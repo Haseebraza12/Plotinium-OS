@@ -1,0 +1,25 @@
+{
+  "systemMenu": [
+    "About Plotinium",
+    "Settings…",
+    "Lock Screen",
+    "Log Out guest-kpwf…",
+    "Restart…",
+    "Shut Down…"
+  ],
+  "logoutFrames": [],
+  "guestWs": [
+    {
+      "url": "ws://localhost:4718/ws",
+      "closed": true,
+      "first": [
+        "> {\"v\":1,\"t\":\"hello\",\"id\":1,\"body\":{\"proto\":1,\"build\":{\"name\":\"Plotinium\",\"version\":\"0.1.0-dev.0\",\"build\":\"6df55c0\",\"date\":\"2026-09-30\"},\"osSessionId\":\"01a0f30e-8",
+        "< {\"v\":1,\"t\":\"hello.ok\",\"id\":1,\"body\":{\"proto\":1,\"osSessionId\":\"01a0f30e-8d5b-711a-9790-fd12791a6d63\",\"server\":{\"name\":\"Plotinium\",\"version\":\"0.1.0-dev.0\",\"build\"",
+        "< {\"v\":1,\"t\":\"resume.done\",\"id\":2,\"body\":{\"ownerUid\":0,\"headSeq\":0}}",
+        "< {\"v\":1,\"t\":\"resume.done\",\"id\":3,\"body\":{\"ownerUid\":60006,\"headSeq\":0}}"
+      ]
+    }
+  ],
+  "logoutCsp": [],
+  "logoutErrors": []
+}

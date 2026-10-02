@@ -1,0 +1,596 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plotinium Task Manager</title>
+<!-- Hand-built reference render (NOT a Stitch export). Stitch generation timed out and returned no screen; see notes.md and screen.json.
+     Add ?menu=1 to the URL to show the End Process menu open (reference-menu.png). -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<style>
+  :root {
+    color-scheme: dark;
+    --label: rgba(255,255,255,.92);
+    --label-2: rgba(255,255,255,.60);
+    --label-3: rgba(255,255,255,.38);
+    --sep: rgba(255,255,255,.10);
+    --menubar: rgba(30,30,36,.55);
+    --win: rgba(30,30,34,.80);
+    --accent: #5E5CE6;
+    --accent-hover: #7472FF;
+    --success: #30D158;
+    --warning: #FF9F0A;
+    --danger: #FF453A;
+    --info: #64D2FF;
+    --hot: #FF6B3D;
+    --focus: 0 0 0 3px rgba(94,92,230,.55);
+    --pl-ease-spring: cubic-bezier(0.34, 1.36, 0.64, 1);
+    --pl-ease-spring-soft: linear(0, 0.157 7.1%, 0.54 17.2%, 0.828 27.3%, 0.94 35.4%, 1.006 45.5%, 1.02 55.6%, 1.006 70.7%, 1);
+    --pl-ease: cubic-bezier(.2,.8,.2,1);
+    --pl-ease-in: cubic-bezier(.4,0,1,1);
+    --pl-ease-out: cubic-bezier(0,0,.2,1);
+    --pl-motion-fast: 120ms; --pl-motion-med: 200ms; --pl-motion-slow: 320ms;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
+    --sans: 'Inter', system-ui, sans-serif;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    :root { --pl-motion-fast: 0ms; --pl-motion-med: 0ms; --pl-motion-slow: 0ms; }
+    *, *::before, *::after { animation-duration: 0ms !important; animation-delay: 0ms !important; animation-iteration-count: 1 !important; transition-duration: 0ms !important; }
+  }
+  :root[data-motion="reduce"] { --pl-motion-fast: 0ms; --pl-motion-med: 0ms; --pl-motion-slow: 0ms; }
+  :root[data-motion="reduce"] *, :root[data-motion="reduce"] *::before, :root[data-motion="reduce"] *::after { animation-duration: 0ms !important; animation-delay: 0ms !important; animation-iteration-count: 1 !important; transition-duration: 0ms !important; }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1440px; height: 900px; overflow: hidden; }
+  body {
+    font: 400 13px/1.4 var(--sans); color: var(--label);
+    background:
+      radial-gradient(900px 600px at 14% 18%, rgba(94,92,230,.55), transparent 60%),
+      radial-gradient(760px 520px at 88% 14%, rgba(170,90,255,.34), transparent 62%),
+      radial-gradient(900px 700px at 72% 96%, rgba(40,90,220,.35), transparent 60%),
+      radial-gradient(600px 420px at 6% 94%, rgba(255,120,200,.15), transparent 60%),
+      linear-gradient(160deg, #0B0B1A 0%, #1a1440 45%, #2A1F5C 100%);
+    -webkit-font-smoothing: antialiased; font-feature-settings: "cv11", "ss01";
+  }
+  button, input { font: inherit; color: inherit; background: none; border: 0; cursor: default; }
+  button:focus-visible, [tabindex]:focus-visible { outline: none; box-shadow: var(--focus); }
+  svg.i { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  .num { font-variant-numeric: tabular-nums; }
+
+  /* menu bar */
+  header.menubar { position: absolute; inset: 0 0 auto 0; height: 28px; display: flex; align-items: center; gap: 2px; padding: 0 12px;
+    background: var(--menubar); backdrop-filter: blur(30px) saturate(180%); -webkit-backdrop-filter: blur(30px) saturate(180%);
+    box-shadow: inset 0 -1px 0 rgba(255,255,255,.06), inset 0 1px 0 rgba(255,255,255,.08); z-index: 10; }
+  .mi { height: 22px; padding: 0 9px; border-radius: 6px; display: inline-flex; align-items: center; font-weight: 500; }
+  .mi:hover { background: rgba(255,255,255,.10); }
+  .mi.app { font-weight: 700; }
+  .spacer { flex: 1; }
+  .st { height: 22px; padding: 0 7px; border-radius: 6px; display: inline-flex; align-items: center; gap: 5px; font-variant-numeric: tabular-nums; }
+  .st:hover { background: rgba(255,255,255,.10); }
+  .sync-dot { position: relative; }
+  .sync-dot::after { content: ""; position: absolute; right: -1px; bottom: 1px; width: 6px; height: 6px; border-radius: 50%; background: var(--success); box-shadow: 0 0 0 1.5px rgba(30,30,36,.9); }
+  .batt i { display: block; width: 22px; height: 11px; border: 1.2px solid rgba(255,255,255,.7); border-radius: 3px; position: relative; padding: 1px; }
+  .batt i::before { content: ""; display: block; height: 100%; width: 82%; background: var(--label); border-radius: 1.5px; }
+  .batt i::after { content: ""; position: absolute; right: -3.5px; top: 3px; width: 2px; height: 4px; background: rgba(255,255,255,.7); border-radius: 0 1px 1px 0; }
+
+  /* window */
+  main.desk { position: absolute; inset: 28px 0 0 0; }
+  .window { position: absolute; left: 100px; top: 26px; width: 1240px; height: 704px; border-radius: 14px; overflow: hidden;
+    background: var(--win); backdrop-filter: blur(40px) saturate(170%); -webkit-backdrop-filter: blur(40px) saturate(170%);
+    box-shadow: 0 0 0 1px rgba(255,255,255,.10), inset 0 1px 0 rgba(255,255,255,.10), 0 22px 70px rgba(0,0,0,.55), 0 4px 14px rgba(0,0,0,.35);
+    display: grid; grid-template-rows: 52px 30px 1fr auto 26px;
+    animation: winOpen var(--pl-motion-med) var(--pl-ease-spring-soft) both; transform-origin: 50% 100%; }
+  @keyframes winOpen { from { opacity: 0; transform: scale(.94); } to { opacity: 1; transform: none; } }
+
+  .toolbar { display: grid; grid-template-columns: auto 1fr auto; gap: 16px; align-items: center; padding: 0 14px; background: rgba(255,255,255,.02); box-shadow: inset 0 -1px 0 var(--sep); }
+  .tl-left { display: flex; align-items: center; gap: 18px; }
+  .lights { display: flex; gap: 8px; }
+  .lights button { width: 12px; height: 12px; border-radius: 50%; box-shadow: inset 0 0 0 .5px rgba(0,0,0,.25); display: grid; place-items: center; }
+  .lights .c { background: #FF5F57; } .lights .m { background: #FEBC2E; } .lights .z { background: #28C840; }
+  .lights svg { width: 8px; height: 8px; stroke: rgba(0,0,0,.6); stroke-width: 2.2; fill: none; opacity: 0; transition: opacity var(--pl-motion-fast) var(--pl-ease); }
+  .lights:hover svg { opacity: 1; }
+  .wtitle { font-weight: 700; font-size: 14px; letter-spacing: -.01em; }
+
+  .seg { justify-self: center; position: relative; display: grid; grid-template-columns: repeat(4, 92px); height: 28px; padding: 2px; border-radius: 9px; background: rgba(0,0,0,.28); box-shadow: inset 0 0 0 1px rgba(255,255,255,.07); }
+  .seg .thumb { position: absolute; top: 2px; left: 2px; width: 92px; height: 24px; border-radius: 7px;
+    background: linear-gradient(180deg, rgba(126,124,255,.55), rgba(94,92,230,.45)); box-shadow: inset 0 1px 0 rgba(255,255,255,.25), inset 0 0 0 1px rgba(255,255,255,.10), 0 2px 8px rgba(94,92,230,.4);
+    transition: transform var(--pl-motion-med) var(--pl-ease-spring); }
+  .seg button { position: relative; z-index: 1; height: 24px; border-radius: 7px; font-size: 12.5px; font-weight: 500; color: var(--label-2); display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
+  .seg button:hover { color: var(--label); }
+  .seg button[aria-selected="true"] { color: #fff; font-weight: 600; }
+  .seg .sp { width: 11px; height: 11px; }
+
+  .tl-right { justify-self: end; display: flex; align-items: center; gap: 8px; position: relative; }
+  .split { display: inline-flex; height: 28px; border-radius: 7px; overflow: hidden; box-shadow: inset 0 0 0 1px rgba(255,69,58,.45); background: rgba(255,69,58,.12); }
+  .split button { white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; color: #FF8A80; font-weight: 600; font-size: 12.5px; transition: background-color var(--pl-motion-fast) var(--pl-ease), transform var(--pl-motion-fast) var(--pl-ease-spring); }
+  .split button:hover { background: rgba(255,69,58,.18); color: #FFB0A8; }
+  .split button:active { transform: scale(.97); }
+  .split .chev { padding: 0 7px; box-shadow: inset 1px 0 0 rgba(255,69,58,.35); }
+  .tbtn { white-space: nowrap; height: 28px; display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; border-radius: 7px; font-weight: 500; font-size: 12.5px; background: rgba(255,255,255,.07); box-shadow: inset 0 0 0 1px rgba(255,255,255,.09), inset 0 1px 0 rgba(255,255,255,.06); transition: transform var(--pl-motion-fast) var(--pl-ease-spring); }
+  .tbtn:hover { background: rgba(255,255,255,.11); }
+  .tbtn:active { transform: scale(.97); }
+  .search { height: 28px; width: 196px; border-radius: 8px; display: flex; align-items: center; gap: 7px; padding: 0 9px; background: rgba(0,0,0,.25); box-shadow: inset 0 0 0 1px rgba(255,255,255,.09); color: var(--label-3); }
+  .search input { flex: 1; min-width: 0; outline: none; font-size: 12.5px; color: var(--label); }
+  .search input::placeholder { color: var(--label-3); }
+  .search kbd { font: 500 10.5px var(--mono); color: var(--label-3); padding: 1px 5px; border-radius: 4px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); }
+
+  /* menu (state demo) */
+  .menu { position: absolute; top: 34px; left: 0; width: 236px; padding: 5px; border-radius: 12px; z-index: 20;
+    background: rgba(40,40,46,.86); backdrop-filter: blur(30px) saturate(180%); -webkit-backdrop-filter: blur(30px) saturate(180%);
+    box-shadow: 0 0 0 1px rgba(255,255,255,.12), inset 0 1px 0 rgba(255,255,255,.08), 0 14px 40px rgba(0,0,0,.5);
+    transform-origin: 20% 0; animation: menuIn var(--pl-motion-fast) var(--pl-ease) both; display: none; }
+  body.menu-open .menu { display: block; }
+  @keyframes menuIn { from { opacity: 0; transform: translateY(-4px) scale(.98); } to { opacity: 1; transform: none; } }
+  .menu .it { height: 28px; border-radius: 7px; display: flex; align-items: center; gap: 8px; padding: 0 9px; font-size: 12.5px; }
+  .menu .it:hover, .menu .it.hl { background: rgba(255,69,58,.85); color: #fff; }
+  .menu .it .k { margin-left: auto; font: 500 11px var(--mono); color: var(--label-3); }
+  .menu .it.hl .k { color: rgba(255,255,255,.8); }
+  .menu .it.dis { color: var(--label-3); }
+  .menu hr { border: 0; height: 1px; background: var(--sep); margin: 4px 6px; }
+  .menu .cap { font-size: 11px; color: var(--label-3); padding: 4px 9px 2px; }
+
+  .summary { display: flex; align-items: center; gap: 14px; padding: 0 18px; font-size: 12px; color: var(--label-2); box-shadow: inset 0 -1px 0 rgba(255,255,255,.05); }
+  .summary b { color: var(--label); font-weight: 600; }
+  .summary .live { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; color: var(--label-3); }
+  .summary .live i { width: 6px; height: 6px; border-radius: 50%; background: var(--success); box-shadow: 0 0 6px var(--success); }
+
+  /* table */
+  .tablewrap { overflow: hidden; padding: 0 8px; min-height: 0; }
+  table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12.5px; table-layout: fixed; }
+  thead th { position: sticky; top: 0; height: 30px; text-align: left; font-weight: 600; font-size: 11.5px; color: var(--label-2); padding: 0 10px; white-space: nowrap; box-shadow: inset 0 -1px 0 var(--sep); }
+  thead th:hover { color: var(--label); }
+  thead th.r, td.r { text-align: right; }
+  thead th .sc { display: inline-block; vertical-align: -2px; margin-left: 3px; opacity: .0; }
+  thead th:hover .sc { opacity: .5; }
+  thead th.sorted { color: #A9A8FF; }
+  thead th.sorted .sc { opacity: 1; }
+  tbody tr { height: 28px; }
+  tbody td { padding: 0 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--label); }
+  tbody tr:nth-child(even) td { background: rgba(255,255,255,.022); }
+  tbody tr:hover td { background: rgba(255,255,255,.06); }
+  tbody tr td:first-child { border-radius: 7px 0 0 7px; }
+  tbody tr td:last-child { border-radius: 0 7px 7px 0; }
+  tbody tr.sel td { background: rgba(94,92,230,.85); color: #fff; }
+  tbody tr.sel td:first-child { box-shadow: inset 0 1px 0 rgba(255,255,255,.16); }
+  tbody tr { animation: rowIn var(--pl-motion-med) var(--pl-ease-spring-soft) both; }
+  @keyframes rowIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+  .pid { font-family: var(--mono); font-size: 12px; color: var(--label-2); }
+  tr.sel .pid { color: rgba(255,255,255,.85); }
+  .name { display: flex; align-items: center; gap: 7px; font-weight: 500; }
+  .name .glyph { width: 18px; height: 18px; border-radius: 5px; display: grid; place-items: center; flex: none; background: rgba(255,255,255,.08); color: var(--label-2); }
+  .name .glyph svg { width: 11px; height: 11px; }
+  tr.sel .name .glyph { background: rgba(255,255,255,.2); color: #fff; }
+  .nm-mono { font-family: var(--mono); font-size: 12px; }
+  .tag { font-size: 10px; font-weight: 600; letter-spacing: .02em; padding: 1px 6px; border-radius: 999px; line-height: 14px; }
+  .tag.bg { color: #C9C8FF; background: rgba(94,92,230,.22); box-shadow: inset 0 0 0 1px rgba(126,124,255,.35); }
+  .tag.spec { color: #C9C8FF; background: rgba(94,92,230,.10); box-shadow: none; outline: 1px dashed rgba(140,138,255,.85); outline-offset: -1px; }
+  .tag.nice { color: var(--label-2); background: rgba(255,255,255,.08); font-weight: 500; }
+  .tag.svc { color: var(--label-3); background: transparent; box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); font-weight: 500; }
+  .user { color: var(--label-2); }
+  tr.sel .user { color: rgba(255,255,255,.85); }
+
+  .pill { display: inline-flex; align-items: center; gap: 5px; height: 20px; padding: 0 8px 0 6px; border-radius: 999px; font-size: 10.5px; font-weight: 700; letter-spacing: .04em; }
+  .pill svg { width: 10px; height: 10px; stroke-width: 2.4; }
+  .pill small { font-size: 10.5px; font-weight: 500; letter-spacing: 0; opacity: .85; }
+  .p-run { color: #5BE584; background: rgba(48,209,88,.15); box-shadow: inset 0 0 0 1px rgba(48,209,88,.28); }
+  .p-rdy { color: #7FDBFF; background: rgba(100,210,255,.13); box-shadow: inset 0 0 0 1px rgba(100,210,255,.26); }
+  .p-blk { color: #FFB84D; background: rgba(255,159,10,.15); box-shadow: inset 0 0 0 1px rgba(255,159,10,.30); }
+  .p-sus { color: rgba(255,255,255,.66); background: rgba(255,255,255,.08); box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); }
+  tr.sel .pill { color: #fff; background: rgba(255,255,255,.2); box-shadow: inset 0 0 0 1px rgba(255,255,255,.3); }
+
+  .prio { font-family: var(--mono); font-size: 12px; display: inline-flex; gap: 6px; align-items: center; }
+  .prio .sl { color: var(--label-3); }
+  tr.sel .prio .sl { color: rgba(255,255,255,.6); }
+  .cpu { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
+  .bar { width: 64px; height: 5px; border-radius: 3px; background: rgba(255,255,255,.08); overflow: hidden; flex: none; }
+  .bar i { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, #7472FF, #9D9BFF); transform-origin: 0 50%; animation: barIn var(--pl-motion-slow) var(--pl-ease-out) both; }
+  .bar i.hot { background: linear-gradient(90deg, #FF9F0A, #FF453A); }
+  @keyframes barIn { from { transform: scaleX(0); } }
+  tr.sel .bar { background: rgba(255,255,255,.22); }
+  tr.sel .bar i.hot { background: linear-gradient(90deg, #FFD60A, #FF9F0A); }
+  .cpu .v { width: 38px; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .mem, .flt { font-variant-numeric: tabular-nums; }
+  .mem small { color: var(--label-3); font-size: 11px; }
+  .exe { font-family: var(--mono); font-size: 11.5px; color: var(--label-2); }
+  tr.sel .exe { color: #fff; }
+  .flt.warm { color: #FFB84D; }
+
+  /* bottom panel */
+  .panel { margin: 8px 14px 12px; border-radius: 12px; padding: 12px 14px 14px; display: grid; grid-template-columns: 1fr 300px; gap: 16px;
+    background: rgba(0,0,0,.22); box-shadow: inset 0 0 0 1px rgba(255,255,255,.07), inset 0 1px 0 rgba(255,255,255,.04); }
+  .ph { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 9px; }
+  .ph h3 { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: rgba(255,255,255,.55); }
+  .ph span { font-size: 11px; color: var(--label-3); }
+  .execs { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+  .ex { border-radius: 10px; padding: 8px 9px 6px; background: rgba(255,255,255,.04); box-shadow: inset 0 0 0 1px rgba(255,255,255,.07); position: relative; overflow: hidden; }
+  .ex:hover { background: rgba(255,255,255,.07); }
+  .ex .top { display: flex; justify-content: space-between; align-items: baseline; }
+  .ex .lbl { font: 500 11px var(--mono); color: var(--label-2); }
+  .ex .pct { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+  .ex .sub { font-size: 10.5px; color: var(--label-3); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ex svg.spark { display: block; width: 100%; height: 64px; margin-top: 4px; overflow: visible; }
+  .ex.hot { box-shadow: inset 0 0 0 1px rgba(255,107,61,.55), 0 0 22px rgba(255,69,58,.18); background: rgba(255,69,58,.08); }
+  .ex.hot .pct { color: #FF8A5C; }
+  .ex.hot::before { content: ""; position: absolute; inset: 0; background: radial-gradient(120px 60px at 50% 110%, rgba(255,107,61,.35), transparent 70%); opacity: 0; animation: hotOnce 640ms var(--pl-ease) 300ms 1 forwards; pointer-events: none; }
+  @keyframes hotOnce { 0% { opacity: 0; } 50% { opacity: .9; } 100% { opacity: .55; } }
+  .ex.idle .pct { color: var(--label-2); }
+
+  .side { display: grid; grid-template-rows: auto auto; gap: 8px; }
+  .ft { border-radius: 10px; padding: 10px 12px; background: rgba(48,209,88,.06); box-shadow: inset 0 0 0 1px rgba(48,209,88,.25); display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: end; }
+  .ft .lbl { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: rgba(255,255,255,.55); grid-column: 1 / -1; }
+  .ft .big { font-size: 28px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; display: flex; align-items: center; gap: 8px; }
+  .ft .big small { font-size: 14px; font-weight: 600; color: var(--label-2); margin-left: -4px; }
+  .ft .ok { width: 20px; height: 20px; color: var(--success); animation: okIn var(--pl-motion-med) var(--pl-ease-spring) 380ms both; }
+  @keyframes okIn { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: none; } }
+  .ft .cap { font-size: 11.5px; color: #7EE8A0; grid-column: 1 / 2; }
+  .ft .hist { grid-row: 2 / 4; grid-column: 2; display: flex; align-items: flex-end; gap: 2px; height: 40px; position: relative; }
+  .ft .hist i { width: 6px; border-radius: 2px 2px 0 0; background: rgba(48,209,88,.55); transform-origin: 50% 100%; animation: histIn var(--pl-motion-slow) var(--pl-ease-spring-soft) both; }
+  .ft .hist i.w { background: rgba(255,159,10,.7); }
+  .ft .hist .budget { position: absolute; left: -2px; right: -2px; bottom: 30px; border-top: 1px dashed rgba(255,255,255,.35); }
+  @keyframes histIn { from { transform: scaleY(0); } }
+  .minis { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .mini { border-radius: 10px; padding: 8px 10px; background: rgba(255,255,255,.04); box-shadow: inset 0 0 0 1px rgba(255,255,255,.07); }
+  .mini .lbl { font-size: 10.5px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: rgba(255,255,255,.5); }
+  .mini .v { font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .mini .v small { font-size: 11px; color: var(--label-3); font-weight: 500; }
+  .mini .mbar { height: 5px; border-radius: 3px; background: rgba(255,255,255,.08); margin-top: 6px; overflow: hidden; display: flex; }
+  .mini .mbar i { height: 100%; }
+
+  footer.status { display: flex; align-items: center; padding: 0 14px; font-size: 11.5px; color: var(--label-2); box-shadow: inset 0 1px 0 var(--sep); background: rgba(0,0,0,.14); }
+  footer .ver { font-family: var(--mono); font-size: 11px; color: var(--label-3); }
+  footer .grow { flex: 1; }
+  footer .pz { display: inline-flex; align-items: center; gap: 6px; height: 20px; padding: 0 8px; border-radius: 6px; }
+  footer .pz:hover { background: rgba(255,255,255,.07); color: var(--label); }
+
+  /* dock */
+  nav.dock { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); height: 68px; padding: 8px 10px; display: flex; align-items: flex-end; gap: 6px; border-radius: 22px;
+    background: rgba(40,40,48,.50); backdrop-filter: blur(40px) saturate(180%); -webkit-backdrop-filter: blur(40px) saturate(180%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.18), inset 0 0 0 1px rgba(255,255,255,.08), 0 12px 40px rgba(0,0,0,.45); z-index: 5; }
+  .dk { width: 52px; height: 52px; position: relative; transform-origin: 50% 100%; transition: transform var(--pl-motion-fast) var(--pl-ease-spring-soft); }
+  .dk:hover { transform: translateY(-10px) scale(1.45); z-index: 2; }
+  .dk:has(+ .dk:hover), .dk:hover + .dk { transform: translateY(-5px) scale(1.2); }
+  .dk .tile { width: 52px; height: 52px; border-radius: 13px; display: grid; place-items: center; position: relative; overflow: hidden;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.28), inset 0 0 0 1px rgba(255,255,255,.10), 0 4px 10px rgba(0,0,0,.35); }
+  .dk .tile svg { width: 28px; height: 28px; stroke: #fff; stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 1px 2px rgba(0,0,0,.3)); }
+  .dk .tile::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(255,255,255,.22), transparent 45%); pointer-events: none; }
+  .t-files { background: linear-gradient(160deg, #6FB7FF, #2F6BEA); }
+  .t-term { background: linear-gradient(160deg, #3A3A44, #121218); }
+  .t-edit { background: linear-gradient(160deg, #8A88FF, #4B3FD1); }
+  .t-task { background: linear-gradient(160deg, #3DDC84, #13985A); }
+  .t-search { background: linear-gradient(160deg, #B58CFF, #6A3FE0); }
+  .t-set { background: linear-gradient(160deg, #9AA0AE, #4D5260); }
+  .t-trash { background: linear-gradient(160deg, rgba(255,255,255,.25), rgba(255,255,255,.08)); }
+  .dk .run { position: absolute; left: 50%; bottom: -6px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: rgba(255,255,255,.85); }
+  .dsep { width: 1px; height: 44px; margin: 0 4px 4px; background: rgba(255,255,255,.18); }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <!-- Plotinium mark per specs/00-product/identity-and-branding.md §3.6: open ring (~266°) + solid point at 1 o'clock -->
+    <symbol id="pl-logo" viewBox="0 0 160 160">
+      <path d="M 134.6 67.4 A 56 56 0 1 1 63.6 26.4" fill="none" stroke="#5E5CE6" stroke-width="20"/>
+      <circle cx="108" cy="31.5" r="25" fill="#FFFFFF"/>
+    </symbol>
+    <symbol id="g-play" viewBox="0 0 24 24"><path d="M7 5l12 7-12 7Z" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="g-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="g-pause" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M10 9v6M14 9v6"/></symbol>
+    <symbol id="g-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z"/></symbol>
+  </defs>
+</svg>
+
+<header class="menubar" role="banner">
+  <nav role="menubar" aria-label="Menu bar" style="display:flex;align-items:center;gap:2px">
+    <button class="mi" role="menuitem" aria-label="Plotinium menu" aria-haspopup="menu" style="padding:0 8px"><svg width="16" height="16" aria-hidden="true"><use href="#pl-logo"/></svg></button>
+    <button class="mi app" role="menuitem" aria-haspopup="menu">Task Manager</button>
+    <button class="mi" role="menuitem" aria-haspopup="menu">File</button>
+    <button class="mi" role="menuitem" aria-haspopup="menu">Edit</button>
+    <button class="mi" role="menuitem" aria-haspopup="menu">View</button>
+    <button class="mi" role="menuitem" aria-haspopup="menu">Process</button>
+    <button class="mi" role="menuitem" aria-haspopup="menu">Window</button>
+    <button class="mi" role="menuitem" aria-haspopup="menu">Help</button>
+  </nav>
+  <span class="spacer"></span>
+  <button class="st sync-dot" aria-label="Sync: synced"><svg class="i" viewBox="0 0 24 24"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg></button>
+  <button class="st" aria-label="Wi-Fi connected"><svg class="i" viewBox="0 0 24 24"><path d="M12 20h.01"/><path d="M2 8.82a15 15 0 0 1 20 0"/><path d="M5 12.86a10 10 0 0 1 14 0"/><path d="M8.5 16.43a5 5 0 0 1 7 0"/></svg></button>
+  <button class="st batt" aria-label="Battery 82 percent"><span style="font-size:12px">82%</span><i></i></button>
+  <button class="st" aria-label="Control Centre"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="7" rx="3.5"/><circle cx="7.5" cy="7.5" r="1.6"/><rect x="3" y="13" width="18" height="7" rx="3.5"/><circle cx="16.5" cy="16.5" r="1.6"/></svg></button>
+  <button class="st" aria-label="Search"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
+  <span class="st" style="font-weight:500">Thu 24 Sep&nbsp;&nbsp;14:32</span>
+</header>
+
+<main class="desk">
+  <div class="window" role="dialog" aria-modal="false" aria-labelledby="wt">
+    <div class="toolbar" role="toolbar" aria-label="Process actions">
+      <div class="tl-left">
+        <div class="lights" role="group" aria-label="Window controls">
+          <button class="c" aria-label="Close"><svg viewBox="0 0 10 10"><path d="M2.5 2.5l5 5M7.5 2.5l-5 5"/></svg></button>
+          <button class="m" aria-label="Minimise"><svg viewBox="0 0 10 10"><path d="M2 5h6"/></svg></button>
+          <button class="z" aria-label="Zoom"><svg viewBox="0 0 10 10"><path d="M3 7V3h4M7 3 3 7"/></svg></button>
+        </div>
+        <span class="wtitle" id="wt">Task Manager</span>
+      </div>
+      <div class="seg" role="tablist" aria-label="View">
+        <span class="thumb" aria-hidden="true"></span>
+        <button role="tab" aria-selected="true"><svg class="i sp" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M4 15h16"/></svg>Processes</button>
+        <button role="tab" aria-selected="false" tabindex="-1"><svg class="i sp" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="10" rx="1.5"/><path d="M7 7V4M12 7V4M17 7V4M7 20v-3M12 20v-3M17 20v-3"/></svg>Memory</button>
+        <button role="tab" aria-selected="false" tabindex="-1"><svg class="i sp" viewBox="0 0 24 24"><path d="M3 6h10M3 12h14M3 18h7"/><circle cx="18" cy="6" r="2"/><circle cx="20" cy="18" r="2"/></svg>Scheduler</button>
+        <button role="tab" aria-selected="false" tabindex="-1"><svg class="i sp" viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9Z"/></svg>AI</button>
+      </div>
+      <div class="tl-right">
+        <div style="position:relative">
+          <div class="split">
+            <button aria-describedby="endtip"><svg class="i" viewBox="0 0 24 24"><path d="M7.9 2h8.2L22 7.9v8.2L16.1 22H7.9L2 16.1V7.9Z"/><path d="m15 9-6 6M9 9l6 6"/></svg>End Process</button>
+            <button class="chev" aria-label="More end options" aria-haspopup="menu" aria-expanded="false"><svg class="i" viewBox="0 0 24 24" style="width:12px;height:12px"><path d="m6 9 6 6 6-6"/></svg></button>
+          </div>
+          <div class="menu" role="menu" aria-label="End options">
+            <div class="cap">burn · pid 301</div>
+            <div class="it" role="menuitem"><svg class="i" viewBox="0 0 24 24"><path d="M7.9 2h8.2L22 7.9v8.2L16.1 22H7.9L2 16.1V7.9Z"/></svg>End (SIGTERM)<span class="k">Del</span></div>
+            <div class="it hl" role="menuitem" aria-description="destructive"><svg class="i" viewBox="0 0 24 24"><path d="M13 2 3 14h9l-1 8 10-12h-9Z"/></svg>Force kill (kill -9)<span class="k">Alt+Ctrl+Q</span></div>
+            <hr>
+            <div class="it" role="menuitem"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M10 9v6M14 9v6"/></svg>Suspend (SIGSTOP)</div>
+            <div class="it dis" role="menuitem" aria-disabled="true"><svg class="i" viewBox="0 0 24 24"><path d="M7 5l12 7-12 7Z"/></svg>Continue (SIGCONT)</div>
+          </div>
+        </div>
+        <button class="tbtn"><svg class="i" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>Renice…</button>
+        <label class="search"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input role="searchbox" placeholder="Search processes" aria-label="Search processes"><kbd>/</kbd></label>
+      </div>
+    </div>
+
+    <div class="summary num">
+      <span><b>12</b> processes</span><span>·</span><span><b>6</b> executors</span><span>·</span><span>load <b>1.84</b></span><span>·</span><span>uptime <b>2h 14m</b></span>
+      <span class="live"><i></i>Sorted by CPU %, live</span>
+    </div>
+
+    <div class="tablewrap">
+      <table role="grid" aria-label="Processes" aria-rowcount="12">
+        <colgroup><col style="width:66px"><col style="width:258px"><col style="width:92px"><col style="width:190px"><col style="width:132px"><col style="width:150px"><col style="width:196px"><col style="width:74px"><col style="width:86px"></colgroup>
+        <thead><tr>
+          <th class="r">PID<svg class="i sc" viewBox="0 0 24 24" style="width:10px;height:10px"><path d="m6 9 6 6 6-6"/></svg></th>
+          <th>Name<svg class="i sc" viewBox="0 0 24 24" style="width:10px;height:10px"><path d="m6 9 6 6 6-6"/></svg></th>
+          <th>User</th>
+          <th>State</th>
+          <th>Priority / Nice</th>
+          <th class="r sorted" aria-sort="descending">CPU %<svg class="i sc" viewBox="0 0 24 24" style="width:10px;height:10px"><path d="m6 9 6 6 6-6"/></svg></th>
+          <th class="r">Memory</th>
+          <th class="r">Faults</th>
+          <th>Executor</th>
+        </tr></thead>
+        <tbody>
+          <tr class="sel" aria-selected="true" style="animation-delay:0ms">
+            <td class="r pid">301</td>
+            <td><span class="name"><span class="glyph"><svg class="i" viewBox="0 0 24 24"><path d="M12 3c1 3 5 5 5 10a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-6 1-9Z"/></svg></span><span class="nm-mono">burn</span></span></td>
+            <td class="user">student</td>
+            <td><span class="pill p-run"><svg class="i"><use href="#g-play"/></svg>RUNNING</span></td>
+            <td><span class="prio">20 <span class="sl">/</span> 0</span></td>
+            <td class="r"><span class="cpu"><span class="bar"><i class="hot" style="width:98%"></i></span><span class="v">98.0</span></span></td>
+            <td class="r mem">12.4 MB</td>
+            <td class="r flt">3</td>
+            <td class="exe">exec-4</td>
+          </tr>
+          <tr style="animation-delay:20ms">
+            <td class="r pid">23</td>
+            <td><span class="name"><span class="glyph"><svg class="i" viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9Z"/></svg></span><span class="nm-mono">ai.indexer</span><span class="tag bg">background</span></span></td>
+            <td class="user">system</td>
+            <td><span class="pill p-run"><svg class="i"><use href="#g-play"/></svg>RUNNING</span></td>
+            <td><span class="prio">32 <span class="sl">/</span> +12 <span class="tag nice">niced</span></span></td>
+            <td class="r"><span class="cpu"><span class="bar"><i style="width:21.6%"></i></span><span class="v">21.6</span></span></td>
+            <td class="r mem">184.0 MB</td>
+            <td class="r flt warm">412</td>
+            <td class="exe">exec-5</td>
+          </tr>
+          <tr style="animation-delay:40ms">
+            <td class="r pid">212</td>
+            <td><span class="name"><span class="glyph"><svg class="i" viewBox="0 0 24 24"><rect x="5" y="8" width="14" height="11" rx="3"/><path d="M12 4v4M9 13h.01M15 13h.01"/></svg></span><span class="nm-mono">ai.agent</span></span></td>
+            <td class="user">student</td>
+            <td><span class="pill p-blk"><svg class="i"><use href="#g-pause"/></svg>BLOCKED <small>awaiting llm</small></span></td>
+            <td><span class="prio">20 <span class="sl">/</span> 0</span></td>
+            <td class="r"><span class="cpu"><span class="bar"><i style="width:4.1%"></i></span><span class="v">4.1</span></span></td>
+            <td class="r mem">96.2 MB</td>
+            <td class="r flt">58</td>
+            <td class="exe">exec-2</td>
+          </tr>
+          <tr style="animation-delay:60ms">
+            <td class="r pid">131</td>
+            <td><span class="name"><span class="glyph"><svg class="i" viewBox="0 0 24 24"><path d="M16 4l4 4L9 19H5v-4Z"/></svg></span><span class="nm-mono">editor</span></span></td>
+            <td class="user">student</td>
+            <td><span class="pill p-rdy"><svg class="i"><use href="#g-clock"/></svg>READY</span></td>
+            <td><span class="prio">20 <span class="sl">/</span> 0</span></td>
+            <td class="r"><span class="cpu"><span class="bar"><i style="width:2.8%"></i></span><span class="v">2.8</span></span></td>
+            <td class="r mem">48.7 MB</td>
+            <td class="r flt">17</td>
+            <td class="exe">exec-1</td>
+          </tr>
+          <tr style="animation-delay:80ms">
+            <td class="r pid">2</td>
+            <td><span class="name"><span class="glyph"><svg class="i" viewBox="0 0 24 24"><path d="M3 6h10M3 12h14M3 18h7"/></svg></span><span class="nm-mono">sched</span><span class="tag svc">kernel</span></span></td>
+            <td class="user">system</td>
+            <td><span class="pill p-run"><svg class="i"><use href="#g-play"/></svg>RUNNING</span></td>
+            <td><span class="prio">0 <span class="sl">/</span> -20</span></td>
+            <td class="r"><span class="cpu"><span class="bar"><i style="width:1.9%"></i></span><span class="v">1.9</span></span></td>
+            <td class="r mem">2.1 MB</td>
+            <td class="r flt">0</td>
+            <td class="exe">exec-0</td>
+          </tr>
+          <tr style="animation-delay:100ms">
+            <td class="r pid">101</td>
+            <td><span class="name"><span class="glyph"><svg class="i" viewBox="0 0 24 24"><path d="m5 8 4 4-4 4M12 17h7"/></svg></span><span class="nm-mono">terminal</span></span></td>
+            <td class="user">student</td>
+            <td><span class="pill p-rdy"><svg class="i"><use href="#g-clock"/></svg>READY</span></td>
+            <td><span class="prio">20 <span class="sl">/</span> 0</span></td>
+            <td class="r"><span class="cpu"><span class="bar"><i style="width:1.2%"></i></span><span class="v">1.2</span></span></td>
+            <td class="r mem">22.3 MB</td>
+            <td class="r flt">5</td>
+            <td class="exe">exec-3</td>
+          </tr>
+          <tr style="animation-delay:120ms">
+            <td class="r pid">3</td>
+            <td><span class="name"><span class="glyph"><svg class="i" viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v12c0 1.7 3.1 3 7 3s7-1.3 7-3V6M5 12c0 1.7 3.1 3 7 3s7-1.3 7-3"/></svg></span><span class="nm-mono">vfs</span><span class="tag svc">kernel</span></span></td>
+            <td class="user">system</td>
+            <td><span class="pill p-blk"><svg class="i"><use href="#g-pause"/></svg>BLOCKED <small>io</small></span></td>
+            <td><span class="prio">10 <span class="sl">/</span> -10</span></td>
+            <td class="r"><span class="cpu"><span class="bar"><i style="width:.9%"></i></span><span class="v">0.9</span></span></td>
+            <td class="r mem">31.5 MB</td>
+            <td class="r flt">9</td>
+            <td class="exe">exec-0</td>
+          </tr>
+          <tr style="animation-delay:140ms">
+            <td class="r pid">4</td>
+            <td><span class="name"><span class="glyph"><svg class="i" viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 1-15.5 6.2M3 12a9 9 0 0 1 15.5-6.2"/><path d="M21 4v5h-5M3 20v-5h5"/></svg></span><span class="nm-mono">syncd</span><span class="tag svc">service</span></span></td>
+            <td class="user">system</td>
+            <td><span class="pill p-rdy"><svg class="i"><use href="#g-clock"/></svg>READY</span></td>
+            <td><span class="prio">10 <span class="sl">/</span> -5</span></td>
+            <td class="r"><span class="cpu"><span class="bar"><i style="width:.6%"></i></span><span class="v">0.6</span></span></td>
+            <td class="r mem">14.8 MB</td>
+            <td class="r flt">2</td>
+            <td class="exe">exec-1</td>
+          </tr>
+          <tr style="animation-delay:160ms">
+            <td class="r pid">104</td>
+            <td><span class="name"><span class="glyph"><svg class="i" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg></span><span class="nm-mono" style="color:var(--label-2)">files</span></span></td>
+            <td class="user">student</td>
+            <td><span class="pill p-sus"><svg class="i"><use href="#g-moon"/></svg>SUSPENDED <small>paged out</small></span></td>
+            <td><span class="prio">20 <span class="sl">/</span> 0</span></td>
+            <td class="r"><span class="cpu"><span class="bar"><i style="width:0"></i></span><span class="v" style="color:var(--label-3)">0.0</span></span></td>
+            <td class="r mem">0 B <small>(38 MB swapped)</small></td>
+            <td class="r flt warm">121</td>
+            <td class="exe" style="color:var(--label-3)">—</td>
+          </tr>
+          <tr style="animation-delay:180ms">
+            <td class="r pid">220</td>
+            <td><span class="name"><span class="glyph"><svg class="i" viewBox="0 0 24 24"><path d="M13 2 3 14h9l-1 8 10-12h-9Z"/></svg></span><span class="nm-mono">prefetch:terminal</span><span class="tag spec">speculative</span></span></td>
+            <td class="user">student</td>
+            <td><span class="pill p-rdy"><svg class="i"><use href="#g-clock"/></svg>READY</span></td>
+            <td><span class="prio">39 <span class="sl">/</span> +19</span></td>
+            <td class="r"><span class="cpu"><span class="bar"><i style="width:.3%"></i></span><span class="v">0.3</span></span></td>
+            <td class="r mem">6.0 MB</td>
+            <td class="r flt">0</td>
+            <td class="exe">exec-5</td>
+          </tr>
+          <tr style="animation-delay:190ms">
+            <td class="r pid">5</td>
+            <td><span class="name"><span class="glyph"><svg class="i" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span><span class="nm-mono">lockd</span><span class="tag svc">service</span></span></td>
+            <td class="user">system</td>
+            <td><span class="pill p-blk"><svg class="i"><use href="#g-pause"/></svg>BLOCKED <small>lease wait</small></span></td>
+            <td><span class="prio">10 <span class="sl">/</span> -5</span></td>
+            <td class="r"><span class="cpu"><span class="bar"><i style="width:.1%"></i></span><span class="v">0.1</span></span></td>
+            <td class="r mem">3.4 MB</td>
+            <td class="r flt">0</td>
+            <td class="exe">exec-1</td>
+          </tr>
+          <tr style="animation-delay:200ms">
+            <td class="r pid">1</td>
+            <td><span class="name"><span class="glyph"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/></svg></span><span class="nm-mono">init</span><span class="tag svc">kernel</span></span></td>
+            <td class="user">root</td>
+            <td><span class="pill p-blk"><svg class="i"><use href="#g-pause"/></svg>BLOCKED <small>wait</small></span></td>
+            <td><span class="prio">0 <span class="sl">/</span> 0</span></td>
+            <td class="r"><span class="cpu"><span class="bar"><i style="width:0"></i></span><span class="v">0.0</span></span></td>
+            <td class="r mem">1.2 MB</td>
+            <td class="r flt">0</td>
+            <td class="exe">exec-0</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="panel">
+      <div>
+        <div class="ph"><h3>CPU per executor</h3><span>last 60 s · 1 sample/s</span></div>
+        <div class="execs" id="execs"></div>
+      </div>
+      <div class="side">
+        <div class="ft" role="group" aria-label="Frame time p95 14.2 milliseconds, under the 16.7 millisecond budget">
+          <span class="lbl">Frame time p95</span>
+          <span class="big num">14.2<small>ms</small><svg class="i ok" viewBox="0 0 24 24" style="stroke-width:2.2"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg></span>
+          <span class="hist" id="hist" aria-hidden="true"><span class="budget"></span></span>
+          <span class="cap">under 16.7 ms budget</span>
+        </div>
+        <div class="minis">
+          <div class="mini"><div class="lbl">Memory</div><div class="v num">1.9 <small>/ 4.0 GB</small></div>
+            <div class="mbar"><i style="width:30%;background:#7472FF"></i><i style="width:12%;background:#64D2FF"></i><i style="width:5.5%;background:rgba(140,138,255,.5)"></i></div></div>
+          <div class="mini"><div class="lbl">Page faults</div><div class="v num">627 <small>/s</small></div>
+            <div class="mbar"><i style="width:62%;background:linear-gradient(90deg,#FFB84D,#FF9F0A)"></i></div></div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="status" role="status">
+      <span class="ver">Plotinium 0.3.0 · build a1f93c2</span>
+      <span class="grow"></span>
+      <button class="pz" aria-pressed="false"><svg class="i" viewBox="0 0 24 24" style="width:12px;height:12px"><path d="M9 5v14M15 5v14"/></svg>Updated every 1 s</button>
+    </footer>
+  </div>
+</main>
+
+<nav class="dock" aria-label="Dock">
+  <button class="dk" aria-label="Files"><span class="tile t-files"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg></span></button>
+  <button class="dk" aria-label="Terminal"><span class="tile t-term"><svg viewBox="0 0 24 24"><path d="m5 8 4 4-4 4"/><path d="M12 17h7"/></svg></span></button>
+  <button class="dk" aria-label="Editor"><span class="tile t-edit"><svg viewBox="0 0 24 24"><path d="M16 4l4 4L9 19H5v-4Z"/><path d="M13.5 6.5l4 4"/></svg></span></button>
+  <button class="dk" aria-label="Task Manager, running"><span class="tile t-task"><svg viewBox="0 0 24 24"><path d="M3 12h4l3-7 4 14 3-7h4"/></svg></span><span class="run"></span></button>
+  <button class="dk" aria-label="Search"><span class="tile t-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m20 20-4.5-4.5"/></svg></span></button>
+  <button class="dk" aria-label="Settings"><span class="tile t-set"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1 7 17M17 7l2.1-2.1"/></svg></span></button>
+  <span class="dsep" aria-hidden="true"></span>
+  <button class="dk" aria-label="Trash"><span class="tile t-trash"><svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></span></button>
+</nav>
+
+<script>
+  if (new URLSearchParams(location.search).get('menu') === '1') {
+    document.body.classList.add('menu-open');
+    document.querySelector('.chev').setAttribute('aria-expanded', 'true');
+  }
+  // deterministic pseudo-random so the reference renders the same every time
+  let seed = 94;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const execs = [
+    { id: 'exec-0', pct: 12, base: 11, amp: 6,  sub: 'sched, vfs, init' },
+    { id: 'exec-1', pct: 18, base: 16, amp: 8,  sub: 'editor, syncd' },
+    { id: 'exec-2', pct: 6,  base: 6,  amp: 5,  sub: 'ai.agent (blocked)' },
+    { id: 'exec-3', pct: 9,  base: 9,  amp: 6,  sub: 'terminal' },
+    { id: 'exec-4', pct: 99, base: 40, amp: 6,  sub: 'burn', hot: true },
+    { id: 'exec-5', pct: 41, base: 36, amp: 12, sub: 'ai.indexer, prefetch' },
+  ];
+  const W = 150, H = 64, N = 40;
+  const host = document.getElementById('execs');
+  execs.forEach((e, k) => {
+    const pts = [];
+    for (let i = 0; i < N; i++) {
+      let v;
+      if (e.hot) v = i < 16 ? e.base + rnd() * e.amp : Math.min(100, 88 + (i - 16) * 1.2 + rnd() * 3);
+      else v = Math.max(1, e.base + (rnd() - .5) * 2 * e.amp);
+      if (i === N - 1) v = e.pct;
+      pts.push([i / (N - 1) * W, H - 2 - v / 100 * (H - 4)]);
+    }
+    let d = `M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}`;
+    for (let i = 1; i < pts.length; i++) {
+      const [x0, y0] = pts[i - 1], [x1, y1] = pts[i], cx = (x0 + x1) / 2;
+      d += ` C${cx.toFixed(1)},${y0.toFixed(1)} ${cx.toFixed(1)},${y1.toFixed(1)} ${x1.toFixed(1)},${y1.toFixed(1)}`;
+    }
+    const col = e.hot ? '#FF6B3D' : '#8A88FF';
+    const last = pts[pts.length - 1];
+    const el = document.createElement('div');
+    el.className = 'ex' + (e.hot ? ' hot' : '') + (e.pct < 8 ? ' idle' : '');
+    el.setAttribute('role', 'img');
+    el.setAttribute('aria-label', `${e.id}, CPU ${e.pct} percent${e.hot ? ', rising' : ''}`);
+    el.innerHTML = `<div class="top"><span class="lbl">${e.id}</span><span class="pct">${e.pct}%</span></div>
+      <div class="sub">${e.sub}</div>
+      <svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
+        <defs><linearGradient id="g${k}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${col}" stop-opacity=".45"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></linearGradient></defs>
+        <path d="${d} L${W},${H} L0,${H} Z" fill="url(#g${k})"/>
+        <path d="${d}" fill="none" stroke="${col}" stroke-width="1.6" vector-effect="non-scaling-stroke"/>
+        <circle cx="${last[0]}" cy="${last[1]}" r="2.4" fill="${col}"/>
+      </svg>`;
+    host.appendChild(el);
+  });
+  // frame-time histogram: 16 buckets, 2 over budget
+  const hist = document.getElementById('hist');
+  [6, 11, 18, 27, 34, 38, 36, 30, 24, 19, 14, 10, 7, 5, 3, 2].forEach((h, i) => {
+    const b = document.createElement('i');
+    b.style.height = h + 'px';
+    b.style.animationDelay = (i * 20) + 'ms';
+    if (i >= 14) b.className = 'w';
+    hist.appendChild(b);
+  });
+</script>
+</body>
+</html>

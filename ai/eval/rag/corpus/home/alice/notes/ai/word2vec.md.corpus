@@ -1,0 +1,16 @@
+# word2vec
+
+Mikolov et al., 2013. Learns one vector per **word** from raw text using the distributional hypothesis: words that appear in similar contexts have similar meanings.
+
+- **Skip-gram:** predict the surrounding words from the centre word.
+- **CBOW:** predict the centre word from the average of its context.
+- Negative sampling replaces the full softmax: push the true context word's score up and a few random words' scores down.
+
+Famous property: vector("king") − vector("man") + vector("woman") ≈ vector("queen"). (The effect is weaker than the papers suggest once you exclude the input words from the answer.)
+
+Limitations:
+- one vector per word, so "bank" (river) and "bank" (money) share a vector;
+- no vectors for unseen words (fastText fixes this with character n-grams);
+- sentence meaning is not the average of word meanings.
+
+Contextual models (ELMo, BERT) and then sentence-level models replaced it for most tasks.

@@ -1,0 +1,7 @@
+{
+  "mode": "login-reload",
+  "boots": ["/ -> login", "/ -> login", "/ -> login"],
+  "console": [],
+  "pageErrors": [],
+  "failed": ["401 GET /api/auth/me", "401 GET /api/auth/me", "401 GET /api/auth/me"]
+}

@@ -1,0 +1,14 @@
+# Memory accounting report
+
+The memory manager tracks each process's declared pages against a global budget (default 512 MiB on the lab machine).
+
+| Process | Declared | Notes |
+|---|---|---|
+| ai.embed | ~100 MiB | ONNX runtime linear memory; evicted by terminating the worker |
+| ai.search | 1.5 MiB per vector segment | segments paged in from IndexedDB on demand |
+| wm | 24 MiB | window snapshots for the overview |
+| Terminal | 6–40 MiB | scrollback ring buffer + glyph atlas |
+
+Over-budget events in the stress test (2× budget workload): accounted memory went over for at most 0.7 s before eviction brought it back. Evicted first: Exposé snapshots, then idle vector segments, then the embedding model.
+
+Calibration: declared bytes were within 18 % of Chrome's own measurement.

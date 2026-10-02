@@ -1,0 +1,52 @@
+[
+  {
+    "name": "UI-018 a launched Files window focuses its list, not a toolbar button",
+    "ok": true,
+    "detail": "{\"role\":\"rowgroup\",\"auto\":true,\"tag\":\"DIV\"}"
+  },
+  {
+    "name": "UI-084 a fresh user's Trash opens empty, not \"This folder does not exist\"",
+    "ok": true,
+    "detail": "null | Trash / Favourites / Home / Locations / Trash / Temporary / Root / 0 bytes of 20 MB / Trash / / / home / guest-xsny"
+  },
+  {
+    "name": "Guest checks: CSP violations = 0",
+    "ok": true,
+    "detail": "[]"
+  },
+  {
+    "name": "Guest checks: console errors = 0",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "UI-018 a launched Editor puts focus in the text surface",
+    "ok": true,
+    "detail": "{\"testid\":\"editor\",\"cls\":\"cm-content\"}"
+  },
+  {
+    "name": "UI-037 closing a dirty Editor asks \"Discard unsaved changes?\" and keeps the window",
+    "ok": true,
+    "detail": "Discard unsaved changes?“Untitled” has unsaved changes. They will be lost if you close this window.CancelDiscard and Close | open=true"
+  },
+  {
+    "name": "UI-037 Escape cancels the prompt and keeps the dirty Editor open",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "UI-135 bootlog --list prints the stored boots",
+    "ok": true,
+    "detail": "#1  2026-09-30 20:39  normal  0.48 s  ok  (this boot)"
+  },
+  {
+    "name": "Session checks: CSP violations = 0",
+    "ok": true,
+    "detail": "[]"
+  },
+  {
+    "name": "Session checks: console errors = 0",
+    "ok": true,
+    "detail": ""
+  }
+]

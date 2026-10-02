@@ -1,0 +1,11 @@
+{
+  "name": "update",
+  "description": "Service Worker registered after interactive plus idle; update.available wired",
+  "requires": ["desktop"],
+  "critical": false,
+  "weight": 1,
+  "timeoutMs": 10000,
+  "priority": 38,
+  "safeMode": true,
+  "runsIn": "main+sw"
+}

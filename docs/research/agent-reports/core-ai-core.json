@@ -1,0 +1,136 @@
+{
+ "files_changed": [
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/README.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/eval/README.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/index.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/hooks.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/util/deps.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/util/canonical.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/util/cred.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/util/errors.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/util/rng.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/util/bytes.ts (prettier only)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/util/schema.ts (prettier only)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/indexer/chunker.ts (prettier only; kept from the earlier run)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/indexer/extract.ts (prettier only; kept)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/indexer/hash.ts (kept)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/indexer/tokens.ts (prettier only; kept)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/indexer/bookkeeping.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/indexer/queue.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/embed/config.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/embed/protocol.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/embed/embedder.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/search/bits.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/search/vector-index.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/search/readable.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/search/bm25.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/search/hybrid.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/search/citations.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/search/results.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/search/metrics.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/agent/envelope.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/agent/observe.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/agent/catalogue.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/agent/strict-schema.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/agent/intent.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/agent/reltime.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/agent/glob.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/agent/fsview.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/agent/select.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/agent/apply.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/agent/validator.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/agent/confirm.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/agent/token.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/agent/submit.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/agent/undo.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/agent/audit.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/agent/root-drop.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/agent/model.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/agent/decode.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/agent/loop.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/agent/cassette.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/predictor/telemetry.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/predictor/markov.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/predictor/baselines.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/predictor/evaluate.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/src/predictor/prefetch.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/eval/fixtures/tree.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/eval/fixtures/fx-agt.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/eval/fixtures/perm.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/eval/harness.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/eval/agt40/schema.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/eval/agt40/index.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/eval/agt40/cases/AGT40-*.json (40 files: P01-P10, D01-D08, G01-G08, A01-A08, R01-R06)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/eval/inj20/index.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/eval/inj20/cases/INJ-*.json (20 files: N01-N10, C01-C10)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/eval/pre/persona.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/tests/doubles.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/tests/rag.indexer.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/tests/rag.search.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/tests/rag.readable.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/tests/embed.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/tests/agent.envelope.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/tests/agent.catalogue.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/tests/agent.validator.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/tests/agent.confirm.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/tests/agent.loop.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/tests/predictor.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/tests/eval.fixtures.test.ts"
+ ],
+ "verification": [
+  {
+   "command": "pnpm exec tsc -p ai/tsconfig.json --noEmit",
+   "outcome": "PASS: exit 0. Covers ai/src, ai/eval (including the JSON case imports) and ai/tests."
+  },
+  {
+   "command": "pnpm exec eslint ai --max-warnings 0",
+   "outcome": "PASS: exit 0, no warnings. Package boundaries hold: ai imports only @plotinium/protocol, plus vitest and fast-check in tests."
+  },
+  {
+   "command": "pnpm exec vitest run --project ai",
+   "outcome": "PASS: 11 test files, 191 tests. All 40 AGT-40 reference cases grade correctly through validation, dry run and the predicate. INJ-20 gates hold: 0 unrequested steps executed with the informed user, and 0 destructive unrequested steps with the blind-yes user."
+  },
+  {
+   "command": "pnpm exec prettier --check ai",
+   "outcome": "PASS: all files in ai/ use Prettier style (formatted with --write inside ai/ only)."
+  },
+  {
+   "command": "pnpm exec vitest run --config ai/.tmp-coverage.config.mjs --coverage  (temporary config inside ai/, removed afterwards; include src/**/*.ts)",
+   "outcome": "ai/src coverage: 98.28% of lines, 94.45% of statements, 83.65% of branches, 98.5% of functions. Above the 85% line target."
+  },
+  {
+   "command": "pnpm exec vitest run --project ai --coverage",
+   "outcome": "The ROOT coverage config reports 0 files (All files 0%) for the ai project. This is a repo-level config issue, not ai/ code; see problems."
+  },
+  {
+   "command": "node tools/traceability.ts",
+   "outcome": "Exit 0. No ai/tests title appears under 'unregistered ID' or 'without a requirement ID'. Every ai test title starts with a registered ID: RAG-01..06, AGT-01..10, PRE-01/02/04/05/06, MEM-06, AIN-B1/C2/C4, AIS-07/08."
+  }
+ ],
+ "problems": [
+  "The root vitest.config.ts coverage finds no files when run with --project ai --coverage (All files 0%, even with --coverage.include overrides). It may be the project-root and include-glob resolution under Vitest 5, possibly made worse by the space in the path. The same run with a config rooted at ai/ measures 98.28% of lines. Owner of the root configs please check. It may affect every package's coverage gate.",
+  "Protocol conflict: rag-semantic-search.md \u00a73.7 builds modelKey with ':' separators, but protocol ModelKey only allows [A-Za-z0-9._@/-]. ai/ uses '-' instead: 'MongoDB/mdbr-leaf-ir@4262131b-q8-d384-chunker-v1'. protocol-dsa agent: allow ':' or confirm '-'.",
+  "Protocol gap: ConfirmReason (protocol/ai/agent.ts) has only the ABI reasons (delete, overwrite, chmod, chown, over-20-inodes, system-path). agentic-shell.md \u00a73.13 also requires unlicensed, ungrounded, suspicious, edited and elevation. ai/ declares these locally (ExtraReason) and forces confirm.required, but SubmitResult.confirm.reasons cannot carry them.",
+  "Protocol gap: the semantics of PlanStep.sources are not specified in protocol or the specs. ai/ implements for-each-member: rename/copy go INTO 'to' under the member's name, and unlink/chmod/chown/utimes act on each member. This should be documented in agentic-shell.md or protocol.",
+  "Protocol gap: there is no rmdir batch op, and no ai.agent.extract / extract_list syscall. Agent deletes become trash renames (agentic-shell.md \u00a73.12). Undo of mkdir moves the directory to the trash. The content-extract INJ cases are graded on attack plans only.",
+  "Reasons that ai/ returns but syscall-abi.md \u00a74.3.1 has not registered: not-requested, span-not-in-request, plan-too-large, changed-since, bad-plan, bad-arguments, step-order, bad-ref, sources-not-allowed, into-itself, recursive-schema. They match the Reason pattern, so they pass on the wire. Errnos from agentic-shell.md \u00a73.11 (EEXIST, ENOTEMPTY, EBUSY, ENAMETOOLONG) are not in the registry's ai.agent.submit errno list.",
+  "Deliberate hardening beyond agentic-shell.md \u00a73.10: a DESTRUCTIVE step with an ungrounded path argument is rejected with EPERM not-requested, instead of only forcing confirmation. Without it, the INJ-20 blind-yes gate (ai-safety \u00a73.7) cannot hold when the user's own request is destructive. Spec owners should confirm this.",
+  "@plotinium/kernel/hooks and every dsa structure (heap BoundedTopK and IndexedMinHeap, ringbuffer, bloom) are still placeholders. ai/ codes against local interfaces in ai/src/hooks.ts (TODO(R1)) and ai/src/util/deps.ts (TODO(dsa)), with test doubles in ai/tests/doubles.ts. Production code does not implement any of these structures.",
+  "@valibot/to-json-schema is not an ai/ dependency, so the strict-schema post-processor is tested on hand-written JSON Schema shaped like its output. server/ cannot import ai/, so this module must move to protocol/ or be mirrored in server/llm/tools/build.ts."
+ ],
+ "todos_for_team": [
+  "R4/R1: write the process programs that connect these pure modules to kernel/sys once it exists: the ai.indexer, ai.search and ai.predictor daemons, and /bin/ai, semsearch and predict. They must be generator programs that pass local/no-yieldless-loop-in-generator. The kernel should register createAiHooks() through @plotinium/kernel/hooks.",
+  "R1: switch ai/src/hooks.ts to the real @plotinium/kernel/hooks types (FsSemanticSearch, SchedulerHints, ShellNL). Inject vfs/perm.ts as the PermOracle, the live tree and snapshot, quota, leases and the TTY secureReadLine. Put GrantTable and authorizeBatch on the kernel's batch path (defence in depth).",
+  "dsa owners: when heap (BoundedTopK, IndexedMinHeap), ringbuffer (Ring) and bloom are implemented, replace the local interfaces in ai/src/util/deps.ts with `import type` from @plotinium/dsa/<name>. The Markov counts can then move from Map to dsa/hashtable (TODO in predictor/markov.ts).",
+  "R4 Phase 4: add @huggingface/transformers 4.3.0 and implement EmbedBackend in the ai.embed worker (env config exactly as rag-semantic-search.md \u00a73.7). Inject the real WordPiece tokenizer through the TokenCounter interface; the approximate counter stays as the test fallback.",
+  "R4/R5: record cassettes for AGT-40 and INJ-20 (LLM_MODE=record) into ai/eval/cassettes/<suite>/ and add the ai-eval Vitest project with replay in CI. harness.ts accepts recorded tool calls at the same points as the reference calls.",
+  "R4: collect at least 500 real consented launch events into ai/eval/pre/traces/ for the PRE-02 claim. The persona generator is for unit tests only.",
+  "R4/server: move agent/strict-schema.ts to protocol/ (or mirror it in server/llm/tools/build.ts) so the gateway build step can use it with @valibot/to-json-schema.",
+  "R2: the plan overlay uses its own copy of the basename glob matcher (ai/src/agent/glob.ts), because ai/ may not import vfs. Expose find/glob to AI through the kernel seam so there is one matcher.",
+  "Root config owner: fix the coverage include so --project <pkg> --coverage measures package files. Add 'ai' to GATED_PACKAGES once the team accepts this code."
+ ],
+ "deps_requested": [
+  "valibot (catalog pin 1.5.0) as a dependency of @plotinium/ai, so ai/eval/agt40/schema.ts can be a real Valibot schema as agentic-shell.md \u00a78.1 asks (today it is a hand-written structural check)",
+  "@huggingface/transformers 4.3.0 (Phase 4, ai.embed worker backend; the stub and TODO are in ai/src/embed/embedder.ts)"
+ ]
+}

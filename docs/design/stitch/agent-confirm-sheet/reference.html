@@ -1,0 +1,351 @@
+<!doctype html>
+<!--
+  Plotinium · Agent confirmation sheet (agent-confirm-sheet)
+  HAND-BUILT REFERENCE RENDER, NOT a Stitch export. Stitch generation timed out and
+  returned no screen (see screen.json). It renders the prompt in notes.md with the
+  Plotinium Glass (Dark) roles. Reload the page to replay the sheet entrance
+  (@starting-style); prefers-reduced-motion turns every animation off.
+  Keyboard: focus starts on Cancel. Enter = the focused button, Esc = Cancel, Ctrl+Enter = Run plan, E = Edit plan.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1440">
+<title>Agent Confirm Sheet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme: dark;
+  --bg:#0B0B1A; --surface:#1C1C1E; --surface-2:#2C2C2E;
+  --label:rgb(255 255 255 / .92); --label-2:rgb(255 255 255 / .70); --label-3:rgb(255 255 255 / .56); /* both >= 4.5:1 on the glass tints (checked) */
+  --sep:rgb(255 255 255 / .10); --hi:rgb(255 255 255 / .08);
+  --accent:#5E5CE6; --accent-hover:#7472FF; --accent-text:#A9A8FF;
+  --ring:0 0 0 3px rgb(94 92 230 / .55);
+  --success:#30D158; --success-text:#5BE07F; --warning:#FF9F0A; --danger:#FF453A; --danger-text:#FF6B61; --info:#64D2FF;
+  --tl-close:#FF5F57; --tl-min:#FEBC2E; --tl-max:#28C840;
+  --font-ui:"Inter",system-ui,sans-serif; --font-mono:"JetBrains Mono",ui-monospace,monospace;
+  --m-fast:120ms; --m-med:200ms; --m-open:240ms; --m-slow:320ms;
+  --ease:cubic-bezier(.2,.8,.2,1); --ease-out:cubic-bezier(0,0,.2,1); --ease-in:cubic-bezier(.4,0,1,1);
+  --spring:linear(0, 0.048 3%, 0.163 6%, 0.360 10%, 0.557 14%, 0.725 18%, 0.878 23%, 0.973 28%, 1.026 34%, 1.038 42%, 1.021 52%, 1.004 64%, 0.999 80%, 1);
+  --spring-calm:linear(0, 0.035 3%, 0.118 6%, 0.265 10%, 0.420 14%, 0.562 18%, 0.709 23%, 0.819 28%, 0.907 34%, 0.971 42%, 1.001 52%, 1.006 64%, 1.003 80%, 1);
+}
+@media (prefers-reduced-motion: reduce){ :root{ --m-fast:0ms; --m-med:0ms; --m-open:0ms; --m-slow:0ms; } }
+:root[data-motion="reduce"]{ --m-fast:0ms; --m-med:0ms; --m-open:0ms; --m-slow:0ms; }
+*{ box-sizing:border-box; margin:0; padding:0; }
+html,body{ width:1440px; height:900px; overflow:hidden; background:var(--bg); }
+body{ font-family:var(--font-ui); color:var(--label); font-size:13px; -webkit-font-smoothing:antialiased; }
+svg.i{ width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; flex:none; }
+button{ font:inherit; color:inherit; background:none; border:0; }
+
+/* wallpaper, menu bar, dock (same as terminal-ai) */
+.wall{ position:fixed; inset:0; overflow:hidden;
+  background:
+    radial-gradient(700px 520px at 18% 22%, rgb(94 92 230 / .38), transparent 70%),
+    radial-gradient(620px 520px at 84% 78%, rgb(140 90 255 / .28), transparent 70%),
+    radial-gradient(520px 380px at 70% 12%, rgb(100 210 255 / .10), transparent 70%),
+    linear-gradient(135deg,#0B0B1A 0%,#15123a 50%,#2A1F5C 100%); }
+.menubar{ position:fixed; top:0; left:0; right:0; height:28px; display:flex; align-items:center; gap:18px; padding:0 14px;
+  background:rgb(30 30 36 / .55); backdrop-filter:blur(30px) saturate(180%); box-shadow:inset 0 -1px 0 var(--sep), inset 0 1px 0 var(--hi); z-index:50; }
+.menubar .app{ font-weight:700; }
+.menubar .m{ opacity:.88; }
+.menubar .tray{ margin-left:auto; display:flex; align-items:center; gap:14px; }
+.menubar .secure{ display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:#fff; background:var(--accent); border-radius:999px; padding:1px 9px 1px 7px; }
+.menubar .secure svg{ width:12px; height:12px; }
+.dock{ position:fixed; left:50%; bottom:8px; transform:translateX(-50%); display:flex; align-items:flex-end; gap:10px; padding:8px 10px 10px;
+  border-radius:22px; background:rgb(40 40 48 / .5); backdrop-filter:blur(40px) saturate(180%);
+  box-shadow:0 12px 40px rgb(0 0 0 / .45), inset 0 1px 0 rgb(255 255 255 / .16), 0 0 0 1px rgb(255 255 255 / .10); z-index:40; }
+.dock .app{ position:relative; width:52px; height:52px; border-radius:13px; display:grid; place-items:center; box-shadow:inset 0 1px 0 rgb(255 255 255 / .22), 0 4px 10px rgb(0 0 0 / .35); }
+.dock .app svg{ width:26px; height:26px; }
+.dock .app.run::after{ content:""; position:absolute; bottom:-7px; left:50%; width:4px; height:4px; margin-left:-2px; border-radius:50%; background:rgb(255 255 255 / .85); }
+.a-files{ background:linear-gradient(160deg,#4d8dff,#2a4fd6); color:#fff; } .a-term{ background:linear-gradient(160deg,#2b2b36,#121218); color:var(--accent-text); }
+.a-edit{ background:linear-gradient(160deg,#8a88ff,#5E5CE6); color:#fff; } .a-task{ background:linear-gradient(160deg,#2fd07a,#15935a); color:#fff; }
+.a-set{ background:linear-gradient(160deg,#8e8e98,#55555f); color:#fff; } .a-search{ background:linear-gradient(160deg,#3a3a46,#24242c); color:var(--label); }
+.dock .sep{ width:1px; height:44px; background:rgb(255 255 255 / .16); margin:0 2px 4px; }
+
+/* window */
+.win{ position:absolute; left:160px; top:40px; width:1120px; height:752px; border-radius:14px; overflow:hidden;
+  background:rgb(22 22 28 / .82); backdrop-filter:blur(40px) saturate(170%); border:1px solid rgb(255 255 255 / .10);
+  box-shadow:0 22px 70px rgb(0 0 0 / .55), 0 0 0 .5px rgb(0 0 0 / .6), inset 0 1px 0 rgb(255 255 255 / .09); display:flex; flex-direction:column; }
+.titlebar{ height:38px; flex:none; display:flex; align-items:center; position:relative; padding:0 14px; background:linear-gradient(rgb(255 255 255 / .05), rgb(255 255 255 / .02)); }
+.lights{ display:flex; gap:8px; } .lights span{ width:12px; height:12px; border-radius:50%; box-shadow:inset 0 0 0 .5px rgb(0 0 0 / .25); }
+.lights .c{ background:var(--tl-close); } .lights .n{ background:var(--tl-min); } .lights .x{ background:var(--tl-max); }
+.titlebar .title{ position:absolute; left:0; right:0; text-align:center; font-weight:600; color:var(--label-2); }
+.tabs{ height:34px; flex:none; display:flex; align-items:center; gap:6px; padding:0 10px; border-bottom:1px solid var(--sep); background:rgb(0 0 0 / .12); position:relative; z-index:3; }
+.tab{ height:26px; display:flex; align-items:center; gap:8px; padding:0 12px; border-radius:8px; font-size:12px; min-width:220px; background:rgb(255 255 255 / .09); box-shadow:inset 0 1px 0 rgb(255 255 255 / .08); }
+.tab .dot{ width:6px; height:6px; border-radius:50%; background:var(--warning); }
+.tab .st{ margin-left:auto; font-size:10.5px; color:var(--warning); font-weight:600; }
+.plus{ width:26px; height:26px; display:grid; place-items:center; color:var(--label-3); }
+.term{ flex:1; position:relative; padding:14px 20px; font-family:var(--font-mono); font-size:13px; line-height:21px; background:rgb(12 12 18 / .55); }
+.term .line{ white-space:pre; } .dim{ color:var(--label-2); }
+.ps{ color:var(--accent-text); font-weight:700; } .ps .path{ color:#8FB8FF; font-weight:500; }
+.scrim{ position:absolute; inset:72px 0 0 0; background:rgb(0 0 0 / .45); z-index:2; transition:opacity var(--m-med) var(--ease-out); }
+@starting-style{ .scrim{ opacity:0; } }
+.status{ height:26px; flex:none; display:flex; align-items:center; gap:18px; padding:0 14px; border-top:1px solid var(--sep); font-size:11px; color:var(--label-2); background:rgb(255 255 255 / .035); }
+.status .led{ width:7px; height:7px; border-radius:50%; background:var(--warning); display:inline-block; margin-right:7px; }
+
+/* ---------- sheet ---------- */
+.sheet-clip{ position:absolute; top:72px; left:0; right:0; bottom:0; overflow:hidden; z-index:4; pointer-events:none; }
+.sheet{ pointer-events:auto; position:absolute; left:50%; top:0; width:688px; margin-left:-344px;
+  border-radius:0 0 18px 18px; overflow:hidden;
+  background:linear-gradient(rgb(50 50 60 / .86), rgb(36 36 44 / .90)); backdrop-filter:blur(40px) saturate(180%);
+  box-shadow:0 30px 80px rgb(0 0 0 / .6), 0 0 0 1px rgb(255 255 255 / .12), inset 0 1px 0 rgb(255 255 255 / .14);
+  transition:transform var(--m-slow) var(--spring-calm), opacity var(--m-slow) var(--spring-calm); }
+@starting-style{ .sheet{ transform:translateY(-100%); opacity:.6; } }
+
+.band{ height:28px; display:flex; align-items:center; gap:8px; padding:0 16px; background:var(--accent); color:#fff; font-size:12px; font-weight:600; }
+.band svg.i{ width:13px; height:13px; }
+.band .r{ margin-left:auto; font-weight:500; opacity:.9; font-family:var(--font-mono); font-size:11px; }
+.body{ padding:16px 22px 0; }
+.hd{ display:flex; gap:14px; align-items:center; }
+.warn{ width:40px; height:40px; border-radius:50%; display:grid; place-items:center; flex:none; color:var(--warning);
+  background:rgb(255 159 10 / .16); box-shadow:inset 0 0 0 1px rgb(255 159 10 / .35);
+  transition:transform var(--m-open) var(--spring), opacity var(--m-open) var(--spring); transition-delay:80ms; }
+@starting-style{ .warn{ transform:scale(.8); opacity:0; } }
+.warn svg{ width:20px; height:20px; }
+.hd h2{ font-size:17px; font-weight:600; letter-spacing:-.01em; }
+.hd p{ color:var(--label-2); margin-top:2px; }
+.hd p code{ font-family:var(--font-mono); font-size:12px; color:var(--label); }
+
+table{ width:100%; border-collapse:separate; border-spacing:0; margin-top:14px; font-size:12.5px; border-radius:10px; overflow:hidden; box-shadow:0 0 0 1px var(--sep); background:rgb(0 0 0 / .14); }
+caption{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
+th{ text-align:left; font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:var(--label-3); padding:7px 10px; border-bottom:1px solid var(--sep); background:rgb(255 255 255 / .03); }
+td{ padding:0 10px; height:31px; vertical-align:middle; }
+tbody tr{ transition:opacity var(--m-fast) var(--spring-calm), transform var(--m-fast) var(--spring-calm); }
+tbody tr:nth-child(1){ transition-delay:180ms } tbody tr:nth-child(2){ transition-delay:210ms } tbody tr:nth-child(3){ transition-delay:240ms } tbody tr:nth-child(4){ transition-delay:270ms } tbody tr:nth-child(5){ transition-delay:300ms }
+@starting-style{ tbody tr{ opacity:0; transform:translateY(4px); } }
+tbody tr:nth-child(even) td{ background:rgb(255 255 255 / .025); }
+tbody tr:hover td{ background:rgb(255 255 255 / .06); }
+td.n{ color:var(--label-3); width:26px; text-align:right; font-variant-numeric:tabular-nums; }
+td.p{ font-family:var(--font-mono); font-size:12px; white-space:nowrap; }
+td.p .to{ color:var(--label-3); }
+td.e{ color:var(--label-2); white-space:nowrap; text-align:right; }
+td.e .rc{ color:var(--label-3); font-size:11px; }
+.badge{ display:inline-block; font-size:10.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; border-radius:999px; padding:2px 8px; line-height:15px; }
+.b-del{ color:var(--danger-text); background:rgb(255 69 58 / .15); box-shadow:inset 0 0 0 1px rgb(255 69 58 / .40); }
+.b-move{ color:var(--accent-text); background:rgb(94 92 230 / .22); box-shadow:inset 0 0 0 1px rgb(94 92 230 / .45); }
+.b-chmod{ color:var(--warning); background:rgb(255 159 10 / .14); box-shadow:inset 0 0 0 1px rgb(255 159 10 / .32); }
+
+.blast{ margin-top:12px; display:grid; grid-template-columns:auto 1fr 1fr 1fr; gap:8px; align-items:stretch; }
+.blast .lbl{ display:flex; flex-direction:column; justify-content:center; padding-right:6px; }
+.blast .lbl b{ font-size:12px; font-weight:600; }
+.blast .lbl span{ font-size:11px; color:var(--label-3); margin-top:2px; }
+.tile{ border-radius:10px; padding:8px 12px; background:rgb(255 255 255 / .05); box-shadow:inset 0 0 0 1px var(--sep);
+  transition:transform var(--m-med) var(--spring), opacity var(--m-med) var(--spring); }
+.tile:nth-child(2){ transition-delay:340ms } .tile:nth-child(3){ transition-delay:380ms } .tile:nth-child(4){ transition-delay:420ms }
+@starting-style{ .tile{ transform:scale(.96); opacity:0; } }
+.tile .v{ font-size:22px; font-weight:700; letter-spacing:-.02em; font-variant-numeric:tabular-nums; line-height:26px; }
+.tile .k{ font-size:11px; color:var(--label-2); }
+.tile.red{ background:rgb(255 69 58 / .10); box-shadow:inset 0 0 0 1px rgb(255 69 58 / .30); } .tile.red .v{ color:var(--danger-text); }
+.tile.grn{ background:rgb(48 209 88 / .08); box-shadow:inset 0 0 0 1px rgb(48 209 88 / .25); } .tile.grn .v{ color:var(--success-text); }
+.meta{ margin-top:10px; display:flex; align-items:center; gap:8px; color:var(--label-2); font-size:12px; }
+.meta svg{ width:14px; height:14px; }
+.meta .quota{ margin-left:auto; display:inline-flex; align-items:center; gap:5px; color:var(--success-text); font-weight:600; font-size:11.5px; border-radius:999px; padding:2px 9px; background:rgb(48 209 88 / .10); box-shadow:inset 0 0 0 1px rgb(48 209 88 / .25); }
+.meta .quota svg{ width:12px; height:12px; }
+.meta code{ font-family:var(--font-mono); font-size:11.5px; color:var(--label); }
+
+.why{ margin-top:12px; border-radius:10px; background:rgb(255 255 255 / .03); box-shadow:inset 0 0 0 1px var(--sep); padding:8px 12px 10px; }
+.why > button{ display:flex; align-items:center; gap:6px; font-weight:600; font-size:12.5px; cursor:pointer; }
+.why > button svg{ width:13px; height:13px; transform:rotate(90deg); transition:transform var(--m-med) var(--spring); color:var(--label-2); }
+.why ul{ list-style:none; margin-top:6px; display:grid; gap:4px; }
+.why li{ display:flex; align-items:center; gap:8px; font-size:12.5px; transition:opacity var(--m-med) var(--spring-calm), transform var(--m-med) var(--spring-calm); }
+.why li:nth-child(2){ transition-delay:30ms } .why li:nth-child(3){ transition-delay:60ms }
+@starting-style{ .why li{ opacity:0; transform:translateY(-4px); } }
+.why li svg{ width:14px; height:14px; }
+.why li .r{ color:var(--danger-text); } .why li .a{ color:var(--warning); } .why li .v{ color:var(--accent-text); }
+.why li em{ font-style:normal; color:var(--label-3); font-family:var(--font-mono); font-size:11.5px; margin-left:4px; }
+.why .pol{ margin-top:6px; font-size:11px; color:var(--label-3); font-family:var(--font-mono); }
+
+.actions{ display:flex; align-items:center; gap:10px; margin-top:16px; }
+.btn{ height:32px; padding:0 16px; border-radius:9px; display:inline-flex; align-items:center; gap:7px; font-weight:600; font-size:13px; position:relative; cursor:pointer;
+  transition:transform var(--m-fast) var(--spring); }
+.btn::before{ content:""; position:absolute; inset:0; border-radius:inherit; opacity:0; transition:opacity var(--m-fast) var(--ease); }
+.btn:hover::before{ opacity:1; } .btn:active{ transform:scale(.97); }
+.btn svg{ width:14px; height:14px; position:relative; } .btn span{ position:relative; }
+.btn.sec{ background:rgb(255 255 255 / .08); box-shadow:inset 0 0 0 1px rgb(255 255 255 / .16), inset 0 1px 0 rgb(255 255 255 / .08); }
+.btn.sec::before{ background:rgb(255 255 255 / .06); }
+.btn.def{ margin-left:auto; background:var(--accent); color:#fff; min-width:96px; justify-content:center; box-shadow:inset 0 1px 0 rgb(255 255 255 / .22), 0 4px 14px rgb(94 92 230 / .45); }
+.btn.def::before{ background:var(--accent-hover); }
+.btn.def:focus-visible, .btn.def.focus{ outline:none; box-shadow:inset 0 1px 0 rgb(255 255 255 / .22), 0 0 0 2px rgb(36 36 44), 0 0 0 5px rgb(94 92 230 / .75), 0 4px 18px rgb(94 92 230 / .5); }
+.btn.def.focus::after{ content:""; position:absolute; inset:-5px; border-radius:13px; box-shadow:0 0 0 3px rgb(94 92 230 / .75); opacity:0;
+  animation:ring-pulse var(--m-slow) var(--spring) 360ms 1 both; } /* one-shot attention pulse, then gone */
+@keyframes ring-pulse{ 0%{ transform:scale(1.25); opacity:0; } 45%{ opacity:1; } 100%{ transform:scale(1); opacity:0; } }
+.btn.dng{ color:var(--danger-text); background:rgb(255 69 58 / .10); box-shadow:inset 0 0 0 1px rgb(255 69 58 / .55); }
+.btn.dng::before{ background:rgb(255 69 58 / .14); }
+.keys{ display:flex; gap:14px; justify-content:flex-end; margin-top:8px; font-size:11px; color:var(--label-3); }
+.keys .l{ margin-right:auto; }
+.kc{ display:inline-block; font-family:var(--font-ui); font-size:10px; font-weight:600; border-radius:4px; padding:0 5px; line-height:15px; box-shadow:inset 0 0 0 1px rgb(255 255 255 / .22), 0 1px 0 rgb(255 255 255 / .06); color:var(--label-2); margin-right:4px; }
+
+.foot{ margin-top:14px; height:34px; display:flex; align-items:center; gap:8px; padding:0 22px; border-top:1px solid var(--sep); background:rgb(0 0 0 / .16); font-size:11.5px; color:var(--label-2); }
+.foot svg{ width:13px; height:13px; }
+.foot a{ color:var(--accent-text); text-decoration:none; font-weight:600; }
+.foot a:hover{ text-decoration:underline; }
+.foot .r{ margin-left:auto; font-family:var(--font-mono); font-size:10.5px; color:var(--label-3); }
+</style>
+<script>if(location.search.indexOf('capture')>-1)document.documentElement.setAttribute('data-capture','');</script>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+    <symbol id="i-wifi" viewBox="0 0 24 24"><path d="M12 20h.01"/><path d="M2 8.82a15 15 0 0 1 20 0"/><path d="M5 12.859a10 10 0 0 1 14 0"/><path d="M8.5 16.429a5 5 0 0 1 7 0"/></symbol>
+    <symbol id="i-battery" viewBox="0 0 24 24"><rect width="16" height="10" x="2" y="7" rx="2"/><path d="M22 11v2"/><path d="M6 11v2"/><path d="M10 11v2"/><path d="M14 11v2"/></symbol>
+    <symbol id="i-toggle" viewBox="0 0 24 24"><rect width="20" height="12" x="2" y="6" rx="6"/><circle cx="16" cy="12" r="2"/></symbol>
+    <symbol id="i-wand" viewBox="0 0 24 24"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/><path d="M11 3H9"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
+    <symbol id="i-log" viewBox="0 0 24 24"><path d="M15 12h-5"/><path d="M15 8h-5"/><path d="M19 17V5a2 2 0 0 0-2-2H4"/><path d="M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3"/></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+    <symbol id="i-expand" viewBox="0 0 24 24"><path d="m15 3 6 0 0 6"/><path d="m9 21-6 0 0-6"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="i-term" viewBox="0 0 24 24"><path d="M12 19h8"/><path d="m4 17 6-6-6-6"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></symbol>
+    <symbol id="i-pen" viewBox="0 0 24 24"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></symbol>
+    <symbol id="i-activity" viewBox="0 0 24 24"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></symbol>
+    <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M20 7h-9"/><path d="M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></symbol>
+    <symbol id="mark" viewBox="0 0 32 32">
+      <ellipse cx="16" cy="16" rx="13" ry="5.2" fill="none" stroke="#5E5CE6" stroke-width="1.6" transform="rotate(30 16 16)"/>
+      <ellipse cx="16" cy="16" rx="13" ry="5.2" fill="none" stroke="#8C8AFF" stroke-width="1.6" transform="rotate(-30 16 16)" opacity=".85"/>
+      <ellipse cx="16" cy="16" rx="13" ry="5.2" fill="none" stroke="#5E5CE6" stroke-width="1.2" transform="rotate(90 16 16)" opacity=".55"/>
+      <circle cx="16" cy="16" r="3.6" fill="#EDEBFF"/><circle cx="16" cy="16" r="6" fill="#5E5CE6" opacity=".35"/>
+    </symbol>
+  </defs>
+</svg>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/></symbol>
+    <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+    <symbol id="i-key" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></symbol>
+    <symbol id="i-lockkey" viewBox="0 0 24 24"><circle cx="12" cy="16" r="1"/><rect x="3" y="10" width="18" height="12" rx="2"/><path d="M7 10V7a5 5 0 0 1 10 0v3"/></symbol>
+    <symbol id="mark-mono" viewBox="0 0 32 32">
+      <ellipse cx="16" cy="16" rx="13" ry="5.2" fill="none" stroke="currentColor" stroke-width="1.8" transform="rotate(30 16 16)"/>
+      <ellipse cx="16" cy="16" rx="13" ry="5.2" fill="none" stroke="currentColor" stroke-width="1.8" transform="rotate(-30 16 16)" opacity=".8"/>
+      <circle cx="16" cy="16" r="3.6" fill="currentColor"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="wall" aria-hidden="true"></div>
+
+<nav class="menubar" aria-label="Menu bar">
+  <svg width="18" height="18" role="img" aria-label="Plotinium menu"><use href="#mark"/></svg>
+  <span class="app">Terminal</span>
+  <span class="m">Shell</span><span class="m">Edit</span><span class="m">View</span><span class="m">Window</span><span class="m">Help</span>
+  <div class="tray">
+    <span class="secure" title="A kernel confirmation is waiting"><svg class="i"><use href="#i-lock"/></svg>Kernel confirmation</span>
+    <svg class="i" aria-label="Wi-Fi connected"><use href="#i-wifi"/></svg>
+    <svg class="i" style="width:20px" aria-label="Battery 82 percent"><use href="#i-battery"/></svg>
+    <svg class="i" aria-label="Control Centre"><use href="#i-toggle"/></svg>
+    <svg class="i" aria-label="Search"><use href="#i-search"/></svg>
+    <span style="font-weight:500;font-variant-numeric:tabular-nums">Thu 24 Sep&nbsp;&nbsp;10:47</span>
+  </div>
+</nav>
+
+<section class="win" role="region" aria-label="Terminal — student@plotinium: ~">
+  <header class="titlebar">
+    <div class="lights" aria-hidden="true"><span class="c"></span><span class="n"></span><span class="x"></span></div>
+    <div class="title">student@plotinium: ~ — 120×36</div>
+  </header>
+  <div class="tabs" role="tablist" aria-label="Terminal tabs">
+    <div class="tab" role="tab" aria-selected="true"><span class="dot"></span>zsh-like shell — 1<span class="st">waiting</span></div>
+    <span class="plus" aria-hidden="true"><svg class="i"><use href="#i-plus"/></svg></span>
+  </div>
+  <div class="term" inert aria-hidden="true">
+    <div class="line dim"><span class="ps" style="opacity:.7">student@plotinium<span class="path">:~</span>$</span> du -sh ~/projects/*/build</div>
+    <div class="line dim">41M  /home/student/projects/lab2/build      28M  /home/student/projects/lab3/build</div>
+    <div class="line"><span class="ps">student@plotinium<span class="path">:~</span>$</span> ai "clean up my old build folders and lock down the lab3 notes"</div>
+    <div class="line dim">ai: looking: find ~/projects -maxdepth 2 -name build -o -name .cache … 3 dirs</div>
+    <div class="line dim">⠿ planning with ai.agent… dry run ready · waiting for confirmation</div>
+  </div>
+  <div class="scrim" aria-hidden="true"></div>
+  <footer class="status"><span><span class="led"></span>ai.agent pid 212 · blocked on tty:confirm</span><span style="margin-left:auto;font-family:var(--font-mono);font-size:10.5px;color:var(--label-3)">UTF-8 · zsh-like · 120×36 · /home/student</span></footer>
+
+  <div class="sheet-clip">
+    <div class="sheet" role="alertdialog" aria-modal="true" aria-labelledby="sh-title" aria-describedby="sh-desc sh-blast">
+      <div class="band"><svg width="15" height="15" aria-hidden="true"><use href="#mark-mono"/></svg><svg class="i" aria-hidden="true"><use href="#i-lock"/></svg>Kernel confirmation · ai.agent pid 212<span class="r">secure layer · not drawn by the app</span></div>
+      <div class="body">
+        <div class="hd">
+          <div class="warn" aria-hidden="true"><svg class="i"><use href="#i-alert"/></svg></div>
+          <div>
+            <h2 id="sh-title">Confirm destructive plan</h2>
+            <p id="sh-desc">ai.agent wants to run 5 steps in one transaction for <code>"clean up my old build folders and lock down the lab3 notes"</code></p>
+          </div>
+        </div>
+
+        <table>
+          <caption>Plan steps</caption>
+          <thead><tr><th scope="col" style="text-align:right">#</th><th scope="col">Operation</th><th scope="col">Path</th><th scope="col" style="text-align:right">Effect</th></tr></thead>
+          <tbody>
+            <tr><td class="n">1</td><td><span class="badge b-del">Delete</span></td><td class="p">~/projects/lab2/build/</td><td class="e">remove 1 dir, 9 files <span class="rc">· to trash</span></td></tr>
+            <tr><td class="n">2</td><td><span class="badge b-del">Delete</span></td><td class="p">~/projects/lab3/build/</td><td class="e">remove 1 dir, 6 files <span class="rc">· to trash</span></td></tr>
+            <tr><td class="n">3</td><td><span class="badge b-del">Delete</span></td><td class="p">~/projects/os-sim/.cache/</td><td class="e">remove 1 dir, 1 file <span class="rc">· to trash</span></td></tr>
+            <tr><td class="n">4</td><td><span class="badge b-move">Move</span></td><td class="p">~/notes/lab3-vfs.md <span class="to">→</span> ~/notes/archive/</td><td class="e">modify 1 entry</td></tr>
+            <tr><td class="n">5</td><td><span class="badge b-chmod">Chmod</span></td><td class="p">~/notes/archive/ <span class="to">-R go-rwx</span></td><td class="e">modify 4 inodes</td></tr>
+          </tbody>
+        </table>
+
+        <div class="blast" id="sh-blast" aria-label="Blast radius: 23 inodes, 3 deletions, 0 overwrites">
+          <div class="lbl"><b>Blast radius</b><span>distinct inodes changed</span></div>
+          <div class="tile"><div class="v">23</div><div class="k">inodes</div></div>
+          <div class="tile red"><div class="v">3</div><div class="k">deletions · recoverable</div></div>
+          <div class="tile grn"><div class="v">0</div><div class="k">overwrites</div></div>
+        </div>
+
+        <div class="meta">
+          <svg class="i"><use href="#i-user"/></svg>
+          <span>Runs as <b style="color:var(--label)">student</b> (uid 1001) · one transaction · undo token issued</span>
+          <span class="quota"><svg class="i"><use href="#i-check"/></svg>within quota · 1.2 GB free</span>
+        </div>
+
+        <div class="why">
+          <button aria-expanded="true" aria-controls="why-list"><svg class="i"><use href="#i-chev"/></svg>Why this needs confirmation</button>
+          <ul id="why-list">
+            <li><svg class="i r"><use href="#i-trash"/></svg>Deletes files (3 directories, 16 files)<em>DELETE</em></li>
+            <li><svg class="i v"><use href="#i-layers"/></svg>Touches more than 20 inodes (23 &gt; threshold 20)<em>BLAST_RADIUS</em></li>
+            <li><svg class="i a"><use href="#i-lockkey"/></svg>Changes permissions on ~/notes/archive/<em>CHMOD</em></li>
+          </ul>
+          <div class="pol">Policy: agent.confirm.destructive = always · deleted items go to ~/.trash/8f2c/</div>
+        </div>
+
+        <div class="actions">
+          <button class="btn sec"><svg class="i"><use href="#i-pencil"/></svg><span>Edit plan</span></button>
+          <button class="btn def focus" autofocus><span>Cancel</span></button>
+          <button class="btn dng" aria-keyshortcuts="Control+Enter"><svg class="i"><use href="#i-play"/></svg><span>Run plan</span></button>
+        </div>
+        <div class="keys">
+          <span class="l"><span class="kc">E</span>Edit plan</span>
+          <span><span class="kc">↵</span>Cancel (default)</span>
+          <span><span class="kc">Esc</span>Cancel</span>
+          <span><span class="kc">Ctrl</span><span class="kc">↵</span>Run plan</span>
+        </div>
+      </div>
+      <div class="foot">
+        <svg class="i"><use href="#i-shield"/></svg>
+        <a href="#" title="Opens ai log in a new tab">Audited in ai log</a>
+        <span class="r">txn pending · ai.agent pid 212 · Claude via gateway</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<nav class="dock" aria-label="Dock">
+  <div class="app a-files" aria-label="Files"><svg class="i"><use href="#i-folder"/></svg></div>
+  <div class="app a-term run" aria-label="Terminal, running"><svg class="i"><use href="#i-term"/></svg></div>
+  <div class="app a-edit" aria-label="Editor"><svg class="i"><use href="#i-pen"/></svg></div>
+  <div class="app a-task" aria-label="Task Manager"><svg class="i"><use href="#i-activity"/></svg></div>
+  <div class="app a-set" aria-label="Settings"><svg class="i"><use href="#i-sliders"/></svg></div>
+  <span class="sep" aria-hidden="true"></span>
+  <div class="app a-search" aria-label="Search"><svg class="i"><use href="#i-search"/></svg></div>
+</nav>
+</body>
+</html>

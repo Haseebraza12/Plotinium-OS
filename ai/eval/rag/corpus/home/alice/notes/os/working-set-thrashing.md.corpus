@@ -1,0 +1,23 @@
+# Working sets and thrashing
+
+**Thrashing:** the system spends more time moving pages between disk and memory than doing useful work. CPU utilisation drops, the old scheduler sees idle CPU and admits more processes, which makes it worse. A death spiral.
+
+## Why it happens
+
+Each process needs its current locality resident. When the sum of the localities is larger than physical memory, every process keeps faulting out pages that another process needs a moment later.
+
+## Working set model (Denning)
+
+WS(t, Δ) = set of pages referenced in the last Δ references. If Σ|WS_i| > frames available, suspend (swap out) a whole process rather than let everyone fault.
+
+## Detecting it
+
+- **Page-fault frequency (PFF):** measure each process's fault rate. Above an upper bound → give it frames. Below a lower bound → take frames away. If no frames are free and someone is above the upper bound → suspend a process.
+- Watch the ratio of time in the pager to time running user code.
+- On Linux: `vmstat` si/so columns and the PSI memory pressure file.
+
+## Fixes
+
+Reduce the degree of multiprogramming, add RAM, or make programs more local (loop tiling in the matrix lab made a huge difference).
+
+In our project the memory manager evicts whole declared pages and never lets accounted memory stay over budget for more than a second, which is a crude version of the same idea.

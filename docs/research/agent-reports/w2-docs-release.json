@@ -1,0 +1,96 @@
+{
+ "files_changed": [
+  "/home/haseeb-raza/Desktop/Plotinium OS/README.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ARCHITECTURE.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/STACK_DECISION.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/DSA.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/DATABASE.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/AI.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/BOOT.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/TESTING.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/SECURITY.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/CHANGELOG.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/.github/workflows/release.yml",
+  "/home/haseeb-raza/Desktop/Plotinium OS/.github/workflows/deploy.yml",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ops/cloud-init.yaml",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ops/provision.sh",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ops/RUNBOOK.md"
+ ],
+ "verification": [
+  {
+   "command": "python3 -c 'yaml.safe_load(...)' on .github/workflows/release.yml, .github/workflows/deploy.yml, ops/cloud-init.yaml",
+   "outcome": "all three parse"
+  },
+  {
+   "command": "cloud-init schema --config-file ops/cloud-init.yaml (cloud-init 26.1), and on the output of ops/provision.sh render --keys <test.pub>",
+   "outcome": "Valid schema for both the committed file and the rendered user data"
+  },
+  {
+   "command": "actionlint 1.7.12 (shellcheck 0.11.0 on PATH) .github/workflows/release.yml .github/workflows/deploy.yml",
+   "outcome": "0 findings (ci.yml, not mine, has one pre-existing SC2016 info)"
+  },
+  {
+   "command": "shellcheck -x ops/provision.sh; bash -n ops/provision.sh; shellcheck on the remote script embedded in deploy.yml",
+   "outcome": "clean"
+  },
+  {
+   "command": "ops/provision.sh render / create --dry-run / help / verify, plus error paths (private key, malformed key, bad hostname); the host subcommand's cloud-init interpreter run against a fake root",
+   "outcome": "all behave as designed; verify on a dev machine reports FAIL lines as expected"
+  },
+  {
+   "command": "systemd-analyze verify on the rendered timer/service units; systemd-analyze calendar for both OnCalendar values",
+   "outcome": "units valid (only complaint: /srv/plotinium/ops/backup.sh absent on this machine); 21:00 UTC and Sun 22:00 UTC confirmed"
+  },
+  {
+   "command": "pnpm exec prettier --check on all 10 root docs, ops/RUNBOOK.md, ops/cloud-init.yaml and both workflows",
+   "outcome": "All matched files use Prettier code style (files were prettier --write formatted, then re-validated)"
+  },
+  {
+   "command": "gitleaks 8.30.1 (checksum-verified, same as ci.yml) dir scan of every file I wrote",
+   "outcome": "no leaks found"
+  },
+  {
+   "command": "mermaid@11 parse (jsdom, scratchpad) of every ```mermaid block in my docs, with a negative control",
+   "outcome": "16 diagrams, 0 parse errors; the control rejects a broken diagram"
+  },
+  {
+   "command": "custom relative-link and GitHub-anchor checker over the 11 Markdown files",
+   "outcome": "0 broken links after one anchor fix"
+  },
+  {
+   "command": "release.yml logic dry-runs: the digest pin sed against compose.yaml, the Dockerfile base-digest extraction, the CHANGELOG section awk and verify grep, the Vitest bench JSON reporter command",
+   "outcome": "all work; vitest bench --run --reporter=json exits 0 (Vitest 5 has no --outputJson, so the workflow uses --outputFile.json)"
+  },
+  {
+   "command": "curl against the locally running stack: /, /api/readyz, /version.json, response headers",
+   "outcome": "readyz {status: ready}, full COOP/COEP/CORP/CSP/Referrer/Permissions headers, placeholder shell served; used as README evidence"
+  },
+  {
+   "command": "pnpm exec vitest run --reporter=json (whole repo, snapshot for the docs)",
+   "outcome": "1,570 tests: 1,376 passed, 185 skipped (158 gated dsa, 27 need DATABASE_URL), 9 failed in other agents' in-progress ui/ and ai/tests/agent.loop.test.ts"
+  },
+  {
+   "command": "pnpm exec eslint ops .github",
+   "outcome": "no lintable files in my paths (Markdown, YAML and shell are outside the ESLint file patterns); tsc/vitest not applicable (no TypeScript in my paths)"
+  }
+ ],
+ "problems": [
+  "No agent-spawning tool was available inside this subagent, so the user's 'use multiple agents' request could not be applied at this level. One agent did the whole docs-release assignment; the workflow around it already runs many agents.",
+  "9 tests fail in suites owned by others and still being written: ui/ primitives (JSX parse failures, likely a ui vitest or tsconfig JSX setting), ui tokens and motion tests, and ai/tests/agent.loop.test.ts. They do not block my paths, and the README reports them honestly.",
+  "The Dockerfile's base images are docker.io digests, not GHCR mirrors. The release bring-up blocks Docker Hub, so it passes only when the GHCR images are pulled; if an image is missing and Compose falls back to building, the build fails. mirror-images.yml and ops/mirrors.lock.json (OPS-04) do not exist yet.",
+  "Release-time blockers today: web/index.html does not exist, so the images job (WEB_BUILD=required by default) fails until web/ builds or the repository variable WEB_BUILD=auto is set. GHCR packages start private, so the anonymous bring-up fails until R5 makes the three packages public after the first push (RUNBOOK \u00a74)."
+ ],
+ "integration_notes": "SECRET NAMES: deploy.yml uses the names from the task: environment `production` secrets VPS_HOST, VPS_USER and VPS_SSH_KEY, plus an optional VPS_KNOWN_HOSTS (without it the job trusts the host key on first use and warns), and the environment variable PLOTINIUM_DOMAIN. specs/14-devops/deployment-and-ci.md \u00a73.9 still names them DEPLOY_SSH_KEY, DEPLOY_KNOWN_HOSTS, DEPLOY_HOST and DEPLOY_USER; the spec table should be updated to match.\n\nRELEASE.YML DESIGN, where it differs from spec \u00a73.7.5:\n(1) It builds and pushes all three images, web, app and db, not only web and app, because ops/deploy.sh and compose.prod.yaml need PLOTINIUM_DB_IMAGE from images.lock.json.\n(2) ci.yml has no `workflow_call` trigger, so release.yml runs its own suite job. Adding workflow_call to ci.yml would let the release reuse it.\n(3) tools/traceability.ts has no `--gate`/`--tag` mode yet, so the release uses `--strict --json` and `--out`.\n(4) The perf job looks for a successful perf-lab.yml run on main with the same git tree, at most 7 days old, and downloads its artifact named `perf-results` for check-budgets `--cadence release --machine lab-spec`. It fails only when the variable REQUIRE_LAB_PERF=true. perf-lab.yml must upload `perf-results` in the tests/performance result format.\n(5) The bring-up gates on clone \u2192 `up --wait` \u2192 `/` and `/api/readyz` serving within 240 s. There is a TODO to add Playwright desktop-interactive once `tests/bringup/` exists.\n(6) The pin job rewrites compose.yaml image lines with a regex that accepts any owner, so it also replaces the placeholder `ghcr.io/plotinium-org/...:0.1.0`. PRs opened with GITHUB_TOKEN do not start CI, so a member closes and reopens the pin PR once; the repository setting 'Allow GitHub Actions to create and approve pull requests' must be enabled.\n(7) The deploy job calls deploy.yml through workflow_call with `secrets: inherit`. It can be skipped with the variable DEPLOY_ON_RELEASE=false.\n(8) Optional variables: ARM64_RUNNER (set to ubuntu-24.04 on a private repository to build arm64 under a digest-pinned QEMU), WEB_BUILD, PLT_SEMESTER_START, BRINGUP_ALLOW_DOCKER_HUB.\n(9) Action SHAs were resolved with git ls-remote. New pins: docker/setup-buildx-action v4.4.1, build-push-action v7.4.0, setup-qemu-action v4.4.0, actions/download-artifact v8.0.1. BuildKit and binfmt images are pinned by digest.\n\nDEPLOY.SH (owned by another agent), suggested changes:\n(a) It downloads images.lock.json anonymously from the public release URL, which fails on a private repository. Suggest accepting a pre-staged file or a token.\n(b) Its own `git checkout --detach <tag>` rewrites the script while bash is still running it. deploy.yml avoids this by checking out the tag on the VPS first, but a re-exec after checkout would make the script safe on its own.\n(c) The pre-deploy backup needs RCLONE_REMOTE and RCLONE_CONFIG. deploy.yml sources /etc/plotinium/backup.env, which cloud-init installs.\n(d) Staging needs compose.staging.yaml, which is still a TODO.\n\nHOST LAYOUT, where it deviates from the spec:\n- `deploy` gets uid 1000, the container's `node` uid, so the 0400 secret files it owns are readable inside the app container.\n- rclone.conf is 0600 and owned by deploy, not by root as spec \u00a73.9 says, because deploy.sh runs the pre-deploy backup as deploy.\n- The backup and prune systemd services run as deploy.\n\nSPEC FIX: /api/readyz answers `{\"status\":\"ready\"}`, not `\"ok\"`. The RUNBOOK and the deploy smoke check use `ready`; specs/14-devops \u00a73.15 (the UptimeRobot keyword) should be corrected.\n\nROOT CONFIGS (not mine to edit):\n- .gitignore should add the VPS working files `/.env.images`, `/images.lock.json`, `/deploys.log`, `/.deploy.lock`, `/secrets/` and `/state/`, plus `compose.override.yaml` (spec \u00a79.2).\n- vitest.config.ts GATED_PACKAGES is still empty, so no coverage gate is enforced. TESTING.md flags this.\n\nSTALE FILES OWNED BY OTHERS:\n- ops/README.md still lists cloud-init.yaml as 'not yet written'. Add rows for cloud-init.yaml, provision.sh and RUNBOOK.md.\n- The READMEs of protocol, dsa, vfs, apps and ai still say 'Scaffold: placeholder src/index.ts only'.\n- DSA spec S12 lists R4 as owner of the rate-limit buckets, while CODEOWNERS says R5. DSA.md states both.\n- The tagline in README is candidate 1, marked provisional, because docs/identity/identity.json does not exist.\n- AI_USAGE.md, which I did not edit, should record that these root docs, workflows and ops files were AI-drafted.",
+ "todos_for_team": [
+  "TODO(team): replace every figure labelled '(pilot figure \u2014 re-measure on the lab machine)' with a lab-spec measurement. The markers are in ARCHITECTURE, STACK_DECISION, DSA, DATABASE \u00a76.4, AI, BOOT \u00a74, TESTING and SECURITY.",
+  "Each record owner: commit prereg/Dn PRs with the team's own criteria and weights, add the team matrix and a sensitivity table to each record in STACK_DECISION.md, and paste in the LLM bake-off results (R4).",
+  "R4: record the temperature-0 ruling, the Week-12 checkpoint result and the cost-report rows in AI.md. Fill the model-quality result columns from docs/evidence/ai-eval/<version>/.",
+  "DSA owners: when flipping IMPLEMENTED=true, fill 'Written by', the AI-assistance disclosure and the generated benchmark tables between the dsa-report markers in DSA.md.",
+  "R5: write perf-lab.yml (uploading the artifact 'perf-results'), bringup.yml (weekly, reusing the release bring-up steps), smoke-prod.yml, restore-drill.yml, mirror-images.yml with ops/mirrors.lock.json, docs.yml, ops/health-report.sh, ops/rotate-db-passwords.sh, ops/prune.sh and compose.staging.yaml.",
+  "R5: add actionlint and shellcheck (checksum-verified binaries) to the ci.yml lint job for the workflow and ops lint (TST-07, OPS-10). Both run clean on release.yml, deploy.yml and provision.sh today.",
+  "R5, once, before the first tag: make the three GHCR packages public; create the `production` environment with required reviewers and 'Prevent self-review'; add VPS_* secrets and PLOTINIUM_DOMAIN; enable 'Allow GitHub Actions to create pull requests'; create the tag ruleset on v*.",
+  "R5: rehearse RUNBOOK \u00a71.6 (rebuild drill) and \u00a76 (rollback drill) before P2. Commit the `ops/provision.sh verify` output and the drill results to docs/evidence/deploy/.",
+  "Week 16: replace ARCHITECTURE.md \u00a714 with the two decisions the team actually reverses, with data."
+ ],
+ "deps_requested": []
+}

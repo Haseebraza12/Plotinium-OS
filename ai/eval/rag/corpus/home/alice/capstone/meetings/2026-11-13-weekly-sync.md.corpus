@@ -1,0 +1,9 @@
+# Weekly sync — 13 Nov 2026
+
+- All 30 search queries written; first full evaluation run tomorrow.
+- Dan: `top` shows per-process memory including declared pages.
+- Carol: Postgres backup script tested restoring onto a fresh VPS.
+- Bob: accessibility pass on dialogs (focus traps, labels).
+- Esha: Playwright suite runs in 7 minutes; split into shards.
+
+Retro items: we underestimated integration time again. Next phase: integration day every Wednesday, not every other.

@@ -1,0 +1,102 @@
+/*
+ * Determinate progress only (DSN-07). The fill is a full-width bar scaled on X
+ * (transform: scaleX), so value changes animate on the compositor. The optional sweep is a
+ * sheen that crosses the fill a bounded number of times (motion.css pl-anim-progress-sweep).
+ */
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pl-space-1);
+  min-width: 0;
+}
+.header {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--pl-space-2);
+  font: var(--pl-type-caption);
+  color: var(--pl-text-muted);
+}
+.label {
+  color: var(--pl-text);
+  font-weight: var(--pl-weight-medium);
+}
+.value {
+  font-variant-numeric: tabular-nums;
+}
+.track {
+  position: relative;
+  overflow: hidden;
+  height: var(--pl-progress-h);
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-progress-track);
+}
+.sm .track {
+  height: var(--pl-progress-h-sm);
+}
+.fill {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--pl-progress-color, var(--pl-accent));
+  transform-origin: left center;
+  transform: scaleX(var(--pl-progress-ratio));
+  transition: transform var(--pl-motion-med) var(--pl-ease);
+}
+.sheen {
+  position: absolute;
+  inset: 0;
+  background: var(--pl-progress-sheen);
+  transform: translateX(-100%);
+}
+.success {
+  --pl-progress-color: var(--pl-success);
+}
+.warning {
+  --pl-progress-color: var(--pl-warning);
+}
+.danger {
+  --pl-progress-color: var(--pl-danger);
+}
+.neutral {
+  --pl-progress-color: var(--pl-text-muted);
+}
+@media (prefers-reduced-motion: reduce) {
+  .fill {
+    transition: none;
+  }
+  .sheen {
+    display: none;
+  }
+}
+@media (forced-colors: active) {
+  .track {
+    border: var(--pl-hairline-width) solid CanvasText;
+  }
+  .fill {
+    background: Highlight;
+  }
+}
+
+/* ---------- ring ---------- */
+.ring {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+}
+.ring svg {
+  transform: rotate(-90deg);
+}
+.ringTrack {
+  stroke: var(--pl-progress-track);
+}
+.ringFill {
+  stroke: var(--pl-progress-color, var(--pl-accent));
+}
+.ringLabel {
+  position: absolute;
+  font: var(--pl-type-caption);
+  font-weight: var(--pl-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  color: var(--pl-text);
+}

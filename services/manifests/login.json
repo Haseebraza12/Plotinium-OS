@@ -1,0 +1,13 @@
+{
+  "name": "login",
+  "description": "Session uid established (cached session, password, offline verifier, guest or demo)",
+  "requires": ["vfs", "wm"],
+  "critical": true,
+  "weight": 2,
+  "timeoutMs": 2000,
+  "priority": 8,
+  "safeMode": true,
+  "runsIn": "kernel+main",
+  "userWait": true,
+  "caps": ["window", "auth.session"]
+}

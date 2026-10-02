@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plotinium Editor Conflict</title>
+<!-- Hand-built reference render (NOT a Stitch export). Stitch generation timed out and returned no screen; see notes.md and screen.json. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0B0B1A;
+    --label: rgba(255,255,255,.92);
+    --label-2: rgba(255,255,255,.60);
+    --label-3: rgba(255,255,255,.38);
+    --sep: rgba(255,255,255,.10);
+    --menubar: rgba(30,30,36,.55);
+    --win: rgba(30,30,34,.80);
+    --win-2: rgba(22,22,26,.70);
+    --vibrancy: rgba(255,255,255,.04);
+    --accent: #5E5CE6;
+    --accent-hover: #7472FF;
+    --accent-glow: rgba(94,92,230,.45);
+    --success: #30D158;
+    --warning: #FF9F0A;
+    --warning-text: #FFC266;
+    --danger: #FF453A;
+    --info: #64D2FF;
+    --teal: #5EEAD4;
+    --focus: 0 0 0 3px rgba(94,92,230,.55);
+    /* proposed spring tokens (see notes.md) */
+    --pl-ease-spring: cubic-bezier(0.34, 1.36, 0.64, 1);
+    --pl-ease-spring-soft: linear(0, 0.157 7.1%, 0.54 17.2%, 0.828 27.3%, 0.94 35.4%, 1.006 45.5%, 1.02 55.6%, 1.006 70.7%, 1);
+    --pl-ease: cubic-bezier(.2,.8,.2,1);
+    --pl-ease-in: cubic-bezier(.4,0,1,1);
+    --pl-ease-out: cubic-bezier(0,0,.2,1);
+    --pl-motion-fast: 120ms; --pl-motion-med: 200ms; --pl-motion-slow: 320ms;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
+    --sans: 'Inter', system-ui, sans-serif;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    :root { --pl-motion-fast: 0ms; --pl-motion-med: 0ms; --pl-motion-slow: 0ms; }
+    *, *::before, *::after { animation-duration: 0ms !important; animation-delay: 0ms !important; animation-iteration-count: 1 !important; transition-duration: 0ms !important; }
+  }
+  :root[data-motion="reduce"] { --pl-motion-fast: 0ms; --pl-motion-med: 0ms; --pl-motion-slow: 0ms; }
+  :root[data-motion="reduce"] *, :root[data-motion="reduce"] *::before, :root[data-motion="reduce"] *::after { animation-duration: 0ms !important; animation-delay: 0ms !important; animation-iteration-count: 1 !important; transition-duration: 0ms !important; }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1440px; height: 900px; overflow: hidden; }
+  body {
+    font: 400 13px/1.4 var(--sans);
+    color: var(--label);
+    background:
+      radial-gradient(900px 600px at 18% 22%, rgba(94,92,230,.55), transparent 60%),
+      radial-gradient(700px 520px at 86% 18%, rgba(170,90,255,.35), transparent 62%),
+      radial-gradient(900px 700px at 70% 95%, rgba(40,90,220,.35), transparent 60%),
+      radial-gradient(600px 400px at 8% 92%, rgba(255,120,200,.16), transparent 60%),
+      linear-gradient(160deg, #0B0B1A 0%, #1a1440 45%, #2A1F5C 100%);
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: "cv11", "ss01";
+  }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: default; }
+  button:focus-visible, [tabindex]:focus-visible { outline: none; box-shadow: var(--focus); }
+  svg.i { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+  /* ---------- menu bar ---------- */
+  header.menubar {
+    position: absolute; inset: 0 0 auto 0; height: 28px; display: flex; align-items: center; gap: 2px; padding: 0 12px;
+    background: var(--menubar); backdrop-filter: blur(30px) saturate(180%); -webkit-backdrop-filter: blur(30px) saturate(180%);
+    box-shadow: inset 0 -1px 0 rgba(255,255,255,.06), inset 0 1px 0 rgba(255,255,255,.08);
+    z-index: 10;
+  }
+  .menubar .mi { height: 22px; padding: 0 9px; border-radius: 6px; display: inline-flex; align-items: center; font-weight: 500; font-size: 13px; }
+  .menubar .mi:hover { background: rgba(255,255,255,.10); }
+  .menubar .app { font-weight: 700; }
+  .menubar .logo { padding: 0 8px; }
+  .menubar .spacer { flex: 1; }
+  .menubar .st { height: 22px; padding: 0 7px; border-radius: 6px; display: inline-flex; align-items: center; gap: 5px; color: var(--label); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .menubar .st:hover { background: rgba(255,255,255,.10); }
+  .sync-dot { position: relative; }
+  .sync-dot::after { content: ""; position: absolute; right: -1px; bottom: 1px; width: 6px; height: 6px; border-radius: 50%; background: var(--success); box-shadow: 0 0 0 1.5px rgba(30,30,36,.9); }
+  .batt { display: inline-flex; align-items: center; gap: 5px; }
+  .batt i { display: block; width: 22px; height: 11px; border: 1.2px solid rgba(255,255,255,.7); border-radius: 3px; position: relative; padding: 1px; }
+  .batt i::before { content: ""; display: block; height: 100%; width: 82%; background: var(--label); border-radius: 1.5px; }
+  .batt i::after { content: ""; position: absolute; right: -3.5px; top: 3px; width: 2px; height: 4px; background: rgba(255,255,255,.7); border-radius: 0 1px 1px 0; }
+
+  /* ---------- window ---------- */
+  main.desk { position: absolute; inset: 28px 0 0 0; }
+  .window {
+    position: absolute; left: 110px; top: 22px; width: 1220px; height: 740px;
+    border-radius: 14px; overflow: hidden;
+    background: var(--win);
+    backdrop-filter: blur(40px) saturate(170%); -webkit-backdrop-filter: blur(40px) saturate(170%);
+    box-shadow: 0 0 0 1px rgba(255,255,255,.10), inset 0 1px 0 rgba(255,255,255,.10), 0 22px 70px rgba(0,0,0,.55), 0 4px 14px rgba(0,0,0,.35);
+    display: grid; grid-template-rows: 38px 34px 1fr 26px;
+    animation: winOpen var(--pl-motion-med) var(--pl-ease-spring-soft) both;
+    transform-origin: 50% 100%;
+  }
+  @keyframes winOpen { from { opacity: 0; transform: scale(.94); } to { opacity: 1; transform: none; } }
+
+  .titlebar { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 0 14px; position: relative; }
+  .lights { display: flex; gap: 8px; }
+  .lights button { width: 12px; height: 12px; border-radius: 50%; position: relative; box-shadow: inset 0 0 0 .5px rgba(0,0,0,.25); display: grid; place-items: center; }
+  .lights .c { background: #FF5F57; } .lights .m { background: #FEBC2E; } .lights .z { background: #28C840; }
+  .lights button svg { width: 8px; height: 8px; stroke: rgba(0,0,0,.6); stroke-width: 2.2; fill: none; opacity: 0; transition: opacity var(--pl-motion-fast) var(--pl-ease); }
+  .lights:hover button svg { opacity: 1; }
+  .lights button:active { filter: brightness(.88); }
+  .title { display: inline-flex; align-items: center; gap: 7px; font-weight: 600; font-size: 13px; color: var(--label); }
+  .title .dim { color: var(--label-2); font-weight: 500; }
+  .tb-right { justify-self: end; display: flex; align-items: center; gap: 8px; }
+
+  .lockchip {
+    display: inline-flex; align-items: center; gap: 7px; height: 24px; padding: 0 5px 0 9px; border-radius: 999px;
+    background: linear-gradient(180deg, rgba(255,159,10,.22), rgba(255,159,10,.14));
+    box-shadow: inset 0 0 0 1px rgba(255,159,10,.42), inset 0 1px 0 rgba(255,255,255,.08);
+    color: #FFD9A0; font-size: 12px; font-weight: 500; white-space: nowrap;
+    animation: chipIn var(--pl-motion-med) var(--pl-ease-spring) 260ms both;
+    transition: transform var(--pl-motion-fast) var(--pl-ease-spring);
+  }
+  .lockchip:hover { transform: translateY(-1px); }
+  .lockchip b { color: #fff; font-weight: 600; }
+  @keyframes chipIn { from { opacity: 0; transform: scale(.8); } to { opacity: 1; transform: none; } }
+  .ring { width: 16px; height: 16px; position: relative; }
+  .ring svg { width: 16px; height: 16px; transform: rotate(-90deg); }
+  .avatar { width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; font-weight: 700; color: #1b1030;
+    background: linear-gradient(135deg, #FFB86B, #FF7EB3); box-shadow: 0 0 0 1.5px rgba(30,30,34,.9); }
+  .tb-btn { width: 28px; height: 24px; border-radius: 7px; display: grid; place-items: center; color: var(--label-2); }
+  .tb-btn:hover { background: rgba(255,255,255,.08); color: var(--label); }
+
+  /* tabs */
+  .tabs { display: flex; align-items: flex-end; gap: 2px; padding: 0 10px; box-shadow: inset 0 -1px 0 var(--sep); background: rgba(0,0,0,.10); }
+  .tab { height: 28px; display: inline-flex; align-items: center; gap: 7px; padding: 0 10px 0 12px; border-radius: 8px 8px 0 0; color: var(--label-2); font-size: 12.5px; font-weight: 500; position: relative; min-width: 150px; }
+  .tab:hover { background: rgba(255,255,255,.05); color: var(--label); }
+  .tab.active { color: var(--label); background: rgba(255,255,255,.07); box-shadow: inset 0 1px 0 rgba(255,255,255,.10), inset 1px 0 0 var(--sep), inset -1px 0 0 var(--sep); }
+  .tab.active::after { content: ""; position: absolute; left: 10px; right: 10px; bottom: 0; height: 2px; border-radius: 2px; background: var(--accent); }
+  .tab .x { margin-left: auto; width: 16px; height: 16px; border-radius: 4px; display: grid; place-items: center; color: var(--label-3); }
+  .tab .x:hover { background: rgba(255,255,255,.10); color: var(--label); }
+  .tab .cdot { width: 7px; height: 7px; border-radius: 50%; background: var(--warning); box-shadow: 0 0 8px rgba(255,159,10,.7); animation: dotIn var(--pl-motion-med) var(--pl-ease-spring) 520ms both; }
+  @keyframes dotIn { from { transform: scale(0); } 60% { transform: scale(1.2); } to { transform: scale(1); } }
+  .tab .ext { font-family: var(--mono); font-size: 10px; color: var(--info); letter-spacing: -.2px; }
+  .tabs .plus { height: 28px; width: 28px; display: grid; place-items: center; color: var(--label-3); border-radius: 7px; margin-bottom: 0; }
+
+  /* body */
+  .body { display: grid; grid-template-columns: 220px 1fr; min-height: 0; }
+  aside.side { background: var(--vibrancy); box-shadow: inset -1px 0 0 var(--sep); padding: 12px 8px; overflow: hidden; }
+  .sec { font-size: 10.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: rgba(255,255,255,.5); padding: 6px 10px 6px; display: flex; align-items: center; justify-content: space-between; }
+  .ol { list-style: none; margin-bottom: 14px; position: relative; }
+  .ol li { height: 26px; display: flex; align-items: center; gap: 6px; padding: 0 10px; border-radius: 7px; color: var(--label-2); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; position: relative; z-index: 1; }
+  .ol li .h { font-family: var(--mono); font-size: 10.5px; color: rgba(151,149,255,.75); width: 18px; flex: none; }
+  .ol li.l2 { padding-left: 16px; }
+  .ol li:hover { background: rgba(255,255,255,.06); color: var(--label); }
+  .ol li.sel { background: rgba(94,92,230,.85); color: #fff; box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 4px 12px rgba(94,92,230,.35); }
+  .ol li.sel .h { color: rgba(255,255,255,.8); }
+  .files li { gap: 8px; }
+  .files li .ic { color: var(--label-3); }
+  .files li .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .files li.cur { color: var(--label); background: rgba(255,255,255,.06); }
+  .files li.cf { height: auto; padding: 5px 10px; align-items: flex-start; }
+  .files li.cf .nm { white-space: normal; line-height: 1.35; color: #FFD9A0; }
+  .files li.cf svg { margin-top: 1px; }
+  .badge-c { flex: none; font-size: 9.5px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: #1c1300; background: var(--warning); padding: 1px 5px; border-radius: 4px; }
+  .path { font-family: var(--mono); font-size: 10.5px; color: var(--label-3); padding: 0 10px 6px; }
+
+  section.editor { display: grid; grid-template-rows: auto 1fr; min-width: 0; min-height: 0; position: relative; }
+
+  /* conflict banner */
+  .banner {
+    margin: 12px 14px 8px; border-radius: 10px; padding: 11px 12px 11px 14px;
+    display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center;
+    background: linear-gradient(180deg, rgba(255,159,10,.20), rgba(255,159,10,.12)), rgba(28,22,14,.70);
+    box-shadow: inset 0 0 0 1px rgba(255,159,10,.55), inset 0 1px 0 rgba(255,255,255,.08), 0 8px 24px rgba(0,0,0,.25);
+    animation: bannerIn var(--pl-motion-slow) var(--pl-ease-spring-soft) 140ms both;
+  }
+  @keyframes bannerIn { from { opacity: 0; transform: translateY(-12px); } to { opacity: 1; transform: none; } }
+  .banner .warn { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; background: rgba(255,159,10,.22); color: var(--warning); animation: nudge var(--pl-motion-slow) var(--pl-ease-spring) 480ms 1 both; }
+  .banner .warn svg { width: 17px; height: 17px; }
+  @keyframes nudge { 0% { transform: rotate(0); } 35% { transform: rotate(-8deg); } 70% { transform: rotate(6deg); } 100% { transform: rotate(0); } }
+  .banner h2 { font-size: 13px; font-weight: 600; color: #fff; }
+  .banner p { font-size: 12.5px; color: rgba(255,236,210,.86); margin-top: 1px; }
+  .banner p code { font-family: var(--mono); font-size: 11.5px; color: #FFE1B0; background: rgba(0,0,0,.25); padding: 1px 5px; border-radius: 4px; }
+  .banner .acts { display: flex; gap: 8px; align-items: center; }
+  .btn { height: 28px; padding: 0 12px; border-radius: 7px; display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; transition: transform var(--pl-motion-fast) var(--pl-ease-spring), background-color var(--pl-motion-fast) var(--pl-ease); }
+  .btn:active { transform: scale(.97); }
+  .btn.primary { background: var(--accent); color: #fff; box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 2px 8px rgba(94,92,230,.45); }
+  .btn.primary:hover { background: var(--accent-hover); }
+  .btn.ghost { color: #FFE1B0; box-shadow: inset 0 0 0 1px rgba(255,200,120,.45); background: rgba(255,255,255,.04); }
+  .btn.ghost:hover { background: rgba(255,255,255,.09); }
+  .banner .dis { width: 24px; height: 24px; border-radius: 6px; display: grid; place-items: center; color: rgba(255,236,210,.7); }
+  .banner .dis:hover { background: rgba(255,255,255,.08); color: #fff; }
+
+  /* code */
+  .codewrap { position: relative; display: grid; grid-template-columns: 1fr 64px; min-height: 0; animation: codeShift var(--pl-motion-slow) var(--pl-ease-spring-soft) 140ms both; }
+  @keyframes codeShift { from { transform: translateY(-52px); } to { transform: none; } }
+  .code { font-family: var(--mono); font-size: 13px; line-height: 20px; padding: 4px 0 0; overflow: hidden; }
+  .ln { display: grid; grid-template-columns: 56px 1fr; white-space: pre; position: relative; }
+  .ln > .n { text-align: right; padding-right: 16px; color: var(--label-3); font-variant-numeric: tabular-nums; user-select: none; }
+  .ln.cur { background: rgba(94,92,230,.12); box-shadow: inset 2px 0 0 var(--accent); }
+  .ln.cur > .n { color: var(--label); }
+  .t { color: rgba(255,255,255,.84); }
+  .hd { color: #A8A6FF; font-weight: 600; }
+  .hm { color: rgba(168,166,255,.55); }
+  .bd { color: #fff; font-weight: 600; }
+  .it { color: #E9D8FF; font-style: italic; }
+  .ic { color: var(--teal); }
+  .bt { color: rgba(94,234,212,.5); }
+  .lk { color: var(--info); text-decoration: underline; text-decoration-color: rgba(100,210,255,.35); text-underline-offset: 2px; }
+  .lp { color: rgba(100,210,255,.55); }
+  .bu { color: var(--warning); }
+  .qt { color: rgba(255,255,255,.46); }
+  .kw { color: #FF7AB6; } .fn { color: #7DD3FC; } .st { color: #A5E88B; } .nu { color: #FFB86B; } .pn { color: rgba(255,255,255,.55); }
+  .caret { display: inline-block; width: 2px; height: 17px; vertical-align: -3px; margin-left: -1px; background: #fff; border-radius: 1px; box-shadow: 0 0 6px rgba(255,255,255,.35); animation: blink 1060ms steps(1) 5; }
+  .ro .caret { background: transparent; box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.85); width: 3px; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .minimap { padding: 8px 10px 0 6px; opacity: .55; position: relative; transition: opacity var(--pl-motion-fast) var(--pl-ease); box-shadow: inset 1px 0 0 rgba(255,255,255,.05); }
+  .minimap:hover { opacity: .8; }
+  .minimap i { display: block; height: 2px; margin: 0 0 2px; border-radius: 1px; background: rgba(255,255,255,.35); }
+  .minimap i.h { background: rgba(168,166,255,.8); }
+  .minimap i.c { background: rgba(94,234,212,.6); }
+  .minimap i.q { background: rgba(255,255,255,.2); }
+  .minimap .vp { position: absolute; left: 3px; right: 6px; top: 96px; height: 120px; border-radius: 3px; background: rgba(255,255,255,.07); box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); }
+  .ro-tip { position: absolute; left: 70px; top: 225px; padding: 3px 8px; height: 19px; border-radius: 7px; font: 500 11.5px/1.2 var(--sans); color: #FFD9A0;
+    background: rgba(40,32,20,.92); box-shadow: inset 0 0 0 1px rgba(255,159,10,.45), 0 6px 18px rgba(0,0,0,.4); display: inline-flex; gap: 6px; align-items: center;
+    animation: tipIn var(--pl-motion-slow) var(--pl-ease-spring) 900ms both; }
+  @keyframes tipIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+  /* status bar */
+  footer.status { display: flex; align-items: center; gap: 0; padding: 0 10px; font-size: 11.5px; color: var(--label-2); box-shadow: inset 0 1px 0 var(--sep); background: rgba(0,0,0,.14); font-variant-numeric: tabular-nums; }
+  .sb { height: 20px; padding: 0 7px; border-radius: 5px; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+  .sb:hover { background: rgba(255,255,255,.07); color: var(--label); }
+  .dotsep { color: var(--label-3); padding: 0 1px; }
+  .ok { color: var(--success); }
+  .sb.synced { color: var(--label); }
+  .sb.synced svg { color: var(--success); animation: checkIn var(--pl-motion-med) var(--pl-ease-out) 60ms both; }
+  @keyframes checkIn { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: none; } }
+  .grow { flex: 1; }
+  .ai { height: 20px; padding: 0 9px 0 7px; border-radius: 999px; display: inline-flex; gap: 5px; align-items: center; color: #fff; font-weight: 600; font-size: 11.5px;
+    background: linear-gradient(135deg, rgba(94,92,230,.95), rgba(150,90,255,.9)); box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 0 14px rgba(94,92,230,.45);
+    transition: transform var(--pl-motion-fast) var(--pl-ease-spring); margin-left: 6px; }
+  .ai:hover { transform: translateY(-1px); }
+  .ai:active { transform: scale(.97); }
+  .sb.ro { color: #FFC266; }
+
+  /* dock */
+  nav.dock { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); height: 68px; padding: 8px 10px; display: flex; align-items: flex-end; gap: 6px; border-radius: 22px;
+    background: rgba(40,40,48,.50); backdrop-filter: blur(40px) saturate(180%); -webkit-backdrop-filter: blur(40px) saturate(180%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.18), inset 0 0 0 1px rgba(255,255,255,.08), 0 12px 40px rgba(0,0,0,.45); z-index: 5; }
+  .dk { width: 52px; height: 52px; position: relative; transform-origin: 50% 100%; transition: transform var(--pl-motion-fast) var(--pl-ease-spring-soft); }
+  .dk:hover { transform: translateY(-10px) scale(1.45); z-index: 2; }
+  .dk:has(+ .dk:hover), .dk:hover + .dk { transform: translateY(-5px) scale(1.2); }
+  .dk .tile { width: 52px; height: 52px; border-radius: 13px; display: grid; place-items: center; position: relative; overflow: hidden;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.28), inset 0 0 0 1px rgba(255,255,255,.10), 0 4px 10px rgba(0,0,0,.35); }
+  .dk .tile svg { width: 28px; height: 28px; stroke: #fff; stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 1px 2px rgba(0,0,0,.3)); }
+  .dk .tile::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(255,255,255,.22), transparent 45%); pointer-events: none; }
+  .t-files { background: linear-gradient(160deg, #6FB7FF, #2F6BEA); }
+  .t-term { background: linear-gradient(160deg, #3A3A44, #121218); }
+  .t-edit { background: linear-gradient(160deg, #8A88FF, #4B3FD1); }
+  .t-task { background: linear-gradient(160deg, #3DDC84, #13985A); }
+  .t-search { background: linear-gradient(160deg, #B58CFF, #6A3FE0); }
+  .t-set { background: linear-gradient(160deg, #9AA0AE, #4D5260); }
+  .t-trash { background: linear-gradient(160deg, rgba(255,255,255,.25), rgba(255,255,255,.08)); }
+  .dk .run { position: absolute; left: 50%; bottom: -6px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: rgba(255,255,255,.85); }
+  .dk .bdg { position: absolute; right: -4px; top: -4px; min-width: 18px; height: 18px; border-radius: 9px; background: var(--danger); color: #fff; font-size: 11px; font-weight: 700; display: grid; place-items: center; padding: 0 5px; box-shadow: 0 0 0 1.5px rgba(40,40,48,.8); }
+  .dsep { width: 1px; height: 44px; margin: 0 4px 4px; background: rgba(255,255,255,.18); }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <!-- Plotinium mark per specs/00-product/identity-and-branding.md §3.6: open ring (~266°) + solid point at 1 o'clock -->
+    <symbol id="pl-logo" viewBox="0 0 160 160">
+      <path d="M 134.6 67.4 A 56 56 0 1 1 63.6 26.4" fill="none" stroke="#5E5CE6" stroke-width="20" stroke-linecap="butt"/>
+      <circle cx="108" cy="31.5" r="25" fill="#FFFFFF"/>
+    </symbol>
+  </defs>
+</svg>
+
+<header class="menubar" role="banner">
+  <nav role="menubar" aria-label="Menu bar" style="display:flex;align-items:center;gap:2px">
+    <button class="mi logo" role="menuitem" aria-label="Plotinium menu" aria-haspopup="menu"><svg width="16" height="16" aria-hidden="true"><use href="#pl-logo"/></svg></button>
+    <button class="mi app" role="menuitem" aria-haspopup="menu">Editor</button>
+    <button class="mi" role="menuitem" aria-haspopup="menu">File</button>
+    <button class="mi" role="menuitem" aria-haspopup="menu">Edit</button>
+    <button class="mi" role="menuitem" aria-haspopup="menu">View</button>
+    <button class="mi" role="menuitem" aria-haspopup="menu">Selection</button>
+    <button class="mi" role="menuitem" aria-haspopup="menu">Go</button>
+    <button class="mi" role="menuitem" aria-haspopup="menu">Window</button>
+    <button class="mi" role="menuitem" aria-haspopup="menu">Help</button>
+  </nav>
+  <span class="spacer"></span>
+  <button class="st sync-dot" aria-label="Sync: synced"><svg class="i" viewBox="0 0 24 24"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg></button>
+  <button class="st" aria-label="Wi-Fi connected"><svg class="i" viewBox="0 0 24 24"><path d="M12 20h.01"/><path d="M2 8.82a15 15 0 0 1 20 0"/><path d="M5 12.86a10 10 0 0 1 14 0"/><path d="M8.5 16.43a5 5 0 0 1 7 0"/></svg></button>
+  <button class="st batt" aria-label="Battery 82 percent"><span style="font-size:12px">82%</span><i></i></button>
+  <button class="st" aria-label="Control Centre"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="7" rx="3.5"/><circle cx="7.5" cy="7.5" r="1.6"/><rect x="3" y="13" width="18" height="7" rx="3.5"/><circle cx="16.5" cy="16.5" r="1.6"/></svg></button>
+  <button class="st" aria-label="Search"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
+  <span class="st" style="font-weight:500">Thu 24 Sep&nbsp;&nbsp;14:32</span>
+</header>
+
+<main class="desk">
+  <div class="window" role="dialog" aria-modal="false" aria-labelledby="wtitle">
+    <!-- title bar -->
+    <div class="titlebar">
+      <div class="lights" role="group" aria-label="Window controls">
+        <button class="c" aria-label="Close"><svg viewBox="0 0 10 10"><path d="M2.5 2.5l5 5M7.5 2.5l-5 5"/></svg></button>
+        <button class="m" aria-label="Minimise"><svg viewBox="0 0 10 10"><path d="M2 5h6"/></svg></button>
+        <button class="z" aria-label="Zoom"><svg viewBox="0 0 10 10"><path d="M3 7V3h4M7 3 3 7" /></svg></button>
+      </div>
+      <div class="title" id="wtitle">
+        <svg class="i" viewBox="0 0 24 24" style="color:var(--label-2)"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></svg>
+        os-report.md <span class="dim">— ~/notes</span>
+      </div>
+      <div class="tb-right">
+        <button class="lockchip" aria-describedby="lock-tip">
+          <svg class="i" viewBox="0 0 24 24" style="width:13px;height:13px"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+          <span>Read-only — locked by <b>alice</b> (lease 12 s)</span>
+          <span class="ring" aria-hidden="true">
+            <svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" fill="none" stroke="rgba(255,159,10,.25)" stroke-width="2"/><circle cx="8" cy="8" r="6" fill="none" stroke="#FF9F0A" stroke-width="2" stroke-linecap="round" stroke-dasharray="15.08 37.7"/></svg>
+          </span>
+          <span class="avatar" aria-hidden="true">A</span>
+        </button>
+        <span id="lock-tip" hidden>alice holds the write lease (fence 88) · renews every 10 s</span>
+        <button class="tb-btn" aria-label="Toggle sidebar"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></button>
+      </div>
+    </div>
+
+    <!-- tabs -->
+    <div class="tabs" role="tablist" aria-label="Open files">
+      <div class="tab active" role="tab" aria-selected="true" tabindex="0" aria-label="os-report.md, has conflict"><span class="ext">MD</span>os-report.md<span class="cdot" aria-hidden="true"></span><span class="x" aria-hidden="true"><svg class="i" viewBox="0 0 24 24" style="width:11px;height:11px"><path d="M18 6 6 18M6 6l12 12"/></svg></span></div>
+      <div class="tab" role="tab" aria-selected="false" tabindex="-1"><span class="ext" style="color:#7DD3FC">TS</span>scheduler.ts<span class="x" aria-hidden="true"></span></div>
+      <div class="tab" role="tab" aria-selected="false" tabindex="-1"><span class="ext">MD</span>README.md<span class="x" aria-hidden="true"></span></div>
+      <button class="plus" aria-label="New tab"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+    </div>
+
+    <div class="body">
+      <aside class="side" aria-label="Outline and files">
+        <div class="sec">Outline</div>
+        <ul class="ol" role="tree" aria-label="Outline">
+          <li role="treeitem" aria-level="1"><span class="h">#</span>OS Report</li>
+          <li class="l2" role="treeitem" aria-level="2"><span class="h">##</span>1. Boot sequence</li>
+          <li class="l2" role="treeitem" aria-level="2"><span class="h">##</span>2. Scheduler (MLFQ)</li>
+          <li class="l2" role="treeitem" aria-level="2"><span class="h">##</span>3. Virtual memory</li>
+          <li class="l2 sel" role="treeitem" aria-level="2" aria-selected="true"><span class="h">##</span>4. Sync and conflicts</li>
+          <li class="l2" role="treeitem" aria-level="2" style="padding-left:30px"><span class="h">###</span>4.1 File locks</li>
+          <li class="l2" role="treeitem" aria-level="2"><span class="h">##</span>5. AI indexer</li>
+        </ul>
+        <div class="sec">Files <span style="text-transform:none;letter-spacing:0;font-weight:500;color:var(--label-3)">3</span></div>
+        <div class="path">/home/student/notes</div>
+        <ul class="ol files" role="listbox" aria-label="Files in notes">
+          <li class="cur" role="option" aria-selected="true"><svg class="i ic" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5"/></svg><span class="nm">os-report.md</span></li>
+          <li class="cf" role="option" aria-selected="false" title="os-report (conflict from student, 2026-09-24).md"><svg class="i" viewBox="0 0 24 24" style="color:var(--warning)"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5"/><path d="M12 11v3M12 17h.01"/></svg><span class="nm">os-report (conflict from student, 2026-09-24).md</span><span class="badge-c">conflict</span></li>
+          <li role="option" aria-selected="false"><svg class="i ic" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5"/></svg><span class="nm">lab-4.md</span></li>
+        </ul>
+      </aside>
+
+      <section class="editor" aria-label="os-report.md">
+        <div class="banner" role="alert" aria-label="Sync conflict">
+          <div class="warn" aria-hidden="true"><svg class="i" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4M12 17h.01"/></svg></div>
+          <div>
+            <h2>This file changed on the server while you were offline.</h2>
+            <p>Your version was saved as <code>os-report (conflict from student, 2026-09-24).md</code></p>
+          </div>
+          <div class="acts">
+            <button class="btn primary"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16"/></svg>Compare</button>
+            <button class="btn ghost">Open conflicted copy</button>
+            <button class="dis" aria-label="Dismiss"><svg class="i" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+          </div>
+        </div>
+
+        <div class="codewrap">
+          <div class="code ro" role="textbox" aria-multiline="true" aria-readonly="true" aria-label="Document text, read-only">
+<div class="ln"><span class="n">30</span><span><span class="hm">## </span><span class="hd">4. Sync and conflicts</span></span></div>
+<div class="ln"><span class="n">31</span><span> </span></div>
+<div class="ln"><span class="n">32</span><span class="t">Plotinium syncs every file with a <span class="hm">**</span><span class="bd">version vector</span><span class="hm">**</span>. When the</span></div>
+<div class="ln"><span class="n">33</span><span class="t">client reconnects, <span class="bt">`</span><span class="ic">syncd</span><span class="bt">`</span> compares the local version (v7) with</span></div>
+<div class="ln"><span class="n">34</span><span class="t">the server version (v8).</span></div>
+<div class="ln"><span class="n">35</span><span> </span></div>
+<div class="ln"><span class="n">36</span><span class="t"><span class="bu">-</span> If only one side changed, it fast-forwards.</span></div>
+<div class="ln"><span class="n">37</span><span class="t"><span class="bu">-</span> If both changed, the server keeps v8 and the client copy is</span></div>
+<div class="ln"><span class="n">38</span><span class="t">  saved as a <span class="hm">*</span><span class="it">conflicted copy</span><span class="hm">*</span> next to the original.</span></div>
+<div class="ln"><span class="n">39</span><span> </span></div>
+<div class="ln"><span class="n">40</span><span><span class="hm">### </span><span class="hd">4.1 File locks</span></span></div>
+<div class="ln"><span class="n">41</span><span> </span></div>
+<div class="ln cur"><span class="n">42</span><span class="t">A lock<span class="caret" aria-hidden="true"></span> is a <span class="hm">**</span><span class="bd">lease</span><span class="hm">**</span>: <span class="bt">`</span><span class="ic">alice</span><span class="bt">`</span> holds it for 30 s and must renew.</span></div>
+<div class="ln"><span class="n">43</span><span class="t">While locked, other users open the file read-only.</span></div>
+<div class="ln"><span class="n">44</span><span> </span></div>
+<div class="ln"><span class="n">45</span><span class="bt">```<span class="ic">ts</span></span></div>
+<div class="ln"><span class="n">46</span><span><span class="kw">const</span> <span class="t">lease</span> <span class="pn">=</span> <span class="kw">await</span> <span class="t">locks.</span><span class="fn">acquire</span><span class="pn">(</span><span class="st">"/home/student/notes/os-report.md"</span><span class="pn">, {</span> <span class="t">ttl</span><span class="pn">:</span> <span class="nu">30_000</span> <span class="pn">});</span></span></div>
+<div class="ln"><span class="n">47</span><span class="bt">```</span></div>
+<div class="ln"><span class="n">48</span><span> </span></div>
+<div class="ln"><span class="n">49</span><span class="t">See <span class="lp">[</span><span class="lk">scheduler notes</span><span class="lp">](./lab-4.md)</span> and the boot log below:</span></div>
+<div class="ln"><span class="n">50</span><span> </span></div>
+<div class="ln"><span class="n">51</span><span class="qt">&gt; [    0.000] firmware: Plotinium 0.3.0 · POST ok</span></div>
+<div class="ln"><span class="n">52</span><span class="qt">&gt; [    0.212] vfs: mounted / · 12,408 inodes · 3 users · quotas enforced</span></div>
+<div class="ln"><span class="n">53</span><span class="qt">&gt; [    0.402] sync: WARN backend unreachable · offline mode · outbox holds 3 ops</span></div>
+<div class="ln"><span class="n">54</span><span class="qt">&gt; [    0.405] lockd: DEGRADED (requires sync) · local advisory locks only</span></div>
+<div class="ln"><span class="n">55</span><span> </span></div>
+          </div>
+          <div class="minimap" aria-hidden="true">
+            <i style="width:30%" class="h"></i><i style="width:0"></i><i style="width:88%"></i><i style="width:80%"></i><i style="width:40%"></i><i style="width:0"></i><i style="width:70%"></i><i style="width:90%"></i><i style="width:74%"></i><i style="width:0"></i>
+            <i style="width:26%" class="h"></i><i style="width:0"></i><i style="width:92%"></i><i style="width:70%"></i><i style="width:0"></i><i style="width:14%" class="c"></i><i style="width:96%" class="c"></i><i style="width:10%" class="c"></i><i style="width:0"></i><i style="width:78%"></i>
+            <i style="width:0"></i><i style="width:60%" class="q"></i><i style="width:84%" class="q"></i><i style="width:92%" class="q"></i><i style="width:86%" class="q"></i><i style="width:0"></i><i style="width:34%" class="h"></i><i style="width:0"></i><i style="width:82%"></i><i style="width:90%"></i>
+            <i style="width:66%"></i><i style="width:0"></i><i style="width:72%"></i><i style="width:84%"></i><i style="width:58%"></i><i style="width:0"></i><i style="width:30%" class="h"></i><i style="width:88%"></i><i style="width:76%"></i><i style="width:92%"></i>
+            <i style="width:44%"></i><i style="width:0"></i><i style="width:80%"></i><i style="width:68%"></i><i style="width:90%"></i><i style="width:52%"></i><i style="width:0"></i><i style="width:84%"></i><i style="width:70%"></i><i style="width:38%"></i>
+            <span class="vp"></span>
+          </div>
+          <div class="ro-tip" role="status"><svg class="i" viewBox="0 0 24 24" style="width:12px;height:12px"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Locked by alice · you can read, not edit</div>
+        </div>
+      </section>
+    </div>
+
+    <footer class="status" role="status" aria-live="polite">
+      <span class="sb">Ln 42, Col 7</span><span class="dotsep">·</span>
+      <span class="sb">UTF-8</span><span class="dotsep">·</span>
+      <span class="sb">Markdown</span><span class="dotsep">·</span>
+      <span class="sb">saved v8</span><span class="dotsep">·</span>
+      <span class="sb synced"><svg class="i" viewBox="0 0 24 24" style="width:12px;height:12px"><path d="M20 6 9 17l-5-5"/></svg>synced</span>
+      <span class="grow"></span>
+      <span class="sb ro"><svg class="i" viewBox="0 0 24 24" style="width:12px;height:12px"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Read-only</span>
+      <span class="sb">Spaces: 2</span>
+      <button class="ai"><svg class="i" viewBox="0 0 24 24" style="width:12px;height:12px"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9Z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8Z"/></svg>Ask AI</button>
+    </footer>
+  </div>
+</main>
+
+<nav class="dock" aria-label="Dock">
+  <button class="dk" aria-label="Files, 1 conflict"><span class="tile t-files"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg></span><span class="bdg">1</span></button>
+  <button class="dk" aria-label="Terminal"><span class="tile t-term"><svg viewBox="0 0 24 24"><path d="m5 8 4 4-4 4"/><path d="M12 17h7"/></svg></span></button>
+  <button class="dk" aria-label="Editor, running"><span class="tile t-edit"><svg viewBox="0 0 24 24"><path d="M16 4l4 4L9 19H5v-4Z"/><path d="M13.5 6.5l4 4"/></svg></span><span class="run"></span></button>
+  <button class="dk" aria-label="Task Manager"><span class="tile t-task"><svg viewBox="0 0 24 24"><path d="M3 12h4l3-7 4 14 3-7h4"/></svg></span></button>
+  <button class="dk" aria-label="Search"><span class="tile t-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m20 20-4.5-4.5"/></svg></span></button>
+  <button class="dk" aria-label="Settings"><span class="tile t-set"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1 7 17M17 7l2.1-2.1"/></svg></span></button>
+  <span class="dsep" aria-hidden="true"></span>
+  <button class="dk" aria-label="Trash"><span class="tile t-trash"><svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></span></button>
+</nav>
+</body>
+</html>

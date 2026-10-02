@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plotinium Unsupported Browser</title>
+<!-- Hand-built reference render (NOT a Stitch export). Stitch generation did not return a screen; see notes.md. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #07070d;
+    --label: rgba(255,255,255,.92);
+    --label-2: rgba(255,255,255,.62);
+    --label-3: rgba(255,255,255,.40);
+    --sep: rgba(255,255,255,.09);
+    --glass: rgba(28,28,34,.74);
+    --inset: rgba(10,10,16,.55);
+    --accent: #5E5CE6;
+    --accent-hover: #7472FF;
+    --accent-glow: rgba(94,92,230,.45);
+    --success: #30D158;
+    --warning: #FF9F0A;
+    --danger: #FF453A;
+    --focus: 0 0 0 3px rgba(94,92,230,.55);
+    --spring: linear(0, 0.25 8%, 0.65 18%, 0.94 30%, 1.03 40%, 1.01 55%, 1);
+    --ease: cubic-bezier(.2,.8,.2,1);
+    --ease-out: cubic-bezier(0,0,.2,1);
+    --ease-in: cubic-bezier(.4,0,1,1);
+    --fast: 120ms; --med: 200ms; --slow: 320ms;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    :root { --fast: 0ms; --med: 0ms; --slow: 0ms; }
+    *, *::before, *::after { animation-duration: 0ms !important; animation-delay: 0ms !important; transition-duration: 0ms !important; }
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; }
+  body { background: var(--bg); color: var(--label); font: 13px/1.5 Inter, system-ui, sans-serif; -webkit-font-smoothing: antialiased; overflow: hidden; }
+  .aurora { position: fixed; inset: 0; background:
+      radial-gradient(760px 520px at 50% 18%, rgba(94,92,230,.28), transparent 62%),
+      radial-gradient(620px 520px at 12% 78%, rgba(60,44,170,.30), transparent 65%),
+      radial-gradient(560px 460px at 90% 82%, rgba(42,31,92,.60), transparent 70%),
+      linear-gradient(170deg, #0B0B1A 0%, #110e26 55%, #08070f 100%); }
+  .aurora::after { content: ""; position: absolute; inset: 0; opacity: .05;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+
+  main { position: relative; height: 100%; display: grid; place-items: center; padding: 24px 16px 48px; }
+  .card {
+    width: min(580px, 100%); border-radius: 28px; padding: 32px 36px 26px;
+    background: var(--glass); backdrop-filter: blur(44px) saturate(170%); -webkit-backdrop-filter: blur(44px) saturate(170%);
+    box-shadow: 0 0 0 1px rgba(255,255,255,.10), inset 0 1px 0 rgba(255,255,255,.12), 0 30px 90px rgba(0,0,0,.6), 0 0 140px rgba(94,92,230,.14);
+    animation: cardIn var(--slow) var(--spring) both;
+    text-align: center;
+  }
+  .logo { width: 64px; height: 64px; margin: 0 auto 14px; display: block; opacity: .42; animation: dim var(--slow) var(--ease) both; filter: drop-shadow(0 0 14px rgba(94,92,230,.55)); }
+  .over { font: 600 10.5px/1 Inter, sans-serif; letter-spacing: .12em; color: var(--label-3); }
+  h1 { font-size: 26px; line-height: 1.2; font-weight: 700; letter-spacing: -.02em; margin-top: 10px; }
+  .sub { color: var(--label-2); font: 500 12px var(--mono); margin-top: 8px; }
+
+  .caps { list-style: none; padding: 4px 0; margin: 22px 0 18px; text-align: left; border-radius: 14px; background: var(--inset);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.07), inset 0 2px 8px rgba(0,0,0,.25); }
+  .caps li { display: grid; grid-template-columns: 20px 1fr auto; column-gap: 12px; align-items: center; padding: 9px 16px; position: relative; animation: rowIn var(--med) var(--spring) both; }
+  .caps li + li::before { content: ""; position: absolute; left: 48px; right: 16px; top: 0; height: 1px; background: var(--sep); }
+  .caps .name { font-weight: 500; font-size: 13.5px; }
+  .caps .name code { font: 500 11.5px var(--mono); color: var(--label-3); margin-left: 6px; }
+  .caps .fix { grid-column: 2 / 4; color: var(--label-2); font-size: 12px; margin-top: 3px; }
+  .ic { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; animation: pop var(--slow) var(--spring) both; animation-delay: inherit; }
+  .ic.pass { background: rgba(48,209,88,.16); color: var(--success); box-shadow: inset 0 0 0 1px rgba(48,209,88,.4); }
+  .ic.miss { background: rgba(255,69,58,.16); color: #ff6a61; box-shadow: inset 0 0 0 1px rgba(255,69,58,.45); }
+  .ic.deg { border-radius: 0; background: none; color: var(--warning); }
+  .tag { font: 600 11px/1 Inter, sans-serif; padding: 4px 8px; border-radius: 999px; }
+  .tag.pass { color: #7ee29a; background: rgba(48,209,88,.10); }
+  .tag.miss { color: #ff8a82; background: rgba(255,69,58,.14); box-shadow: inset 0 0 0 1px rgba(255,69,58,.28); }
+  .tag.deg { color: #FFB340; background: rgba(255,159,10,.14); box-shadow: inset 0 0 0 1px rgba(255,159,10,.28); }
+  li.bad { background: linear-gradient(90deg, rgba(255,255,255,.03), transparent); }
+
+  .explain { color: var(--label-2); font-size: 14px; line-height: 1.6; text-align: left; max-width: 64ch; }
+  .explain b { color: var(--label); font-weight: 600; }
+  .explain code { font: 500 12.5px var(--mono); color: var(--label); background: rgba(255,255,255,.07); padding: 1px 5px; border-radius: 5px; }
+
+  .actions { display: flex; gap: 10px; justify-content: center; margin-top: 22px; }
+  .btn { height: 36px; padding: 0 18px; border-radius: 999px; border: 0; font: 600 13.5px Inter, sans-serif; display: inline-flex; align-items: center; gap: 8px; color: var(--label);
+    background: rgba(255,255,255,.10); box-shadow: inset 0 0 0 1px rgba(255,255,255,.13), inset 0 1px 0 rgba(255,255,255,.08);
+    transition: transform var(--fast) var(--spring); cursor: pointer; }
+  .btn:hover { background: rgba(255,255,255,.15); }
+  .btn:active { transform: scale(.97); }
+  .btn.primary { background: var(--accent); color: #fff; box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 6px 20px rgba(94,92,230,.45); }
+  .btn.primary:hover { background: var(--accent-hover); }
+  .btn:focus-visible, .btn.focused { outline: none; box-shadow: var(--focus), inset 0 1px 0 rgba(255,255,255,.22), 0 6px 20px rgba(94,92,230,.45); }
+  .btn .lab { display: inline-block; }
+  .btn.copied .lab { animation: labIn var(--med) var(--spring) both; }
+
+  .meta { display: flex; justify-content: space-between; align-items: center; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--sep); font-size: 12px; }
+  .meta a { color: #9d9bff; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; font-weight: 500; }
+  .meta a:hover { text-decoration: underline; }
+  .meta a:focus-visible { outline: none; box-shadow: var(--focus); border-radius: 4px; }
+  .meta .hint { color: var(--label-3); animation: hintIn var(--med) var(--ease-out) 1.2s both; }
+  .kbd { font: 600 10.5px/1 var(--mono); color: var(--label-2); border-radius: 5px; padding: 2px 5px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.18); }
+
+  footer { position: fixed; bottom: 16px; left: 0; right: 0; text-align: center; color: var(--label-3); font: 500 11.5px var(--mono); }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  @keyframes cardIn { from { opacity: 0; transform: translateY(12px) scale(.97); } }
+  @keyframes dim { from { opacity: 1; transform: scale(1.04); } }
+  @keyframes rowIn { from { opacity: 0; transform: translateY(6px); } }
+  @keyframes pop { from { opacity: 0; transform: scale(.6); } }
+  @keyframes labIn { from { opacity: 0; transform: translateY(4px); } }
+  @keyframes hintIn { from { opacity: 0; } }
+
+  @media (forced-colors: active) { .card, .caps { border: 1px solid CanvasText; } }
+</style>
+</head>
+<body>
+<div class="aurora" aria-hidden="true"></div>
+<main>
+  <section class="card" aria-labelledby="t" aria-describedby="why">
+    <svg class="logo" viewBox="0 0 64 64" aria-hidden="true">
+      <defs>
+        <radialGradient id="n" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#fff"/><stop offset=".4" stop-color="#c9c8ff"/><stop offset="1" stop-color="#5E5CE6"/></radialGradient>
+      </defs>
+      <g fill="none" stroke="#8f8dff" stroke-width="1.6">
+        <ellipse cx="32" cy="32" rx="27" ry="10" transform="rotate(-32 32 32)"/>
+        <ellipse cx="32" cy="32" rx="27" ry="10" transform="rotate(32 32 32)"/>
+        <ellipse cx="32" cy="32" rx="27" ry="10" transform="rotate(90 32 32)" stroke-opacity=".55"/>
+      </g>
+      <circle cx="32" cy="32" r="6.5" fill="url(#n)"/>
+    </svg>
+    <div class="over">POWER-ON SELF TEST</div>
+    <h1 id="t">This browser can’t run Plotinium</h1>
+    <p class="sub">Plotinium 0.3.0 · build a1f93c2 · Chrome 128 on Linux</p>
+    <p class="sr-only" role="status">2 features unavailable: Origin Private File System, cross-origin isolation.</p>
+
+    <ul class="caps" aria-label="Browser capabilities">
+      <li style="animation-delay:120ms"><span class="ic pass" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+        <span class="name">Secure context<code>localhost:4717</code></span><span class="tag pass">Pass</span></li>
+      <li style="animation-delay:160ms"><span class="ic pass" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+        <span class="name">Web Workers</span><span class="tag pass">Pass</span></li>
+      <li style="animation-delay:200ms"><span class="ic pass" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+        <span class="name">Module workers</span><span class="tag pass">Pass</span></li>
+      <li style="animation-delay:240ms"><span class="ic pass" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+        <span class="name">IndexedDB</span><span class="tag pass">Pass</span></li>
+      <li class="bad" style="animation-delay:280ms"><span class="ic miss" aria-hidden="true"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
+        <span class="name">Origin Private File System</span><span class="tag miss">Missing</span>
+        <span class="fix">Swap falls back to IndexedDB (<code style="font:500 11.5px var(--mono)">plotinium-swap</code>) · slower paging</span></li>
+      <li style="animation-delay:320ms"><span class="ic pass" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+        <span class="name">WebCrypto<code>crypto.subtle</code></span><span class="tag pass">Pass</span></li>
+      <li class="bad" style="animation-delay:360ms"><span class="ic deg" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg></span>
+        <span class="name">Cross-origin isolation</span><span class="tag deg">Degraded</span>
+        <span class="fix">Pre-emption falls back to messages · AI search runs single-threaded</span></li>
+    </ul>
+
+    <p class="explain" id="why">Plotinium runs its kernel and apps in browser workers and keeps your files in local storage. <b>Two features it relies on are unavailable here.</b> You can continue in degraded mode: everything works, but paging and scheduling will be slower. For the full experience, open the latest Chrome at <code>http://localhost:4717</code>, not a LAN IP.</p>
+
+    <div class="actions">
+      <button class="btn primary focused" id="go" aria-keyshortcuts="Enter">Continue in degraded mode
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+      <button class="btn" id="copy" aria-keyshortcuts="D">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="3" width="8" height="4" rx="1"/><path d="M16 5h2a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/></svg>
+        <span class="lab">Copy diagnostics</span></button>
+    </div>
+
+    <div class="meta">
+      <a href="#requirements">Requirements
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+        <span class="sr-only">(opens in a new tab)</span></a>
+      <span class="hint"><span class="kbd">Enter</span> continue · <span class="kbd">D</span> copy diagnostics</span>
+    </div>
+  </section>
+</main>
+<footer>Plotinium 0.3.0 · build a1f93c2</footer>
+<script>
+  (function () {
+    const copy = document.getElementById('copy');
+    const lab = copy.querySelector('.lab');
+    function copied() {
+      const diag = JSON.stringify({ version: '0.3.0', build: 'a1f93c2', caps: { secureContext: true, workers: true, moduleWorkers: true, indexedDB: true, opfs: false, subtle: true, crossOriginIsolated: false } }, null, 2);
+      (navigator.clipboard ? navigator.clipboard.writeText(diag) : Promise.reject()).then(() => {
+        copy.classList.remove('copied'); void copy.offsetWidth; copy.classList.add('copied'); lab.textContent = 'Copied';
+        setTimeout(() => { lab.textContent = 'Copy diagnostics'; copy.classList.remove('copied'); }, 1500);
+      }, () => { lab.textContent = 'Couldn’t copy'; });
+    }
+    copy.addEventListener('click', copied);
+    document.addEventListener('keydown', (e) => { if (e.key.toLowerCase() === 'd' && !e.metaKey && !e.ctrlKey) copied(); });
+    document.getElementById('go').addEventListener('mousedown', function () { this.classList.remove('focused'); });
+  })();
+</script>
+</body>
+</html>

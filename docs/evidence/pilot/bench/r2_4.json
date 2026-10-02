@@ -1,0 +1,80 @@
+{
+ "ok": true,
+ "out": {
+  "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.0.0 Safari/537.36",
+  "swap": {
+   "idbOut": {
+    "n": 60,
+    "p50": 38.9,
+    "p95": 46.2
+   },
+   "idbIn": {
+    "n": 60,
+    "p50": 21.1,
+    "p95": 26.9
+   },
+   "idbReadOnly": {
+    "n": 60,
+    "p50": 10.8,
+    "p95": 14.2
+   },
+   "opfsOut": {
+    "n": 60,
+    "p50": 33,
+    "p95": 44
+   },
+   "opfsIn": {
+    "n": 60,
+    "p50": 20.5,
+    "p95": 25.4
+   },
+   "opfsReadOnly": {
+    "n": 60,
+    "p50": 10,
+    "p95": 12.9
+   },
+   "parseAndVerify": {
+    "n": 60,
+    "p50": 11.8,
+    "p95": 14
+   }
+  },
+  "lazyEntries": 130,
+  "bulk": {
+   "idbSeed1000": {
+    "n": 20,
+    "p50": 54.9,
+    "p95": 61
+   },
+   "idbRmPlanned1000": {
+    "n": 20,
+    "p50": 50.2,
+    "p95": 56.5
+   },
+   "sqliteSeed1000": {
+    "n": 20,
+    "p50": 32.8,
+    "p95": 40.5
+   },
+   "sqliteRm1000": {
+    "n": 20,
+    "p50": 24,
+    "p95": 30.1
+   },
+   "faultInjectionUnchanged": "20/20",
+   "successDeleted1000": "20/20",
+   "sqliteLeftover": 10000,
+   "bootFullLoad": {
+    "n": 12,
+    "p50": 105.8,
+    "p95": 117.6,
+    "inodes": 10000
+   },
+   "bootLazyLoad": {
+    "n": 12,
+    "p50": 3.7,
+    "p95": 8.9
+   }
+  }
+ }
+}

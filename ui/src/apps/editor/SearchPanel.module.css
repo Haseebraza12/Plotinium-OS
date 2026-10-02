@@ -1,0 +1,117 @@
+/*
+ * The Editor's find and replace bar (UI-101). Tokens only; a bundled stylesheet, so the strict
+ * CSP applies it (no inline style anywhere in the bar). Only transform and opacity animate.
+ */
+.panel {
+  /* CodeMirror adds .cm-panel; the bar supplies its own padding and surface. */
+  padding: 0;
+}
+.bar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pl-space-1);
+  padding: var(--pl-space-1) var(--pl-space-2);
+  background: var(--pl-glass-window-bg);
+  color: var(--pl-text);
+  font: var(--pl-type-body);
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--pl-space-1);
+  min-width: 0;
+}
+.disclosure {
+  flex: none;
+}
+.disclosure :global(svg) {
+  transition: transform var(--pl-motion-fast) var(--pl-ease);
+}
+.open :global(svg) {
+  transform: rotate(90deg);
+}
+/* The width of the disclosure button, so both fields line up. */
+.disclosureSpace {
+  flex: none;
+  width: var(--pl-control-h);
+}
+.field {
+  display: flex;
+  align-items: center;
+  gap: var(--pl-space-1);
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 34rem;
+  height: var(--pl-control-h);
+  padding: 0 var(--pl-space-2);
+  border-radius: var(--pl-radius-ctl);
+  background: var(--pl-search-bg);
+  box-shadow: inset 0 0 0 var(--pl-hairline-width) var(--pl-hairline-subtle);
+  color: var(--pl-text-tertiary);
+}
+.field:focus-within {
+  outline: var(--pl-focus-ring);
+  outline-offset: var(--pl-focus-offset);
+  color: var(--pl-text-muted);
+}
+.field[data-invalid] {
+  box-shadow: inset 0 0 0 var(--pl-hairline-width) var(--pl-danger);
+}
+.fieldIcon {
+  display: inline-flex;
+  flex: none;
+}
+.input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--pl-text);
+  font: var(--pl-type-body);
+}
+.input::placeholder {
+  color: var(--pl-text-tertiary);
+}
+.count {
+  flex: none;
+  color: var(--pl-text-muted);
+  font: var(--pl-type-caption);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.countError {
+  color: var(--pl-danger);
+}
+.group {
+  display: flex;
+  align-items: center;
+  gap: var(--pl-space-half);
+  flex: none;
+}
+.toggle[aria-pressed='true'] {
+  color: var(--pl-accent-text);
+  background: var(--pl-accent-subtle);
+}
+.done {
+  flex: none;
+  margin-left: auto;
+}
+.replaceRow {
+  animation: replace-in var(--pl-motion-fast) var(--pl-ease) both;
+}
+@keyframes replace-in {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .disclosure :global(svg),
+  .replaceRow {
+    transition: none;
+    animation: none;
+  }
+}

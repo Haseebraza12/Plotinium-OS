@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2560 1600" width="2560" height="1600" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Plotinium wallpaper, dark">
+  <!-- Plotinium wallpaper, dark. Gradients only (no filters or raster), so it stays sharp at any size and cheap
+       to rasterise. Layers follow the pl-wallpaper token; the faint arcs repeat the boot-screen
+       orbits so boot, login and desktop share one field. -->
+  <defs>
+    <linearGradient id="wallpaper-dark-base" x1="822.51" y1="-332.32" x2="1737.49" y2="1932.32" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#0B0D1F"/><stop offset=".44" stop-color="#13113A"/><stop offset="1" stop-color="#251B63"/></linearGradient>
+    <radialGradient id="wd-1" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1996.8 288) scale(1600 1102.22)"><stop offset="0" stop-color="#5E5CE6" stop-opacity="0.55"/><stop offset="0.62" stop-color="#5E5CE6" stop-opacity="0"/></radialGradient>
+    <radialGradient id="wd-2" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(307.2 1408) scale(1351.11 924.44)"><stop offset="0" stop-color="#4630AA" stop-opacity="0.7"/><stop offset="0.62" stop-color="#4630AA" stop-opacity="0"/></radialGradient>
+    <radialGradient id="wd-3" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(2406.4 1472) scale(1102.22 817.78)"><stop offset="0" stop-color="#C440AA" stop-opacity="0.26"/><stop offset="0.62" stop-color="#C440AA" stop-opacity="0"/></radialGradient>
+    <radialGradient id="wd-4" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(768 224) scale(995.56 675.56)"><stop offset="0" stop-color="#2860D2" stop-opacity="0.32"/><stop offset="0.62" stop-color="#2860D2" stop-opacity="0"/></radialGradient>
+    <radialGradient id="wd-5" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1560 1420) rotate(-9) scale(1500 250)"><stop offset="0" stop-color="#5E5CE6" stop-opacity="0.42"/><stop offset="0.45" stop-color="#5E5CE6" stop-opacity="0.16"/><stop offset="1" stop-color="#5E5CE6" stop-opacity="0"/></radialGradient>
+    <radialGradient id="wd-6" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1780 1240) rotate(-14) scale(1150 130)"><stop offset="0" stop-color="#A5A4FF" stop-opacity="0.15"/><stop offset="0.5" stop-color="#A5A4FF" stop-opacity="0.045"/><stop offset="1" stop-color="#A5A4FF" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="2560" height="1600" fill="url(#wallpaper-dark-base)"/>
+  <rect width="2560" height="1600" fill="url(#wd-1)"/>
+  <rect width="2560" height="1600" fill="url(#wd-2)"/>
+  <rect width="2560" height="1600" fill="url(#wd-3)"/>
+  <rect width="2560" height="1600" fill="url(#wd-4)"/>
+  <rect width="2560" height="1600" fill="url(#wd-5)"/>
+  <rect width="2560" height="1600" fill="url(#wd-6)"/>
+  <g transform="scale(1.78)" fill="none" stroke="#FFFFFF" stroke-opacity="0.06" stroke-width="1.1"><path d="M-120 760A900 360-12 0 1 1100 120"/><path d="M260 980A820 300 18 0 1 1560 520"/><path d="M1500 90A700 260-28 0 0 520-60"/><path d="M-80 300A640 220 8 0 0 700 960"/></g>
+  <circle cx="1955.56" cy="213.33" r="3.5" fill="#A5A4FF" fill-opacity=".45"/>
+</svg>

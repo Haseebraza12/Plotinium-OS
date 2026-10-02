@@ -1,0 +1,801 @@
+{
+ "key": "ui",
+ "title": "UI framework, rendering & app UI libraries",
+ "record": {
+  "decision_title": "UI framework, rendering model and app UI libraries (boot/login screens, desktop shell, compositor chrome, built-in apps)",
+  "context_constraints_ranked": [
+   "1. Main-thread frame budget and update isolation: WM-03 (p95 frame <=16.7 ms while dragging or resizing with >=10 windows), PROC-05 (same budget with a CPU-bound workload; no OS long task >50 ms), and the reference limit of <=4 ms kernel work per frame. Section 14.2 says the defence must show that one window's change does not re-render the others.",
+   "2. Boot budget BOOT-10: warm <=1.5 s and cold <=3.0 s to an interactive desktop on the modest lab machine, with large assets loaded only after that. BOOT-02 needs truthful progress and BOOT-13 an accessible boot screen, so framework bytes and parse/eval time sit on the critical path.",
+   "3. The compositor is the only code that writes window geometry (WM-01) and uses pointer capture plus translate3d batched per requestAnimationFrame. Apps reach OS state only through typed syscalls, and kernel state lives in workers, so the UI layer must take external event streams and must never own geometry or OS state.",
+   "4. Team skills and defensibility: 5 students who know JS/TS and some React, 18 weeks, and the stack is frozen after the Week-4 defence. Every member must be able to defend the choice in the viva, and a decision only one member can explain counts as undefended.",
+   "5. Accessibility and built-in app breadth: WCAG 2.2 AA (WM-07) and BOOT-13 (progressbar, live regions, reduced motion, keyboard-only boot menu). Terminal, Files, Editor, Task Manager and Settings all have to be built, and they must work offline (OFF-01).",
+   "6. Stability and maintenance over the frozen window: no major-version migration after Week 4, and third-party code needs licence and attribution in THIRD_PARTY.md.",
+   "7. Testability: unit, e2e and performance tests with a budget that fails the build, and >=70% coverage reported by CI on every PR.",
+   "8. Cost: free and open-source only, with no runtime service cost."
+  ],
+  "options": [
+   {
+    "name": "SolidJS 1.9 (fine-grained signals, JSX, no virtual DOM)",
+    "current_version": "solid-js 1.9.15 (npm latest, 2026-08-17); vite-plugin-solid 2.11.14",
+    "summary": "JSX that React developers can read, compiled to direct DOM updates. A component function runs once, and later state changes update only the DOM nodes that read them. Stores with reconcile() fit batches of kernel events.",
+    "status_notes": "Stable 1.x line, still patched (1.9.15 in Aug 2026). Solid 2.0 is at RC (2.0.0-rc.9, 2026-09-18) and has breaking changes (onMount->onSettled, For children become accessors, draft-first store setters), so we would pin 1.9.x for the whole project. The accessible-primitives ecosystem is smaller: Kobalte is still 0.13.x, Ark UI Solid is 5.39.2."
+   },
+   {
+    "name": "React 19.3 + React Compiler 1.0",
+    "current_version": "react/react-dom 19.3.0 (2026-09-09); babel-plugin-react-compiler 1.0.0 (2025-10-07); @vitejs/plugin-react 6.1.1",
+    "summary": "The team already knows it and it has the largest ecosystem (React Aria Components, Radix). Rendering uses a virtual DOM, so isolating windows depends on the compiler's automatic memoisation or on per-window external stores through useSyncExternalStore.",
+    "status_notes": "Stable and now governed by the React Foundation (Linux Foundation). Compiler 1.0 is stable, and React recommends pinning its exact version. Under Vite 8 the compiler runs through @rolldown/plugin-babel with reactCompilerPreset; the Rust port is experimental. daedalOS, one of the two benchmark systems, uses React 19.2 + Next 15.5."
+   },
+   {
+    "name": "Preact 10 + @preact/signals (React-like API, 1/7 of React's size)",
+    "current_version": "preact 10.29.8; @preact/signals 2.11.2; @preact/preset-vite 2.10.6",
+    "summary": "Keeps the React hooks and JSX mental model at about 9 KB gzip. Binding signals directly into JSX skips re-rendering on hot paths. React libraries work only through preact/compat.",
+    "status_notes": "Stable 10.x. Preact 11 is at RC (11.0.0-rc.2, 2026-09-08). This option was added to test whether the team could keep React skills without React's runtime cost. The preset still needs Babel 7, while @rolldown/plugin-babel wants Babel 8; we hit this peer-dependency conflict while installing."
+   },
+   {
+    "name": "Svelte 5 (runes)",
+    "current_version": "svelte 5.57.1 (2026-09-18); @sveltejs/vite-plugin-svelte 7.3.1",
+    "summary": "A compiler-first framework with fine-grained $state and $derived and template syntax rather than JSX. It emits about 45 compile-time a11y_* warnings.",
+    "status_notes": "Svelte 5 has been stable since 2024-10-19, releases often, and has no major version in flight. Its deep $state proxies wrap external objects, so kernel data needs $state.raw or createSubscriber."
+   },
+   {
+    "name": "Vue 3.5 (Vapor mode in 3.6 RC)",
+    "current_version": "vue 3.5.43 (latest); 3.6.0-rc.9 (2026-09-18) with Vapor",
+    "summary": "SFC templates with proxy reactivity and per-component virtual DOM. Vapor mode drops the VDOM for components that opt in.",
+    "status_notes": "Vapor became feature-complete at 3.6.0-rc.1 (2026-07-18). The Vue changelog recommends it for now only for partial use or small new apps, and it is still an RC at our Week-4 freeze. Installing 3.6 RC with @vitejs/plugin-vue 6.0.9 needed --legacy-peer-deps."
+   },
+   {
+    "name": "Lit 3 / plain Web Components (expected to lose)",
+    "current_version": "lit 3.3.3 (2026-05-14), BSD-3-Clause",
+    "summary": "Standards-based custom elements with lit-html tagged templates. Tiny and fast, and a custom element is a natural boundary for a window.",
+    "status_notes": "Stable, with a slower release cadence. Class components and string templates give weaker type-checking in templates, and few app-level components exist. Shadow DOM cross-root ARIA (Reference Target) only shipped in Chrome 152, so we would use light DOM. We expected it to lose on team fit and ecosystem."
+   }
+  ],
+  "criteria": [
+   {
+    "name": "C1 Update isolation and main-thread cost per update",
+    "weight": 25,
+    "why": "Section 14.2 names isolation as a defence point. WM-03 and PROC-05 are Must requirements verified by performance traces, the kernel may use <=4 ms of each frame, and OS & Process Engineering is 25% of the marks. Kernel events (process table, sync, locks, indexer progress) arrive at up to ~20/s per client, so each UI update must be cheap and must not touch other windows."
+   },
+   {
+    "name": "C2 Boot-path cost (framework bytes and parse/eval)",
+    "weight": 20,
+    "why": "BOOT-10 sets warm <=1.5 s and cold <=3.0 s on a modest machine, and section 14.2 names bundle size against the boot budget. The framework runtime is on the boot critical path, while app chunks are not."
+   },
+   {
+    "name": "C3 Fit with an imperative compositor and kernel-owned state",
+    "weight": 10,
+    "why": "WM-01 makes the compositor the only writer of geometry, and all OS state comes from workers through syscalls and events. The framework must accept refs and external stores easily and must not take ownership of geometry."
+   },
+   {
+    "name": "C4 Team familiarity and defensibility",
+    "weight": 15,
+    "why": "There are 18 weeks, 5 members, and every member is examined on the whole system. 'We already knew it' counts as a factor but never as the whole justification."
+   },
+   {
+    "name": "C5 Ecosystem and accessibility support for built-in apps",
+    "weight": 15,
+    "why": "WM-07 (WCAG 2.2 AA) and BOOT-13 (accessible boot), plus five built-in apps that need menus, dialogs, lists, a terminal and an editor."
+   },
+   {
+    "name": "C6 Stability over the frozen 18-week window",
+    "weight": 10,
+    "why": "The stack freezes after Week 4. A major version landing mid-project means either a migration or being left on an old line."
+   },
+   {
+    "name": "C7 Testability and tooling",
+    "weight": 5,
+    "why": "Coverage >=70% (85% on kernel/, vfs/ and dsa/), PR CI, and performance budgets that fail the build."
+   }
+  ],
+  "scores": [
+   {
+    "option": "SolidJS 1.9",
+    "per_criterion": [
+     {
+      "criterion": "C1",
+      "score": 5,
+      "reason": "Measured 0.04 ms (10 windows x 150 rows) and 0.02 ms (20x400) of script per one-window update, with zero sibling work because components run once. The reactive drag path cost 0.26 ms/frame. js-framework-benchmark Chrome 150 gives 1.11x vanilla."
+     },
+     {
+      "criterion": "C2",
+      "score": 5,
+      "reason": "7.3 KB gz for the identical prototype, the smallest after vanilla. Cold boot P50 252 ms against 239 ms for vanilla (gzip, 10 Mbps/40 ms, 4x CPU, 15 interleaved runs)."
+     },
+     {
+      "criterion": "C3",
+      "score": 5,
+      "reason": "A ref callback hands the element to the compositor and no geometry binding exists. createStore plus batch/reconcile applies kernel event batches directly."
+     },
+     {
+      "criterion": "C4",
+      "score": 3,
+      "reason": "The JSX transfers from React, but the semantics differ: no re-render, props must not be destructured, and conditionals use Show/For. This needs about a week of practice plus lint rules."
+     },
+     {
+      "criterion": "C5",
+      "score": 3,
+      "reason": "Has Ark UI 5.39 and TanStack Virtual, but Kobalte is still 0.x, there are no compile-time a11y checks and the community is smaller. xterm.js and CodeMirror are framework-agnostic, so they are unaffected."
+     },
+     {
+      "criterion": "C6",
+      "score": 3,
+      "reason": "1.9 is stable and patched, but 2.0 is at RC with breaking changes. By the final defence we will be on the previous major, pinned."
+     },
+     {
+      "criterion": "C7",
+      "score": 4,
+      "reason": "Vitest 5 + @solidjs/testing-library 0.8.10, and eslint-plugin-solid 0.18 catches reactivity mistakes."
+     }
+    ],
+    "weighted_total": 83
+   },
+   {
+    "option": "Preact 10 + Signals",
+    "per_criterion": [
+     {
+      "criterion": "C1",
+      "score": 4,
+      "reason": "Measured 0.13 and 0.19 ms per update with zero sibling re-renders. Reactive drag 0.52 ms/frame. js-framework-benchmark gives 1.39x vanilla with the highest run memory of the group (5.05 MB)."
+     },
+     {
+      "criterion": "C2",
+      "score": 5,
+      "reason": "9.2 KB gz, cold P50 277 ms."
+     },
+     {
+      "criterion": "C3",
+      "score": 4,
+      "reason": "Signals bound into JSX work well, but the hooks re-render model and the signals model coexist, which makes two models to explain."
+     },
+     {
+      "criterion": "C4",
+      "score": 4,
+      "reason": "Uses the React API, but signals and compat quirks are new to the team."
+     },
+     {
+      "criterion": "C5",
+      "score": 3,
+      "reason": "The React ecosystem is reachable only through preact/compat, with unofficial support for libraries such as React Aria."
+     },
+     {
+      "criterion": "C6",
+      "score": 4,
+      "reason": "10.x is stable, and Preact 11 is at RC."
+     },
+     {
+      "criterion": "C7",
+      "score": 4,
+      "reason": "Vitest and Testing Library are available, and the preset still pins Babel 7."
+     }
+    ],
+    "weighted_total": 81
+   },
+   {
+    "option": "React 19.3 + Compiler 1.0",
+    "per_criterion": [
+     {
+      "criterion": "C1",
+      "score": 3,
+      "reason": "With the compiler and top-level state: 0.64-1.25 ms per update across runs, and all 9 or 19 sibling Win components are re-invoked (they return cached JSX). With per-window useSyncExternalStore there are 0 sibling renders but still 0.70-0.73 ms per update. Without the compiler it reaches 8.93 ms in the 20x400 case, more than twice the 4 ms kernel reference. Reactive drag 0.96 ms/frame. js-framework-benchmark gives 1.80-1.91x vanilla."
+     },
+     {
+      "criterion": "C2",
+      "score": 3,
+      "reason": "69.3 KB gz, about 62 KB more than Solid. Cold P50 364 ms, +112 ms over Solid (about 4% of the cold budget); warm P50 204 ms, within noise. Measurable but not a threat to the budget."
+     },
+     {
+      "criterion": "C3",
+      "score": 4,
+      "reason": "useSyncExternalStore is designed for external stores, and refs work for the compositor. Isolation needs per-window store discipline."
+     },
+     {
+      "criterion": "C4",
+      "score": 5,
+      "reason": "The team already knows it."
+     },
+     {
+      "criterion": "C5",
+      "score": 5,
+      "reason": "React Aria Components 1.21 and Radix give the best-in-class accessible primitives, and it has the largest community."
+     },
+     {
+      "criterion": "C6",
+      "score": 5,
+      "reason": "19.3 and Compiler 1.0 are stable, and no major version is in flight."
+     },
+     {
+      "criterion": "C7",
+      "score": 5,
+      "reason": "The most mature testing and tooling."
+     }
+    ],
+    "weighted_total": 80
+   },
+   {
+    "option": "Svelte 5",
+    "per_criterion": [
+     {
+      "criterion": "C1",
+      "score": 4,
+      "reason": "Measured 0.34 and 0.27 ms per update with zero sibling work. Reactive drag 0.74 ms/frame. js-framework-benchmark gives 1.16x vanilla."
+     },
+     {
+      "criterion": "C2",
+      "score": 4,
+      "reason": "14.7 KB gz, cold P50 288 ms."
+     },
+     {
+      "criterion": "C3",
+      "score": 4,
+      "reason": "$state deep-proxies whatever is assigned to it, so kernel data needs $state.raw or createSubscriber. Refs are fine."
+     },
+     {
+      "criterion": "C4",
+      "score": 3,
+      "reason": "A new template language and runes, though the semantics are simpler than Solid's."
+     },
+     {
+      "criterion": "C5",
+      "score": 4,
+      "reason": "About 45 compile-time a11y warnings, plus Bits UI."
+     },
+     {
+      "criterion": "C6",
+      "score": 5,
+      "reason": "Stable since Oct 2024 with no major in flight."
+     },
+     {
+      "criterion": "C7",
+      "score": 4,
+      "reason": "Vitest and @testing-library/svelte 5.4."
+     }
+    ],
+    "weighted_total": 79
+   },
+   {
+    "option": "Vue 3.5 (Vapor 3.6 RC)",
+    "per_criterion": [
+     {
+      "criterion": "C1",
+      "score": 4,
+      "reason": "3.5: 0.08 ms per update with zero siblings, but reactive drag costs 0.65 ms/frame because the whole window template is re-diffed. Vapor 0.05/0.04 ms, but it is only an RC."
+     },
+     {
+      "criterion": "C2",
+      "score": 4,
+      "reason": "3.5 is 24.8 KB gz (Vapor 19.5), cold P50 279 ms."
+     },
+     {
+      "criterion": "C3",
+      "score": 4,
+      "reason": "shallowRef/markRaw handle external data, and template refs work."
+     },
+     {
+      "criterion": "C4",
+      "score": 3,
+      "reason": "The SFC template language is new to the team."
+     },
+     {
+      "criterion": "C5",
+      "score": 4,
+      "reason": "Reka UI 2.10 and a large ecosystem."
+     },
+     {
+      "criterion": "C6",
+      "score": 4,
+      "reason": "3.5 is stable, but the reason to choose Vue now (Vapor) will not be stable before the freeze."
+     },
+     {
+      "criterion": "C7",
+      "score": 4,
+      "reason": "Vitest and Vue Test Utils."
+     }
+    ],
+    "weighted_total": 77
+   },
+   {
+    "option": "Lit 3 / Web Components",
+    "per_criterion": [
+     {
+      "criterion": "C1",
+      "score": 5,
+      "reason": "Measured 0.06 and 0.05 ms per update with zero siblings, and the lowest reactive drag of all (0.15 ms/frame). js-framework-benchmark gives 1.31x vanilla."
+     },
+     {
+      "criterion": "C2",
+      "score": 5,
+      "reason": "8.2 KB gz, cold P50 279 ms."
+     },
+     {
+      "criterion": "C3",
+      "score": 4,
+      "reason": "A custom element is a natural window boundary, but updates rely on manual property identity."
+     },
+     {
+      "criterion": "C4",
+      "score": 2,
+      "reason": "Class components and tagged-template strings are unfamiliar, and template type-checking is weak."
+     },
+     {
+      "criterion": "C5",
+      "score": 2,
+      "reason": "Few app-level components. Shadow DOM a11y needs Chrome 152+ Reference Target, or light DOM."
+     },
+     {
+      "criterion": "C6",
+      "score": 4,
+      "reason": "Stable, with a slow cadence."
+     },
+     {
+      "criterion": "C7",
+      "score": 3,
+      "reason": "The testing story is less integrated (web-test-runner or Vitest browser mode)."
+     }
+    ],
+    "weighted_total": 76
+   }
+  ],
+  "evidence": [
+   {
+    "claim": "Own prototype, bundle size. The same 10-window desktop (150 rows per window, taskbar, same compositor), built with Vite 8.3.0, gives this gzip JS: vanilla 1.5 KB, Solid 7.3, Lit 8.2, Preact+signals 9.2, Svelte 14.7, Vue Vapor 19.5, Vue 3.5 24.8, React 19.3 + Compiler 69.3 (68.7 without the compiler).",
+    "source": "Own measurement 2026-09-23, scratchpad/fw/dist (gzip -9), Chrome 153 headless",
+    "verified": true
+   },
+   {
+    "claim": "Own prototype, boot. Cold/warm P50 to the 'desktop-interactive' mark over 15 interleaved runs, gzip on, 10 Mbps/40 ms RTT, 4x CPU throttle: vanilla 239/177 ms, Solid 252/195, Preact 277/215, Lit 279/212, Vue 279/190, Vapor 284/204, Svelte 288/209, React+Compiler 364/204. The cold penalty for React is about 112 ms; warm differences are within noise.",
+    "source": "Own measurement, scratchpad/fw/bootrr.mjs -> boot-rr-cpu4-gzip.json",
+    "verified": true
+   },
+   {
+    "claim": "Own prototype, isolation. Script ms for one update to one window (10x150 | 20x400) at 4x CPU: Solid 0.04|0.02, Vapor 0.05|0.04, Lit 0.06|0.05, Vue 0.08|0.08, Preact 0.13|0.19, Svelte 0.34|0.27, React+Compiler with top-level state 0.89|0.79 (sibling components re-invoked 9|19; a repeat run gave 1.25|0.64), React with per-window useSyncExternalStore 0.70|0.73 (0 siblings), React without the compiler 2.68|8.93.",
+    "source": "Own measurement, scratchpad/fw/bench.mjs -> results-cpu4.json (CDP Performance.getMetrics ScriptDuration delta / 100 updates)",
+    "verified": true
+   },
+   {
+    "claim": "Own prototype, dragging. When the compositor writes translate3d directly (the framework is bypassed), all 9 variants hold p95 frame at 16.7-16.8 ms (vsync-capped) with 2.7-4.2 ms main-thread work per frame and zero long animation frames. When geometry goes through framework state, script cost per frame is Lit 0.15, Solid 0.26, Vapor 0.39, Preact 0.52, Vue 0.65, Svelte 0.74, React+Compiler 0.96, React without the compiler 2.44 ms.",
+    "source": "Own measurement, bench.mjs dragImperative/dragReactive, 200 pointer moves via CDP Input",
+    "verified": true
+   },
+   {
+    "claim": "Own prototype, drag under CPU load. With hardwareConcurrency-2 = 10 busy workers on 12 threads plus 4x throttle, p95 ranged from 16.8 to 49.9 ms for every variant, including vanilla JS (33.3, 49.9 and 33.4 ms across 3 runs). Run-to-run variance exceeded the differences between frameworks, so under PROC-05 the lever is worker scheduling and yielding, not the UI framework.",
+    "source": "Own measurement, results-pass2-cpu4.json",
+    "verified": true
+   },
+   {
+    "claim": "Own prototype, heap. Used JS heap after GC with 10 windows: vanilla 1.27 MB, Solid 1.60, Preact 1.79, Lit 1.88, Vue 1.92, React 2.11, Vapor 2.29, Svelte 2.51. Framework heap is negligible against the 256 MB MEM-01 budget.",
+    "source": "Own measurement, CDP Runtime.getHeapUsage",
+    "verified": true
+   },
+   {
+    "claim": "Own measurement, editor and terminal. CodeMirror 6 is 87 KB gz for the core, 170 KB with markdown (it pulls in lang-html) and 203 KB with basicSetup+markdown+JS; heap is 3.86 MB with a 5,000-line document. Monaco 0.56 core is 754 KB gz + 12 KB CSS with an 8.0 MB main-thread heap and ~790 ms load against ~150 ms for CM6; full Monaco is 3.18 MB gz across 95 files. xterm.js 6.0 is 82 KB gz (113 KB with the webgl and fit addons) with a 3.65 MB heap at 5,000 lines of scrollback. 9 Lucide icons are 1.1 KB gz.",
+    "source": "Own measurement, scratchpad/libsize (vite build + heap.mjs)",
+    "verified": true
+   },
+   {
+    "claim": "js-framework-benchmark on Chrome 150 (keyed; our unweighted geometric mean of median CPU times against vanillajs over 9 CPU tests): Vue Vapor 3.6-alpha.2 1.06, Solid 1.9.3 1.11, Svelte 5.42.1 1.16, Vue 3.6-alpha.2 1.25, Lit 3.2.0 1.31, Preact-signals 1.39, React 19.2 hooks 1.80, React-compiler 19.0 1.91. Compressed size in KB: Solid 4.5, Lit 7.3, Preact-signals 8.2, Svelte 12.2, Vapor 14.3, Vue 22.8, React 51.4. First paint in ms: Solid 38.4, Lit 58.2, Svelte 60.3, Vapor 62.1, Vue 90.8, React 222.6.",
+    "source": "https://krausest.github.io/js-framework-benchmark/2026/chrome150.html (data extracted from the published bundle by scratchpad/kx.cjs)",
+    "verified": true
+   },
+   {
+    "claim": "React 19.3.0 was released 2026-09-09. React Compiler 1.0 has been stable since 2025-10-07; at Meta Quest Store it gave up to 12% faster loads and 2.5x faster interactions, and React advises pinning the compiler's exact version.",
+    "source": "https://react.dev/blog ; https://react.dev/blog/2025/10/07/react-compiler-1 ; npm registry",
+    "verified": true
+   },
+   {
+    "claim": "Solid 1.9.15 is the npm 'latest' (2026-08-17). 2.0.0-rc.9 (2026-09-18) is on the 'next' tag with breaking changes: onMount->onSettled, For accessors, draft-first store setters, and removal of the use: directive.",
+    "source": "npm registry; https://github.com/solidjs/solid/releases ; https://www.infoq.com/news/2026/05/solidjs-2-async/",
+    "verified": true
+   },
+   {
+    "claim": "A Solid component runs only once. Updates change the relevant DOM without re-running it, and destructuring props breaks reactivity.",
+    "source": "https://docs.solidjs.com/concepts/components/basics ; https://docs.solidjs.com/concepts/components/props",
+    "verified": true
+   },
+   {
+    "claim": "Vue Vapor became feature-complete at 3.6.0-rc.1 (2026-07-18). The changelog recommends it for now only for partial use or small new apps. 3.6.0-rc.9 is dated 2026-09-18, and 3.5.43 is still the npm 'latest'.",
+    "source": "https://github.com/vuejs/core/blob/minor/CHANGELOG.md ; npm registry",
+    "verified": true
+   },
+   {
+    "claim": "Vue 3.6 stable is 'expected in autumn 2026'.",
+    "source": "Third-party blog (forkbyte.nl); no official date",
+    "verified": false
+   },
+   {
+    "claim": "Svelte 5.57.1 is current and 5.0.0 shipped 2024-10-19. The compiler emits about 45 a11y_* warnings.",
+    "source": "npm registry; https://svelte.dev/docs/svelte/compiler-warnings",
+    "verified": true
+   },
+   {
+    "claim": "Chrome 152 shipped Reference Target, which forwards aria-labelledby, label[for] and similar references into shadow DOM.",
+    "source": "https://developer.chrome.com/release-notes/152",
+    "verified": true
+   },
+   {
+    "claim": "Vite 8.0 went stable on 2026-03-12 with Rolldown as its single bundler and Oxc as its compiler. 8.3.0 is dated 2026-09-10. Rolldown 1.0 is dated 2026-05-07 with a locked API, and 1.2.9 is current. plugin-react 6 uses Oxc, and the React Compiler runs through @rolldown/plugin-babel.",
+    "source": "https://vite.dev/blog/announcing-vite8 ; https://voidzero.dev/posts/announcing-rolldown-1-0 ; npm readme of @vitejs/plugin-react 6.1.1",
+    "verified": true
+   },
+   {
+    "claim": "xterm.js 6.0.0 (published 2025-12-22) removed the canvas renderer and keeps the DOM and WebGL renderers. screenReaderMode exposes DOM for NVDA and VoiceOver.",
+    "source": "https://github.com/xtermjs/xterm.js/releases/tag/6.0.0 ; https://xtermjs.org/docs/api/terminal/interfaces/iterminaloptions/ ; npm time",
+    "verified": true
+   },
+   {
+    "claim": "CodeMirror renders only the visible viewport plus a margin, and it is modular.",
+    "source": "https://codemirror.net/docs/guide/",
+    "verified": true
+   },
+   {
+    "claim": "Tailwind 4.3.3 @theme tokens are emitted as ordinary CSS custom properties, so a plain tokens.css could be adopted by Tailwind later without renaming.",
+    "source": "https://tailwindcss.com/docs/theme ; npm registry",
+    "verified": true
+   },
+   {
+    "claim": "light-dark() has been Baseline since May 2024 and needs color-scheme: light dark on :root.",
+    "source": "https://developer.mozilla.org/en-US/docs/Web/CSS/color_value/light-dark",
+    "verified": true
+   },
+   {
+    "claim": "New WCAG 2.2 AA criteria that bear on a WebOS: 2.4.11 Focus Not Obscured, 2.5.7 Dragging Movements (a single-pointer alternative is required), 2.5.8 Target Size >=24x24 px, and 3.3.8 Accessible Authentication.",
+    "source": "https://www.w3.org/WAI/standards-guidelines/wcag/new-in-22/",
+    "verified": true
+   },
+   {
+    "claim": "The Long Animation Frames API shipped in Chrome 123 with a 50 ms threshold. We use it for the frame meter and the PROC-05 check.",
+    "source": "https://developer.chrome.com/docs/web-platform/long-animation-frames",
+    "verified": true
+   },
+   {
+    "claim": "Benchmark systems: the Puter GUI vendors jQuery 3.6.1 and jQuery UI 1.13.2. daedalOS uses React 19.2, Next 15.5, styled-components, xterm 5.3 and Monaco 0.54.",
+    "source": "https://api.github.com/repos/HeyPuter/puter/contents/src/gui/src/lib ; https://github.com/DustinBrett/daedalOS/blob/main/package.json",
+    "verified": true
+   },
+   {
+    "claim": "Measurement caveat: all numbers come from headless Chrome 153 on a 12-thread Linux laptop, using CDP 4x CPU throttling as a stand-in for the modest lab machine, with rAF capped at 60 Hz. The team must re-run the harness on the Week-2 reference machine before the defence.",
+    "source": "Own method note",
+    "verified": true
+   }
+  ],
+  "recommendation": "Choose SolidJS 1.9 (solid-js 1.9.15, pinned exactly) for the desktop shell, window chrome, login, boot menu, recovery screen and all built-in app UIs. Build with Vite 8.3 (Rolldown 1.x) and vite-plugin-solid 2.11.14.\n\nThe rendering rule is that window geometry never enters framework state. The compositor is a framework-free TypeScript module (wm/compositor.ts): it owns the window registry and is the only writer of transform, size and z-index. It uses pointer capture and a requestAnimationFrame write batch. Solid renders only the chrome and the contents. The compositor pushes coarse events (open, close, focus, min/max, snap) into a Solid store, never one update per pointermove. Kernel events reach the UI as one batch per frame, applied with batch() and reconcile().\n\nThe boot screen is static HTML plus inlined CSS updated by a tiny vanilla script, so no framework is on the first-paint path. Built-in apps are lazy chunks and never part of the boot chunk.\n\nWhy: our identical 10-window prototype measured Solid at 7.3 KB gz against 69.3 KB for React. A one-window update cost 0.02-0.04 ms of script against 0.64-1.25 ms for React 19.3 with the compiler, and Solid re-invoked zero sibling components. Cold boot was 252 ms against 364 ms. Those are exactly the two points section 14.2 says the defence must address. With the compositor outside the framework, every candidate held p95 16.7 ms while dragging, so the frame budget is protected by architecture rather than by the framework choice.\n\nSub-decisions:\n- **Build:** Vite 8.3.0. Rolldown has been Vite's only bundler since 8.0 (2026-03-12) and hit 1.0 on 2026-05-07. It handles module workers and emits a manifest for Service Worker precaching and size budgets. Rsbuild or bare Rolldown are not needed.\n- **Styling:** native CSS. One tokens.css (custom properties with light-dark(), data-theme overrides and reduced-motion motion tokens) plus Vite's built-in CSS Modules, native nesting and @layer. No Tailwind 4.3 and no CSS-in-JS runtime. Reasons: zero runtime cost, and the boot screen must be styled from the same tokens before any JS runs. Tailwind's @theme tokens are CSS variables anyway, so adopting it later is cheap.\n- **Terminal:** xterm.js 6.0 (@xterm/xterm, DOM renderer, addon-fit; WebGL addon only if the output-throughput test fails), used purely as a TTY device. The line discipline, shell lexer/parser/executor and trie completion are the team's own. We avoid a hand-rolled DOM terminal because top and full-screen tools need cursor addressing and the alternate screen, and xterm brings screenReaderMode. It is lazy-loaded and precached for offline use.\n- **Editor:** CodeMirror 6 (modular @codemirror/* packages), lazy-loaded: 87-203 KB gz and 3.9 MB heap. Monaco was rejected (754 KB gz core, 8 MB heap, its own workers, and features the spec does not need), as was a bare textarea (no highlighting, and weaker undo and large-file behaviour).\n- **Icons:** lucide-solid 1.47 (ISC, tree-shaken, about 0.12 KB per icon) for UI glyphs. The logo, wordmark and app icons are the team's own SVGs for the identity kit.\n- **Accessibility:** hand-built WAI-ARIA APG patterns for windows, the taskbar and the boot menu, with @ark-ui/solid 5.39 allowed only for complex widgets (menu, dialog, select, tabs) if the Week-3 axe spike needs it. @axe-core/playwright runs in e2e CI on every system screen in both themes. We add explicit WCAG 2.2 AA work for 2.4.11, 2.5.7 (keyboard and button alternatives to dragging), 2.5.8 and 3.3.8.\n\nIf the team's Week-2 skills spike fails (see the reversal trigger), fall back to React 19.3 + Compiler 1.0 with per-window useSyncExternalStore stores. The compositor, kernel bridge, tokens, xterm and CodeMirror layers carry over unchanged.",
+  "runner_up": "Preact 10.29.8 + @preact/signals 2.11.2 is second on score (81/100 against 83 for Solid): it keeps the React API at 9.2 KB gz. React 19.3 + React Compiler 1.0 (80/100) is the fallback we would actually switch to if the Solid skills spike fails, because it maximises team familiarity and has the best accessibility primitives (React Aria), and it passed every budget in our prototype.\n\nThe decision is close. Moving 5 weight points from C1 (isolation) to C4 (familiarity) makes React win, 82 to 81. That is why the Week-2 skills spike is part of the evidence rather than an afterthought.",
+  "chat_reason": "Use SolidJS 1.9 with Vite 8. We built the same 10-window desktop in six frameworks. Solid shipped 7 KB of framework code against React's 69 KB, applied a single window's update 20-40 times more cheaply, and never re-ran the other windows, which is exactly what the spec asks the defence to prove. Window dragging stays in a small plain-TypeScript compositor outside any framework, so every option held 60 FPS; the framework mainly affects boot size and update isolation. React 19 + Compiler also passes every budget and is the fallback if the team's Week-2 Solid trial goes badly.",
+  "gave_up": "- **React's ecosystem and the team's React muscle memory:** React Aria and Radix primitives, the largest body of answers, and zero ramp-up. Solid needs about a week of practice and lint rules to avoid its pitfalls (destructured props, reading signals outside a tracking scope, early returns).\n- **Svelte's strengths:** its compile-time a11y warnings, and stability with no major version in flight.\n- **Being on the newest Solid major:** Solid 2.0 is at RC, so by the final defence we will be on the previous major line, pinned.\n- **Monaco's IDE features:** IntelliSense and a VS Code feel.\n- **Tailwind's utility-class speed.**\n- **Some raw speed in one path:** Lit measured slightly faster on the reactive drag path, but we do not use that path.\n- **One shared model for geometry:** keeping geometry outside the framework means the compositor and the view need a clear, documented contract (refs plus coarse events) instead of a single declarative model.",
+  "risks": [
+   {
+    "risk": "Solid reactivity pitfalls (destructuring props, reading a signal outside JSX or an effect, conditional early returns) cause silent missed updates that React developers do not expect.",
+    "mitigation": "Put eslint-plugin-solid 0.18 in CI as an error, add a PR checklist item, and run the Week-2 kata with peer review. Unit tests assert the DOM after store updates, and a 'components run once' explanation goes in ARCHITECTURE.md for the viva."
+   },
+   {
+    "risk": "Solid 2.0 goes stable mid-project and third-party libraries drop 1.x support.",
+    "mitigation": "Pin exact versions with a committed lockfile and allow no upgrades after the freeze without a new decision record and instructor approval. Keep Solid-specific third-party libraries to lucide-solid and, optionally, Ark UI (both have stable releases today). xterm.js and CodeMirror are framework-agnostic."
+   },
+   {
+    "risk": "Smaller accessible-primitives ecosystem, so WCAG 2.2 AA gaps appear in menus, dialogs and listboxes.",
+    "mitigation": "Build the few needed widgets from WAI-ARIA APG patterns, with Ark UI Solid as a fallback. Run @axe-core/playwright on every system screen in both themes in e2e and fail on serious or critical issues. Do a manual NVDA/Orca and keyboard-only pass each phase, and add a token contrast unit test."
+   },
+   {
+    "risk": "The framework and the compositor both end up writing geometry, which violates WM-01 and causes drag jitter.",
+    "mitigation": "No style binding for transform, left, top, width, height or z-index in any component, enforced by a CI grep/ESLint rule. Only wm/compositor.ts imports the geometry writer. A compositor unit test in Vitest browser mode checks z renumbering, clamping and snapping."
+   },
+   {
+    "risk": "Lazy app chunks inflate boot or break offline: xterm 82-113 KB gz, CodeMirror up to 203 KB gz.",
+    "mitigation": "Neither goes in the boot chunk. Restored windows paint their chrome immediately and load their app chunk after 'desktop-interactive' (BOOT-10). The Service Worker precaches all chunks from Vite's manifest (OFF-01). A CI size-budget script fails the build if boot-critical JS exceeds 60 KB gz."
+   },
+   {
+    "risk": "CPU-bound worker load drops frames regardless of framework; we measured this even for vanilla JS.",
+    "mitigation": "Size the worker pool at max(1, hardwareConcurrency-2). The compositor sends an 'interactive' hint on pointerdown so the scheduler pauses niced or background quanta (indexer, pre-fetch) until pointerup. Workers yield every quantum. The frame meter and LoAF attribution run in the PROC-05 performance test."
+   },
+   {
+    "risk": "Our numbers come from a fast laptop with 4x CDP throttling, not from the lab machine.",
+    "mitigation": "Re-run the harness on the reference machine published in Week 2 and put those numbers, not ours, in STACK_DECISION.md."
+   },
+   {
+    "risk": "Viva risk: only one member can explain Solid.",
+    "mitigation": "Every member completes the kata, owns one built-in app UI, and rehearses the sensitivity analysis and the fallback story."
+   }
+  ],
+  "reversal_trigger": "Before the Week-4 freeze: switch to React 19.3 + Compiler 1.0 with per-window external stores if the Week-2 skills spike shows either of two things. (a) Two or more of the five members take more than 1.5x their React time to finish the Task-Manager kata in Solid. (b) Code review finds more than 3 missed-update reactivity bugs per member that eslint-plugin-solid did not flag.\n\nAfter the freeze: reopen the decision with a new record if a performance trace on the reference machine attributes more than 2 ms per frame to the Solid runtime during the WM-03 or PROC-05 tests (as opposed to our own code or style/layout), or if the boot-critical chunk cannot be kept under 60 KB gz because of the framework. Also reopen if a Solid 1.9 defect blocks a Must requirement and has no patch or workaround within 2 weeks.",
+  "team_prototype": "Weeks 1-3, owned by the WM/UI lead with QA/DevOps as second reviewer. Our harness is at /tmp/claude-1000/-home-haseeb-raza-Desktop-Plotinium-OS/6bdb43c3-e62e-4f77-88ef-40bcd9948f85/scratchpad/fw (bench.mjs, bootrr.mjs, apps/*, shared/compositor.js) and scratchpad/libsize (heap.mjs). Copy it into the repo under tests/performance/ui-framework, or rebuild it.\n\n1. **Same-workload benchmark.** Build the identical 10-window desktop (150 rows per window, taskbar, shared compositor) in Solid 1.9.15, React 19.3 + Compiler with per-window useSyncExternalStore, Svelte 5.57, and a vanilla baseline, all with Vite 8.3. Run it on the Week-2 reference lab machine in current stable Chrome with Playwright + CDP, 15 interleaved runs each, reporting P50 and P90:\n   - (a) Cold and warm boot to a performance.mark('desktop-interactive'), with gzip and 10 Mbps/40 ms emulated.\n   - (b) Script ms per single-window update at 10x150 and 20x400, plus the count of sibling components re-invoked.\n   - (c) Drag p95 frame and LoAF count, once with the compositor writing geometry and once with geometry in framework state.\n   - (d) Pass (c) repeated 3 times with max(1, hardwareConcurrency-2) busy workers (PROC-05).\n   - (e) Heap after GC.\n\n   Pass criteria: framework plus shell adds <=60 KB gz to the boot chunk, per-update script <=0.5 ms, drag p95 <=16.7 ms, and zero LoAF >50 ms attributed to OS scripts.\n2. **Skills spike (evidence for C4).** Every member builds a Task-Manager kata in Solid in at most 6 hours: a 256-row process table fed at 10 Hz by a fake kernel worker over MessageChannel, sortable, with kill and renice buttons and full keyboard access. Log the hours, the bugs found in peer review, and each member's React baseline.\n3. **Terminal and editor spike.** Build xterm.js 6 with the team's own line discipline and trie completion over 10,000 entries: p95 prefix lookup <=1 ms (SYS-03), keystroke-to-echo p95 <16 ms, and 'yes | head -n 100000' throughput without long animation frames. Open a 1 MB file in CodeMirror 6 and in Monaco core, and measure time to first edit, heap, and gz bytes.\n4. **Accessibility spike.** Run an axe-core scan of the boot screen, login and desktop in both themes (zero serious or critical issues), a keyboard-only boot-menu test, and a check that the role=progressbar values track real work under network throttling (BOOT-02/13).\n\nPut the resulting tables and EXPLAIN-style notes in STACK_DECISION.md as the team's own evidence.",
+  "requirement_ids_served": [
+   "WM-01",
+   "WM-02",
+   "WM-03",
+   "WM-04",
+   "WM-05",
+   "WM-06",
+   "WM-07",
+   "BOOT-01",
+   "BOOT-02",
+   "BOOT-05",
+   "BOOT-06",
+   "BOOT-08",
+   "BOOT-09",
+   "BOOT-10",
+   "BOOT-13",
+   "BOOT-14",
+   "PROC-05",
+   "PROC-08",
+   "MEM-07",
+   "VFS-07",
+   "VFS-10",
+   "SYS-03",
+   "OFF-01",
+   "OFF-03",
+   "OFF-04",
+   "OFF-05",
+   "RAG-06",
+   "AGT-03",
+   "AGT-08",
+   "PRE-06",
+   "s14.2 UI framework",
+   "s15 identity kit / design tokens"
+  ],
+  "packages": [
+   {
+    "name": "solid-js",
+    "version": "1.9.15 (pin exact; do not take 2.0.0-rc)",
+    "licence": "MIT",
+    "purpose": "UI framework for the shell, window chrome, login, boot menu, recovery and built-in app views"
+   },
+   {
+    "name": "vite",
+    "version": "8.3.0 (bundles Rolldown 1.x)",
+    "licence": "MIT",
+    "purpose": "Dev server and production build; module workers; manifest used for SW precache and the size budget"
+   },
+   {
+    "name": "vite-plugin-solid",
+    "version": "2.11.14",
+    "licence": "MIT",
+    "purpose": "Solid JSX compilation under Vite 8 (verified building in our prototype)"
+   },
+   {
+    "name": "@xterm/xterm",
+    "version": "6.0.0",
+    "licence": "MIT",
+    "purpose": "Terminal renderer and input device only (DOM renderer); shell, line discipline and trie are the team's own"
+   },
+   {
+    "name": "@xterm/addon-fit",
+    "version": "0.11.0",
+    "licence": "MIT",
+    "purpose": "Resize the terminal grid to the window size on compositor resize events"
+   },
+   {
+    "name": "@xterm/addon-webgl",
+    "version": "0.19.0 (optional)",
+    "licence": "MIT",
+    "purpose": "Only if the DOM renderer fails the output-throughput test"
+   },
+   {
+    "name": "@codemirror/view",
+    "version": "6.43.13",
+    "licence": "MIT",
+    "purpose": "Text Editor core (viewport rendering)"
+   },
+   {
+    "name": "@codemirror/state",
+    "version": "6.7.6",
+    "licence": "MIT",
+    "purpose": "Editor state and transactions"
+   },
+   {
+    "name": "@codemirror/commands",
+    "version": "6.11.1",
+    "licence": "MIT",
+    "purpose": "History and default keymaps"
+   },
+   {
+    "name": "@codemirror/language",
+    "version": "6.12.4",
+    "licence": "MIT",
+    "purpose": "Syntax highlighting infrastructure"
+   },
+   {
+    "name": "@codemirror/lang-markdown",
+    "version": "6.5.2",
+    "licence": "MIT",
+    "purpose": "Markdown mode (pulls in lang-html; lazy chunk)"
+   },
+   {
+    "name": "@codemirror/lang-javascript",
+    "version": "6.2.5",
+    "licence": "MIT",
+    "purpose": "JS/TS source mode (lazy)"
+   },
+   {
+    "name": "lucide-solid",
+    "version": "1.47.0",
+    "licence": "ISC",
+    "purpose": "UI glyph icons, tree-shaken per icon; the logo and app icons are the team's own SVGs"
+   },
+   {
+    "name": "@ark-ui/solid",
+    "version": "5.39.2 (optional)",
+    "licence": "MIT",
+    "purpose": "Accessible headless primitives (menu, dialog, select, tabs), adopted only if the Week-3 a11y spike needs them"
+   },
+   {
+    "name": "@tanstack/solid-virtual",
+    "version": "3.13.40 (optional)",
+    "licence": "MIT",
+    "purpose": "Virtualised rows for Files or Task Manager lists above ~2,000 rows"
+   },
+   {
+    "name": "eslint-plugin-solid",
+    "version": "0.18.0",
+    "licence": "MIT",
+    "purpose": "Lint for reactivity pitfalls, run in CI"
+   },
+   {
+    "name": "vitest",
+    "version": "5.0.1",
+    "licence": "MIT",
+    "purpose": "Unit and component tests; browser mode for compositor pointer tests"
+   },
+   {
+    "name": "@vitest/browser",
+    "version": "5.0.1",
+    "licence": "MIT",
+    "purpose": "Real-Chrome component and compositor tests"
+   },
+   {
+    "name": "@vitest/coverage-v8",
+    "version": "5.0.1",
+    "licence": "MIT",
+    "purpose": "Coverage reporting in CI"
+   },
+   {
+    "name": "@solidjs/testing-library",
+    "version": "0.8.10",
+    "licence": "MIT",
+    "purpose": "Solid component testing"
+   },
+   {
+    "name": "@playwright/test",
+    "version": "1.63.0",
+    "licence": "Apache-2.0",
+    "purpose": "e2e tests plus boot, frame-time and bundle performance gates (CDP throttling, LoAF)"
+   },
+   {
+    "name": "@axe-core/playwright",
+    "version": "4.13.0",
+    "licence": "MPL-2.0",
+    "purpose": "Automated WCAG checks on every system screen in both themes"
+   }
+  ],
+  "design_notes": "## 1. Layer ownership\n- **index.html:** the boot screen is static HTML and CSS. tokens.css and a boot-ui.ts of about 2 KB are inlined. No framework is on the first-paint path, so BOOT-02 progress and BOOT-13 announcements work before any chunk loads. The Solid shell chunk is fetched with modulepreload while kernel init runs in workers, and it mounts at the login screen.\n- **wm/compositor.ts:** plain TypeScript with no Solid import. It holds the registry Map<wid, WinRec> (WM-01) and handles z renumbering, focus, drag and resize with pointer capture, snapping, viewport clamping, min/max/restore, and a rAF write batch. It is the ONLY code that writes transform, width, height or z-index.\n- **ui/shell (Solid):** desktop, taskbar, window chrome (title, icon, buttons), login, boot menu, recovery console, notifications. It reads coarse WM state from a Solid store that the compositor updates only on discrete events: open, close, focus, state, snap.\n- **apps/* (Solid views, lazy chunks):** each app receives only { sys, pid, wid }, where sys is the MessagePort syscall client bound to that pid. ESLint no-restricted-imports forbids importing kernel/, wm/ or vfs/ from apps/*. no-restricted-globals forbids indexedDB, localStorage, caches and navigator.storage in apps/*. This keeps the 'apps reach OS resources only through syscalls' boundary true for built-in apps too. App logic runs in the app's worker process; the view renders and dispatches.\n\n## 2. Compositor sketch (TS)\n```ts\ninterface WinRec { wid:number; pid:number; el:HTMLElement; x:number; y:number; w:number; h:number; z:number;\n  state:'normal'|'min'|'max'|'full'; restore?:{x:number;y:number;w:number;h:number}; minW:number; minH:number }\nconst reg = new Map<number, WinRec>();            // O(1) registry (WM-01)\nconst dirty = new Set<WinRec>(); let raf = 0;\nconst write = (r: WinRec) => { dirty.add(r); raf ||= requestAnimationFrame(flush); };\nfunction flush() { raf = 0;\n  for (const r of dirty) { const s = r.el.style;\n    s.transform = `translate3d(${r.x}px,${r.y}px,0)`; s.width = r.w + 'px'; s.height = r.h + 'px'; s.zIndex = String(r.z); }\n  dirty.clear(); }\nexport function beginDrag(e: PointerEvent, wid: number) {\n  const r = reg.get(wid)!, handle = e.currentTarget as HTMLElement;\n  handle.setPointerCapture(e.pointerId); focus(wid);                  // focus raises + renumbers z 1..n\n  r.el.style.willChange = 'transform'; sched.hint('interactive', true); // scheduler defers niced quanta\n  const ox = e.clientX - r.x, oy = e.clientY - r.y;                   // the only geometry read is at drag start\n  const move = (ev: PointerEvent) => { r.x = clampX(ev.clientX - ox, r); r.y = clampY(ev.clientY - oy, r); write(r); };\n  const end = () => { handle.removeEventListener('pointermove', move); r.el.style.willChange = '';\n    snap(r); write(r); sched.hint('interactive', false); wmEvents.emit({ type: 'geometry', wid }); layout.persistSoon(); };\n  handle.addEventListener('pointermove', move);\n  handle.addEventListener('pointerup', end, { once: true }); handle.addEventListener('pointercancel', end, { once: true });\n}\n```\nResize follows the same pattern with 8 handle elements. Minimise sets state 'min' and applies `inert` + `content-visibility:hidden` after a WAAPI animation whose duration comes from --pl-motion-*, which is 0 under reduced motion. It then tells the memory manager that the window's process is the first paging candidate (WM-05). layout.persistSoon() writes the registry snapshot through a syscall to the sessions store (WM-06).\n\n## 3. Window frame (Solid)\n```tsx\nfunction WindowFrame(p: { wid: number; pid: number; title: string; children: JSX.Element }) {\n  return (\n    <section class={css.win} role=\"dialog\" aria-modal=\"false\" aria-labelledby={`t${p.wid}`}\n      ref={(el) => compositor.attach(p.wid, p.pid, el)}>          {/* no geometry binding anywhere */}\n      <header class={css.title} onPointerDown={(e) => compositor.beginDrag(e, p.wid)}\n        onDblClick={() => compositor.toggleMax(p.wid)}>\n        <h2 id={`t${p.wid}`}>{p.title}</h2>\n        <button aria-label=\"Minimise\" onClick={() => compositor.minimise(p.wid)}><Minus /></button>\n        <button aria-label=\"Close\" onClick={() => sys.kill(p.pid, 'SIGTERM')}><X /></button>\n      </header>\n      <ErrorBoundary fallback={(err) => <AppCrashed pid={p.pid} error={err} />}>{p.children}</ErrorBoundary>\n    </section>);\n}\n```\nEach window is mounted in its own createRoot, so killing a process disposes exactly that tree (PROC-07). An ErrorBoundary contains a crashed app view to its own window.\n\n## 4. Kernel to UI bridge\n- The kernel worker coalesces events and posts at most one batch per frame over the UI MessagePort.\n- The UI applies each batch with `batch(() => events.forEach(apply))`.\n- The Task Manager uses `setProcs(reconcile(snapshot, { key: 'pid', merge: true }))`, so only changed cells update (PROC-08, PROC-09 at 256 processes).\n- Syscall calls from views are Promises; they go into createResource or event handlers, never eval.\n\n## 5. Budgets and chunks\n- **Boot-critical JS <=60 KB gz:** boot-ui, kernel client, Solid at 7 KB and the shell. A CI script reads dist/.vite/manifest.json, gzips the entry plus its static imports, and fails the build over budget.\n- **Lazy app chunks:** Terminal (xterm, about 85-115 KB gz), Editor (CodeMirror, about 90-200 KB), Files, Task Manager, Settings. Restored windows paint their chrome immediately; their chunk loads after 'desktop-interactive' (BOOT-10).\n- **Pre-fetch coupling (PRE-03):** the predictor's pre-fetch job calls import() on the predicted app's chunk at idle priority.\n- **Per-frame split:** compositor <=1 ms, UI updates <=3 ms, kernel dispatch <=4 ms, and the rest for style, layout and paint. We measured 2.7-4.2 ms total main-thread work per drag frame at 4x throttle.\n\n## 6. Rendering rules\n- Geometry is never reactive state.\n- Layout reads happen only at gesture start, and writes happen only in the rAF flush.\n- Every window gets `contain: layout paint`; will-change is set only during a gesture.\n- Title bars use `touch-action: none`.\n- Minimised windows are inert and use content-visibility: hidden.\n- CSS transitions are driven by motion tokens.\n\n## 7. tokens.css (single file, used by every screen, xterm and CodeMirror themes)\n```css\n:root { color-scheme: light dark;\n  --pl-bg: light-dark(#f4f5f9,#10121a); --pl-surface: light-dark(#fff,#1b1e29); --pl-text: light-dark(#151823,#e7e9f1);\n  --pl-accent: light-dark(#3452d6,#8aa2ff); --pl-danger: light-dark(#b3261e,#ffb4ab); --pl-focus-ring: 2px solid var(--pl-accent);\n  --pl-font-ui: system-ui, 'Segoe UI', Roboto, sans-serif; --pl-font-mono: ui-monospace, 'Cascadia Mono', 'DejaVu Sans Mono', monospace;\n  --pl-space-1:4px; --pl-space-2:8px; --pl-space-3:12px; --pl-space-4:16px; --pl-radius-win:10px; --pl-target-min:24px;\n  --pl-motion-fast:120ms; --pl-motion-med:200ms; --pl-ease:cubic-bezier(.2,.8,.2,1); }\n:root[data-theme=light]{color-scheme:light} :root[data-theme=dark]{color-scheme:dark}\n@media (prefers-reduced-motion: reduce){ :root{ --pl-motion-fast:0ms; --pl-motion-med:0ms } }\n```\n- The file lives in the repo under docs/identity/ and is seeded into /system/branding/tokens.css.\n- Components use CSS Modules with @layer order: reset, tokens, shell, apps.\n- System font stacks mean no font download on the boot path.\n- A unit test computes WCAG contrast for every text/surface token pair in both schemes.\n- xterm and CodeMirror themes read the tokens with getComputedStyle and re-apply them when the theme changes.\n\n## 8. Terminal\n- **xterm.js is the TTY device only.** All terminal logic is the team's own code.\n- **tty.ts:** canonical mode, echo, history, Ctrl-C sends SIGINT to the foreground process group, Ctrl-Z sends SIGTSTP, Ctrl-D is EOF, and raw mode serves top.\n- **Shell parser:** lexer, then parser, then an AST of Seq(;), AndIf(&&), Pipeline(|), Background(&) and Cmd{argv, redirs > >> <}, with quote and $VAR expansion.\n- **Execution:** the shell runs as a process in a worker; pipes are kernel-managed buffers.\n- **Tab completion:** backed by dsa/trie, updated incrementally from VFS change events. SYS-03 requires p95 <=1 ms over >=10,000 entries, measured in the worker.\n- **top:** uses the alternate screen (CSI ?1049h) and cursor addressing, which is why we do not hand-roll a DOM terminal.\n- **Accessibility:** screenReaderMode is toggled from Settings > Accessibility.\n\n## 9. Editor\n- CodeMirror 6 lives in its own lazy chunk.\n- Opening a file uses sys.open and sys.read.\n- Saving uses sys.write(fd, data, { expectedVersion }). On a version mismatch the kernel creates the conflicted copy (VFS-10) and the Editor shows a 'reload / keep both' banner.\n- Large files stay responsive because CodeMirror renders only the viewport.\n\n## 10. Accessibility (WCAG 2.2 AA + BOOT-13)\n- **Boot screen:** `role=progressbar` with aria-valuenow and aria-valuetext, fed by weighted DAG and asset progress, plus a `role=status` aria-live=polite region. The boot menu is a keyboard listbox.\n- **Windows:** each is a labelled non-modal dialog. Focusing a window raises it, which satisfies 2.4.11.\n- **Window switching (WM-07):** a documented keyboard window switcher, for example Alt+` and Alt+Shift+`. Check for conflicts with lab OS shortcuts.\n- **Dragging alternative (2.5.7):** the window menu offers keyboard move and resize, plus snap buttons.\n- **Target size (2.5.8):** title-bar buttons are at least 24x24 px.\n- **Login (3.3.8 and OFF-03):** allows paste, autocomplete=current-password and a platform authenticator.\n- **Modal dialogs** (agent destructive confirmation AGT-03, kill confirmation) trap focus and restore it on close.\n\n## 11. Tests and CI gates\n- Vitest 5 with @solidjs/testing-library for views, and Vitest browser mode for compositor pointer tests.\n- A static check that no component binds geometry styles (WM-01).\n- Playwright e2e: boot, login, open 10 windows, drag, reboot, layout restored (WM-06).\n- An axe scan of every screen in both themes.\n- Performance gates at 4x CPU with a CPU-bound worker job: fail the build if p95 frame >16.7 ms or any LoAF >50 ms has script attribution in our bundle, or if boot time or boot-chunk size exceeds budget.\n- For the defence, a frame-meter overlay reads a rAF-delta ring buffer (the dsa ring buffer) plus PerformanceObserver('long-animation-frame').\n\n## 12. Measured facts to quote in the defence\n- **Bundle size, gz:** Solid 7.3 KB, React 69.3 KB.\n- **Per-update script:** Solid 0.02-0.04 ms; React with the compiler 0.64-1.25 ms, and 8.93 ms without it at 20x400.\n- **Dragging:** every framework held p95 16.7 ms because the compositor bypasses the framework.\n- **Under full worker load:** even vanilla JS dropped to p95 33-50 ms. Frame safety under PROC-05 therefore comes from scheduler yielding and the compositor's interactive hint, not from the UI framework.",
+  "open_questions": [
+   "What is the reference lab machine spec (published Week 2)? The harness must be re-run on it, and a 4x CDP throttle on a 12-thread laptop is only a proxy for it.",
+   "Will examiners' Chrome have GPU compositing enabled? Layer and compositing costs for 10+ translate3d windows differ under software rasterisation.",
+   "Are same-realm built-in app views, with the boundary enforced by lint and code review, acceptable to examiners? The alternative is sandboxed iframes per app, which cost more memory and boot time; this should be asked at the Week-4 defence.",
+   "Does the TypeScript 7.0.2 native compiler work with vite-plugin-solid type tooling and eslint-plugin-solid? This is settled by the kernel-language decision and should be checked in Week 1.",
+   "Which window-switch shortcut is free on the lab OS and browser? Alt+Tab and Ctrl+Tab are captured by the OS or browser.",
+   "If Solid 2.0 goes stable before Week 4, should the team start on 2.0 instead of 1.9? That is only advisable if Ark UI, lucide-solid and the testing library have stable 2.0-compatible releases by then; otherwise stay on 1.9."
+  ]
+ },
+ "examiner_review": {
+  "verdict": "upheld_with_changes",
+  "factual_errors": [
+   {
+    "claim": "Preact: 'The preset still needs Babel 7, while @rolldown/plugin-babel wants Babel 8', and Preact C7 is marked down because 'the preset still pins Babel 7'.",
+    "correction": "@rolldown/plugin-babel 0.2.4 accepts either Babel line: its peer range is '@babel/core ^7.29.0 || ^8.0.0-rc.1'. The ERESOLVE came from the prototype's own root package.json, which pinned '@babel/core ^8.0.6' (Babel 8 has been npm latest since 2026-06-16) against @preact/preset-vite 2.10.6's peer '@babel/core 7.x'. The chosen stack also runs on Babel 7: vite-plugin-solid 2.11.14 has '@babel/core ^7.23.3' and babel-preset-solid as direct dependencies. 'Needs Babel 7' is therefore true of Solid too and should not count against Preact alone.",
+    "source": "npm view @rolldown/plugin-babel@0.2.4 peerDependencies; npm view vite-plugin-solid@2.11.14 dependencies; npm view @preact/preset-vite@2.10.6 peerDependencies; scratchpad/fw/package.json"
+   },
+   {
+    "claim": "Open question: 'Does the TypeScript 7.0.2 native compiler work with vite-plugin-solid type tooling and eslint-plugin-solid?' (left unanswered, while eslint-plugin-solid is the main mitigation for the top Solid risk).",
+    "correction": "It does not work for linting. typescript-eslint 8.70.1, and with it @typescript-eslint/parser and @typescript-eslint/utils, which eslint-plugin-solid 0.18.0 depends on, requires 'typescript >=4.8.4 <6.1.0'. The npm typescript@7.0.2 package no longer ships the classic compiler API: its exports are only version.cjs and './unstable/*'. We reproduced it: 'npm i eslint-plugin-solid@0.18.0 typescript-eslint@8.70.1 typescript@7.0.2' fails with ERESOLVE. With typescript@6.0.3 the same install works. The lint toolchain must therefore pin TypeScript 6.0.3, and tsgo 7 can be used only as a separate type-check binary.",
+    "source": "npm view typescript-eslint@8.70.1 peerDependencies; npm view typescript@7.0.2 exports; local reproduction in scratchpad/solidtest (2026-09-23)"
+   },
+   {
+    "claim": "'eslint-plugin-solid 0.18 in CI as an error' is presented as a mitigation that catches destructured props, reads outside tracking scopes and early returns.",
+    "correction": "With the plugin's default typescript config, only solid/no-destructure is an error. solid/reactivity and solid/components-return-once are warnings. In our run on a file containing all three pitfalls the result was 1 error and 3 warnings, so CI passes unless the rules are raised to 'error' or ESLint runs with --max-warnings 0. Also, ESLint 9 is now the 'maintenance' tag and npm marks 9.39.5 as unsupported; the latest is 10.11.0, which eslint-plugin-solid 0.18 supports.",
+    "source": "Local run: npx eslint bad.tsx with eslint-plugin-solid/configs/typescript (scratchpad/solidtest); npm dist-tags eslint (latest 10.11.0, maintenance 9.39.5)"
+   },
+   {
+    "claim": "Solid 'applied a single window's update 20-40 times more cheaply' than React (chat_reason and section 12 'measured facts to quote').",
+    "correction": "The ratio holds only for CDP ScriptDuration. The same harness also records TaskDuration, which is the full main-thread cost per update. By that measure, 10x150 | 20x400: Solid 1.57|1.59 ms, React+Compiler 2.78|2.73 ms, React with per-window uSES 2.84|3.46 ms, and vanilla 1.89|3.80 ms. The full cost differs by less than 2x, and it sits inside the harness noise, since vanilla ranged from 1.89 to 3.80 ms. The record should report both metrics and say that script time is where the difference shows, not total frame cost.",
+    "source": "scratchpad/fw/run-cpu4.log and results-cpu4.json (isolation.taskMsPerUpdate vs scriptMsPerUpdate); bench.mjs lines 70-83"
+   },
+   {
+    "claim": "'All 9 variants hold p95 frame at 16.7-16.8 ms' is presented as meeting WM-03 (p95 <=16.7 ms).",
+    "correction": "16.8 ms is literally above the 16.7 ms target. rAF deltas are quantised to vsync and jitter by \u00b10.1-0.2 ms, so a gate written as 'fail if p95 >16.7 ms' (design note 11) will flap in CI. The frame metric must be defined, for example: a dropped frame is a rAF delta >1.5x the refresh interval, and p95 is compared against the refresh interval plus a 1 ms jitter tolerance. The definition also has to hold on examiner displays running at 60, 120 or 144 Hz.",
+    "source": "scratchpad/fw/results-cpu4.json (p95 16.799..., 16.800...)"
+   },
+   {
+    "claim": "C7: 'Vitest 5 + @solidjs/testing-library 0.8.10' is scored 4, implying a maintained test library.",
+    "correction": "@solidjs/testing-library 0.8.10 was published on 2024-09-25 and has had no 1.x-line release in two years. Its 'next' line (1.0.0-beta.3, 2026-09-02) requires solid-js >=2.0.0-0 and @solidjs/web. We verified that 0.8.10 still works with solid-js 1.9.15, vite-plugin-solid 2.11.14, Vitest 5.0.1 and jsdom: a reconcile/For/components-run-once test passed. It is usable, but it is unmaintained for the line we are pinning.",
+    "source": "npm view @solidjs/testing-library time/dist-tags/peerDependencies; local test scratchpad/solidtest/win.test.tsx (passed 2026-09-23)"
+   },
+   {
+    "claim": "Rolldown '1.2.9 is current'.",
+    "correction": "1.2.10 was published on 2026-09-23. This is trivial, but the record should pin the version Vite 8.3.0 resolves to in the lockfile rather than quote 'current'.",
+    "source": "npm registry rolldown time"
+   },
+   {
+    "claim": "Svelte 'emits about 45 compile-time a11y_* warnings'.",
+    "correction": "svelte.dev/docs/svelte/compiler-warnings lists 42 distinct a11y_* codes. The difference is immaterial but should be stated exactly.",
+    "source": "https://svelte.dev/docs/svelte/compiler-warnings (counted 2026-09-23)"
+   }
+  ],
+  "spec_gaps": [
+   "BOOT-05/06/08 recovery path depends on the framework. Design note 1 puts the boot menu and the recovery console in ui/shell (Solid), which mounts only at login. The boot menu (Esc held) runs at the bootloader stage, before kernel init. The kernel-panic screen (a DAG cycle) and the recovery screen (critical failure) must work even when the Solid shell chunk failed to load or its cache is corrupt, which is exactly the failure recovery exists for. All of them belong in the framework-free, inlined boot-ui.",
+   "MEM-01 cross-origin isolation is not addressed. performance.measureUserAgentSpecificMemory() needs crossOriginIsolated, which touches the UI build. Vite dev and preview need server.headers. The production reverse proxy needs COOP same-origin plus COEP credentialless, or Document-Isolation-Policy (Chrome 137+ desktop). Navigations the Service Worker serves offline must keep those headers. Vitest browser mode and Playwright must assert self.crossOriginIsolated. No cross-origin wallpapers, avatars, fonts or model weights may lack CORS/CORP. None of this is in the record.",
+   "Multi-tab is not addressed. The compositor, session restore (WM-06) and layout.persistSoon() assume one OS instance per origin. Two tabs would each boot a kernel on the same IndexedDB, each restore and overwrite sessions.window_layout, and both hold the old Service Worker, which blocks OFF-05 'restart to update'. The record needs a single-instance guard (navigator.locks, with an 'already running: take over' screen) or an explicit per-tab session model, plus BroadcastChannel coordination for SW activation.",
+   "PROC-05 gate contradicts the record's own evidence. Design note 11 fails the build if p95 >16.7 ms at 4x CPU with a CPU-bound worker job, yet the pass-2 data shows vanilla JS at p95 33.3-49.9 ms with 7-25 LoAF >50 ms under that load. As written, the gate fails every build whatever the framework. The record does not set a pool size that leaves hardware threads for the main thread and the GPU/compositor on the modest lab machine. max(1, hwc-2) on a 4-core/8-thread machine is 6 busy workers. It also does not separate CDP-throttling artefacts from real contention.",
+   "WM-03 frame metric is undefined (see factual errors): vsync quantisation, 60 vs 120 Hz examiner displays, and headless CI without a GPU (SwiftShader) make raw 'p95 <=16.7 ms' unreliable as a per-PR gate.",
+   "DSA ownership for the WM lead (s4, s10) is missing. The spec lists the window registry and the z-order structure as that role's structures, gives distinction credit for a hand-written hash table in at least one registry, and extra credit for an interval structure for window hit-testing. The compositor sketch uses a built-in Map and renumbers z ad hoc. The record should state which of these live in dsa/ with tests and benchmarks.",
+   "Same-realm app views versus boundary 1 ('no app, even built-in, touches ... other apps' windows directly'). Enforcement is lint-only. A same-realm Solid view can still call document.querySelector into another window's DOM. The record leaves this as an open question, but it needs a stated trust assumption in SECURITY.md, a runtime mitigation (views receive only a scoped container, and app logic stays in the worker), and a test.",
+   "Identity-kit surfaces (s15) are only partly covered: tokens.css is specified, but the installable web app manifest, favicon at 16 px, the browser tab title, Settings > About (name, version, build hash, build date, team) and the uname string injected at build time (Vite define) are not planned in the UI layer.",
+   "Evidence rule (s14.1 item 4: 'opinions are not evidence') is not met for C4, C5 and C6. Solid's C4=3 ('about a week of practice') and the C5 and C6 scores are assigned before the skills and a11y spikes that are meant to provide the evidence. There is also no proof that the weights were declared before scoring, such as a commit timestamp that predates results-cpu4.json.",
+   "s18 AI coding assistants are allowed, and their effect on Solid is not considered. Assistants tend to produce React idioms (destructured props, early returns, reading signals outside tracking scopes) that silently break Solid reactivity. The skills spike should run with the team's normal assistant workflow, and AI_USAGE.md should record rejected suggestions of this kind.",
+   "React 19.2/19.3 capabilities that bear on WM-05 and PROC-05 are missing from the React assessment: <Activity> (hidden windows keep state while updates are deprioritised), View Transitions (19.3) and React Performance Tracks in DevTools (19.2). The record should acknowledge them and name the Solid equivalents: document.startViewTransition, createRoot disposal, and custom performance.measure tracks."
+  ],
+  "weaknesses": [
+   "The weights and scales favour the winner even if they were not reverse-engineered. C1 and C2 carry 45%, and the record's own evidence says every candidate except React without the compiler passes WM-03, the isolation requirement and BOOT-10 by a wide margin ('the frame budget is protected by architecture rather than by the framework choice'; React's +112 ms is 'about 4% of the cold budget'). The scores are relative ranks, not headroom against the budget. Scored instead as the share of budget consumed (5 = under 25% of budget), React gets 4 on C1 (0.70 ms of a 3-4 ms UI budget) and 4 on C2 (+112 ms of 3,000 ms). The totals then become React 89, Svelte 88, Preact and Vue 86, Solid 83. The result depends on the choice of scale as well as the weights, and the record's sensitivity analysis only tests the weights.",
+   "The top three scores (83, 81, 80) are closer together than the scores' resolution. A 1-5 integer scale over seven criteria cannot separate a 2-3 point gap. Honestly stated, the decision rests on the Week-2 skills spike, which has not run yet, and not on the matrix.",
+   "The headline measurement is selective. '20-40x cheaper updates' uses ScriptDuration only, while the harness's TaskDuration shows under a 2x difference, inside vanilla's own 1.89-3.80 ms spread. An examiner who reads results-cpu4.json will find this.",
+   "Everything was measured on one fast 12-thread laptop with CDP 4x throttling and 15 runs for boot, but only 5 runs in results-cpu4.json. The record admits the reference machine is unknown. CDP throttling does not model memory bandwidth, GPU rasterisation or thread oversubscription on a 4-core lab machine, which is exactly where the framework-independent PROC-05 failures showed up.",
+   "The prototype is about one-tenth of the real UI: 10 windows x 150 static rows, no text editing, no virtualised lists, no terminal output stream. Per-update and boot numbers from it support 'headroom' only if the team re-measures on the Task-Manager kata at 256 rows and 10 Hz and on a terminal output flood.",
+   "The C6 stability score is generous to the 1.9 line. Solid 2.0 is at rc.9, and its ecosystem is visibly moving: Kobalte 2.0.0-alpha pins solid-js 2.0.0-rc.3, vite-plugin-solid 'next' now redirects to a renamed @solidjs/vite-plugin, and the testing library's 1.0 line is 2.0-only. docs.solidjs.com and AI assistants will drift toward 2.0 APIs during the project. Pinning 1.9 is right, but the cost of learning from docs that no longer match is not in the risk register.",
+   "'Every member can defend it' is at risk for a less obvious reason than the one listed. The Solid-specific material (ownership, tracking scopes, createRoot per window, reconcile) sits in the WM/UI lead's code, while the other four roles are kernel, VFS/DB, AI and DevOps and touch the UI only through one app view each. The kata helps, but the viva can pick any member.",
+   "The runner-up is presented inconsistently. Preact is called runner-up on score, yet React is the fallback, and Preact's C5 ('React ecosystem only via compat') and C3 ('two models') penalties are not backed by any measurement."
+  ],
+  "amended_recommendation": "Choose SolidJS 1.9 (solid-js 1.9.15, pinned exactly) for the desktop shell, window chrome, login and built-in app views, as a provisional choice confirmed by pre-registered Week-2 spike thresholds. React 19.3 + React Compiler 1.0 with per-window useSyncExternalStore stores is the named fallback. Build with Vite 8.3.0 (the Rolldown 1.x version resolved in the lockfile) and vite-plugin-solid 2.11.14. Solid's own JSX compile path still uses Babel 7 through babel-preset-solid, so do not install a root-level Babel 8.\n\nWHY (stated honestly). Every candidate except React without the compiler met the two points section 14.2 names: zero sibling re-renders (React only with per-window stores), and bundle and boot cost within BOOT-10. Solid is chosen for headroom, not to pass a threshold:\n- Script time per one-window update: 0.02-0.04 ms, against 0.70-0.73 ms for React with per-window stores. Full main-thread task time differs by less than 2x and falls within harness noise, and STACK_DECISION.md must say so.\n- Boot framework bytes: 7.3 KB gz against 69.3 KB. Cold P50 is 252 ms against 364 ms at 4x throttle.\n- Components run once, so isolation is structural rather than a matter of discipline.\n\nThe matrix cannot separate Solid, Preact and React: 83/81/80 on relative scores, and React ahead under budget-anchored scoring. STACK_DECISION.md shows both matrices, the weight sensitivity and the scale sensitivity. The Week-2 spike decides:\n- Keep Solid only if all of these hold:\n  - (a) At least 4 of the 5 members finish the Task-Manager kata (256 rows at 10 Hz over MessageChannel, sortable, kill/renice, keyboard-complete) in at most 1.5x their React baseline, using their normal AI-assistant workflow.\n  - (b) Code review finds at most 3 reactivity bugs per member that lint missed.\n  - (c) On the Week-2 reference machine, the kata plus 10 windows keeps UI script at or below 1 ms per frame.\n- Otherwise switch to React 19.3 + Compiler 1.0 before the Week-4 freeze.\n- Commit the weights, both scales and these thresholds in a PR before the spike runs, so the timestamp shows the criteria came first.\n\nRENDERING AND LAYER RULES (unchanged in substance):\n- Window geometry never enters framework state. wm/compositor.ts is framework-free TypeScript and the only writer of transform, width, height and z-index. It uses pointer capture and a requestAnimationFrame write batch. It pushes only coarse events (open, close, focus, state, snap) into a Solid store.\n- Kernel events arrive as at most one batch per frame and are applied with batch() and reconcile({ key: 'pid', merge: true }).\n- Each window mounts with createRoot(fn, shellOwner) so that shell context flows into it, and disposing that root on kill frees exactly that tree (PROC-07). Each window has its own ErrorBoundary.\n\nCORRECTED BOOT LAYERING:\n- index.html inlines tokens.css and a framework-free boot-ui (about 3-5 KB). The boot-ui renders the boot screen (role=progressbar fed by real DAG and asset progress; role=status), the Esc boot menu (Normal, Safe, Recovery, Verbose), the kernel-panic screen that names a DAG cycle, and the recovery console (retry, safe mode, diagnostics).\n- None of these depend on the Solid chunk, so recovery still works if that chunk fails to load (BOOT-05, -06, -08, -13).\n- Solid mounts at login. App chunks load after 'desktop-interactive'.\n- The CI budget covers boot-critical main-thread JS (at most 60 KB gz) and, separately, the kernel and service worker bundles on the critical path.\n\nCROSS-ORIGIN ISOLATION (MEM-01):\n- Serve with COOP: same-origin and COEP: credentialless, or Document-Isolation-Policy: isolate-and-credentialless (Chrome 137+ desktop). Set this in Vite server.headers and preview.headers, the production reverse proxy, and every navigation response the Service Worker serves offline.\n- Vitest browser mode and Playwright tests assert self.crossOriginIsolated === true.\n- The shell loads no cross-origin assets: system font stacks, self-hosted icons and wallpapers, and model weights only via same-origin or CORS-enabled URLs.\n\nMULTI-TAB:\n- A single OS instance per origin, enforced with navigator.locks.request('os-kernel', { ifAvailable: true }). A second tab shows an 'already running: switch here / take over' screen.\n- BroadcastChannel coordinates the 'restart to update' Service Worker activation (OFF-05).\n\nFRAME METRICS AND GATES:\n- A dropped frame is a rAF delta greater than 1.5x the measured refresh interval. The p95 gate is the refresh interval plus 1 ms, plus zero LoAF over 50 ms with script attribution in our bundle.\n- The WM-03 drag gate (10 windows, no load) runs nightly and per release.\n- The PROC-05 gate (CPU-bound load) runs on the reference machine without CDP throttling.\n- The worker pool is sized to leave at least 2 hardware threads for the main thread and the GPU/compositor: max(1, min(hwc - 2, floor(hwc * 0.75))), tuned on the lab machine.\n- On pointerdown the compositor sends an 'interactive' hint that pauses niced background quanta.\n- STACK_DECISION.md reports both ScriptDuration and TaskDuration.\n\nTOOLING (corrected):\n- TypeScript 6.0.3 is the workspace 'typescript', because typescript-eslint 8.70.1 requires TypeScript below 6.1 and typescript@7.0.2 ships no classic API. tsgo 7 is optional, as a separate type-check step.\n- ESLint 10.11 with typescript-eslint 8.70.1 and eslint-plugin-solid 0.18.0. Set solid/reactivity, solid/no-destructure and solid/components-return-once to 'error' and run with --max-warnings 0.\n- ESLint no-restricted-imports and no-restricted-globals keep apps/* away from kernel/, wm/, vfs/, indexedDB, caches and navigator.storage.\n- Vitest 5.0.1 with @vitest/browser and @vitest/coverage-v8. Use @solidjs/testing-library 0.8.10; we verified it with Solid 1.9.15 and Vitest 5, but it is unmaintained on 1.x, so the fallback is render() from solid-js/web plus @testing-library/dom.\n- @playwright/test 1.63.0 with @axe-core/playwright 4.13.0.\n- Node 22.12+ or 24 in CI and in the Docker build stage. Vite 8, Vitest 5 and eslint-plugin-solid need it whatever the backend runtime is.\n\nOTHER SUB-DECISIONS (unchanged):\n- **Styling:** native CSS. One tokens.css (light-dark(), data-theme, reduced-motion tokens) plus CSS Modules and @layer. No Tailwind and no CSS-in-JS.\n- **Terminal:** @xterm/xterm 6.0.0 as the TTY device only (DOM renderer, addon-fit 0.11.0; webgl 0.19.0 only if the throughput test fails). The line discipline, parser, executor and trie are the team's own.\n- **Editor:** CodeMirror 6 (view 6.43.13, state 6.7.6, commands 6.11.1, language 6.12.4, lang-markdown 6.5.2, lang-javascript 6.2.5), lazy-loaded. Monaco is rejected.\n- **Icons:** lucide-solid 1.47.0. The identity-kit SVGs are the team's own.\n- **Accessibility:** hand-built WAI-ARIA APG patterns, with @ark-ui/solid 5.39.2 only if the Week-3 axe spike needs it.\n- **Min/max animations:** native document.startViewTransition or WAAPI, with motion tokens set to 0 under reduced motion.\n\nDSA:\n- The window registry (the WM lead's hand-written hash table with a declared collision strategy, for distinction credit) and the z-order list live in dsa/ with tests and benchmarks.\n- Optional: an interval or grid structure for window hit-testing.\n\nIDENTITY KIT:\n- Build-time define of name, version, build hash and date for uname and Settings > About.\n- Web app manifest, favicon legible at 16 px, tab title.\n\nSECURITY.md:\n- States the trust assumption that built-in app views run in the same realm and are enforced by lint, review and a test.\n- App logic runs in its worker process, and views receive only { sys, pid, wid } and a scoped container.\n- Any future third-party app would run in a sandboxed iframe.\n\nREVERSAL AFTER THE FREEZE:\n- A reference-machine trace attributes more than 2 ms per frame to the Solid runtime in the WM-03 or PROC-05 tests.\n- Or the boot-critical chunk cannot stay under 60 KB gz because of the framework.\n- Or a Solid 1.9 defect blocks a Must requirement with no patch or workaround within 2 weeks.\n- Or an ecosystem package we depend on (Ark UI, lucide-solid, TanStack Virtual, the testing library) drops 1.x support in a way that blocks a Must requirement.",
+  "amended_chat_reason": "Keep SolidJS 1.9 with Vite 8, but only provisionally, and fix the record before the defence. We built the same 10-window desktop in six frameworks. Solid shipped 7 KB of framework code against React's 69 KB and never re-ran the other windows. Its update script cost was far lower, but full main-thread time differed by less than 2x. Every option except React without the compiler already meets the spec's budgets, because window dragging runs in a small plain-TypeScript compositor. That means Solid wins on headroom, not on passing a requirement, and the top three scores are too close to separate. The Week-2 team trial decides between Solid and React using thresholds committed in advance. Five fixes are needed:\n- **Tooling:** the lint tools need TypeScript 6.0.3 rather than 7.\n- **Lint rules:** the Solid lint rules must be raised to errors.\n- **Recovery screens:** the boot menu and recovery screens must not depend on the framework.\n- **Isolation and tabs:** cross-origin isolation and multi-tab behaviour must be specified.\n- **CPU-load frame test:** the frame test under CPU load needs a realistic definition, because even plain JS failed it on our laptop.",
+  "defence_qa": [
+   {
+    "question": "Your own data shows every framework held 60 FPS once the compositor bypassed it, and React's boot penalty is about 4% of the cold budget. Why do performance criteria carry 45% of the weight? Isn't the matrix built to pick Solid?",
+    "strong_answer": "The weights came from section 14.2, which names rendering cost, isolation and bundle size against the boot budget, and from the 25% OS & Process rubric line. They were committed in PR #<n> before any benchmark ran, and the timestamps are in git. We agree that on a pass/fail basis every candidate except React without the compiler passes, and we show a second, budget-anchored matrix in which React comes first. So we do not claim the matrix decides. It shows that Solid, Preact and React are within scoring noise. We still chose Solid for headroom because the prototype is about a tenth of the real UI: a 256-row Task Manager at 10 Hz, terminal floods, restored windows during boot. It also makes isolation structural rather than a matter of discipline. The actual decision rule was pre-registered: the Week-2 kata thresholds on hours, missed-update bugs and reference-machine frame cost. Here are the results."
+   },
+   {
+    "question": "Prove that one window's change does not re-render the others.",
+    "strong_answer": "In Solid a component function runs once. After that, a signal write updates only the DOM text or attribute nodes that read that signal. Our harness counts component invocations per window (window.__renders). After 100 updates to window 3 the other windows show 0 invocations at both 10x150 and 20x400. React with the compiler re-invoked 9 and 19 siblings when state was top-level, and 0 only with per-window stores. We can show it live: the Task Manager receives 10 Hz reconcile() batches keyed by pid with DevTools paint flashing on, and only changed cells flash. A component test asserts that the row component's run count stays constant after a store update and a sibling click; it passes under Vitest 5."
+   },
+   {
+    "question": "Solid 2.0 is at rc.9 with breaking changes and renamed packages. Why start an 18-week project on a line that is about to be superseded?",
+    "strong_answer": "The stack freezes after Week 4, and a mid-project major migration is the thing we most want to avoid. 1.9 is still patched (1.9.15, August 2026). Everything we depend on supports 1.x today: Ark UI (solid-js >=1.6), lucide-solid, TanStack Virtual and eslint-plugin-solid. We verified @solidjs/testing-library 0.8.10 against Solid 1.9.15 and Vitest 5. Solid-specific code is limited to shell and app views. The compositor, kernel bridge, xterm.js and CodeMirror are framework-agnostic. We pin exact versions and the lockfile, record which docs revision and AI-assistant prompt pinning we use, and reopen the decision only if a 1.9 defect blocks a Must requirement for two weeks or an ecosystem package drops 1.x in a way that blocks one."
+   },
+   {
+    "question": "Under PROC-05 your own run shows even plain JS at p95 33-50 ms with long animation frames. How will you pass with any framework?",
+    "strong_answer": "That result is why we say the framework is not the lever for PROC-05. The frame drops came from oversubscribing hardware threads (10 busy workers on 12 threads, plus CDP throttling), not from UI script. LoAF attribution showed no long script in our bundle. The fixes are in the kernel. The pool leaves at least 2 hardware threads for the main thread and the GPU/compositor. Workers run cooperative quanta that yield back. On pointerdown the compositor sends an 'interactive' hint and the scheduler pauses niced background quanta until pointerup. The gate is measured on the Week-2 reference machine without CDP throttling. A dropped frame is defined as a rAF delta above 1.5x the refresh interval, and the pass rule is p95 within the refresh interval plus 1 ms and zero long animation frames attributed to our scripts."
+   },
+   {
+    "question": "Built-in app views run in the same JavaScript realm as the compositor. What stops Files from touching the process table, IndexedDB or another app's window?",
+    "strong_answer": "App logic runs in the app's own worker process and reaches the OS only through the MessagePort syscall client. A view receives only { sys, pid, wid } and a scoped container. It never gets the registry, the kernel or storage handles. Lint rules (no-restricted-imports on kernel/, wm/ and vfs/, and no-restricted-globals on indexedDB, caches and navigator.storage) fail CI, and an e2e test checks that app views issue no direct storage calls. We are open that this is a trust assumption for first-party code, documented in SECURITY.md. The kernel still checks permissions on every syscall, so a misbehaving view cannot exceed its pid's rights. A third-party app would run in a sandboxed iframe with only a MessagePort."
+   },
+   {
+    "question": "What happens if the framework chunk is corrupt or fails to load? Can the user still reach Safe mode or Recovery?",
+    "strong_answer": "Yes. The boot screen, the Esc boot menu, the kernel-panic screen that names a DAG cycle, and the recovery console (retry, safe mode, diagnostics) are all part of a roughly 4 KB framework-free boot-ui inlined in index.html together with tokens.css. They render before any module loads, carry role=progressbar and live-region announcements fed by real DAG and asset progress, and are keyboard-only operable. Solid mounts only at login. Recovery can clear the versioned Service Worker cache and reload, so a broken shell chunk is exactly the case recovery handles."
+   }
+  ],
+  "extra_risks": [
+   {
+    "risk": "The TypeScript 7 / typescript-eslint split. If the kernel-language decision installs typescript@7.0.2 at the workspace root, npm fails with ERESOLVE, or with --legacy-peer-deps typed lint breaks silently, and the main Solid mitigation (eslint-plugin-solid) disappears.",
+    "mitigation": "Pin typescript 6.0.3 as the workspace 'typescript'. Run tsgo 7 only as a separate optional type-check. Add a CI job that fails if 'npx eslint --print-config' cannot load the parser. Revisit when typescript-eslint widens its TypeScript peer range."
+   },
+   {
+    "risk": "Cross-origin isolation breaks offline boot or assets. Offline navigations served by the Service Worker without COOP/COEP headers turn crossOriginIsolated off, so MEM-01 accounting and SharedArrayBuffer fail offline only. Cross-origin images or fonts are blocked under require-corp.",
+    "mitigation": "Use COEP: credentialless or Document-Isolation-Policy. The Service Worker copies the isolation headers onto every navigation Response. Playwright asserts crossOriginIsolated both online and offline. The shell loads no cross-origin assets."
+   },
+   {
+    "risk": "Two tabs run two kernels on one IndexedDB and fight over session layout and the Service Worker update.",
+    "mitigation": "A navigator.locks single-instance guard with a 'take over' screen. BroadcastChannel tells the old tab to flush and close before skipWaiting. An e2e test opens a second tab."
+   },
+   {
+    "risk": "Flaky per-PR performance gates in headless, GPU-less CI containers make the team ignore red builds.",
+    "mitigation": "Per PR: bundle-size and per-update script budgets only, which are deterministic. Frame and boot-time gates run nightly and per release, with a defined metric, 3 runs, median-of-p95 and a tolerance band. The authoritative runs happen on the reference machine."
+   },
+   {
+    "risk": "AI coding assistants, which are allowed, generate React idioms that silently break Solid reactivity, and docs and examples drift to Solid 2.0 APIs.",
+    "mitigation": "Solid rules at error with --max-warnings 0. Include the version in assistant prompts ('Solid 1.9, no 2.0 APIs'). Log rejected suggestions in AI_USAGE.md. Pin the 1.x docs revision in the README."
+   },
+   {
+    "risk": "The Docker and CI build stage needs Node 22.12+ even if the backend picks Bun or Deno (Vite 8: ^20.19 || >=22.12; Vitest 5 and eslint-plugin-solid: >=22). A mismatched base image breaks the three-command bring-up at the final defence.",
+    "mitigation": "A multi-stage Dockerfile with a node:24 build stage producing static assets, served by the reverse proxy with COOP/COEP headers, index.html and sw.js as no-cache, and hashed chunks as immutable. Test the bring-up from a clean clone in CI."
+   }
+  ]
+ }
+}

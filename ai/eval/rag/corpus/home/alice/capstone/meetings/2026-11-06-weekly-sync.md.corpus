@@ -1,0 +1,9 @@
+# Weekly sync — 6 Nov 2026
+
+- Evaluation corpus for search reached 200 documents; Bob and Carol writing the 30 queries this week.
+- Dan: executor pool resizes with hardware concurrency.
+- Carol: `rm -r` now deletes search vectors in the same transaction.
+- Bob: Settings app with the reduce-transparency toggle.
+- Esha: release workflow builds and signs the Docker image.
+
+Reminder: code freeze for Phase 4 on 20 Nov.

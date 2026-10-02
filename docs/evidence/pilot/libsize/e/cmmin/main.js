@@ -1,0 +1,2 @@
+import { EditorView, keymap, lineNumbers } from '@codemirror/view'; import { EditorState } from '@codemirror/state'; import { history, defaultKeymap, historyKeymap } from '@codemirror/commands'; import { markdown } from '@codemirror/lang-markdown';
+new EditorView({ state: EditorState.create({ doc: '# hi', extensions: [lineNumbers(), history(), keymap.of([...defaultKeymap, ...historyKeymap]), markdown()] }), parent: document.getElementById('x') });

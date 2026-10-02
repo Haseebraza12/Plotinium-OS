@@ -1,0 +1,106 @@
+/*
+ * Menus: glass, 12 px radius, 5 px inset, 24 px rows. The highlighted row is an accent capsule
+ * with white text (macOS). Rows show a check column only when some row can be checked.
+ */
+.menu {
+  display: flex;
+  flex-direction: column;
+  min-width: var(--pl-menu-min-w);
+  max-height: min(70vh, calc(100vh - 2 * var(--pl-space-4)));
+  overflow-y: auto;
+  padding: calc(var(--pl-space-1) + 1px);
+  outline: none;
+  font: var(--pl-type-body);
+  user-select: none;
+}
+.item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--pl-space-2);
+  min-height: var(--pl-menu-item-h);
+  padding: 0 var(--pl-space-2);
+  border: 0;
+  border-radius: var(--pl-radius-sm);
+  background: transparent;
+  color: var(--pl-text);
+  font: inherit;
+  text-align: start;
+  outline: none;
+  cursor: default;
+}
+.withChecks .item {
+  grid-template-columns: var(--pl-icon-sm) auto 1fr auto;
+  padding-left: var(--pl-space-1);
+}
+.item[data-active='true'] {
+  background: var(--pl-menu-hover);
+  color: var(--pl-on-menu-hover);
+}
+.item[data-active='true'] .shortcut,
+.item[data-active='true'] .description {
+  /* Full-strength on the highlight: white at 85% falls under 4.5:1 on the accent. */
+  color: inherit;
+}
+.item:focus-visible {
+  outline: var(--pl-focus-ring);
+  outline-offset: calc(var(--pl-focus-offset) * -1);
+}
+.item[aria-disabled='true'] {
+  color: var(--pl-text-disabled);
+  background: transparent;
+}
+.danger {
+  color: var(--pl-danger);
+}
+.item.danger[data-active='true'] {
+  background: var(--pl-danger-fill);
+  color: var(--pl-on-accent);
+}
+.check,
+.icon {
+  display: inline-grid;
+  place-items: center;
+  width: var(--pl-icon-sm);
+}
+.labelCell {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: var(--pl-space-half) 0;
+}
+.label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.description {
+  font: var(--pl-type-caption);
+  color: var(--pl-text-muted);
+}
+.shortcut {
+  padding-left: var(--pl-space-4);
+  color: var(--pl-text-tertiary);
+  font-size: var(--pl-text-sm);
+  letter-spacing: 0.02em;
+}
+.separator {
+  height: var(--pl-hairline-width);
+  margin: var(--pl-space-1) var(--pl-space-2);
+  border: 0;
+  background: var(--pl-separator);
+}
+.header {
+  padding: var(--pl-space-1) var(--pl-space-2) var(--pl-space-half);
+  font: var(--pl-type-section);
+  color: var(--pl-text-tertiary);
+}
+.target {
+  display: contents;
+}
+@media (forced-colors: active) {
+  .item[data-active='true'] {
+    background: Highlight;
+    color: HighlightText;
+  }
+}

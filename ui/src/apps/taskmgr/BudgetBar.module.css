@@ -1,0 +1,244 @@
+/*
+ * Stacked memory-budget bar. Each segment is a full-width layer: translateX(start) scaleX(size)
+ * from its left edge (--pl-start and --pl-size are ratios written by the component), so samples
+ * animate with transform only. In-bar labels sit on small window-tint chips for contrast.
+ */
+.root {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--pl-space-2);
+}
+.ticks {
+  position: relative;
+  height: var(--pl-space-4);
+}
+.tick {
+  --pl-at: 0;
+  position: absolute;
+  bottom: 0;
+  left: calc(var(--pl-at) * 100%);
+}
+.tickLabel {
+  position: absolute;
+  bottom: var(--pl-space-half);
+  transform: translateX(-50%);
+  font: var(--pl-type-caption);
+  font-size: calc(var(--pl-text-xs) - 1px);
+  font-weight: var(--pl-weight-semibold);
+  letter-spacing: var(--pl-tracking-caps);
+  white-space: nowrap;
+  color: var(--pl-text-muted);
+}
+.tickHigh .tickLabel {
+  color: var(--pl-warning);
+}
+.meter {
+  position: relative;
+}
+.track {
+  position: relative;
+  height: calc(var(--pl-row-h) + var(--pl-space-1));
+  overflow: hidden;
+  border-radius: var(--pl-radius-md);
+  background: var(--pl-control-bg);
+  box-shadow: inset 0 0 0 var(--pl-hairline-width) var(--pl-hairline);
+}
+.fill {
+  --pl-start: 0;
+  --pl-size: 0;
+  position: absolute;
+  inset: 0;
+  transform: translateX(calc(var(--pl-start) * 100%)) scaleX(var(--pl-size));
+  transform-origin: left center;
+  transition: transform calc(400ms * var(--pl-k)) var(--pl-ease-out);
+  animation: pl-bb-grow calc(480ms * var(--pl-k)) var(--pl-ease-spring) both;
+}
+@keyframes pl-bb-grow {
+  from {
+    transform: translateX(calc(var(--pl-start) * 100%)) scaleX(0);
+  }
+}
+.fill + .fill {
+  box-shadow: inset 1px 0 0 color-mix(in srgb, var(--pl-bg) 55%, transparent);
+}
+.kernel {
+  background: var(--pl-tint-gray);
+}
+.apps {
+  background: var(--pl-accent);
+}
+.model {
+  background: color-mix(in srgb, var(--pl-tint-teal) 60%, var(--pl-tint-green));
+}
+.vectors {
+  background: var(--pl-tint-teal);
+}
+/* A 45° hatch whose tile is widened by 1/size, so after scaleX(size) the stripes are square. */
+.speculative {
+  --pl-hatch: 8px;
+  background-color: color-mix(in srgb, var(--pl-tint-orange) 18%, transparent);
+  background-image: linear-gradient(
+    to top right,
+    transparent 0 25%,
+    var(--pl-tint-orange) 25% 50%,
+    transparent 50% 75%,
+    var(--pl-tint-orange) 75%
+  );
+  background-size: calc(var(--pl-hatch) / max(var(--pl-size), 0.001)) var(--pl-hatch);
+}
+.free {
+  background: var(--pl-control-bg);
+  box-shadow: inset 0 0 0 1px var(--pl-border-subtle);
+}
+.labels {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.label {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--pl-start) * 100%);
+  display: flex;
+  align-items: center;
+  width: calc(var(--pl-size) * 100%);
+  padding: 0 var(--pl-space-1);
+  overflow: hidden;
+}
+.chip {
+  max-width: 100%;
+  padding: var(--pl-space-half) var(--pl-space-1);
+  overflow: hidden;
+  border-radius: var(--pl-radius-xs);
+  background: var(--pl-glass-window-bg);
+  color: var(--pl-text);
+  font: var(--pl-type-caption);
+  font-size: calc(var(--pl-text-xs) - 1px);
+  font-weight: var(--pl-weight-semibold);
+  line-height: 1.2;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.mark {
+  --pl-at: 0;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--pl-at) * 100%);
+  border-left: 1px dashed var(--pl-text-muted);
+}
+.markHigh {
+  border-left: 1px solid var(--pl-warning);
+}
+.segments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--pl-space-1) var(--pl-space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font: var(--pl-type-caption);
+  color: var(--pl-text-muted);
+}
+.segmentKey {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--pl-space-1) + var(--pl-space-half));
+  padding: var(--pl-space-half) var(--pl-space-1);
+  border-radius: var(--pl-radius-xs);
+  outline: none;
+  cursor: default;
+}
+.segmentKey:hover {
+  background: var(--pl-control-bg);
+}
+.segmentKey:focus-visible {
+  outline: var(--pl-focus-ring);
+  outline-offset: 0;
+}
+.segmentKey strong {
+  color: var(--pl-text);
+  font-weight: var(--pl-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+.swatch {
+  --pl-size: 1;
+  flex: none;
+  width: calc(var(--pl-space-2) + var(--pl-space-half));
+  height: calc(var(--pl-space-2) + var(--pl-space-half));
+  border-radius: var(--pl-radius-xs);
+}
+.swatch.speculative {
+  --pl-hatch: 5px;
+}
+.tag {
+  padding: 1px var(--pl-space-1);
+  border-radius: var(--pl-radius-xs);
+  box-shadow: inset 0 0 0 1px currentColor;
+  font-size: calc(var(--pl-text-xs) - 2px);
+  font-weight: var(--pl-weight-bold);
+  letter-spacing: var(--pl-tracking-caps);
+  text-transform: uppercase;
+  color: var(--pl-text-muted);
+}
+.tag-model {
+  color: var(--pl-success);
+  background: var(--pl-success-subtle);
+}
+.tag-speculative {
+  color: var(--pl-warning);
+  background: var(--pl-warning-subtle);
+}
+.tooltip {
+  --pl-at: 0;
+  position: absolute;
+  z-index: 2;
+  top: var(--pl-space-2);
+  left: calc(var(--pl-at) * 100%);
+  display: flex;
+  flex-direction: column;
+  gap: var(--pl-space-half);
+  max-width: var(--pl-tooltip-max-w);
+  padding: var(--pl-space-1) var(--pl-space-2);
+  border-radius: var(--pl-radius-sm);
+  background: var(--pl-tooltip-bg);
+  box-shadow: var(--pl-shadow-tooltip);
+  color: var(--pl-tooltip-text);
+  font: var(--pl-type-caption);
+  pointer-events: none;
+  transform: translate(-50%, -100%);
+  animation: pl-bb-tip var(--pl-motion-fast) var(--pl-ease) both;
+}
+@keyframes pl-bb-tip {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-100% + 4px));
+  }
+}
+.tooltip strong {
+  font-weight: var(--pl-weight-semibold);
+}
+.tooltipDetail {
+  color: var(--pl-tooltip-text);
+  opacity: 0.8;
+}
+.stale .fill {
+  opacity: 0.35;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fill {
+    transition: none;
+    animation: none;
+  }
+  .tooltip {
+    animation: none;
+  }
+}
+@media (forced-colors: active) {
+  .fill,
+  .swatch {
+    border: 1px solid CanvasText;
+  }
+}

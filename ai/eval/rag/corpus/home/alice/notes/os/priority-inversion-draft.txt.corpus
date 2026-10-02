@@ -1,0 +1,13 @@
+draft - clean up before the quiz
+
+pathfinder 1997 - lander kept rebooting.
+3 tasks: weather (low), comms (medium, long running, no lock), bus mgmt (high, needs same mutex as weather).
+weather takes mutex -> bus mgmt wants it, blocks -> comms preempts weather -> weather cant release -> bus mgmt stuck for unbounded time -> watchdog resets.
+
+the point: waiting on a less important task is fine if bounded by the critical section. the medium tasks make it unbounded.
+
+fixes:
+- priority inheritance: lock holder borrows the waiter's priority until it unlocks. this is what JPL turned on (VxWorks mutex option) via uploaded patch.
+- priority ceiling: lock has a ceiling, holder runs at ceiling. needs static knowledge of who uses the lock.
+
+TODO draw L/M/H gantt chart. ask TA if inheritance is transitive (chain of locks) - I think yes in most RTOS.

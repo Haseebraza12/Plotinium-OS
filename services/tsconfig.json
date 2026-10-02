@@ -1,0 +1,11 @@
+// The service manager runs inside the kernel worker. Timers come from the kernel timer heap, not
+// setTimeout, so that timeouts never move boot progress (BOOT-02).
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2024", "WebWorker"],
+    "types": []
+  },
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules", "dist", "coverage"]
+}

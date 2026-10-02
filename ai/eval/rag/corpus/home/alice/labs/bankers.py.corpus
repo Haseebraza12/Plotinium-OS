@@ -1,0 +1,23 @@
+"""Check homework answers for the Banker's safety algorithm."""
+
+
+def is_safe(available, maximum, allocation):
+    n, m = len(maximum), len(available)
+    need = [[maximum[i][j] - allocation[i][j] for j in range(m)] for i in range(n)]
+    work, finish, order = list(available), [False] * n, []
+    progress = True
+    while progress:
+        progress = False
+        for i in range(n):
+            if not finish[i] and all(need[i][j] <= work[j] for j in range(m)):
+                work = [work[j] + allocation[i][j] for j in range(m)]
+                finish[i], progress = True, True
+                order.append(f"P{i}")
+    return all(finish), order
+
+
+if __name__ == "__main__":
+    avail = [3, 3, 2]
+    mx = [[7, 5, 3], [3, 2, 2], [9, 0, 2], [2, 2, 2], [4, 3, 3]]
+    alloc = [[0, 1, 0], [2, 0, 0], [3, 0, 2], [2, 1, 1], [0, 0, 2]]
+    print(is_safe(avail, mx, alloc))  # (True, ['P1', 'P3', 'P4', 'P0', 'P2'])

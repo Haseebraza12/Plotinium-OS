@@ -1,0 +1,13 @@
+{
+  "v": 1,
+  "t": "resume",
+  "id": 13,
+  "body": {
+    "cursors": [
+      {
+        "ownerUid": 1002,
+        "fromSeq": 0
+      }
+    ]
+  }
+}

@@ -1,0 +1,5 @@
+# Normalisation quiz answers (Carol)
+
+1. R(A, B, C, D), key AB, B → C: partial dependency, not 2NF. Decompose into R1(B, C), R2(A, B, D).
+2. R(A, B, C), A → B, B → C: transitive dependency, not 3NF. Decompose into (A, B) and (B, C).
+3. BCNF but not dependency preserving: R(street, city, zip) with (street, city) → zip and zip → city.

@@ -1,0 +1,67 @@
+{
+ "files_changed": [
+  "/home/haseeb-raza/Desktop/Plotinium OS/specs/16-delivery/implementation-plan.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/specs/16-delivery/backlog.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/specs/16-delivery/backlog.csv",
+  "/home/haseeb-raza/Desktop/Plotinium OS/specs/16-delivery/sprint-01.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/AI_USAGE.md"
+ ],
+ "verification": [
+  {
+   "command": "python3 check_ids.py specs/00-product/requirements-traceability.md specs/16-delivery/backlog.md",
+   "outcome": "PASS (exit 0). The traceability file has 218 requirement IDs once ranges are expanded (84 spec IDs and 134 Plotinium IDs). All 218 appear in backlog.md; none are missing. The script source is embedded in backlog.md \u00a78 so it can be ported to tools/."
+  },
+  {
+   "command": "python3 check_ids.py specs/00-product/requirements-traceability.md specs/16-delivery/backlog.csv",
+   "outcome": "PASS. This run checks the issue rows only, so it proves every ID is attached to a real issue. The requirement index in backlog.md \u00a73.4 lists every ID by construction, so the backlog.md run alone could not prove that. None missing; no index row reads MISSING."
+  },
+  {
+   "command": "python3 structural check of the three specs: 7 header fields, sections 1\u20139 in order (fenced blocks skipped), relative links resolve, cell count per table row, no raw HTML outside code spans, no leftover template placeholders",
+   "outcome": "PASS for implementation-plan.md (93 KB), backlog.md (126 KB) and sprint-01.md (32 KB)."
+  },
+  {
+   "command": "python3 checks on backlog.csv: owner vs reviewer, estimate size, dependencies, Kahn acyclicity",
+   "outcome": "PASS. 216 rows, 14 columns. Owner and reviewer differ on every row; every estimate is 6 h or less; every dependency exists and is scheduled no later than the issue that needs it; the dependency graph is acyclic (Kahn visits all 216). Estimates total 652.5 h, 78% of the 836 h of focus capacity."
+  },
+  {
+   "command": "python3 diff of the definition of done in implementation-plan \u00a73.8.2 against TEAM_CONTRACT.md \u00a72 and testing-and-performance \u00a73.15",
+   "outcome": "Both copies match their sources exactly (True, True)."
+  },
+  {
+   "command": "pnpm exec prettier --check AI_USAGE.md specs/16-delivery",
+   "outcome": "PASS. specs/ is in .prettierignore. AI_USAGE.md was reformatted with prettier --write after the append; only the table padding changed."
+  },
+  {
+   "command": "pnpm exec eslint specs/16-delivery --max-warnings 0",
+   "outcome": "Exit 2: ESLint says every file under specs/16-delivery is ignored. These are .md and .csv files with no lint configuration, so this does not apply."
+  },
+  {
+   "command": "pnpm exec tsc / pnpm exec vitest --project <pkg>",
+   "outcome": "Not applicable. My only path is specs/16-delivery, which contains no TypeScript and no test project."
+  }
+ ],
+ "problems": [
+  "STATUS: done. All three deliverables are written and verified. implementation-plan.md covers goals, the calendar relative to W1, phases and milestones, the critical path with a Mermaid graph, the capacity model, the per-phase per-role tables, gate scripts G0/P1\u2013P5/FRZ, definitions of ready and done, branch/PR/review rules, the requirement-ID flow, rituals, the ownership matrix, the ordered scope-cut list, 16 risks, AI-assisted versus team-owned work, the deployment track with a checklist of what the team must provide, and 15 instructor questions. backlog.md and backlog.csv hold 216 issues with owners, reviewers, weeks, estimates, dependencies and acceptance criteria. sprint-01.md is the day-by-day plan for W1\u2013W2 and ends with a 21-line W2 exit checklist.",
+  "Capacity is tight in Phases 2 and 3. Planned load is 112% of baseline focus capacity in P2 and 102% in P3; by role, R3 is at 116% in P2 and R2 at 114%. The plan absorbs this in four ways: pulling work forward into W3\u2013W4, surge weeks (+2 h/week before each gate, which brings P2 to 98% and P3 to 90%), 22 loans (mostly to R4, who is free before the AI work), and about 170 h of slack in P4\u2013P5. P4 is only 58% loaded; that slack is deliberate buffer.",
+  "The estimates depend on AI drafts. 75 issues are marked ai-draft, and their estimates assume a draft exists for the owner to review and test. No draft exists yet for the wm/ compositor, boot-ui or app views, so those are estimated as new work. A missing draft means re-estimating and applying the scope-cut list (risk R14).",
+  "AI_USAGE.md is outside specs/16-delivery. I edited it only because the assignment said to record the AI-versus-team section there. I appended row 2 and a new section, then ran prettier --write. Other agents may be editing this file at the same time.",
+  "The dsa/ reviewer assignments disagree across three sources: .github/CODEOWNERS, specs/14-devops \u00a73.8 and specs/08-dsa \u00a73.3. The plan follows 08-dsa \u00a73.3, which owns the topic, and gives the correction to PLT-004. CODEOWNERS was not edited because it is outside my paths.",
+  "Some choices in the plan differ from other specs; each is sent as a cross-spec request. The registration form is filled by R3 (the identity spec says R5). The S10 benchmark analysis is owned by R3 (traceability says R5). The DSA implement-by weeks change (the plan is canonical if it differs). A minimal `reboot` ships at P2 and the full BOOT-12 at P3, which answers a traceability request. The A30 bring-up job starts in W6, not W5. Staging before P2 is private behind an SSH tunnel, so the first public deploy is at P2. D4 is presented by R2 with R5.",
+  "Two new ID prefixes need registering in traceability \u00a73.13: PLN-nn (plan and backlog) and SPR-nn (sprint). The issue keys PLT-001\u2026PLT-216 could trip the SPX-05 ID check unless it is told to ignore them.",
+  "The Mermaid diagrams were checked by hand only; no Mermaid CLI is installed, so they were not validated by a tool.",
+  "The project folder is not a git repository yet. The sprint plans one labelled import commit, `chore(import): \u2026`, which must be excluded from the equity report.",
+  "The snapshot of what the AI work has produced (plan \u00a73.15.1) was taken while parallel agents were still writing, so its sizes are approximate. They are re-measured at the W2 review (PLT-019)."
+ ],
+ "todos_for_team": [
+  "At G0, fill in the calendar placeholders in implementation-plan \u00a73.2: the Monday of W1, university breaks, gate dates, and later the stack-freeze date. Then assign people to R1\u2013R5.",
+  "Adopt or correct the plan, the owners, the estimates and the loans at the first Monday planning. Complete the accepted and rejected columns of AI_USAGE.md rows 1 and 2 from the W2 onboarding reviews (PLT-014 to PLT-019).",
+  "Send instructor questions Q1\u2013Q15 in W1 (PLT-002). Q2 (public repo), Q4 (the name), Q5 (temperature 0), Q11 (lab machine) and Q15 (acceptance of the AI-assisted work under \u00a718) are urgent.",
+  "R5: update TEAM_CONTRACT.md. Change the definition-of-ready estimate from S/M/L to hours (6 h or less); add an annex with the surge-week agreement and the funding split; reference the change process in README \u00a73.6.",
+  "R5 and R4: port the coverage checker in backlog.md \u00a78 to tools/check-backlog.ts and add the PLN-05 and PLN-06 docs checks to the lint job. Register the PLN and SPR prefixes in traceability \u00a73.13, and make spec-lint ignore PLT-### issue keys.",
+  "R5: align .github/CODEOWNERS (and the block in 14-devops \u00a73.8) with the dsa/ reviewers in 08-dsa \u00a73.3 (PLT-004). Update the README \u00a73.1 index for the three 16-delivery files: plan R5/R1, backlog R5/R2, sprint-01 R5/R1.",
+  "R5: create the import commit exactly as specified in sprint-01 \u00a73.8, and exclude it from tools/equity.ts.",
+  "Seed the GitHub board from specs/16-delivery/backlog.csv with the gh CLI (PLT-021). The column mapping is in backlog \u00a74.2.",
+  "Spec owners: accept or answer the cross-spec requests in \u00a79 of each delivery file, addressed to identity, traceability, data-structures, deployment-and-ci, testing-and-performance, stack-decisions, offline-and-sync, backend-api, ai-safety-and-evaluation and boot-and-services."
+ ],
+ "deps_requested": []
+}

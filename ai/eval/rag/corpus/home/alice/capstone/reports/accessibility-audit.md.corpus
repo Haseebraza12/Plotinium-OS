@@ -1,0 +1,8 @@
+# Accessibility audit (axe + manual)
+
+- 14 axe violations on first run; 2 left (both contrast in the glass menu bar over bright wallpapers).
+- All windows reachable by keyboard; focus returns to the previous window when a dialog closes.
+- Dock icons have accessible names; running apps announce "running".
+- Reduce motion: disables the dock magnification and the window open animation.
+- Reduce transparency: glass surfaces become solid, fixes the contrast issue.
+- Screen reader test with NVDA: the Files app list is navigable, but the breadcrumb needs `aria-current`.

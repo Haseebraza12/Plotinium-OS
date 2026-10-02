@@ -1,0 +1,14 @@
+# Copy-on-write
+
+After `fork()`, parent and child share every physical page. The kernel marks the PTEs read-only in both. When either writes, the CPU faults; the handler sees the page is COW, allocates a new frame, copies the 4 KiB, maps it writable in the writer and drops the share count.
+
+Why it matters: most forks are followed immediately by `exec`, which throws the address space away. Copying everything eagerly would be wasted work. `vfork` was the older hack for the same problem.
+
+Other places COW shows up:
+- `mmap(MAP_PRIVATE)` of a file;
+- the zero page: all untouched anonymous memory maps one shared zero-filled frame until written;
+- file systems like Btrfs and ZFS (never overwrite a live block);
+- snapshots of VMs and containers;
+- persistent data structures in functional languages.
+
+Gotcha: a process that forks with a huge heap and then writes everywhere (Redis BGSAVE under heavy writes) can double its memory use.

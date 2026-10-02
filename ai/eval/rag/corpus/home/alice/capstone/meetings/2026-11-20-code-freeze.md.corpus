@@ -1,0 +1,7 @@
+# Code freeze — 20 Nov 2026
+
+- Phase 4 tag cut from main at 18:00 after all gates passed.
+- Search evaluation: numbers go into AI.md with the date and the model key.
+- Known issues list frozen: Files grid view keyboard navigation, one flaky e2e test (drag) quarantined with an issue link.
+- From now until the demo: bug fixes only, each with a test and a second reviewer.
+- Everyone rehearses their 3-minute segment on Monday.

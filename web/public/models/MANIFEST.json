@@ -1,0 +1,89 @@
+{
+  "generatedBy": "ai/scripts/fetch-models.ts",
+  "models": [
+    {
+      "role": "primary",
+      "id": "MongoDB/mdbr-leaf-ir",
+      "revision": "4262131b32c3182bd06e67e92ae69d7bd66e0c5c",
+      "files": [
+        {
+          "path": "config.json",
+          "sha256": "258407cfa27c7e1e502a9c312abebb4f5241bf226972ffc366287f370a3567f1",
+          "bytes": 829
+        },
+        {
+          "path": "tokenizer.json",
+          "sha256": "da0e79933b9ed51798a3ae27893d3c5fa4a201126cef75586296df9b4d2c62a0",
+          "bytes": 711661
+        },
+        {
+          "path": "tokenizer_config.json",
+          "sha256": "46ac231e9b955a8af80fc7f23a0ecc65b524f1df84a02c2c82cbca354fb207b4",
+          "bytes": 1529
+        },
+        {
+          "path": "special_tokens_map.json",
+          "sha256": "5aa43c2f985a25296d5a5ce621c2f77376ca8091a47993c492fd5460b895b140",
+          "bytes": 732
+        },
+        {
+          "path": "onnx/model_quantized.onnx",
+          "sha256": "8c08cb4ecc00bad721b117a85738c537ceb9b85b3eedc52d9c6906fddaa55718",
+          "bytes": 220597
+        },
+        {
+          "path": "onnx/model_quantized.onnx_data",
+          "sha256": "e77ea96a124230e23e5bac8e26c3ffe5410154973d8635673fa0220b06c13f8b",
+          "bytes": 22954752
+        }
+      ]
+    },
+    {
+      "role": "fallback",
+      "id": "Xenova/bge-small-en-v1.5",
+      "revision": "ea104dacec62c0de699686887e3f920caeb4f3e3",
+      "files": [
+        {
+          "path": "config.json",
+          "sha256": "fa73f90bf92c8cace1fbcb709626306f2bdbc9ea3e5b5f94b440df9b6aa56350",
+          "bytes": 683
+        },
+        {
+          "path": "tokenizer.json",
+          "sha256": "d241a60d5e8f04cc1b2b3e9ef7a4921b27bf526d9f6050ab90f9267a1f9e5c66",
+          "bytes": 711396
+        },
+        {
+          "path": "tokenizer_config.json",
+          "sha256": "9261e7d79b44c8195c1cada2b453e55b00aeb81e907a6664974b4d7776172ab3",
+          "bytes": 366
+        },
+        {
+          "path": "special_tokens_map.json",
+          "sha256": "b6d346be366a7d1d48332dbc9fdf3bf8960b5d879522b7799ddba59e76237ee3",
+          "bytes": 125
+        },
+        {
+          "path": "onnx/model_quantized.onnx",
+          "sha256": "6c9c6101a956d62dfb5e7190c538226c0c5bb9cb27b651234b6df063ee7dbfe4",
+          "bytes": 34014426
+        }
+      ]
+    }
+  ],
+  "ort": {
+    "version": "1.31.0-dev.20260914-8d85527a0",
+    "files": [
+      {
+        "path": "1.31.0-dev.20260914-8d85527a0/ort-wasm-simd-threaded.asyncify.wasm",
+        "sha256": "49871f5a4409519797e127440868a6d1923339d9185907f301a5b2a1d90af082",
+        "bytes": 26861777
+      },
+      {
+        "path": "1.31.0-dev.20260914-8d85527a0/ort-wasm-simd-threaded.asyncify.mjs",
+        "sha256": "0966b6105cd936744498aa60df7a22cbd47af3374dbc64a9ab561c08a71e3611",
+        "bytes": 53057
+      }
+    ]
+  }
+}

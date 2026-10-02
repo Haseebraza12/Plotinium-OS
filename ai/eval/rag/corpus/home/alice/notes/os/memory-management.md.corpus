@@ -1,0 +1,27 @@
+# Memory management overview
+
+## Address spaces
+
+Each process sees a private virtual address space. The MMU translates virtual to physical addresses on every access.
+
+## Contiguous allocation (old)
+
+Base and limit registers. External fragmentation; compaction is expensive. First fit, best fit and worst fit placement; first fit is usually fine.
+
+## Segmentation
+
+Code, heap and stack are separate segments with their own base and bounds. Sharing and protection per segment, still external fragmentation.
+
+## Paging
+
+Fixed-size pages (4 KiB) map to frames. No external fragmentation, some internal fragmentation (half a page per region on average). Page table entry: frame number, valid, protection, referenced, dirty.
+
+32-bit address, 4 KiB pages: 20-bit page number, 12-bit offset. A flat table is 2^20 entries × 4 bytes = 4 MiB per process, which is why we use multi-level tables.
+
+## Swapping
+
+Pages that are not needed can live on disk; a page fault brings them back. See page-replacement.md for choosing what to evict and working-set-thrashing.md for what happens when too much is evicted.
+
+## Allocation inside a process
+
+malloc manages the heap with free lists, size classes or buddy allocation; the kernel grows it with brk or mmap.

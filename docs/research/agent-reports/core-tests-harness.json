@@ -1,0 +1,122 @@
+{
+ "files_changed": [
+  "/home/haseeb-raza/Desktop/Plotinium OS/.github/workflows/e2e.yml (new: harness, integration, e2e, a11y and visual jobs; ci.yml untouched)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/tests/README.md (rewritten: layout, commands, env switches, rules)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/tests/vitest.config.ts (new: harness, property and integration projects)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/tests/playwright.config.ts (new: e2e, a11y, perf and visual projects on channel chrome)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/tests/quarantine.json (new)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/tests/e2e/SELECTORS.md (new: data-testid, role, test-hook, URL-flag and mark contract)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/tests/e2e/boot-to-session-restore.spec.ts (earlier placeholder replaced by E1: BOOT-01, SYS-02, WM-06, BOOT-12)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/tests/e2e/offline-boot.spec.ts (E2 with the server stopped, E3 with setOffline: OFF-01, OFF-02, OFF-04, BOOT-09, MEM-01)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/tests/e2e/boot-progress.spec.ts (E9 BOOT-02 at 400 kbps with CDP cache off and SW bypass)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/tests/e2e/boot-menu.spec.ts (BOOT-06 and BOOT-13, keyboard only)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/tests/e2e/lock-contention.spec.ts (E5 VFS-09, two persistent contexts)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/tests/e2e/README.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/tests/a11y/axe.ts, announce.ts, a11y.test.ts, screens.spec.ts, keyboard.spec.ts, README.md (axe in 4 theme passes: light and dark, each also with data-theme forced opposite; BOOT-13 announcement rate; keyboard flows)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/tests/performance/budgets.json (180 budgets: every numeric target of testing \u00a77.1-\u00a77.3)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/tests/performance/budgets.schema.ts, budgets.ts, methods.ts, budgets.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/tests/performance/check-budgets.ts + check-budgets.test.ts (\u00a75.4, exit codes 0/1/2, ratchet, job summary, CLI)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/tests/performance/result.ts, envelope.ts (+ tests) (\u00a74.2 result file; TST-06, TST-13)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/tests/performance/frame/parse.ts, capture.ts, runs.ts, drag.spec.ts (+ parse.test.ts, runs.test.ts) (TST-05 frame p95 and LoAF attribution; WM-03 and PROC-05 drag trace)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/tests/performance/boot/runs.ts, boot.spec.ts, runs.test.ts (BOOT-10 warm, cold and cold-first, plus no large assets before the desktop-interactive mark)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/tests/performance/sampler.ts, calibration.ts, calibration.json (+ tests) (per-op sampler; TST-21)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/tests/performance/k6/ws-soak.js, to-result.ts, to-result.test.ts (k6 WebSocket and lock soak skeleton)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/tests/performance/README.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/tests/fault-injection/matrix.ts, ops.ts, seed.ts, server.ts, matrix.test.ts, server.test.ts, README.md (DB-02 matrix at nodes 1/500/999/1000/M and M+1 for every bulk op; random fault-point property; TST-08 inert trigger)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/tests/integration/global-setup.ts, schema.test.ts, concurrency.test.ts, README.md (template database; VFS-11 probes; DB-03 torture with 2 and 8 clients)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/tests/property/arbitraries.ts, profile.ts, regressions.json, arbitraries.test.ts, oracle.prop.test.ts, README.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/tests/fixtures/clock.ts, frame-trace.ts, README.md (new); rng.ts, trees.ts, trees.test.ts, users.ts (Prettier formatting only)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/tests/visual/gallery.ts, gallery.spec.ts, gallery.test.ts, README.md (ui/gallery pages in light and dark, discovered from ui/gallery/pages/*.tsx)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/tests/support/oracle.test.ts, storage-names.ts(+test), stack.ts(+test), progress.ts(+test), cdp.ts(+test), os.ts(+test), sql.ts, db-template.ts(+test), probes.test.ts, quarantine.ts(+test), browser.test.ts (new)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/tests/support/env.ts, hooks.ts, oracle.ts, percentile.ts, percentile.test.ts, selectors.ts, tests/tsconfig.json (kept from the earlier run; Prettier formatting only)"
+ ],
+ "verification": [
+  {
+   "command": "pnpm exec tsc -p tests/tsconfig.json --noEmit",
+   "outcome": "exit 0, no errors"
+  },
+  {
+   "command": "pnpm exec tsc -p tsconfig.json --noEmit | grep ^tests/",
+   "outcome": "no errors in tests/ under the repo-wide program"
+  },
+  {
+   "command": "pnpm exec eslint tests --max-warnings 0",
+   "outcome": "exit 0 (includes k6/ws-soak.js)"
+  },
+  {
+   "command": "pnpm exec prettier --check tests .github/workflows/e2e.yml",
+   "outcome": "All matched files use Prettier code style"
+  },
+  {
+   "command": "pnpm exec vitest run --config tests/vitest.config.ts (no DATABASE_URL, Chrome stable installed)",
+   "outcome": "27 files passed, 3 skipped (DB-gated); 160 tests passed, 41 skipped"
+  },
+  {
+   "command": "pnpm exec vitest run --project property (root config)",
+   "outcome": "2 files, 14 tests passed"
+  },
+  {
+   "command": "DATABASE_URL=<owner URL of the running Compose db on 127.0.0.1:55432> pnpm exec vitest run --config tests/vitest.config.ts --project integration",
+   "outcome": "4 files, 47 tests passed against real PostgreSQL 18: the full DB-02 matrix for rm -r, cp -r, mv of 1,000 files, directory mv, batch rename of 500, chmod -R and chown -R (rollback with an unchanged oracle; M+1 commits after exactly M node ops), a 25-run random fault-point property, TST-08 inert trigger, VFS-11 probes and DB-03 torture with 2 and 8 clients"
+  },
+  {
+   "command": "isolated docker compose -p plotinium-harness (port 55433) + vitest run --config tests/vitest.config.ts --coverage",
+   "outcome": "30 files and 201 tests passed; tests/ coverage: 87.13% lines, 85.6% statements. The remaining gaps are mainly in-page closures that run inside Chrome, which Node's V8 coverage cannot count. The isolated stack was removed afterwards with down -v."
+  },
+  {
+   "command": "support/browser.test.ts in real Chrome stable",
+   "outcome": "8 passed: progress, announcement and LoAF recorders; frame parser on a real Chrome trace (PipelineReporter shape confirmed); axe finds a contrast failure that appears only in the forced dark theme; result envelope; login, desktop and Terminal helpers against a fake page"
+  },
+  {
+   "command": "pnpm exec playwright test -c tests/playwright.config.ts --list",
+   "outcome": "79 tests in 10 files load. e2e, a11y and perf are fixme until PLT_E2E_UI=1."
+  },
+  {
+   "command": "PLOTINIUM_GALLERY_URL=<served ui/gallery/dist> playwright --project=visual (record with --update-snapshots=all, then compare)",
+   "outcome": "6 of 6 passed both times: screenshots are deterministic, themes are applied and pages are captured at full height. The local reference PNGs were deleted afterwards because they are platform-specific."
+  },
+  {
+   "command": "temporary a11y smoke with axe scan() on the ui gallery in 4 theme passes (spec file deleted afterwards)",
+   "outcome": "passed; data-theme forcing confirmed; 0 blocking violations on the tokens page"
+  },
+  {
+   "command": "pnpm traceability",
+   "outcome": "0 untagged titles in tests/; 114 warnings because the TST prefix is not registered yet. The --strict exit 1 comes from untagged ui/ titles in another agent's paths."
+  }
+ ],
+ "problems": [
+  "The root vitest.config.ts has no project for the tests/ helpers or for tests/integration and tests/fault-injection, so I added tests/vitest.config.ts with harness, property and integration projects. Until the root config adopts these projects, `pnpm test` does not run them.",
+  "The root playwright.config.ts only knows tests/e2e, so tests/playwright.config.ts defines e2e, a11y, perf and visual. TST-02 lists exactly four Playwright projects (e2e, a11y, perf, bringup); `visual` is an extra one that the spec must register, or it gets folded into a11y.",
+  "`pg` cannot be resolved from tests/ (tests/ is not a workspace package and hoist is false). support/sql.ts loads it with createRequire from server/package.json and types it with a minimal local interface. TODO(R5).",
+  "valibot cannot be resolved from tests/, so the budgets.json validator is hand-written. The spec asks for Valibot in tools/check-budgets.ts.",
+  "check-budgets lives at tests/performance/check-budgets.ts (spec path: tools/check-budgets.ts), and the root package.json has no `check-budgets` script.",
+  "PLT_TEST_BUILD is not wired into the image build: the Dockerfile has no ARG PLT_TEST_BUILD and the compose.yaml build sections pass no args. e2e.yml therefore cannot produce a test build (window.__plt, ?bootflags) until devops wires it.",
+  "The semester's W1 date is not recorded anywhere, so check-budgets needs --week, PLT_WEEK or PLT_SEMESTER_START (otherwise exit 2).",
+  "Spec clarification (testing \u00a73.11.3 step 5): read literally, the raw-interval cross-check compares against D_i, which would mark every trace with idle (no-update) vsyncs invalid. The parser compares against the elapsed vsyncs (\u0394seq\u00b7V) instead; the spec text should say so.",
+  "Spec discrepancy: the testing \u00a74.3 trigger sketch raises at n >= fault_after, but database.md \u00a73.14, backend-api.md and the committed migration raise when n > fault_after, with 'fail at node k' setting fault_after = k \u2212 1. The harness follows database.md and the migration; testing \u00a74.3 should be aligned.",
+  "The hardFrom weeks of the \u00a77.2 and \u00a77.3 budgets are not given by the spec. I assigned them by the owning spec's gate (W7, W10-W11, W14, W5-W6); budget owners must confirm them. Compound targets were split into suffixed ids (for example VFS-08.limits-name).",
+  "The shared Compose db container (plotinium-db-1) was stopped by another agent partway through my runs. The DB suites had already passed against it; for the coverage run I used an isolated compose project (plotinium-harness on 127.0.0.1:55433) and removed it with down -v.",
+  "`pnpm traceability --strict` currently exits 1 because of untagged titles in ui/ (UI workflow's paths), not tests/.",
+  "E5 measures lease expiry from the crash, which is a lower bound. For the strict check against the server's expiry, SELECTORS.md asks the Editor lock banner to carry data-expires-at."
+ ],
+ "todos_for_team": [
+  "R5: fold tests/vitest.config.ts (harness, integration with globalSetup tests/integration/global-setup.ts, sequence.groupOrder 1) and tests/playwright.config.ts (e2e, a11y, perf, visual) into the root configs during the W5 migration of spec \u00a73.2.",
+  "R5: add root scripts `check-budgets` (node tests/performance/check-budgets.ts, or have tools/check-budgets.ts re-export main), `test:int` and `a11y`; wire the `integration` job of ci.yml to the tests/ integration project.",
+  "R5/devops: add ARG PLT_TEST_BUILD to the Dockerfile web/app build stages and `args: { PLT_TEST_BUILD: ${PLT_TEST_BUILD:-0} }` in compose.yaml, so `PLT_TEST_BUILD=1 docker compose up --build` exposes window.__plt and ?bootflags.",
+  "R3 and app owners: render every data-testid, role, data-app, data-user, data-wid and data-expires-at in tests/e2e/SELECTORS.md, and expose window.__plt hooks (bootlog, sessionId, layout, terminal.text/idle, oracle.snapshot, perf.accumulators) in test builds; then set the repository variable PLT_E2E_UI=1.",
+  "R3/R4 (boot-ui): support ?bootflags=hold-splash and inject-cycle in test builds, give the boot menu the accessible name 'Plotinium Boot Manager', and give the status region role=status (used by the a11y screens and BOOT-13 tests).",
+  "R5: record the W1 date (PLT_SEMESTER_START) as a repository variable for check-budgets; run the W2 CPU calibration and fill tests/performance/calibration.json.",
+  "Budget owners (R1-R5): confirm the hardFrom weeks and the ids of the split budgets in tests/performance/budgets.json.",
+  "R5 (traceability): register the TST prefix in tools/traceability/ids.ts (testing \u00a79.2).",
+  "Spec editors: align testing \u00a74.3's trigger sketch with database.md \u00a73.14 (fault_after = k \u2212 1), and reword \u00a73.11.3 step 5 (the cross-check compares against elapsed vsyncs).",
+  "R2/R5: add a vfsTxn-based driver to tests/fault-injection/ops.ts once server/src/vfs/tx.ts lands, and run the same matrix against it; add the client-side IndexedDB abort matrix in the vfs browser project and the FaultyBlobStore case in the server integration tests.",
+  "R3: after the first CI visual run, download the visual-screenshots artifact and commit tests/visual/__screenshots__/visual/*.png as the references.",
+  "R5: add the planned integration suites (OFF-02 5,000-op replay, VFS-09 lock leases, auth) and E6 (DB-02 fault on both sides, end to end) once the server's /ws and the debug endpoint exist.",
+  "TST-07: e2e.yml never targets the lab-spec runner. perf-lab.yml (not created here) should run `playwright --project=perf`, the k6 soak and check-budgets --cadence nightly --machine lab-spec."
+ ],
+ "deps_requested": [
+  "pg (catalog 8.23.0) and @types/pg (catalog 8.23.1) as root devDependencies, or make tests/ a workspace package that declares them, so tests/support/sql.ts can import pg directly instead of loading it through createRequire from server/.",
+  "valibot (catalog 1.5.0) resolvable from tests/ (same reason), if the budgets.json schema should be the Valibot one that spec \u00a74.1 names.",
+  "k6 v2.3.0 binary on the lab-spec runner only (checksum-verified download, per deployment-and-ci \u00a73.7); not an npm dependency."
+ ]
+}

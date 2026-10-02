@@ -1,0 +1,7 @@
+# Deploy notes (Carol, backup for Esha)
+
+- `docker compose -f compose.prod.yaml pull && docker compose up -d --wait`
+- migrations run automatically on server start; check `docker compose logs server | grep migrate`
+- Postgres backups nightly at 02:00 to object storage, 30 days
+- restore test: fresh VPS, pull the latest dump, `pg_restore --clean`, 6 minutes for the demo database
+- Caddy renews TLS automatically; check the cert expiry monthly anyway

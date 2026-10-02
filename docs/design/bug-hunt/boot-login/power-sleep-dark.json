@@ -1,0 +1,13 @@
+{
+  "which": "sleep",
+  "nav": ["http://localhost:4718/"],
+  "console": [],
+  "pageErrors": [],
+  "failed": ["401 GET /api/auth/me"],
+  "after": {
+    "login": true,
+    "plb": [],
+    "text": "Sunday, 27 September | 0 | 9 | : | 3 | 7 | D | demo | A | alice | B | bob | Guest | Press Enter to sign in | Sleep | Restart | Shut Down | Plotinium 0.1.0-dev.0 | build 0000000",
+    "active": ""
+  }
+}

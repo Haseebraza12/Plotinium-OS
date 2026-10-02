@@ -1,0 +1,94 @@
+{
+  "light:login": [
+    {
+      "id": "aria-prohibited-attr",
+      "impact": "serious",
+      "n": 1,
+      "nodes": [
+        "time :: Fix all of the following:\n  aria-label attribute cannot be used on a time with no valid role attribute."
+      ]
+    }
+  ],
+  "light:login:csp": 0,
+  "light:login:errors": [],
+  "light:desktop": [],
+  "light:files": [],
+  "light:terminal": [],
+  "light:editor": [
+    {
+      "id": "target-size",
+      "impact": "serious",
+      "n": 2,
+      "nodes": [
+        "button[aria-label=\"saved v0\"] :: Fix any of the following:\n  Target has insufficient size (59.5px by 17.4px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diamet",
+        "button[aria-label=\"Indentation Spaces: 2\"] :: Fix any of the following:\n  Target has insufficient size (64.3px by 17.4px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diamet"
+      ]
+    }
+  ],
+  "light:task-manager": [],
+  "light:settings": [],
+  "light:about:present": 1,
+  "light:about": [],
+  "light:desktop-with-apps": [
+    {
+      "id": "target-size",
+      "impact": "serious",
+      "n": 4,
+      "nodes": [
+        "button[aria-label=\"Close Files\"] :: Fix any of the following:\n  Target has insufficient size because it is partially obscured (smallest space is 24px by 17px, should be at least 24px by 24px)\n  Target has insufficient space to its close",
+        "button[aria-label=\"Minimise Files\"] :: Fix any of the following:\n  Target has insufficient size because it is partially obscured (smallest space is 24px by 17px, should be at least 24px by 24px)\n  Target has insufficient space to its close",
+        "button[aria-label=\"Zoom Files\"] :: Fix any of the following:\n  Target has insufficient size because it is partially obscured (smallest space is 24px by 17px, should be at least 24px by 24px)\n  Target has insufficient space to its close",
+        "button[aria-label=\"Close Task Manager\"] :: Fix any of the following:\n  Target has insufficient size because it is partially obscured (smallest space is 24px by 17px, should be at least 24px by 24px)\n  Target has insufficient space to its close"
+      ]
+    }
+  ],
+  "light:csp": [],
+  "light:errors": [],
+  "light:warnings": [],
+  "dark:login": [
+    {
+      "id": "aria-prohibited-attr",
+      "impact": "serious",
+      "n": 1,
+      "nodes": [
+        "time :: Fix all of the following:\n  aria-label attribute cannot be used on a time with no valid role attribute."
+      ]
+    }
+  ],
+  "dark:login:csp": 0,
+  "dark:login:errors": [],
+  "dark:desktop": [],
+  "dark:files": [],
+  "dark:terminal": [],
+  "dark:editor": [
+    {
+      "id": "target-size",
+      "impact": "serious",
+      "n": 2,
+      "nodes": [
+        "button[aria-label=\"saved v0\"] :: Fix any of the following:\n  Target has insufficient size (59.5px by 17.4px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diamet",
+        "button[aria-label=\"Indentation Spaces: 2\"] :: Fix any of the following:\n  Target has insufficient size (64.3px by 17.4px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diamet"
+      ]
+    }
+  ],
+  "dark:task-manager": [],
+  "dark:settings": [],
+  "dark:about:present": 1,
+  "dark:about": [],
+  "dark:desktop-with-apps": [
+    {
+      "id": "target-size",
+      "impact": "serious",
+      "n": 4,
+      "nodes": [
+        "button[aria-label=\"Close Files\"] :: Fix any of the following:\n  Target has insufficient size because it is partially obscured (smallest space is 24px by 17px, should be at least 24px by 24px)\n  Target has insufficient space to its close",
+        "button[aria-label=\"Minimise Files\"] :: Fix any of the following:\n  Target has insufficient size because it is partially obscured (smallest space is 24px by 17px, should be at least 24px by 24px)\n  Target has insufficient space to its close",
+        "button[aria-label=\"Zoom Files\"] :: Fix any of the following:\n  Target has insufficient size because it is partially obscured (smallest space is 24px by 17px, should be at least 24px by 24px)\n  Target has insufficient space to its close",
+        "button[aria-label=\"Close Task Manager\"] :: Fix any of the following:\n  Target has insufficient size because it is partially obscured (smallest space is 24px by 17px, should be at least 24px by 24px)\n  Target has insufficient space to its close"
+      ]
+    }
+  ],
+  "dark:csp": [],
+  "dark:errors": [],
+  "dark:warnings": []
+}

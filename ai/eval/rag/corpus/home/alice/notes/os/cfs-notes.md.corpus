@@ -1,0 +1,12 @@
+# Linux CFS (Completely Fair Scheduler)
+
+- Each task accumulates `vruntime`, its run time scaled by a weight derived from its nice value (nice 0 = 1024; each nice step is about 1.25×).
+- The runnable task with the **smallest vruntime** runs next. Tasks are kept in a red-black tree ordered by vruntime, so picking the leftmost node is O(1) with caching and insertion is O(log n).
+- `sched_latency` (e.g. 6 ms) is the window in which every runnable task should run once; the slice is latency × weight / total weight, but never below `min_granularity`.
+- A task that sleeps for a long time comes back with its vruntime pulled up to near the minimum so it cannot hoard the CPU after waking.
+
+Weights make this proportional share: two tasks with nice 0 and nice 5 split roughly 3:1.
+
+Since kernel 6.6 the default is EEVDF, which adds a lag/deadline notion to improve latency for tasks with short slices.
+
+Lecture question: why a red-black tree and not a heap? Both give O(log n); the tree also makes removal of an arbitrary task (it blocks) straightforward.

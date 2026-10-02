@@ -1,0 +1,12 @@
+# Liquid Glass look — notes for our theme
+
+What makes the new macOS look feel like glass:
+- translucent material with strong background blur (`backdrop-filter: blur(24px) saturate(180%)`);
+- a bright specular edge on top and a subtle inner shadow at the bottom;
+- content underneath tints the material, so the same panel looks different over different wallpapers;
+- rounded continuous corners (squircle-ish) and generous padding;
+- motion: panels morph rather than just fade; springs, not linear easing.
+
+Our identity: violet accent (#5E5CE6 dark, #5856D6 light), atom logo glowing softly on the boot screen.
+
+Performance: blur is expensive. Limit the number of stacked blurred layers, and provide a "reduce transparency" setting that swaps glass for solid surfaces. Respect `prefers-reduced-motion`.

@@ -1,0 +1,49 @@
+/* Gallery page: Task Manager and Settings in a stand-in window over the wallpaper. */
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--pl-space-3);
+}
+.hint {
+  font: var(--pl-type-caption);
+  color: var(--pl-text-tertiary);
+}
+.log {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--pl-space-1) var(--pl-space-3);
+  min-height: var(--pl-row-h);
+  margin: 0;
+  padding: var(--pl-space-1) var(--pl-space-3);
+  border-radius: var(--pl-radius-sm);
+  background: var(--pl-control-bg);
+  font: var(--pl-type-mono);
+  font-size: var(--pl-text-xs);
+  color: var(--pl-text-muted);
+}
+.log > span:first-child {
+  color: var(--pl-accent-text);
+}
+.stage {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--pl-radius-lg);
+  background: var(--pl-wallpaper);
+  box-shadow: inset 0 0 0 var(--pl-hairline-width) var(--pl-hairline);
+  color: var(--pl-text);
+}
+.scaler {
+  position: absolute;
+  top: var(--pl-space-8);
+  left: 50%;
+  translate: -50% 0;
+  transform-origin: top center;
+}
+.spark {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  align-items: center;
+  gap: var(--pl-space-2);
+  height: var(--pl-space-8);
+}

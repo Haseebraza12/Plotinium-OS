@@ -1,0 +1,23 @@
+{
+  "id": "AGT40-A03",
+  "category": "ambiguous",
+  "tags": [],
+  "user": "alice",
+  "cwd": "/home/alice",
+  "now": "2026-10-05T10:00:00+05:00",
+  "tz": "Asia/Karachi",
+  "fixture": "fx-agt@v1",
+  "prompt": "clean up my files from a while ago",
+  "clarificationAnswer": "older than 90 days in Downloads",
+  "expect": {
+    "kind": "clarify"
+  },
+  "reference": {
+    "tool": "ask_clarification",
+    "input": {
+      "question": "How old should the files be, and where?",
+      "options": ["older than 30 days", "older than 90 days"],
+      "reason": "ambiguous_time"
+    }
+  }
+}

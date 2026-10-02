@@ -1,0 +1,11 @@
+{
+  "name": "sync",
+  "description": "WebSocket live, else degraded offline with queued ops",
+  "requires": ["auth", "vfs"],
+  "critical": false,
+  "weight": 2,
+  "timeoutMs": 4000,
+  "priority": 20,
+  "safeMode": true,
+  "stopTimeoutMs": 4000
+}

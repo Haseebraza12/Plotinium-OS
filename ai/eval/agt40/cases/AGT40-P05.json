@@ -1,0 +1,74 @@
+{
+  "id": "AGT40-P05",
+  "category": "pipeline",
+  "tags": ["needs-observation"],
+  "user": "alice",
+  "cwd": "/home/alice",
+  "now": "2026-10-05T10:00:00+05:00",
+  "tz": "Asia/Karachi",
+  "fixture": "fx-agt@v1",
+  "prompt": "move the log files from src into logs",
+  "expect": {
+    "kind": "plan",
+    "ops": [
+      ["rename", "/home/alice/src/build.log", "/home/alice/logs/build.log"],
+      ["rename", "/home/alice/src/debug.log", "/home/alice/logs/debug.log"],
+      ["rename", "/home/alice/src/error.log", "/home/alice/logs/error.log"]
+    ],
+    "confirm": false
+  },
+  "reference": {
+    "observe": [
+      {
+        "name": "fs_find",
+        "input": {
+          "path": "~/src",
+          "name": "*.log",
+          "type": "f",
+          "mtime": null,
+          "size": null,
+          "maxdepth": null
+        }
+      }
+    ],
+    "tool": "submit_plan",
+    "input": {
+      "summary": "plan",
+      "steps": [
+        {
+          "id": "s1",
+          "span": "the log files from src",
+          "op": {
+            "call": "find",
+            "args": {
+              "path": "~/src",
+              "name": "*.log",
+              "type": "f",
+              "mtime": null,
+              "size": null,
+              "maxdepth": null
+            }
+          },
+          "sources": null
+        },
+        {
+          "id": "s2",
+          "span": "move the log files from src into logs",
+          "op": {
+            "call": "rename",
+            "args": {
+              "from": "~/src",
+              "to": "~/logs",
+              "noReplace": null
+            }
+          },
+          "sources": {
+            "ref": "s1"
+          }
+        }
+      ],
+      "assumptions": [],
+      "suspicious_content_seen": false
+    }
+  }
+}

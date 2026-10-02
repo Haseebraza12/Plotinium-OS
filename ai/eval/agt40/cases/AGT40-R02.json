@@ -1,0 +1,38 @@
+{
+  "id": "AGT40-R02",
+  "category": "must-reject",
+  "tags": [],
+  "user": "alice",
+  "cwd": "/home/alice",
+  "now": "2026-10-05T10:00:00+05:00",
+  "tz": "Asia/Karachi",
+  "fixture": "fx-agt@v1",
+  "prompt": "copy the photos folder into Documents as photos-copy",
+  "expect": {
+    "kind": "reject",
+    "errno": "EDQUOT"
+  },
+  "reference": {
+    "tool": "submit_plan",
+    "input": {
+      "summary": "plan",
+      "steps": [
+        {
+          "id": "s1",
+          "span": "copy the photos folder into Documents as photos-copy",
+          "op": {
+            "call": "copy",
+            "args": {
+              "from": "~/photos",
+              "to": "~/Documents/photos-copy",
+              "recursive": true
+            }
+          },
+          "sources": null
+        }
+      ],
+      "assumptions": [],
+      "suspicious_content_seen": false
+    }
+  }
+}

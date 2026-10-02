@@ -1,0 +1,279 @@
+#cloud-config
+# ops/cloud-init.yaml: the Plotinium production host, provisioned from this file only (OPS-12).
+# Spec: specs/14-devops/deployment-and-ci.md §3.12 (VPS provisioning), §3.9 (secrets), §3.14 (backups).
+# Runbook: ops/RUNBOOK.md §1. Owner: R5 QA/DevOps. Reviewer: R1 (CODEOWNERS for ops/).
+#
+# Ubuntu 24.04 LTS on Hetzner CX33 (fallback OVHcloud VPS-2, §3.13). Apply it with
+#   ops/provision.sh render --keys team.pub --hostname plotinium-prod > /tmp/user-data.yaml
+#   hcloud server create --name plotinium-prod --type cx33 --image ubuntu-24.04 \
+#     --location fsn1 --user-data-from-file /tmp/user-data.yaml --firewall plotinium
+# or let `ops/provision.sh create` do both. `render` replaces the two @PLOTINIUM_...@ markers below;
+# this file itself holds no key, token or password (spec §18), only public-key placeholders.
+#
+# What it sets up (spec §3.12):
+#   - user `deploy` (uid 1000, the uid of the app container's `node` user, so secret files it
+#     owns are readable in the container), SSH keys of each member, `docker` group, no password,
+#     no sudo; root login disabled; key-only SSH; AllowUsers deploy; MaxStartups 10:30:60
+#   - Docker Engine and the Compose plugin from Docker's apt repository (fingerprint-checked key)
+#   - UFW: inbound 22/tcp, 80/tcp, 443/tcp, 443/udp only. Docker-published ports bypass UFW, so the
+#     authoritative firewall is the Hetzner Cloud Firewall with the same rules (provision.sh firewall)
+#   - BBR + fq, tcp_slow_start_after_idle=0, UDP buffers for HTTP/3, vm.swappiness=10, 2 GB swap
+#   - unattended-upgrades for security updates, automatic reboot OFF (gate weeks)
+#   - Docker daemon: log driver `local`, live-restore
+#   - /srv/plotinium (deploy), /srv/plotinium/secrets (0700), /srv/plotinium/state, /var/backups/plotinium
+#   - systemd timers: plotinium-backup (21:00 UTC = 02:00 PKT), plotinium-prune (weekly)
+# After first boot, finish with ops/RUNBOOK.md §1.4: clone the repository, write the secrets, deploy.
+
+hostname: '@PLOTINIUM_HOSTNAME@'
+preserve_hostname: false
+timezone: UTC
+locale: C.UTF-8
+
+# Key-only SSH, no root login, no distribution default user (so `deploy` gets uid 1000).
+ssh_pwauth: false
+disable_root: true
+users:
+  - name: deploy
+    uid: 1000
+    gecos: Plotinium deploy
+    shell: /bin/bash
+    lock_passwd: true
+    ssh_authorized_keys:
+      # One public key per member (and the CI deploy key). `provision.sh render --keys FILE`
+      # replaces this line; never put a private key anywhere in this repository.
+      - '@PLOTINIUM_AUTHORIZED_KEYS@'
+
+package_update: true
+package_upgrade: true
+packages:
+  - ca-certificates
+  - curl
+  - gnupg
+  - git
+  - jq
+  - rclone
+  - ufw
+  - unattended-upgrades
+  - apt-listchanges
+
+# 2 GB swap file protects PostgreSQL from an OOM kill during an HNSW build (§3.12).
+swap:
+  filename: /swapfile
+  size: 2147483648
+  maxsize: 2147483648
+
+write_files:
+  - path: /etc/ssh/sshd_config.d/10-plotinium.conf
+    owner: root:root
+    permissions: '0644'
+    content: |
+      # Plotinium (OPS-12). Loaded before 50-cloud-init.conf, and sshd keeps the FIRST value it
+      # reads, so these settings win.
+      PermitRootLogin no
+      PasswordAuthentication no
+      KbdInteractiveAuthentication no
+      PubkeyAuthentication yes
+      AuthenticationMethods publickey
+      AllowUsers deploy
+      MaxStartups 10:30:60
+      MaxAuthTries 3
+      LoginGraceTime 30
+      X11Forwarding no
+      # `local` keeps `ssh -L 4718:localhost:4718` working for the staging stack (OPS-22).
+      AllowTcpForwarding local
+      AllowAgentForwarding no
+      ClientAliveInterval 300
+      ClientAliveCountMax 2
+
+  - path: /etc/sysctl.d/90-plotinium.conf
+    owner: root:root
+    permissions: '0644'
+    content: |
+      # Plotinium (OPS-12; deployment-and-ci.md §3.12).
+      net.core.default_qdisc = fq
+      net.ipv4.tcp_congestion_control = bbr
+      # Keep-alive connections keep their congestion window (MEM-05 remote page-in).
+      net.ipv4.tcp_slow_start_after_idle = 0
+      # UDP buffers for HTTP/3 (Caddy, quic-go).
+      net.core.rmem_max = 7500000
+      net.core.wmem_max = 7500000
+      vm.swappiness = 10
+
+  - path: /etc/modules-load.d/plotinium-bbr.conf
+    owner: root:root
+    permissions: '0644'
+    content: |
+      tcp_bbr
+
+  - path: /etc/docker/daemon.json
+    owner: root:root
+    permissions: '0644'
+    content: |
+      {
+        "log-driver": "local",
+        "log-opts": { "max-size": "10m", "max-file": "5" },
+        "live-restore": true
+      }
+
+  - path: /etc/apt/apt.conf.d/20auto-upgrades
+    owner: root:root
+    permissions: '0644'
+    content: |
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Download-Upgradeable-Packages "1";
+      APT::Periodic::Unattended-Upgrade "1";
+      APT::Periodic::AutocleanInterval "7";
+
+  - path: /etc/apt/apt.conf.d/52plotinium-unattended-upgrades
+    owner: root:root
+    permissions: '0644'
+    content: |
+      // Plotinium (OPS-12): security updates only (the Ubuntu default origins), never a reboot on
+      // its own (a reboot in a gate week is done by hand, RUNBOOK §8). Docker's repository is not
+      // an allowed origin, so Docker Engine is upgraded deliberately, not overnight.
+      Unattended-Upgrade::Automatic-Reboot "false";
+      Unattended-Upgrade::Remove-Unused-Dependencies "true";
+      Unattended-Upgrade::Remove-Unused-Kernel-Packages "true";
+
+  - path: /usr/local/sbin/plotinium-install-docker
+    owner: root:root
+    permissions: '0755'
+    content: |
+      #!/bin/sh
+      # Docker Engine + Compose plugin from Docker's apt repository (Compose >= 2.24.4, §3.12).
+      set -eu
+      DOCKER_KEY_FPR=9DC858229FC7DD38854AE2D88D81803C0EBFCD88
+      . /etc/os-release
+      install -m 0755 -d /etc/apt/keyrings
+      curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+      fpr="$(gpg --show-keys --with-colons /etc/apt/keyrings/docker.asc | awk -F: '/^fpr:/ {print $10; exit}')"
+      if [ "$fpr" != "$DOCKER_KEY_FPR" ]; then
+        echo "plotinium: Docker apt key fingerprint mismatch ($fpr)" >&2
+        exit 1
+      fi
+      chmod a+r /etc/apt/keyrings/docker.asc
+      echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu ${UBUNTU_CODENAME:-$VERSION_CODENAME} stable" \
+        > /etc/apt/sources.list.d/docker.list
+      apt-get update -q
+      DEBIAN_FRONTEND=noninteractive apt-get install -yq \
+        docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+      systemctl enable --now docker
+
+  - path: /etc/plotinium/backup.env
+    owner: root:root
+    permissions: '0644'
+    content: |
+      # Non-secret settings for ops/backup.sh (systemd and deploy.sh). The R2 credentials live in
+      # /srv/plotinium/secrets/rclone.conf (0600, owner deploy), never here (spec §3.9).
+      RCLONE_REMOTE=r2:plotinium-backups
+      RCLONE_CONFIG=/srv/plotinium/secrets/rclone.conf
+      BACKUP_DIR=/var/backups/plotinium
+      BACKUP_STATE_DIR=/srv/plotinium/state
+      COMPOSE_PROJECT_NAME=plotinium
+
+  - path: /etc/systemd/system/plotinium-backup.service
+    owner: root:root
+    permissions: '0644'
+    content: |
+      [Unit]
+      Description=Plotinium nightly backup: snapshot pg_dump, manifest, rclone copy to R2 (OPS-14)
+      Documentation=file:///srv/plotinium/ops/RUNBOOK.md
+      Wants=network-online.target
+      After=network-online.target docker.service
+      ConditionFileIsExecutable=/srv/plotinium/ops/backup.sh
+
+      [Service]
+      Type=oneshot
+      User=deploy
+      Group=deploy
+      WorkingDirectory=/srv/plotinium
+      EnvironmentFile=/etc/plotinium/backup.env
+      ExecStart=/srv/plotinium/ops/backup.sh --label nightly
+      Nice=10
+      IOSchedulingClass=idle
+      TimeoutStartSec=2h
+
+  - path: /etc/systemd/system/plotinium-backup.timer
+    owner: root:root
+    permissions: '0644'
+    content: |
+      [Unit]
+      Description=Plotinium nightly backup at 21:00 UTC (02:00 PKT)
+
+      [Timer]
+      OnCalendar=*-*-* 21:00:00 UTC
+      Persistent=true
+      RandomizedDelaySec=300
+
+      [Install]
+      WantedBy=timers.target
+
+  - path: /etc/systemd/system/plotinium-prune.service
+    owner: root:root
+    permissions: '0644'
+    content: |
+      [Unit]
+      Description=Plotinium weekly prune: unused images older than 7 days; remote blob prune when present
+      After=docker.service
+
+      [Service]
+      Type=oneshot
+      User=deploy
+      Group=deploy
+      WorkingDirectory=/srv/plotinium
+      EnvironmentFile=/etc/plotinium/backup.env
+      ExecStart=/bin/sh -c 'if [ -x /srv/plotinium/ops/prune.sh ]; then /srv/plotinium/ops/prune.sh; fi; exec docker image prune -f --filter until=168h'
+
+  - path: /etc/systemd/system/plotinium-prune.timer
+    owner: root:root
+    permissions: '0644'
+    content: |
+      [Unit]
+      Description=Plotinium weekly prune (Sunday 22:00 UTC)
+
+      [Timer]
+      OnCalendar=Sun *-*-* 22:00:00 UTC
+      Persistent=true
+
+      [Install]
+      WantedBy=timers.target
+
+runcmd:
+  # Kernel settings (BBR needs its module before the sysctl applies).
+  - modprobe tcp_bbr
+  - sysctl --system
+  # Docker Engine, then the deploy user joins the docker group (created by the package).
+  - /usr/local/sbin/plotinium-install-docker
+  - usermod -aG docker deploy
+  # Host firewall (defence in depth; the Hetzner Cloud Firewall is authoritative, §3.12).
+  - ufw default deny incoming
+  - ufw default allow outgoing
+  - ufw allow 22/tcp
+  - ufw allow 80/tcp
+  - ufw allow 443/tcp
+  - ufw allow 443/udp
+  - ufw --force enable
+  # Directories (spec §3.12) and the always-present, possibly empty, upstream accept list that
+  # compose.prod.yaml mounts as a Compose secret.
+  - install -d -o deploy -g deploy -m 0755 /srv/plotinium
+  - install -d -o deploy -g deploy -m 0700 /srv/plotinium/secrets
+  - install -d -o deploy -g deploy -m 0755 /srv/plotinium/state
+  - install -d -o deploy -g deploy -m 0750 /var/backups/plotinium
+  - [
+      sh,
+      -c,
+      'test -e /srv/plotinium/secrets/llm_upstream_accept || install -o deploy -g deploy -m 0400 /dev/null /srv/plotinium/secrets/llm_upstream_accept',
+    ]
+  # Services and timers.
+  - systemctl enable --now unattended-upgrades
+  - systemctl daemon-reload
+  - systemctl enable plotinium-backup.timer plotinium-prune.timer
+  - systemctl start plotinium-backup.timer plotinium-prune.timer
+  - systemctl restart ssh
+  - [
+      sh,
+      -c,
+      'echo "Plotinium host. Next steps are in /srv/plotinium/ops/RUNBOOK.md section 1.4." > /etc/motd',
+    ]
+
+final_message: 'Plotinium host ready after $UPTIME s. Next: ops/RUNBOOK.md section 1.4 (clone, secrets, first deploy).'

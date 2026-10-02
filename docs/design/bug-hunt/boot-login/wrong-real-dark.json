@@ -1,0 +1,97 @@
+{
+  "mode": "real",
+  "console": [],
+  "pageErrors": [],
+  "failed": ["401 GET /api/auth/me", "401 POST /api/auth/login"],
+  "seq": [
+    {
+      "t": 2182,
+      "state": "error",
+      "hint": "Invalid username or password",
+      "role": "alert",
+      "invalid": "true",
+      "val": 0,
+      "focus": "login-password",
+      "pillErr": "true"
+    },
+    {
+      "t": 2971,
+      "state": "error",
+      "hint": "Invalid username or password",
+      "role": "alert",
+      "invalid": "true",
+      "val": 0,
+      "focus": "login-password",
+      "pillErr": "true"
+    },
+    {
+      "t": 3275,
+      "state": "error",
+      "hint": "Invalid username or password",
+      "role": "alert",
+      "invalid": "true",
+      "val": 0,
+      "focus": "login-password",
+      "pillErr": "true"
+    },
+    {
+      "t": 4012,
+      "state": "error",
+      "hint": "Invalid username or password",
+      "role": "alert",
+      "invalid": "true",
+      "val": 0,
+      "focus": "login-password",
+      "pillErr": "true"
+    },
+    {
+      "t": 4315,
+      "state": "error",
+      "hint": "Invalid username or password",
+      "role": "alert",
+      "invalid": "true",
+      "val": 0,
+      "focus": "login-password",
+      "pillErr": "true"
+    },
+    {
+      "t": 4618,
+      "state": "error",
+      "hint": "Invalid username or password",
+      "role": "alert",
+      "invalid": "true",
+      "val": 0,
+      "focus": "login-password",
+      "pillErr": "true"
+    },
+    {
+      "t": 4920,
+      "state": "error",
+      "hint": "Invalid username or password",
+      "role": "alert",
+      "invalid": "true",
+      "val": 0,
+      "focus": "login-password",
+      "pillErr": "true"
+    },
+    {
+      "t": 5221,
+      "state": "error",
+      "hint": "Invalid username or password",
+      "role": "alert",
+      "invalid": "true",
+      "val": 0,
+      "focus": "login-password",
+      "pillErr": "true"
+    }
+  ],
+  "anims": [
+    "2067 pl-login-shake",
+    "2068 pl-progress-sweep",
+    "2179 pl-login-shake",
+    "2462 pl-login-shake",
+    "3462 pl-login-shake",
+    "4462 pl-login-shake"
+  ],
+  "hits": ["login"]
+}

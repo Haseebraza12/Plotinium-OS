@@ -1,0 +1,51 @@
+# compose.prod.yaml: the production override, used ONLY on the VPS:
+#   docker compose -f compose.yaml -f compose.prod.yaml --env-file .env --env-file .env.images up -d --wait
+# Spec: specs/14-devops/deployment-and-ci.md §3.1.2 (OPS-01, OPS-02, OPS-08, OPS-09); backend-api.md §3.4.
+# Requires Compose >= 2.24.4 for !override. Every ${VAR:?} fails fast when unset.
+#
+# /srv/plotinium/.env (mode 0600, never committed) holds only NON-secret settings: PLOTINIUM_DOMAIN,
+# the budget values and, the day before the defence, LEASE_TTL_MS=15000. /srv/plotinium/.env.images is
+# written by ops/deploy.sh with the three image references BY DIGEST (D-5). Secrets are files under
+# /srv/plotinium/secrets (0400/0600), mounted as Compose secrets; the database passwords are generated
+# at first start into the dbsecrets volume, as on every stack (no human ever handles them).
+services:
+  db:
+    image: ${PLOTINIUM_DB_IMAGE:?set by ops/deploy.sh from images.lock.json}
+    restart: unless-stopped
+    mem_limit: 2g
+
+  app:
+    image: ${PLOTINIUM_APP_IMAGE:?set by ops/deploy.sh from images.lock.json}
+    restart: unless-stopped
+    mem_limit: 1536m
+    environment:
+      PLOTINIUM_ENV: production # production guards: https origin, no fault harness, secrets as files
+      APP_ORIGIN: https://${PLOTINIUM_DOMAIN:?set in /srv/plotinium/.env}
+      FAULT_INJECTION: '0' # never on production (C7, OPS-09); the server refuses to start with 1
+      LEASE_TTL_MS: ${LEASE_TTL_MS:-30000} # 15000 only in the frozen Demo-Day .env
+      LLM_MODE: live
+      ANTHROPIC_API_KEY_FILE: /run/secrets/anthropic_api_key
+      LLM_UPSTREAM_ACCEPT_FILE: /run/secrets/llm_upstream_accept
+      LLM_BUDGET_USD_MONTH: ${LLM_BUDGET_USD_MONTH:-50}
+      LLM_BUDGET_USD_TOTAL: ${LLM_BUDGET_USD_TOTAL:-250}
+      # The public deployment carries no bench dataset: DB-05's live query runs on the examiner's
+      # local stack (bench10k by default there).
+      PLOTINIUM_SEED_PROFILE: none
+    secrets: [anthropic_api_key, llm_upstream_accept]
+
+  web:
+    image: ${PLOTINIUM_WEB_IMAGE:?set by ops/deploy.sh from images.lock.json}
+    restart: unless-stopped
+    mem_limit: 256m
+    environment:
+      SITE_ADDRESS: ${PLOTINIUM_DOMAIN:?set in /srv/plotinium/.env} # automatic HTTPS, HTTP->HTTPS, HTTP/3
+    ports: !override
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    volumes:
+      - ./ops/caddy/prod.d:/etc/caddy/prod.d:ro # production-only headers (HSTS)
+
+secrets:
+  anthropic_api_key: { file: /srv/plotinium/secrets/anthropic_api_key } # mode 0400, owner uid 1000
+  llm_upstream_accept: { file: /srv/plotinium/secrets/llm_upstream_accept } # SHA-256 per line; may be empty

@@ -1,0 +1,19 @@
+# Big-O cheat sheet
+
+| Structure | Access | Search | Insert | Delete |
+|---|---|---|---|---|
+| array | 1 | n | n | n |
+| dynamic array (append) | 1 | n | 1 amortised | n |
+| singly linked list | n | n | 1 at head | 1 at head |
+| hash table | – | 1 avg | 1 avg | 1 avg |
+| balanced BST | log n | log n | log n | log n |
+| binary heap | 1 (min) | n | log n | log n |
+| trie | – | L | L | L |
+| skip list | log n exp. | log n exp. | log n exp. | log n exp. |
+
+Growth order: 1 < log n < √n < n < n log n < n² < 2ⁿ < n!.
+
+Master theorem for T(n) = aT(n/b) + f(n): compare f(n) with n^(log_b a).
+- merge sort: a = 2, b = 2, f = n → n log n;
+- binary search: a = 1, b = 2, f = 1 → log n;
+- Strassen: a = 7, b = 2 → n^2.81.

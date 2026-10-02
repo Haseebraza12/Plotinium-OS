@@ -1,0 +1,19 @@
+{
+  "which": "unsupported",
+  "console": [],
+  "pageErrors": [],
+  "failed": [],
+  "text": "POWER-ON SELF TEST | Plotinium cannot start in this browser | Plotinium 0.1.0-dev.0 · build 0000000 · Chrome 153 on Linux | Secure context localhost:4718 | Pass | Module workers new Worker({type:\"module\"}) | Pass | IndexedDB indexedDB | Pass | Web Locks navigator.locks | Missing | Use a current Chrome in a secure context | Web Crypto crypto.subtle | Pass | Cross-origin isolation crossOriginIsolated | Pass | Service Worker navigator.serviceWorker | Pass | CompressionStream CompressionStream | Pass | Plotinium runs its kernel and apps in browser workers and keeps your files in local storage. This browser lacks a feature Plotinium ",
+  "active": "Copy diagnostics",
+  "rects": [
+    "svg.[object SVGAnimatedString] 66 h61",
+    "P.plb-over 153 h17",
+    "H1.plb-h 213 h64",
+    "P.plb-meta 320 h14",
+    "UL.plb-caps 366 h366",
+    "P.plb-lead 772 h81",
+    "DIV.plb-actions 879 h40",
+    "FOOTER.plb-uf 931 h33",
+    "P.plb-sr 78 h1"
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "v": 1,
+  "t": "op.result",
+  "id": 3,
+  "body": {
+    "opId": "0192f0c1-8a3b-7c4d-8e5f-0123456789ab",
+    "status": "conflict",
+    "duplicate": false,
+    "errno": "EBUSY",
+    "reason": "stale-fence",
+    "keptAs": {
+      "ino": "0192f0c1-8a3b-7c4d-9e5f-0123456789ac",
+      "parentIno": "00000000-0000-7000-8000-000000000008",
+      "name": "report (conflict from alice, 2026-09-24).md"
+    },
+    "lamport": 902
+  }
+}

@@ -1,0 +1,726 @@
+{
+ "key": "orm",
+ "title": "ORM / query builder, migrations & DB tooling",
+ "record": {
+  "decision_title": "ORM / query builder, migrations and DB tooling: Kysely 0.29 on node-postgres, dbmate SQL migrations with up/down sections, and our own seed and benchmark scripts",
+  "context_constraints_ranked": [
+   "1. Atomic bulk tree operations and a declared isolation level with retry (DB-02, DB-03, \u00a711.3 rules 1-7). This layer has to support one transaction per user-visible operation, SERIALIZABLE (or READ COMMITTED plus explicit locks) chosen per transaction, SELECT ... FOR UPDATE on the quota row and parent directories, automatic retry on SQLSTATE 40001/40P01, and a fault-injection hook that throws after N of M node operations inside the same transaction. The mandatory harness repeats this live at the final defence.",
+   "2. Versioned migrations, each with a rollback script, that run from scratch (DB-01). DATABASE.md also needs a readable ERD/DDL, and the 'before and after indexing' benchmark states in DB-05 have to be reproducible.",
+   "3. Q1-Q5 p95 <= 10 ms at >= 10,000 inodes (100,000 recommended), with EXPLAIN ANALYZE plans and p50/p95 over 1,000 runs before and after indexing (DB-05). Q1 (depth-8 path) and Q5 (1,000-node subtree) are most natural as WITH RECURSIVE queries.",
+   "4. Constraints enforced by the database: FKs, unique (parent_ino, name), CHECK on type and mode (DB-04). It also needs Postgres-specific DDL: a lower(name) text_pattern_ops expression index (Q3), a hash index on blobs(sha256), an HNSW index on file_chunks.embedding, and vector distance operators combined with permission filters (RAG-03, RAG-05).",
+   "5. Typed server code behind the syscall interface. Five students write handlers, and column-name or result-shape bugs must fail at compile time (Code Quality 10%; coverage >= 85% on vfs/).",
+   "6. Stability from the Week-4 stack freeze to v1.0.0 in Week 18: no forced major upgrade mid-project, active maintenance, permissive licence (THIRD_PARTY.md).",
+   "7. Team skills and viva: JS/TS and some React/Node, SQL from coursework. Every member must explain the isolation level, locks and queries, and no paid tools can be assumed.",
+   "8. Runtime portability: Node 22/24 LTS for sure, Bun if the separate backend-runtime decision picks it. It must also run on a cheap VPS, where memory per process matters."
+  ],
+  "options": [
+   {
+    "name": "Kysely + kysely-codegen + node-postgres (pg) + dbmate",
+    "current_version": "kysely 0.29.6 (2026-09-16; 0.30.0-beta.2 in progress), kysely-codegen 0.20.0, pg 8.23.0, dbmate 2.36.0",
+    "summary": "A type-safe SQL query builder, not an ORM: what you write is the SQL that runs. Types are generated from the migrated database by kysely-codegen. The schema lives in plain-SQL dbmate migrations, each with a '-- migrate:up' and a '-- migrate:down' section. Kysely's built-in PostgresDialect runs on a pg Pool.",
+    "status_notes": "MIT licence, zero runtime dependencies, 3.5 MB unpacked, needs Node >= 22. Still 0.x semver, so the exact version must be pinned. The 0.29 series moved the migration exports to 'kysely/migration' and 0.30 changes Migrator transaction modes; neither matters here because we do not use Kysely's Migrator. Verified in the 0.29.6 type definitions: withRecursive, forUpdate/forShare/forNoKeyUpdate/forKeyShare, transaction().setIsolationLevel(), startTransaction() controlled transactions with savepoints, explain(format, sql`analyze`), and Migrator up/down."
+   },
+   {
+    "name": "Drizzle ORM + drizzle-kit",
+    "current_version": "drizzle-orm 0.45.3 / drizzle-kit 0.31.11 stable (2026-09-21); 1.0.0-rc.4 on the rc tag since 2026-06-27, with rc.5 snapshots",
+    "summary": "An ORM that defines the schema in TypeScript and generates SQL migrations with drizzle-kit. It is SQL-like and very popular.",
+    "status_notes": "Apache-2.0. Transactions accept isolationLevel, accessMode and deferrable, and .for('update'|'share') works. pgvector support is native and the best of the candidates: a vector() column, cosineDistance(), and .using('hnsw', col.op('vector_cosine_ops')). The CHECK, expression-index and operator-class DSL is good. Two gaps: there is no WITH RECURSIVE builder (issue #209, open since 2023-03-01), and drizzle-kit has no down or rollback command (issue #4005, open). 1.0 has been a release candidate for three months, so a GA could land mid-project."
+   },
+   {
+    "name": "Prisma ORM",
+    "current_version": "@prisma/client 7.10.0 (2026-08-25); prisma CLI 8.0.0-rc.15 (2026-09-14), GA expected October 2026",
+    "summary": "A schema-DSL ORM with a Rust-free TypeScript query compiler since 7.0. Prisma 8 is a new TypeScript foundation with a different query and migration workflow.",
+    "status_notes": "Prisma 7 supports isolationLevel on interactive transactions (default maxWait 2,000 ms, timeout 5,000 ms) but has no FOR UPDATE in the query API. A vector column is Unsupported('vector') and has to go through raw SQL or TypedSQL. HNSW and CHECK need hand-edited migration SQL. Down migrations are manual (migrate diff, then db execute plus migrate resolve --rolled-back). Per its release-status page, Prisma 8 does not yet have transaction isolation levels. Prisma 8's GA is expected in October 2026, the same month as our freeze."
+   },
+   {
+    "name": "TypeORM (expected to lose)",
+    "current_version": "1.1.1 (2026-09-01); 1.0.0 released 2026-05-19",
+    "summary": "A decorator and entity ORM using the Data Mapper or Active Record patterns, with auto-generated migrations.",
+    "status_notes": "MIT, 30 MB unpacked, depends on reflect-metadata. Verified in source: migration:generate writes both up() and down() SQL, and the Postgres driver lists vector and halfvec types. startTransaction(isolationLevel) and setLock('pessimistic_write') exist, and addCommonTableExpression supports recursive CTEs, but raw results come back as untyped any. It spent years on 0.3.x, and 1.x has only been out since May 2026."
+   },
+   {
+    "name": "MikroORM",
+    "current_version": "@mikro-orm/core 7.2.1 (v7 stable since 2026-03-11)",
+    "summary": "A Unit-of-Work and identity-map Data Mapper ORM. v7 dropped knex and uses Kysely as its query runner, and migrations are generated with up and down.",
+    "status_notes": "MIT and actively maintained. em.transactional supports isolation levels and LockMode.PESSIMISTIC_WRITE. Because the Unit of Work defers writes until flush(), 'fail after node op N' does not match the SQL that actually runs, which makes the fault-injection harness harder to reason about. The team has no experience with it."
+   },
+   {
+    "name": "Raw SQL: postgres.js (or pg) + pgTyped/sqlc typing + dbmate",
+    "current_version": "postgres 3.4.9 (2026-04-05, Unlicense); pg 8.23.0; @pgtyped/cli 2.4.3 (2025-03-15); sqlc-gen-typescript 0.1.x ('early access')",
+    "summary": "Hand-written SQL in tagged templates, with maximum control and the fewest layers. Types come from pgTyped (needs pg at runtime) or are written by hand.",
+    "status_notes": "postgres.js supports sql.begin('isolation level serializable', ...), savepoints, pipelining, COPY streams and automatic prepared statements. pgTyped has not released since March 2025. sqlc-gen-typescript says 'expect breaking changes'. With postgres.js, types would effectively be hand-written."
+   }
+  ],
+  "criteria": [
+   {
+    "name": "C1 Transaction and locking control",
+    "weight": 25,
+    "why": "DB-02, DB-03 and \u00a711.3 rules 1, 2, 4 and 7 are graded above everything else in the database section. The layer has to set the isolation level per transaction, take FOR UPDATE/FOR SHARE row locks, use savepoints, expose the SQLSTATE so a wrapper can retry 40001/40P01, and run SET LOCAL (lock_timeout, fault hooks) inside the same transaction. The fault-injected rm -r is repeated live at the final defence."
+   },
+   {
+    "name": "C2 Migrations with rollback scripts",
+    "weight": 15,
+    "why": "DB-01 requires versioned migrations, each with a rollback script, that run from scratch. A single SQL source of truth also becomes the DDL in DATABASE.md and gives the before/after indexing states for DB-05."
+   },
+   {
+    "name": "C3 PostgreSQL feature reach",
+    "weight": 20,
+    "why": "Q1 and Q5 plus the subtree plans and ancestor checks need WITH RECURSIVE. DB-04 needs CHECK constraints. Q3 needs a lower(name) text_pattern_ops expression index, \u00a711.4 a hash index, RAG-05 an HNSW index, and RAG-03 vector distance operators with permission filters. DB-05 also needs EXPLAIN ANALYZE access."
+   },
+   {
+    "name": "C4 Type safety",
+    "weight": 10,
+    "why": "Syscall handlers written by five people have to fail at compile time on schema drift. Coverage of 85% on vfs/ is easier when result types are real."
+   },
+   {
+    "name": "C5 Runtime overhead and footprint",
+    "weight": 10,
+    "why": "The DB-05 budget is 10 ms p95 per query, and the cheap VPS limits memory per process. The data layer must not eat into the budget."
+   },
+   {
+    "name": "C6 Stability through the freeze window",
+    "weight": 10,
+    "why": "The stack freezes after the Week-4 defence and v1.0.0 ships in Week 18. A major rewrite or an unstable release line mid-project is a schedule risk, and every option needs a clear licence for THIRD_PARTY.md."
+   },
+   {
+    "name": "C7 Learnability and viva defensibility",
+    "weight": 10,
+    "why": "The team knows JS/TS and some Node. A decision only one member can explain counts as undefended (\u00a714.4), so the SQL that actually runs should be visible and explainable."
+   }
+  ],
+  "scores": [
+   {
+    "option": "Kysely + kysely-codegen + pg + dbmate",
+    "per_criterion": [
+     {
+      "criterion": "C1 Transaction and locking control",
+      "score": 5,
+      "reason": "The 0.29.6 type definitions include setIsolationLevel, forUpdate, forShare, forNoKeyUpdate, forKeyShare, startTransaction with savepoints, and sql`SET LOCAL ...`. In the prototype, a SERIALIZABLE cross-move with a 15-line retry wrapper produced A=ok and B=EINVAL after 2 attempts, with 0 unreachable entries. The fault-injected rm -r rolled back with the checksum unchanged."
+     },
+     {
+      "criterion": "C2 Migrations with rollback scripts",
+      "score": 5,
+      "reason": "Each dbmate migration is one .sql file with up and down sections. 'dbmate rollback' runs the down section in a transaction, and the schema is plain SQL, so there is one source of truth. kysely-codegen --verify keeps the TypeScript types in step with it."
+     },
+     {
+      "criterion": "C3 PostgreSQL feature reach",
+      "score": 5,
+      "reason": "withRecursive is typed; the prototype ran Q1 through it. pgvector-node exports pgvector/kysely distance helpers. explain('json', sql`analyze`) is available. All DDL, including CHECK constraints and hash, HNSW and text_pattern_ops indexes, is raw SQL in dbmate, so nothing is out of reach."
+     },
+     {
+      "criterion": "C4 Type safety",
+      "score": 4,
+      "reason": "Types are generated from the real migrated database. The deduction is because raw sql`` fragments need a manual sql<T> annotation and the vector type needs --type-mapping."
+     },
+     {
+      "criterion": "C5 Runtime overhead and footprint",
+      "score": 5,
+      "reason": "Measured in the prototype: 13-15 \u00b5s to compile a query, Q1 p95 0.78 ms and Q2 p95 3.7 ms at 100k inodes. There are no runtime dependencies."
+     },
+     {
+      "criterion": "C6 Stability through the freeze window",
+      "score": 4,
+      "reason": "It is still 0.x semver with 0.30 in beta, so the version is pinned exactly. It is actively released (2026-09-16), and the churn in 0.29/0.30 is in the Migrator, which we don't use."
+     },
+     {
+      "criterion": "C7 Learnability and viva defensibility",
+      "score": 4,
+      "reason": "The API mirrors SQL, so the viva can walk through the exact statement. It does require SQL fluency, but DB-05 and the viva require that anyway."
+     }
+    ],
+    "weighted_total": 94
+   },
+   {
+    "option": "Raw SQL: postgres.js + pgTyped/sqlc + dbmate",
+    "per_criterion": [
+     {
+      "criterion": "C1 Transaction and locking control",
+      "score": 5,
+      "reason": "sql.begin('isolation level serializable', ...), savepoints and pipelining give full control."
+     },
+     {
+      "criterion": "C2 Migrations with rollback scripts",
+      "score": 5,
+      "reason": "The same dbmate up/down migration files."
+     },
+     {
+      "criterion": "C3 PostgreSQL feature reach",
+      "score": 5,
+      "reason": "Any SQL is available."
+     },
+     {
+      "criterion": "C4 Type safety",
+      "score": 2,
+      "reason": "pgTyped needs pg at runtime, not postgres.js, and its last release was March 2025. sqlc-gen-typescript is 'early access'. In practice the result types would be hand-written."
+     },
+     {
+      "criterion": "C5 Runtime overhead and footprint",
+      "score": 5,
+      "reason": "The fastest in the prototype: Q1 p95 0.28-0.37 ms with automatic prepared statements."
+     },
+     {
+      "criterion": "C6 Stability through the freeze window",
+      "score": 4,
+      "reason": "postgres.js 3.4.x is mature, but its release cadence is slower (last release 2026-04-05)."
+     },
+     {
+      "criterion": "C7 Learnability and viva defensibility",
+      "score": 3,
+      "reason": "Maximum SQL visibility, but queries with dynamic filters, IN-lists and agent plans become string assembly written by five people without compile-time checks."
+     }
+    ],
+    "weighted_total": 88
+   },
+   {
+    "option": "Drizzle ORM + drizzle-kit",
+    "per_criterion": [
+     {
+      "criterion": "C1 Transaction and locking control",
+      "score": 5,
+      "reason": "Transactions take isolationLevel, accessMode and deferrable, and .for(strength) exists in the pg select builder."
+     },
+     {
+      "criterion": "C2 Migrations with rollback scripts",
+      "score": 2,
+      "reason": "drizzle-kit 0.31.11's commands are generate, migrate, push, pull, check, drop, up, export and studio, with no rollback, and issue #4005 is still open. A dbmate plus 'drizzle-kit pull' hybrid would raise this to 4 (total 83), at the cost of two schema tools."
+     },
+     {
+      "criterion": "C3 PostgreSQL feature reach",
+      "score": 3,
+      "reason": "Its vector, HNSW, CHECK and operator-class DSL is the best of the candidates. But there is no WITH RECURSIVE builder (issue #209), so Q1, Q5, subtree plans and ancestor checks all become raw sql. In the prototype, sql`` expanded a JS array into a record (SQLSTATE 42846) until sql.param() was used."
+     },
+     {
+      "criterion": "C4 Type safety",
+      "score": 5,
+      "reason": "Excellent type inference from the schema written in TypeScript."
+     },
+     {
+      "criterion": "C5 Runtime overhead and footprint",
+      "score": 5,
+      "reason": "Prototype: Q1 p95 0.45 ms and Q2 p95 2.7 ms."
+     },
+     {
+      "criterion": "C6 Stability through the freeze window",
+      "score": 3,
+      "reason": "Stable is 0.45.x while 1.0 has been an RC since June 2026, so the team would choose between an old line and an RC that could reach GA mid-project."
+     },
+     {
+      "criterion": "C7 Learnability and viva defensibility",
+      "score": 4,
+      "reason": "The API is SQL-like and there is plenty of learning material."
+     }
+    ],
+    "weighted_total": 77
+   },
+   {
+    "option": "MikroORM",
+    "per_criterion": [
+     {
+      "criterion": "C1 Transaction and locking control",
+      "score": 4,
+      "reason": "Isolation levels and pessimistic locks are supported. The Unit of Work delays SQL until flush(), which blurs 'fail after node op N'."
+     },
+     {
+      "criterion": "C2 Migrations with rollback scripts",
+      "score": 5,
+      "reason": "Generated migrations include both up and down."
+     },
+     {
+      "criterion": "C3 PostgreSQL feature reach",
+      "score": 3,
+      "reason": "Recursive CTEs, vector operators and special indexes mostly go through raw SQL or the underlying Kysely."
+     },
+     {
+      "criterion": "C4 Type safety",
+      "score": 4,
+      "reason": "Entity types are good. Raw paths are less well typed."
+     },
+     {
+      "criterion": "C5 Runtime overhead and footprint",
+      "score": 3,
+      "reason": "The identity map and hydration add work and memory to every request. Not measured."
+     },
+     {
+      "criterion": "C6 Stability through the freeze window",
+      "score": 4,
+      "reason": "v7 has been stable since March 2026 and is active."
+     },
+     {
+      "criterion": "C7 Learnability and viva defensibility",
+      "score": 2,
+      "reason": "Unit of Work, identity map and flush semantics are new concepts for the whole team."
+     }
+    ],
+    "weighted_total": 73
+   },
+   {
+    "option": "TypeORM (expected to lose)",
+    "per_criterion": [
+     {
+      "criterion": "C1 Transaction and locking control",
+      "score": 3,
+      "reason": "startTransaction(isolationLevel) and setLock exist. But the transactional EntityManager must be passed through every call, and one missed call silently runs outside the transaction."
+     },
+     {
+      "criterion": "C2 Migrations with rollback scripts",
+      "score": 5,
+      "reason": "migration:generate writes up and down (verified in MigrationGenerateCommand.js), and migration:revert undoes them."
+     },
+     {
+      "criterion": "C3 PostgreSQL feature reach",
+      "score": 3,
+      "reason": "vector and halfvec types and recursive CTEs exist, but results come back untyped from getRawMany. Distance operators have to be raw SQL."
+     },
+     {
+      "criterion": "C4 Type safety",
+      "score": 2,
+      "reason": "Decorator metadata, and raw results typed as any."
+     },
+     {
+      "criterion": "C5 Runtime overhead and footprint",
+      "score": 2,
+      "reason": "30 MB unpacked, reflect-metadata, and entity hydration."
+     },
+     {
+      "criterion": "C6 Stability through the freeze window",
+      "score": 3,
+      "reason": "1.0 is only four months old, after years on 0.3.x with a patchy maintenance history."
+     },
+     {
+      "criterion": "C7 Learnability and viva defensibility",
+      "score": 3,
+      "reason": "Familiar to NestJS users, but many concepts to learn: entities, relations, lazy loading."
+     }
+    ],
+    "weighted_total": 62
+   },
+   {
+    "option": "Prisma ORM",
+    "per_criterion": [
+     {
+      "criterion": "C1 Transaction and locking control",
+      "score": 2,
+      "reason": "Prisma 7 has isolationLevel and a documented P2034 retry pattern, but no FOR UPDATE in the query API, so locks need $queryRaw. The default interactive-transaction timeout is 5 s. Prisma 8 does not have isolation levels yet."
+     },
+     {
+      "criterion": "C2 Migrations with rollback scripts",
+      "score": 2,
+      "reason": "Down scripts are created by hand with 'migrate diff' and are documented only for rolling back failed migrations."
+     },
+     {
+      "criterion": "C3 PostgreSQL feature reach",
+      "score": 2,
+      "reason": "The vector column is Unsupported('vector') and needs raw SQL or TypedSQL. HNSW and CHECK need hand-edited migrations, and expression indexes only arrive in Prisma 8."
+     },
+     {
+      "criterion": "C4 Type safety",
+      "score": 4,
+      "reason": "Excellent types for CRUD, and TypedSQL covers raw queries."
+     },
+     {
+      "criterion": "C5 Runtime overhead and footprint",
+      "score": 3,
+      "reason": "The query compiler is an extra layer. The only benchmark is Prisma's own, comparing the query compiler with the old Rust engine; there is no neutral comparison with other ORMs."
+     },
+     {
+      "criterion": "C6 Stability through the freeze window",
+      "score": 2,
+      "reason": "The major-version change to 8 lands in October 2026, right at the freeze, and brings API and migration-workflow changes."
+     },
+     {
+      "criterion": "C7 Learnability and viva defensibility",
+      "score": 3,
+      "reason": "The easiest schema DSL, but it hides the SQL that isolation and locking questions in the viva will ask about."
+     }
+    ],
+    "weighted_total": 48
+   }
+  ],
+  "evidence": [
+   {
+    "claim": "Prototype (this research run: 12-thread laptop, Docker pgvector/pgvector:0.8.6-pg18, seeded with 100,059 inodes, 51 users, depth 2-19 with median about 7). Q2 (list a 500-entry directory sorted by name) with the default random_page_cost=4 chose Hash Join + Seq Scan on inodes, taking 11.7 ms of server execution and failing the 10 ms budget. The same query as a generic prepared plan took 0.56 ms. With random_page_cost=1.1 it chose Nested Loop at 0.5-1.8 ms. So the plan dominates latency by 10-20x, not the ORM.",
+    "source": "Own prototype: scratchpad/ormproto/seed.mjs and bench.mjs plus EXPLAIN (ANALYZE, BUFFERS) in psql (paths in design_notes)",
+    "verified": true
+   },
+   {
+    "claim": "Prototype, after tuning, run 1 of 2, 100 warm-up plus 1,000 timed runs. Q1 (depth-8 path in one WITH RECURSIVE) p95: raw pg 0.45 ms, pg named prepared 0.25, postgres.js 0.37, Kysely+pg 0.78, Kysely+postgres.js 0.41, Drizzle (raw sql) 0.45. Q2 p95: raw pg 2.2, postgres.js 1.5, Kysely+pg 3.7, Kysely+postgres.js 1.9, Drizzle 2.7. Kysely compile-only cost was 13-15 \u00b5s per query. Run 2 on the shared, noisy host showed spikes up to 10 ms, so the team must repeat the measurement on a quiet lab-spec machine.",
+    "source": "Own prototype: scratchpad/ormproto/bench.mjs",
+    "verified": true
+   },
+   {
+    "claim": "Prototype of DB-03, two clients moving overlapping subtrees (A: X into Y, B: Y into X) at the same time. Under READ COMMITTED without extra locks, both commit and 2 dentries become unreachable from / (a detached X-Y cycle). Under SERIALIZABLE, B fails with SQLSTATE 40001 and 0 entries are unreachable. SERIALIZABLE with the Kysely retry wrapper gives A=ok and B=EINVAL on attempt 2, with 0 unreachable.",
+    "source": "Own prototype: scratchpad/ormproto/cross-move.mjs",
+    "verified": true
+   },
+   {
+    "claim": "Prototype of DB-02: rm -r on a 1,000-node subtree as 2,000 per-node statements in one SERIALIZABLE Kysely transaction. With a fault injected at node op 500, the rollback took 221 ms, the tree checksum was unchanged and the orphan probes were unchanged. The successful full delete took 366 ms.",
+    "source": "Own prototype: scratchpad/ormproto/fault-rm.mjs",
+    "verified": true
+   },
+   {
+    "claim": "Kysely 0.29.6 is the latest release (2026-09-16), and 0.30.0-beta.2 is in progress. It is MIT licensed, requires Node >= 22 and exports './migration'.",
+    "source": "npm registry (npm view kysely, 2026-09-23) and kysely 0.29.6 package.json; https://github.com/kysely-org/kysely/releases",
+    "verified": true
+   },
+   {
+    "claim": "Kysely has typed withRecursive; forUpdate, forShare, forKeyShare and forNoKeyUpdate; transaction().setIsolationLevel(); startTransaction() controlled transactions with savepoints; explain(format, sql`analyze`); and a Migrator with up/down and migrateDown().",
+    "source": "kysely 0.29.6 dist/query-creator.d.ts, query-builder/select-query-builder.d.ts, kysely.d.ts, migration/migrator.d.ts",
+    "verified": true
+   },
+   {
+    "claim": "kysely-codegen 0.20.0 (2026-02-16, MIT) supports --verify (checks the generated types are up to date), --type-mapping and --overrides.",
+    "source": "kysely-codegen 0.20.0 dist/cli/flags.js; npm registry",
+    "verified": true
+   },
+   {
+    "claim": "pgvector-node 0.3.0 (MIT) exports 'pgvector/kysely' with l2Distance, cosineDistance, maxInnerProduct and l1Distance, emitted as sql`${ref} <=> ${toSql(v)}`, plus 'pgvector/pg' type registration.",
+    "source": "pgvector 0.3.0 package src/kysely/index.js and package.json exports",
+    "verified": true
+   },
+   {
+    "claim": "dbmate 2.36.0 (2026-09-19, MIT): one file per migration with '-- migrate:up' and '-- migrate:down' sections, a 'rollback' command, migrations wrapped in transactions by default (transaction:false to opt out), an automatic schema.sql dump, and npm packages that ship platform binaries.",
+    "source": "https://github.com/amacneil/dbmate ; npm view dbmate",
+    "verified": true
+   },
+   {
+    "claim": "drizzle-orm latest (stable) is 0.45.3 (2026-09-21), and the rc tag points to 1.0.0-rc.4 (2026-06-27), with rc.5 snapshots through 2026-09-09.",
+    "source": "npm registry (npm view drizzle-orm dist-tags/time, 2026-09-23)",
+    "verified": true
+   },
+   {
+    "claim": "drizzle-kit has no down or rollback migration command (0.31.11 CLI: generate, migrate, push, pull, check, drop, up, export, studio). The feature request 'Reverse/Down Migrations' #4005 is open.",
+    "source": "drizzle-kit 0.31.11 bin.cjs; https://github.com/drizzle-team/drizzle-orm/issues/4005",
+    "verified": true
+   },
+   {
+    "claim": "Drizzle has no WITH RECURSIVE query builder. Issue #209 has been open since 2023-03-01, and the docs cover only non-recursive $with CTEs.",
+    "source": "https://github.com/drizzle-team/drizzle-orm/issues/209 ; https://orm.drizzle.team/docs/select",
+    "verified": true
+   },
+   {
+    "claim": "Drizzle transactions accept isolationLevel ('read uncommitted' through 'serializable'), accessMode and deferrable. Native pgvector: vector('embedding', {dimensions}), cosineDistance(), index().using('hnsw', col.op('vector_cosine_ops')). CHECK and expression and operator-class indexes are supported.",
+    "source": "https://orm.drizzle.team/docs/transactions ; https://orm.drizzle.team/docs/guides/vector-similarity-search ; https://orm.drizzle.team/docs/indexes-constraints",
+    "verified": true
+   },
+   {
+    "claim": "Prisma 8 is a release candidate with GA expected in October 2026 (needs Node 22.18+ and TS 5.9+). Features not yet available in 8 include transaction isolation levels. Prisma 7 gets fixes for 18 months after 8 reaches GA.",
+    "source": "https://www.prisma.io/docs/prisma-orm/release-status",
+    "verified": true
+   },
+   {
+    "claim": "Prisma 7 interactive transactions accept isolationLevel, with maxWait defaulting to 2,000 ms and timeout to 5,000 ms. Conflicts surface as P2034, and the retry has to be written by the application.",
+    "source": "https://www.prisma.io/docs/orm/v7/prisma-client/queries/transactions",
+    "verified": true
+   },
+   {
+    "claim": "Prisma down migrations are manual (migrate diff --script > down.sql, then db execute and migrate resolve --rolled-back) and are documented for rolling back failed migrations.",
+    "source": "https://www.prisma.io/docs/orm/prisma-migrate/workflows/generating-down-migrations",
+    "verified": true
+   },
+   {
+    "claim": "Prisma represents pgvector columns as Unsupported('vector'), queried through raw SQL or TypedSQL, with HNSW indexes added in custom migration SQL. First-class vector support is still an open request.",
+    "source": "https://www.prisma.io/docs/postgres/database/postgres-extensions ; https://github.com/prisma/prisma/issues/26546",
+    "verified": false
+   },
+   {
+    "claim": "@prisma/client latest is 7.10.0 (2026-08-25). The prisma CLI package's latest tag points to 8.0.0-rc.15 (2026-09-14).",
+    "source": "npm registry (npm view prisma / @prisma/client, 2026-09-23)",
+    "verified": true
+   },
+   {
+    "claim": "Prisma's own benchmark (2025-07-24) shows the Rust-free query compiler 2-11x faster than the Rust engine. It is a vendor benchmark with no comparison against Drizzle or Kysely.",
+    "source": "https://www.prisma.io/blog/prisma-orm-without-rust-latest-performance-benchmarks",
+    "verified": true
+   },
+   {
+    "claim": "TypeORM 1.0.0 was released 2026-05-19 and 1.1.1 on 2026-09-01. migration:generate emits both up and down SQL. The Postgres driver supports vector and halfvec. QueryRunner.startTransaction(isolationLevel) and pessimistic locks exist.",
+    "source": "npm registry; typeorm 1.1.1 commands/MigrationGenerateCommand.js, driver/postgres/PostgresDriver.js, query-runner/QueryRunner.d.ts",
+    "verified": true
+   },
+   {
+    "claim": "MikroORM 7 is stable (released 2026-03-11): knex removed, Kysely used as the query runner, and migrations generate up/down. The current version is 7.2.1.",
+    "source": "https://mikro-orm.io/blog/mikro-orm-7-released ; npm view @mikro-orm/core",
+    "verified": false
+   },
+   {
+    "claim": "Atlas 'migrate down' is not part of the Apache-2.0 Community Edition. graphile-migrate is roll-forward only by design.",
+    "source": "https://atlasgo.io/community-edition ; https://github.com/graphile/migrate",
+    "verified": true
+   },
+   {
+    "claim": "node-pg-migrate 9.0.0 (MIT, peer dependency pg) ships a .sql migration template and paired up/down SQL loading, and infers down steps for many operations.",
+    "source": "node-pg-migrate 9.0.0 package (templates/, dist/bundle/index.d.ts)",
+    "verified": true
+   },
+   {
+    "claim": "pgTyped's last release was @pgtyped/cli 2.4.3 (2025-03-15), and it needs pg at runtime. sqlc-gen-typescript is 'early access. Expect breaking changes'.",
+    "source": "npm view @pgtyped/cli time; https://github.com/adelsz/pgtyped ; https://github.com/sqlc-dev/sqlc-gen-typescript",
+    "verified": true
+   },
+   {
+    "claim": "postgres.js 3.4.9 (2026-04-05) supports sql.begin with an isolation-level option string, savepoints, pipelining, COPY streams and automatic prepared statements. pg 8.23.0 was released 2026-08-08.",
+    "source": "https://github.com/porsager/postgres ; npm registry",
+    "verified": true
+   },
+   {
+    "claim": "The Bun.sql docs do not document isolation levels for sql.begin, and they state that Postgres COPY is not implemented.",
+    "source": "https://bun.com/docs/runtime/sql",
+    "verified": true
+   },
+   {
+    "claim": "PostgreSQL 18 docs: applications using Repeatable Read or Serializable must be prepared to retry transactions on serialization failures, which always return SQLSTATE 40001.",
+    "source": "https://www.postgresql.org/docs/current/transaction-iso.html",
+    "verified": true
+   },
+   {
+    "claim": "pgvector 0.8.6 was released 2026-07-29. PostgreSQL 18.6 is the current 18.x minor, and PostgreSQL 19 GA is expected around September/October 2026.",
+    "source": "https://github.com/pgvector/pgvector/blob/master/CHANGELOG.md ; https://www.postgresql.org/about/news/postgresql-19-beta-1-released-3313/",
+    "verified": false
+   }
+  ],
+  "recommendation": "Decision: use Kysely 0.29.6 (pinned exactly) as the only server-side data-access layer, on node-postgres (pg 8.23.0) through Kysely's built-in PostgresDialect. Generate types with kysely-codegen 0.20.0 from the migrated database and check them in CI with --verify. Keep the schema in plain-SQL dbmate 2.36.0 migrations, each file with a '-- migrate:up' and a '-- migrate:down' section. For vector queries, use the pgvector 0.3.0 'pgvector/kysely' distance helpers. Write the seed and benchmark tooling ourselves in TypeScript: a deterministic mulberry32 generator, bulk inserts with unnest(), performance.now() timing, and EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON). Assumed database (the primary-DB decision record decides it): PostgreSQL 18 with pgvector 0.8.6 (image pgvector/pgvector:0.8.6-pg18), with random_page_cost=1.1 set in the Postgres command line because our Q2 measurement showed why it is needed.\n\nIsolation level to declare in DATABASE.md: SERIALIZABLE for every VFS mutation (mv, rm -r, cp -r, batch rename, chmod/chown -R, write). A shared withTx() wrapper retries SQLSTATE 40001/40P01 up to 5 times with jittered exponential backoff, and runs SET LOCAL lock_timeout='2s' so a held lock becomes EBUSY. Each transaction also takes explicit FOR UPDATE row locks on the user's quota row and on the parent directories, in ino order, which turns most conflicts into short waits instead of aborts. Q1-Q5 are single read-only statements under READ COMMITTED; one statement is already one snapshot. We measured the reason for this choice: under READ COMMITTED, two concurrent cross-moves left a detached cycle, while SERIALIZABLE with retry kept the tree consistent (DB-03).\n\nConsequences:\n- Every down script is hand-written. CI guards this with a round-trip job (up all, then roll back all, then up all), a per-migration up/down/up check, and a schema.sql diff.\n- The VFS bulk operations run as an explicit list of per-node statements inside one transaction. The fault-injection hook, the agent's dry-run blast radius and the client IndexedDB mirror all read the same list. Measured cost: 366 ms for rm -r of 1,000 nodes.\n- Kysely-built SQL can be pasted straight into psql EXPLAIN ANALYZE for the DB-05 report.\n- The perf indexes live in their own migration, so 'dbmate rollback' of that one migration produces the 'before indexing' state that DB-05 asks for.\n\nWhat changes if skills differ:\n- A team that is strong in SQL but uncomfortable with TypeScript generics can use the runner-up, raw postgres.js with the same dbmate migrations, at a small cost in type safety.\n- A team already fluent in Drizzle can use Drizzle 0.45 with dbmate and 'drizzle-kit pull' (about 83 of 100), but must write every recursive query as raw SQL and should stay off the 1.0 RC.\n- Prisma is not recommended even for Prisma-experienced teams: down migrations are manual, row locks need raw SQL, and the switch to Prisma 8 lands during the freeze.",
+  "runner_up": "Raw SQL with postgres.js 3.4.9 and the same dbmate up/down migrations (88/100). It ties or beats Kysely on control, feature reach and speed; it had the fastest Q1 in our prototype thanks to automatic prepared statements. It loses on type safety, because pgTyped needs pg and has been dormant since March 2025, which leaves hand-written result types. It also loses on productivity for dynamic queries such as agent plans and optional filters. Switching is cheap in either direction: migrations are plain SQL, Kysely can run on postgres.js through kysely-postgres-js 5.0.0 (the prototype ran the same queries on both), and hot paths can drop to sql`` at any time.",
+  "chat_reason": "Use Kysely, a type-safe SQL query builder, on the standard node-postgres driver, with plain-SQL dbmate migrations that each contain a rollback (down) section. It is the only TypeScript option that gives typed recursive queries, row locks and a per-transaction SERIALIZABLE setting, and it pairs cleanly with real rollback scripts. In our prototype it added well under 1 ms per query, and with a retry wrapper it kept the file tree consistent when two users moved folders into each other at the same time. Drizzle has neither down migrations nor recursive queries, both of which our VFS needs. Prisma is in the middle of a major-version change during our stack freeze.",
+  "gave_up": "We give up the following:\n- Automatically generated down migrations (TypeORM and MikroORM have them). Every rollback script is written by hand, about 5-10 minutes per migration, and CI checks it.\n- Drizzle's schema-in-TypeScript and its native vector column DSL.\n- Prisma's relation API, nested writes, Studio and gentle schema language.\n- Any ORM identity map or relation loading. VFS operations are set-oriented SQL, so this is a small loss.\n- A 1.0-semver dependency. Kysely is 0.x and has to be pinned exactly.\n- The ~2x lower latency of automatic prepared statements in postgres.js. We accept Kysely+pg's unnamed statements while measured p95 stays far under budget. Custom per-parameter plans also suit skewed directory sizes.",
+  "risks": [
+   {
+    "risk": "A hand-written down script is wrong or incomplete, which would break DB-01's 'each with a rollback script' requirement in practice.",
+    "mitigation": "A CI job runs on every PR against a pgvector/pgvector:0.8.6-pg18 service container. It creates an empty database, runs 'dbmate up', rolls back every migration, runs 'dbmate up' again, and diffs db/schema.sql. It also runs up/down/up for the newest migration alone. A PR that fails this job cannot merge."
+   },
+   {
+    "risk": "Kysely is 0.x; 0.30 (in beta) or later could change APIs mid-project.",
+    "mitigation": "Pin kysely@0.29.6 exactly, with no caret, and disable automatic dependency updates for it until v1.0.0 is tagged. We don't use Kysely's Migrator, which is where the 0.29 and 0.30 changes are. An upgrade needs a decision-record amendment."
+   },
+   {
+    "risk": "SERIALIZABLE retry storms under contention, for example an agent's 500-file batch rename running while outbox replays arrive.",
+    "mitigation": "Up to 5 attempts with full-jitter exponential backoff. Rows are locked in ino order with FOR UPDATE on parents and the quota row. SET LOCAL lock_timeout='2s' maps to EBUSY. A tx_retry counter is recorded per SQLSTATE and shown in the ops dashboard. The reversal trigger applies if retries exceed 5% of mutations under a 50-client test."
+   },
+   {
+    "risk": "Side effects inside a retried transaction run twice: duplicate WebSocket broadcasts or duplicate indexer jobs.",
+    "mitigation": "The transaction only writes to the database. Its first statement is INSERT INTO op_log ... ON CONFLICT (op_id) DO NOTHING RETURNING, which makes replays no-ops (OFF-02). Broadcasts and AI indexer notifications are published only after commit."
+   },
+   {
+    "risk": "The query plan, not the ORM, blows the 10 ms budget. The prototype's Q2 took 11.7 ms under default costs.",
+    "mitigation": "Set random_page_cost=1.1 on SSD, run ANALYZE after every seed, and commit EXPLAIN (ANALYZE, BUFFERS) plans to docs/. A nightly performance job seeds 100k inodes and fails the build if any Q1-Q5 p95 exceeds 10 ms, or if an index expected by the plan is not used."
+   },
+   {
+    "risk": "Raw sql`` fragments (array params, vector operators) bypass type checking or bind incorrectly. The prototype hit a Drizzle array-expansion bug of this kind.",
+    "mitigation": "Keep all raw fragments in db/sql/*.ts helpers with an explicit sql<T> return type, cover each with an integration test against real Postgres, and forbid string-concatenated SQL with a lint rule on sql.raw."
+   },
+   {
+    "risk": "dbmate's schema dump needs a pg_dump of the same or newer major version than the server (18). CI runners may ship an older client.",
+    "mitigation": "Run dbmate from its Docker image, or install postgresql-client-18 in CI. Use --no-dump-schema on developer laptops and let CI own schema.sql."
+   },
+   {
+    "risk": "int8 columns come back as strings from pg by default, and ino or size arithmetic bugs follow.",
+    "mitigation": "Set pg.types.setTypeParser(20, BigInt), or parse to Number behind a safe-integer guard, and align kysely-codegen with --type-mapping. Unit tests cover the path resolver with large inode numbers."
+   },
+   {
+    "risk": "Knowledge concentrated in one member (Role 2), so a decision only one person can explain counts as undefended.",
+    "mitigation": "Each member writes at least one migration with its down script and one VFS query plus its EXPLAIN plan before Week 4. The Phase-1 rehearsal includes cross-questioning on isolation levels."
+   }
+  ],
+  "reversal_trigger": "Any one of these observations reopens the decision:\n1. At 100k inodes on the lab-spec machine, after plan tuning, a Q1-Q5 p95 measured through Kysely+pg is more than 1 ms above the same SQL through the raw driver, or exceeds 5 ms, half the budget. Action: switch the dialect to kysely-postgres-js (one file); if that is still not enough, move the hot paths to raw postgres.js.\n2. More than 30% of data-access call sites end up as raw sql`` fragments. Action: move to the runner-up, raw postgres.js with the same dbmate migrations.\n3. A Kysely bug blocks a DB-0x requirement and has no fix or workaround within one week. Action: same move to raw postgres.js.\n4. Serialization retries exceed 5% of mutations, or any mutation exhausts its 5 attempts, in the 50-client contention test. Action: re-examine isolation, moving to READ COMMITTED with explicit ancestor-chain row locks.\n5. dbmate cannot run the migration round-trip for reasons unrelated to our SQL. Action: switch the runner to node-pg-migrate 9 with paired up/down SQL files, a mechanical port.",
+  "team_prototype": "Weeks 2-3, owned by Role 2 (VFS/DB) and reviewed by Role 5 (QA/DevOps). The goal is the team's OWN numbers for STACK_DECISION.md; the prototype numbers above are only a starting point. It runs on the published lab-spec machine with nothing else running.\n1. Environment: docker compose with pgvector/pgvector:0.8.6-pg18. Two dbmate migrations: 001_core (users, groups, user_groups, inodes, dentries, blobs, with FKs, PK (parent_ino, name) and CHECKs on type, mode, name and quota) and 002_perf_indexes (dentries(ino), lower(name) text_pattern_ops, inodes(uid, modified_at DESC), hash on blobs(sha256)). CI round-trip job: up, rollback all, up, then diff schema.sql.\n2. Seed (db/seed/seed.ts): deterministic mulberry32 with seed 42; 51 users (root plus 50); 10,000 and 100,000 inodes built as a random recursive tree, reporting the depth histogram (target median 6-8, max >= 16). Fixtures: a depth-8 path, a 500-entry directory, a 1,000-node subtree and prefix-search names. Bulk insert with INSERT ... SELECT FROM unnest($1::bigint[], ...) in chunks of 5,000, then ANALYZE.\n3. Benchmark (db/bench/run.ts): Q1-Q5, each run 100 times as warm-up and 1,000 times timed, with parameters drawn from the seeded generator rather than one fixed value. Measure through six paths: raw pg, pg with named prepared statements, postgres.js, Kysely+pg, Kysely+postgres.js and Drizzle+pg. Measure two states: 'before' (002 rolled back, plus enable_indexscan/bitmapscan off for the queries served by the integrity PK) and 'after', each at random_page_cost 4 and 1.1. Report p50, p95 and p99, repeat 3 times and report the median p95, and store EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) for each query. Pass: every Q p95 <= 10 ms after indexing, and the Kysely overhead over raw is <= 1 ms.\n4. DB-03 probe: 100 randomized interleavings of overlapping cross-moves (X into Y and Y into X, plus a 3-way rotation) under READ COMMITTED, SERIALIZABLE, and SERIALIZABLE with withTx. Count unreachable dentries with the reachability probe; expected result is RC > 0, SERIALIZABLE+retry = 0. Record retry counts.\n5. DB-02 probe: fault injection at node op 1, 500, 999 and 1,000 of a 1,000-node rm -r, and the same for mv, cp -r, a 500-file batch rename and chmod -R. Assert the tree checksum, both orphan probes and the users.used_bytes/used_inodes row are unchanged, and time the per-node and set-based variants.\n6. Record the numbers, plots and plans in STACK_DECISION.md and DATABASE.md, and state that the prototype numbers in this record were superseded. Starting scripts from this research run (seed.mjs, bench.mjs, cross-move.mjs, fault-rm.mjs, schema.sql) are in /tmp/claude-1000/-home-haseeb-raza-Desktop-Plotinium-OS/6bdb43c3-e62e-4f77-88ef-40bcd9948f85/scratchpad/ormproto/. Copy them into the repo's db/ folder before the scratchpad is cleaned.",
+  "requirement_ids_served": [
+   "DB-01",
+   "DB-02",
+   "DB-03",
+   "DB-04",
+   "DB-05",
+   "VFS-07",
+   "VFS-09",
+   "VFS-10",
+   "OFF-02",
+   "MEM-04",
+   "AGT-05",
+   "AGT-08",
+   "AGT-09",
+   "RAG-03",
+   "RAG-05"
+  ],
+  "packages": [
+   {
+    "name": "kysely",
+    "version": "0.29.6 (pin exactly)",
+    "purpose": "Type-safe SQL query builder: transactions with isolation level, FOR UPDATE/SHARE, WITH RECURSIVE, EXPLAIN; the only server data-access layer",
+    "licence": "MIT"
+   },
+   {
+    "name": "kysely-codegen",
+    "version": "0.20.0 (devDependency)",
+    "purpose": "Generates server/db/types.gen.ts from the migrated database; 'kysely-codegen --verify' in CI catches schema/type drift; --type-mapping for vector and int8",
+    "licence": "MIT"
+   },
+   {
+    "name": "pg",
+    "version": "8.23.0",
+    "purpose": "node-postgres driver and Pool used by Kysely's built-in PostgresDialect; works on Node 22/24 and Bun",
+    "licence": "MIT"
+   },
+   {
+    "name": "@types/pg",
+    "version": "8.23.1 (devDependency)",
+    "purpose": "Type definitions for pg",
+    "licence": "MIT"
+   },
+   {
+    "name": "dbmate",
+    "version": "2.36.0 (devDependency; also ghcr.io/amacneil/dbmate image for compose/CI)",
+    "purpose": "Versioned SQL migrations with '-- migrate:up' / '-- migrate:down' in one file, 'dbmate rollback', 'dbmate wait', schema.sql dump",
+    "licence": "MIT"
+   },
+   {
+    "name": "pgvector",
+    "version": "0.3.0",
+    "purpose": "'pgvector/kysely' distance helpers (cosineDistance, l2Distance, maxInnerProduct) and toSql() for vector parameters in RAG queries",
+    "licence": "MIT"
+   },
+   {
+    "name": "pgvector/pgvector (Docker image)",
+    "version": "0.8.6-pg18 (PostgreSQL 18.x + pgvector 0.8.6); primary-DB decision assumed",
+    "purpose": "Database for dev, CI service container and production compose; run with -c random_page_cost=1.1",
+    "licence": "PostgreSQL licence"
+   },
+   {
+    "name": "kysely-postgres-js + postgres",
+    "version": "5.0.0 + 3.4.9 (NOT installed unless the reversal trigger fires)",
+    "purpose": "Fallback dialect: swap to postgres.js automatic prepared statements with no query changes",
+    "licence": "MIT / Unlicense"
+   }
+  ],
+  "design_notes": "## Repository placement\n- db/migrations/: dbmate files named YYYYMMDDHHMMSS_name.sql, each with up and down sections. db/schema.sql is the dbmate dump and is committed.\n- db/seed/seed.ts, db/bench/run.ts, db/bench/queries/q1..q5.ts, db/probes/integrity.sql.\n- server/db/client.ts, server/db/tx.ts, server/db/errors.ts, server/db/types.gen.ts (generated, never edited by hand).\n- server/vfs/ops/*.ts: one module per syscall, each a single transaction. tests/fault-injection/*.test.ts.\n\n## Migration format (DB-01)\nEach migration file has both halves:\n```sql\n-- migrate:up\nCREATE TABLE inodes (\n  ino bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,\n  type text NOT NULL CHECK (type IN ('file','dir','symlink')),\n  mode smallint NOT NULL CHECK (mode BETWEEN 0 AND 1023),          -- 9 rwx bits + sticky (0o1777)\n  uid integer NOT NULL REFERENCES users, gid integer NOT NULL REFERENCES groups,\n  size bigint NOT NULL DEFAULT 0 CHECK (size >= 0), nlink integer NOT NULL DEFAULT 1 CHECK (nlink >= 0),\n  version integer NOT NULL DEFAULT 0, blob_id bigint REFERENCES blobs,\n  symlink_target text, CHECK ((type = 'symlink') = (symlink_target IS NOT NULL)),\n  subtree_bytes bigint NOT NULL DEFAULT 0,                          -- maintained aggregate for Q5 (if chosen)\n  created_at timestamptz NOT NULL DEFAULT now(), modified_at timestamptz NOT NULL DEFAULT now(), accessed_at timestamptz NOT NULL DEFAULT now());\nCREATE TABLE dentries (\n  parent_ino bigint NOT NULL REFERENCES inodes(ino),\n  name text NOT NULL CHECK (octet_length(name) BETWEEN 1 AND 255 AND strpos(name,'/') = 0 AND name NOT IN ('.','..')),\n  ino bigint NOT NULL REFERENCES inodes(ino),\n  PRIMARY KEY (parent_ino, name));                                   -- unique B-tree: path steps, listings, EEXIST\n-- migrate:down\nDROP TABLE dentries;\nDROP TABLE inodes;\n```\n- The quota is a CHECK on users (used_bytes <= quota_bytes, used_inodes <= quota_inodes). The quota UPDATE runs inside the operation's transaction after SELECT ... FOR UPDATE on the user row (rule 2). A violation raises 23514 and maps to EDQUOT with a full rollback, so no partial data is written.\n- Put the perf indexes in their own migration (002_perf_indexes: dentries(ino), dentries(lower(name) text_pattern_ops), inodes(uid, modified_at DESC), blobs USING hash (sha256)). Rolling back that one migration gives the DB-05 'before' state.\n- Postgres hash indexes cannot be UNIQUE, so keep UNIQUE(sha256) as a B-tree for integrity. Benchmark whether the extra hash index helps, and document the result honestly.\n- file_chunks(embedding vector(d)) and its HNSW index (vector_cosine_ops) come in a Phase-4 migration with its own down script. d depends on the AI-model decision.\n\n## Client and types\n```ts\nimport { Kysely, PostgresDialect } from 'kysely';\nimport pg from 'pg';\nimport type { DB } from './types.gen';\npg.types.setTypeParser(20, (v) => BigInt(v));              // int8 -> bigint\nexport const db = new Kysely<DB>({ dialect: new PostgresDialect({ pool: new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 10 }) }) });\n```\n- Vectors are passed as parameters with pgvector's toSql() (cast to ::vector), so the pg type registration is not needed.\n- Codegen: `kysely-codegen --dialect postgres --out-file server/db/types.gen.ts --type-mapping '{\"vector\":\"string\"}'`. CI runs the same command with --verify.\n\n## Transaction wrapper (declared isolation level, rule 7)\n```ts\nconst RETRYABLE = new Set(['40001', '40P01']);              // serialization_failure, deadlock_detected\nexport async function withTx<T>(fn: (trx: Transaction<DB>) => Promise<T>, maxAttempts = 5): Promise<T> {\n  for (let attempt = 1; ; attempt++) {\n    try {\n      return await db.transaction().setIsolationLevel('serializable').execute(async (trx) => {\n        await sql`SET LOCAL lock_timeout = '2s'`.execute(trx); // blocked on a held lock -> 55P03 -> EBUSY\n        return fn(trx);\n      });\n    } catch (e: any) {\n      if (RETRYABLE.has(e?.code) && attempt < maxAttempts) {\n        metrics.txRetry.inc({ sqlstate: e.code });\n        await sleep(Math.random() * 5 * 2 ** attempt);       // full jitter\n        continue;\n      }\n      throw toErrno(e); // 23505->EEXIST, 23503->ENOENT, 23514->EINVAL|EDQUOT|ENAMETOOLONG (by constraint name), 55P03/exhausted 40001->EBUSY\n    }\n  }\n}\n```\n\n## Directory move with retry (the \u00a711.3 reference, in Kysely)\n```ts\nexport async function moveEntry(req: MoveReq, faults: FaultInjector = NO_FAULTS) {\n  const res = await withTx(async (trx) => {\n    // idempotency (rule 6, OFF-02): the op id is op_log's PK; a replay applies nothing\n    const fresh = await trx.insertInto('op_log')\n      .values({ op_id: req.opId, uid: req.uid, session_id: req.sessionId, op: 'mv', payload: JSON.stringify(req), client_ts: req.clientTs })\n      .onConflict((oc) => oc.column('op_id').doNothing()).returning('op_id').executeTakeFirst();\n    if (!fresh) return { replayed: true as const };\n    // lock both parents in ino order (no deadlocks); check w+x on both, sticky bit on the source parent\n    const parents = await trx.selectFrom('inodes').selectAll()\n      .where('ino', 'in', [req.srcParent, req.dstParent]).orderBy('ino').forUpdate().execute();\n    assertCanModifyDirs(parents, req.cred);                                  // ENOTDIR / EACCES / EPERM\n    const src = await trx.selectFrom('dentries').select('ino')\n      .where('parent_ino', '=', req.srcParent).where('name', '=', req.srcName).forUpdate().executeTakeFirst();\n    if (!src) throw new VfsError('ENOENT');\n    faults.tick();\n    // rule 3: dst must not be src or inside src's subtree; walk UP from dst, O(depth); UNION always terminates\n    const inside = req.dstParent === src.ino || !!(await trx\n      .withRecursive('anc(ino)', (qb) => qb.selectFrom('dentries').select('parent_ino as ino').where('ino', '=', req.dstParent)\n        .union(qb.selectFrom('dentries as d').innerJoin('anc', 'anc.ino', 'd.ino').select('d.parent_ino as ino')))\n      .selectFrom('anc').select('ino').where('ino', '=', src.ino).executeTakeFirst());\n    if (inside) throw new VfsError('EINVAL');\n    // the move is ONE row; the (parent_ino,name) PK turns a name clash into 23505 -> EEXIST\n    await trx.updateTable('dentries').set({ parent_ino: req.dstParent, name: req.dstName })\n      .where('parent_ino', '=', req.srcParent).where('name', '=', req.srcName).execute();\n    faults.tick();\n    await trx.updateTable('inodes').set({ version: sql`version + 1`, modified_at: sql`now()` })\n      .where('ino', 'in', [req.srcParent, req.dstParent, src.ino]).execute();  // optimistic versions (VFS-10)\n    await adjustSubtreeBytes(trx, src.ino, req.srcParent, req.dstParent);     // Q5 aggregate, same txn\n    faults.tick();\n    await trx.updateTable('op_log').set({ applied_at: sql`now()` }).where('op_id', '=', req.opId).execute();\n    return { replayed: false as const, ino: src.ino };\n  });\n  if (!res.replayed) bus.publishAfterCommit({ kind: 'vfs.moved', ...req });  // WS broadcast + AI indexer, outside the retried txn\n  return res;\n}\n```\nThe prototype ran this same pattern: READ COMMITTED produced a cycle, and SERIALIZABLE with retry returned EINVAL to the loser with 0 unreachable entries.\n\n## Fault injection (DB-02, live at the final defence)\n- `FaultInjector { tick(): void }`. `failAfter(n)` throws InjectedFault on the n-th node op, and `NO_FAULTS` is a no-op.\n- Bulk operations (rm -r, cp -r, batch rename, chmod/chown -R) first compute a plan with one recursive query: the post-order subtree for rm -r, pre-order for cp -r. They then run it node by node inside ONE withTx, calling tick() after each node op.\n- The same plan feeds the agent's dry run and blast radius (AGT-03) and the client's single IndexedDB transaction mirror.\n- The hook is enabled only when PLOTINIUM_FAULTS=1, through a root-only debug syscall, so examiners can trigger it on the demo build.\n- Probes run after each injected failure: tree checksum = md5(string_agg(parent_ino/name>ino:mode:uid:size ORDER BY parent_ino, name)), the two orphan queries from \u00a711.3, and users.used_* unchanged.\n- If per-node latency becomes a UX problem (366 ms per 1,000 nodes in the prototype), switch to set-based statements plus a test-only trigger that raises after N rows, counted with SET LOCAL plotinium.fault_after.\n\n## Q1 in one round trip (all path inodes returned so the kernel can check x on every directory and find where ENOENT occurs)\n```sql\nWITH RECURSIVE walk(depth, ino) AS (\n  SELECT 0, $root::bigint\n  UNION ALL\n  SELECT w.depth + 1, d.ino FROM walk w\n  JOIN dentries d ON d.parent_ino = w.ino AND d.name = ($parts::text[])[w.depth + 1]\n  WHERE w.depth < cardinality($parts::text[]))\nSELECT w.depth, i.* FROM walk w JOIN inodes i USING (ino) ORDER BY w.depth;\n```\nSymlink components stop the walk. The TypeScript resolver follows the symlink and re-issues the walk, returning ELOOP after 40 hops.\n\n## Benchmark harness (DB-05)\n- Parameters are seeded; 100 warm-up and 1,000 timed runs per query; latency is measured client-side with performance.now() through the real Kysely code path; p50/p95/p99 use the nearest-rank method; the whole run repeats 3 times and reports the median.\n- Server-side 'Execution Time' comes from EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON).\n- Before state: 002 rolled back. After state: 002 applied. Output is JSON plus a Markdown table.\n- The nightly CI job exits non-zero if any p95 exceeds 10 ms.\n- Postgres runs with random_page_cost=1.1. At the default of 4, the planner chose Hash Join + Seq Scan for the 500-entry listing (11.7 ms) instead of Nested Loop (0.5 ms).\n\n## CI and bring-up\n- Every PR, against a pgvector/pgvector:0.8.6-pg18 service: `dbmate --wait up`, migration round-trip, `kysely-codegen --verify`, integration tests (fault-injection suite, cross-move concurrency, lock leases, outbox replay).\n- Nightly: seed 100k, run the before/after benchmark, upload the report artifact.\n- Production: `docker compose up -d` starts db and server. The server entrypoint runs `dbmate --wait up`, then an idempotent demo-account seed. This fits within the <= 3-command bring-up.",
+  "open_questions": [
+   "Backend runtime (Node 24 LTS or Bun) is decided in its own record. pg and Kysely work on both. Bun.sql is not an option here: its docs cover neither isolation levels nor COPY.",
+   "Q5: a maintained subtree_bytes aggregate (O(depth) extra updates per write, all in the same transaction) or a recursive CTE sum over a 1,000-node subtree? Measure both in the Week-3 prototype.",
+   "Should rm -r and cp -r stay as per-node statements (clear fault-injection semantics; 366 ms per 1,000 nodes in the prototype) or become set-based SQL with a trigger-based fault injector?",
+   "Does the hash index on blobs(sha256) beat the UNIQUE B-tree it duplicates? Postgres hash indexes cannot enforce uniqueness, so both are needed if the hash index is kept.",
+   "Pin PostgreSQL 18 (18.6) for the freeze, or move to 19 when it reaches GA around now? Recommendation: stay on 18 unless a pgvector pg19 image is published and tested before Week 4.",
+   "Embedding dimension d for file_chunks.embedding depends on the AI-model decision and fixes the Phase-4 migration.",
+   "The lab workstation spec is published in Week 2. The benchmark numbers must be re-measured on it."
+  ]
+ },
+ "examiner_review": {
+  "verdict": "upheld_with_changes",
+  "factual_errors": [
+   {
+    "claim": "Explicit FOR UPDATE row locks on the quota row and parent directories under SERIALIZABLE 'turn most conflicts into short waits instead of aborts'.",
+    "correction": "Wrong for PostgreSQL SERIALIZABLE and REPEATABLE READ. If another transaction updated the row and committed, the waiter blocks until that commit and then fails with 40001 ('could not serialize access due to concurrent update'). Taking the lock as the transaction's first statement does not help, because the snapshot is taken when that statement starts. Reproduced on pgvector/pgvector:0.8.6-pg18 (PG 18.6): with SERIALIZABLE, B waited, then got 40001, and the final used_bytes was 100. Under READ COMMITTED, B waited, then committed, and the final value was a correct 150.",
+    "source": "PostgreSQL docs, transaction-iso.html \u00a713.2.2 ('if the first updater commits ... the repeatable read transaction will be rolled back'); examiner probe scratchpad/exam/forupdate.mjs"
+   },
+   {
+    "claim": "C5 scores Kysely+pg 5/5, and the evidence reports Q2 p95 of 3.7 ms for Kysely+pg against 2.2 ms for raw pg.",
+    "correction": "Run 1 in the record is 1.5 ms over raw, which already trips the record's own reversal trigger #1 (more than 1 ms over raw) and fails the team_prototype pass line. Re-running the same bench.mjs on a quieter host gave Q1 p95 0.49 ms for Kysely+pg against 0.41-0.43 ms raw, and Q2 p95 1.50-1.70 ms against 1.36-1.54 ms. The real overhead is 0.05-0.35 ms, and compiling a query costs 10 \u00b5s. Two things still need reporting: a repeatable Q2 p99 tail of 8-9 ms through Kysely+pg (raw pg: 1.8 ms), and Kysely+pg is the slowest path in both runs. Replace run 1 and score C5 as 4. The total becomes 92 and the ranking does not change.",
+    "source": "Examiner re-run of scratchpad/ormproto/bench.mjs against a fresh PG 18.6 container, 2026-09-23"
+   },
+   {
+    "claim": "Kysely is 3.5 MB unpacked; TypeORM is 30 MB unpacked.",
+    "correction": "On npm, kysely 0.29.6 has dist.unpackedSize 1,726,989 B (about 1.7 MB). 3.5 MB is the on-disk du figure. typeorm 1.1.1 has dist.unpackedSize 21,667,474 B (about 21.7 MB). Give both numbers on the same basis.",
+    "source": "npm view kysely@0.29.6 dist.unpackedSize; npm view typeorm@1.1.1 dist.unpackedSize"
+   },
+   {
+    "claim": "The 0.29/0.30 churn is in the Migrator, which we don't use.",
+    "correction": "The 0.30.0-beta.2 notes also say that Kysely, Transaction and ControlledTransaction types are now 'compared more tightly', and that custom helpers may stop compiling. That touches the planned withTx(fn: (trx: Transaction<DB>) => ...) and adjustSubtreeBytes(trx, ...) helpers. Pinning 0.29.6 still covers this, but the stated reason is incomplete.",
+    "source": "https://github.com/kysely-org/kysely/releases/tag/v0.30.0-beta.2"
+   },
+   {
+    "claim": "Rolling back migration 002_perf_indexes with 'dbmate rollback' produces the DB-05 'before indexing' state, and CI can 'roll back every migration'.",
+    "correction": "'dbmate rollback' (alias 'down') only rolls back the most recent migration. It has no --all or --to option. Once any Phase 3 or Phase 4 migration lands after 002 (locks, op_log, swap_pages, file_chunks/HNSW), 002 cannot be rolled back on its own. The CI round trip has to call rollback in a loop N times, with N taken from 'dbmate status'.",
+    "source": "dbmate 2.36.0 'dbmate --help' and 'dbmate rollback --help', run locally"
+   },
+   {
+    "claim": "dbmate writes an automatic schema.sql dump that CI diffs, which guards the down scripts.",
+    "correction": "When pg_dump is missing, 'dbmate up' still exits 0 and writes no schema.sql, without any warning; the auto-dump failure is swallowed. Only an explicit 'dbmate dump' fails (exit 2). A pg_dump 17 client against PG 18 aborts with 'server version mismatch'. The ghcr.io/amacneil/dbmate:2.36.0 image does ship pg_dump 18.6, so that mitigation is valid. CI must call 'dbmate dump' explicitly, or the diff guard passes without testing anything.",
+    "source": "Local test: dbmate 2.36.0 npm binary with no pg_dump on PATH; docker run ghcr.io/amacneil/dbmate:2.36.0 pg_dump --version prints 18.6; postgres:17 pg_dump against 18.6"
+   },
+   {
+    "claim": "PostgreSQL 19 GA is expected 'around September/October 2026' ('move to 19 when it reaches GA around now').",
+    "correction": "This is out of date. 19 Beta 3 was released 2026-08-13 and Beta 4 is scheduled for 2026-09-24. RC1 has no date, and the release team is aiming for GA 'by the end of October' at the earliest, which is after the Week-4 freeze. Pin 18.6 without qualification.",
+    "source": "https://www.postgresql.org/developer/roadmap/ ; https://layerbase.com/blog/when-will-postgres-19-be-released (2026-09-17, citing J. Katz, pgsql-hackers, 2026-09-03)"
+   },
+   {
+    "claim": "Drizzle has no WITH RECURSIVE builder (issue #209, open since 2023-03-01).",
+    "correction": "This is true today, but the record leaves out that #209 is labelled has-pr (PR #1336) and marked 'In Progress' on Drizzle's public roadmap. It could land with 1.0 GA, so present it as a current gap, not a permanent one.",
+    "source": "https://github.com/drizzle-team/drizzle-orm/issues/209"
+   },
+   {
+    "claim": "MikroORM 7 stable 2026-03-11, current 7.2.1 (marked verified:false); Prisma pgvector Unsupported('vector') (marked verified:false).",
+    "correction": "The MikroORM claim is now verified: npm shows @mikro-orm/core 7.0.0 published 2026-03-11 and 7.2.1 published 2026-09-19. All other version and date claims match npm as of 2026-09-23: kysely 0.29.6 (09-16), 0.30.0-beta.2 (09-14), kysely-codegen 0.20.0 with --verify and --type-mapping flags, pg 8.23.0, @types/pg 8.23.1, dbmate 2.36.0 (09-19), pgvector 0.3.0 with a ./kysely export, drizzle-orm 0.45.3 (09-21), rc tag 1.0.0-rc.4 (06-27), drizzle-kit 0.31.11, @prisma/client 7.10.0, prisma latest = 8.0.0-rc.15, typeorm 1.0.0 (05-19) and 1.1.1 (09-01), postgres 3.4.9 (Unlicense), @pgtyped/cli 2.4.3 (2025-03-15), kysely-postgres-js 5.0.0, node-pg-migrate 9.0.0, pgvector 0.8.6 (2026-07-29). Prisma 8 is an RC with GA expected October 2026, and isolation levels are not yet available in it.",
+    "source": "npm registry (npm view ... time/dist-tags, 2026-09-23); https://www.prisma.io/docs/prisma-orm/release-status ; https://github.com/pgvector/pgvector/blob/master/CHANGELOG.md"
+   }
+  ],
+  "spec_gaps": [
+   "DB-03 and the rubric's 'atomic under fault injection AND concurrency': the only concurrency evidence is one pair of transactions. Under load, the declared design (SERIALIZABLE for every mutation, per-node bulk statements, GENERATED ALWAYS identity inos) does not hold up. Examiner stress test on PG 18.6 at 100k inodes: 10 distinct users writing about every 500 ms, plus 2 workers doing a 300-node cp -r. The cp -r failed with 40001 on 96.9% of attempts (91.3% with max_pred_locks_per_transaction=4096, 37% with random inos). With no think time, even small single-file writes by different users aborted 96.8% of the time, from the rightmost-page hotspot of sequential ino keys in inodes_pkey. The same workload under READ COMMITTED with explicit locks had 0 aborts and per-node bulk p95 of about 127-670 ms. With a 5-attempt cap, cp -r, the agent's 500-file batch rename (AGT-05/AGT-07) and chmod -R would regularly end in EBUSY during a live multi-user demo, and reversal trigger #4 would fire on day one.",
+   "DB-01 'a documented backup-and-restore procedure' is a Must, and it is DB tooling, but the record never mentions it. It needs a pg_dump -Fc/pg_restore procedure using the same PG 18 client image, coordinated with the blob/object store (blobs.storage_key, swap pages), and a CI restore drill that runs the integrity probes and the tree checksum on the restored database.",
+   "Architecture boundary 3 and OFF-01/OFF-02 (local-first, outbox replay): the DDL declares inodes.ino as GENERATED ALWAYS AS IDENTITY, so the server assigns inode numbers. Files and directories created offline (mkdir a; touch a/b) need stable inos before the server sees them. Either every replayed op needs ID remapping, or the server rejects client-supplied inos (GENERATED ALWAYS needs OVERRIDING SYSTEM VALUE). Inode-number allocation that works offline is missing, for example per-session ino blocks reserved from a sequence with INCREMENT BY 65536.",
+   "AGT-09 (agent killable mid-plan with the txn rolled back): Kysely's db.transaction().execute(cb) cannot be aborted from outside. The record does not say how kill <pid> reaches a running server transaction. It needs an AbortSignal check inside the per-node tick(), plus statement_timeout or pg_cancel_backend for a single long statement.",
+   "OFF-02 exactly-once: on a duplicate op_id, moveEntry returns {replayed:true} without the original result, for example EEXIST versus ok. A client whose ack was lost cannot tell whether its op succeeded. op_log should store the result and return it on replay.",
+   "VFS-10 optimistic concurrency: the write path bumps version but never shows the expected-version guard (UPDATE ... WHERE ino=$1 AND version=$expected, with 0 rows meaning a conflict and a conflicted copy). Its behaviour under the declared isolation level is not argued.",
+   "Q5/DB-05: the maintained subtree_bytes aggregate (adjustSubtreeBytes, O(depth) ancestor updates) makes every write in the system update the '/' and '/home' inode rows. Those become one global hot row, which serialises all writers under RC and causes aborts under SERIALIZABLE. A recursive-CTE Q5 over a 1,000-node subtree measured p95 1.97 ms (server 2.0 ms) at 100k inodes, so no aggregate is needed.",
+   "DB-05 'before indexing' state: rolling back 002 only works while it is the newest migration (see factual errors). The benchmark needs its own perf-index toggle scripts.",
+   "\u00a717 clean bring-up (\u22643 commands, within 5 minutes, on a machine the team does not control): dbmate is listed as a devDependency, yet the production server entrypoint runs 'dbmate --wait up'. An image built with npm ci --omit=dev has no dbmate, so the first boot fails.",
+   "RAG-03/RAG-05: a permission-filtered HNSW query (ORDER BY embedding <=> $q LIMIT k with an ACL predicate) needs pgvector 0.8's SET LOCAL hnsw.iterative_scan inside the transaction, or it can return fewer than k rows. The filter must join the current inodes.mode and not a copied mode. This belongs to the vector-store record, but this layer must support it, and the record does not mention it."
+  ],
+  "weaknesses": [
+   "The recommendation packs an isolation and locking design into a tooling decision and defends it with a two-transaction prototype. The tooling choice holds up. The isolation design does not hold up under throughput, and one of its supporting claims (FOR UPDATE turns aborts into waits) is false.",
+   "The criteria mix two separate decisions: the query layer and the migration runner. C2 (15%) is really about the migration tool, which any query layer can pair with dbmate. It is not reverse-engineered, though. Sensitivity check: if every option gets dbmate (all C2 = 5), the scores are Kysely 94, raw postgres.js 88, Drizzle 86, MikroORM 73. With C5 corrected to 4, Kysely is 92. The winner is robust, and the record should publish this table to rebut the 'weights fitted to the winner' question.",
+   "The migration runner has no matrix of its own with at least 3 scored options. Kysely's own Migrator (TypeScript up/down, no extra binary) is never considered as an option. node-pg-migrate, Atlas and graphile-migrate appear only in the evidence.",
+   "The typed withRecursive advantage over Drizzle is overstated. In the record's own bench.mjs, the Kysely Q1 still needs four sql`` fragments: the seed row literal, 1::bigint, the text[] subscript and depth + 1. Recursive queries end up hybrid in both tools, which narrows the C3 and C4 gap.",
+   "The C5 score contradicts the record's own run 1, where Kysely+pg is the slowest path and trips reversal trigger #1. The quiet re-run clears Kysely, but it also shows a repeatable Q2 p99 of 8-9 ms, which the record does not mention.",
+   "The benchmark uses one fixed parameter per query (a single depth-8 path, a single 500-entry directory) and runs on a noisy host. The team plan acknowledges this, but the headline numbers in the record are still single-parameter numbers.",
+   "The int8 handling in design_notes uses setTypeParser(20, BigInt). JSON.stringify throws 'Do not know how to serialize a BigInt', and syscall results cross the WebSocket as JSON, so every ino, size, used_bytes and count(*) would crash the WS path unless it is converted.",
+   "The retry wrapper keeps state across attempts. The FaultInjector counter is not reset on retry, which changes what 'fail after N' means. toErrno must pass VfsError through unchanged, and the lock order is not global: users rows should be locked by uid first, then inodes by ino. The moveEntry sketch locks inodes before the quota row, which invites 40P01.",
+   "The 'every member can defend it' mitigation (each member writes one migration and one EXPLAIN) is good. It does not cover the isolation argument, however, which is the most likely viva question and currently the weakest part of the record."
+  ],
+  "amended_recommendation": "Decision (tooling unchanged): use Kysely 0.29.6, pinned exactly, as the only server-side data-access layer. Run it on node-postgres (pg 8.23.0) through the built-in PostgresDialect. Generate types with kysely-codegen 0.20.0 and check them in CI with --verify, using --type-mapping for vector and int8. The schema lives in plain-SQL dbmate 2.36.0 migrations, one file each with '-- migrate:up' and '-- migrate:down'. Vector distance helpers come from pgvector 0.3.0 ('pgvector/kysely'). Seed and benchmark tooling is our own: mulberry32 with seed 42, unnest() bulk inserts, performance.now(), and EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON). Database: PostgreSQL 18.6 with pgvector 0.8.6 (pgvector/pgvector:0.8.6-pg18) and random_page_cost=1.1. Stay on 18 through v1.0.0, because PostgreSQL 19 GA is targeted for the end of October 2026 at the earliest, after the freeze. The runner-up is raw postgres.js 3.4.9 with the same dbmate files. The fallback is a one-file dialect swap to kysely-postgres-js 5.0.0.\n\nIsolation level to declare in DATABASE.md (CHANGED): READ COMMITTED with explicit row locks for every VFS mutation (\u00a711.3 rule 7, the spec's second named option), under a fixed global lock order:\n(1) SELECT ... FROM users WHERE uid = ANY($owners) ORDER BY uid FOR UPDATE. These are the quota rows, locked first, in the transaction's first statement.\n(2) For a cross-directory move of a directory, pg_advisory_xact_lock(hashtext('vfs.dirmove')), a filesystem-wide rename lock like Linux's s_vfs_rename_mutex, and then the ancestor check. Each RC statement takes a fresh snapshot, so the check sees any move that committed first.\n(3) The affected directory inodes, ORDER BY ino FOR UPDATE. For rm -r, cp -r (source FOR SHARE), chmod -R and chown -R: plan, lock the subtree's directories, then re-plan inside the lock.\n(4) The writes, with the version guard UPDATE ... WHERE version = $expected for VFS-10.\nSET LOCAL lock_timeout = '2s' maps 55P03 to EBUSY. The withTx() wrapper still carries the DB-03 retry logic: up to 5 attempts with full jitter on 40P01 and 40001. It resets the fault and cancel state on each attempt, passes VfsError through, and maps other SQLSTATEs as follows: 23505\u2192EEXIST, 23503\u2192ENOENT, 23514\u2192EDQUOT/EINVAL/ENAMETOOLONG by constraint name. Read-only Q1-Q5 run under RC.\n\nEvidence for the change, from the examiner's probes on PG 18.6 at 100k inodes (scratchpad/exam/*.mjs; copy them into db/probes/):\n- Overlapping cross-moves, 50 trials. RC without the rename lock: 50/50 trials left a detached cycle. RC with the rename lock: 0/50, and the loser got EINVAL on its first attempt.\n- 10 users writing plus 2 workers doing a 300-node per-node cp -r. SERIALIZABLE: 91-97% of cp -r attempts aborted. RC with the lock protocol: 0 aborts.\n- SERIALIZABLE with FOR UPDATE produces wait-then-40001, not waits.\nDocumented alternative (reversal target): SERIALIZABLE with set-based bulk statements (measured 0-3% bulk aborts, but 7.7% for small writes with 30 busy users) and a trigger-based fault injector.\n\nSchema changes: inodes.ino becomes bigint PRIMARY KEY DEFAULT nextval('ino_seq'), not GENERATED ALWAYS. Each session reserves ino blocks while online (a sequence with INCREMENT BY 65536) and keeps one spare block for offline creation, so replayed outbox ops (OFF-02) never need ID remapping. Q5 uses a recursive CTE (measured p95 1.97 ms over a 1,000-node subtree). There is no ancestor-maintained subtree_bytes, which would make '/' and '/home' a global hot row. Only users.used_bytes and users.used_inodes are maintained, inside the same transaction. int8 values are parsed to Number behind a Number.isSafeInteger guard, not to BigInt, because syscall results cross the WebSocket as JSON. op_log stores each op's result, and a duplicate op_id returns the stored result.\n\nFault injection and agent kill: bulk ops keep explicit per-node statements inside one transaction, and tick() runs after each node op. tick() throws InjectedFault after N ops, and it also throws when the process's AbortSignal fires (AGT-09 kill). SET LOCAL statement_timeout bounds any single statement. The same plan feeds the agent dry run and blast radius (AGT-03) and the single IndexedDB transaction on the client (rule 5). The probes are the tree checksum, both orphan queries and an unchanged users.used_* row.\n\nMigrations and CI:\n- On every PR, against a pgvector/pgvector:0.8.6-pg18 service: dbmate --wait up; roll back one at a time in a loop, N taken from 'dbmate status', because dbmate has no --all; dbmate up again; then run 'dbmate dump' explicitly with pg_dump 18, either from ghcr.io/amacneil/dbmate:2.36.0 (verified pg_dump 18.6) or postgresql-client-18, and git diff --exit-code db/schema.sql. Auto-dump skips silently when pg_dump is missing. Also run up/down/up on the newest migration, kysely-codegen --verify, and the integration suites (fault injection, concurrent cross-moves including a 100-interleaving property test with the reachability probe, lock leases, outbox replay).\n- The DB-05 'before' state comes from db/bench/perf-indexes.down.sql and .up.sql (the same DDL as migration 002), not from rolling back 002.\n- Nightly: seed 100k with parameters drawn from the seeded generator, before/after runs, 3 repeats, report p50/p95/p99 plus EXPLAIN plans, and fail the build if any p95 exceeds 10 ms.\n- Production: compose runs a one-shot 'migrate' service from the dbmate image ('dbmate --wait --no-dump-schema up'). The server depends_on it with service_completed_successfully, then runs the idempotent demo seed. dbmate stays a devDependency, and bring-up is still 'docker compose up -d'.\n\nBackup and restore (DB-01): 'pg_dump -Fc' plus a snapshot of the blob/object store, taken together with a manifest. A documented 'pg_restore --clean' procedure. A monthly and pre-release CI restore drill that restores into an empty database and runs the integrity probes and checksum.\n\nScoring corrections: C5 for Kysely+pg goes to 4, giving 92. Add the sensitivity table (with dbmate for every option: Kysely 94, raw 88, Drizzle 86). Add a migration-runner mini-matrix: dbmate, node-pg-migrate 9, the Kysely Migrator, and drizzle-kit, which is expected to lose because it has no down command. Replace the run-1 latency numbers with measurements from the lab-spec machine.\n\nConsequences and reversal triggers are as in the record, plus:\n(a) Any unreachable dentry or orphan in the RC concurrency property test moves the team to SERIALIZABLE with set-based bulk operations.\n(b) More than 5% of mutations hitting 40P01 or 55P03 in the 50-client test means revisiting the lock order.\n(c) A Kysely+pg p99 above 5 ms on any of Q1-Q5 on the lab machine means swapping the dialect to kysely-postgres-js.",
+  "amended_chat_reason": "Keep Kysely, a type-safe SQL query builder, on the standard node-postgres driver, with plain-SQL dbmate migrations that each have a rollback section. It shows the exact SQL, types it, supports row locks and recursive queries, and costs well under 1 ms per query. One change: declare READ COMMITTED with explicit row locks plus a single filesystem-wide lock for directory moves, not SERIALIZABLE everywhere. In our contention tests, SERIALIZABLE aborted over 90% of recursive copies once ten other users were writing. The lock-based design had zero aborts and still kept concurrent folder moves consistent. Drizzle still lacks down migrations and recursive queries. Prisma is mid-way through a major version change during our freeze.",
+  "defence_qa": [
+   {
+    "question": "Rule 7 asks you to declare and justify an isolation level. Why READ COMMITTED and not SERIALIZABLE, which the spec's own example uses?",
+    "strong_answer": "Both are allowed. We measured both on PG 18.6 at 100k inodes. With 10 users writing and 2 workers doing a 300-node cp -r, SERIALIZABLE aborted 91-97% of cp -r attempts, because long per-node transactions build up SSI rw-conflicts and sequential inos create a rightmost-page hotspot. Adding FOR UPDATE does not help: under SERIALIZABLE the waiter waits and then gets 40001. READ COMMITTED with a fixed lock order had 0 aborts. We make RC safe for trees in three ways. Quota rows are locked first, in uid order. Directory rows are locked in ino order, and the bulk plan is recomputed after locking. Cross-directory moves of directories take one filesystem-wide advisory lock, the same idea as Linux's s_vfs_rename_mutex, before the ancestor check. Because each RC statement sees the latest committed tree, the second mover sees the first move and gets EINVAL. In 50 trials without the lock there were 50 cycles; with it there were 0. We still have retry logic for 40P01 and 40001, as DB-03 requires."
+   },
+   {
+    "question": "Kysely is still 0.x and 0.30 is in beta. Why bet an 18-week project on it?",
+    "strong_answer": "We pin 0.29.6 exactly, with no caret and automatic updates disabled. We read the 0.30 notes: they change Migrator transaction modes, which we don't use because dbmate runs our migrations, and they tighten Transaction type assignability, which only matters if we upgrade. Our exit is cheap. Migrations are plain SQL, so they don't depend on the ORM. Swapping the dialect to postgres.js is one file, and hot paths can drop to sql`` at any time. The reversal triggers are measurable: more than 1 ms p95 over the raw driver, more than 5 ms p99, more than 30% raw fragments, or a blocking bug with no fix within a week."
+   },
+   {
+    "question": "Your first prototype run had Kysely slower than raw pg by 1.5 ms. Why not write raw SQL?",
+    "strong_answer": "That run was on a noisy shared host. On a quiet host, the p95 overhead is 0.05-0.35 ms: Q1 0.49 against 0.41 ms, Q2 1.5-1.7 against 1.36-1.54 ms. Building the query costs about 10 \u00b5s. The query plan matters much more than the library: at the default random_page_cost, Q2 chose a Seq Scan and took 11.7 ms, against 0.5 ms with a Nested Loop. What we get back is compile-time errors on schema drift across five authors, via kysely-codegen --verify in CI, which raw SQL with hand-written types can't give us now that pgTyped is dormant. We report the p99 tail and will re-measure on the lab-spec machine."
+   },
+   {
+    "question": "How do you prove every migration really has a working rollback script?",
+    "strong_answer": "CI proves it on every PR. It runs dbmate up. Then it calls 'dbmate rollback' in a loop, once per applied migration, because dbmate only rolls back the newest one. Then it runs up again, dumps the schema explicitly with pg_dump 18 from the dbmate image, and diffs db/schema.sql. We call dump explicitly because dbmate's auto-dump skips silently if pg_dump is missing. The newest migration also gets its own up/down/up check. The DB-05 'before indexing' state comes from separate perf-index up and down scripts, so it doesn't depend on migration order."
+   },
+   {
+    "question": "Show us that rm -r failing at node 500 leaves nothing behind, and that killing the agent mid-plan rolls back.",
+    "strong_answer": "Every bulk operation first runs one recursive query to compute a plan. It then runs the plan node by node inside one withTx. After each node, tick() runs, and it throws either when the injected fault counter reaches N or when the process's AbortSignal fires (kill <pid>, AGT-09). An exception inside Kysely's transaction callback issues ROLLBACK, and statement_timeout bounds any single statement. Afterwards we run the probes: an md5 tree checksum over (parent, name, ino, mode, uid, size), both orphan queries from \u00a711.3, and the user's used_bytes and used_inodes. All must be unchanged. The same plan feeds the agent's dry run and the client's single IndexedDB transaction, so all three layers agree on which nodes are affected."
+   },
+   {
+    "question": "Files created offline need inode numbers before the server sees them. How does that fit your schema?",
+    "strong_answer": "Inode numbers are not GENERATED ALWAYS. ino is a bigint with a sequence default that increments in blocks of 65,536. While online, each session reserves a block and keeps a spare one, so the client can create files and directories offline with final inos, and the outbox replays them unchanged. The op_log primary key (the idempotency key) makes replay exactly-once, and op_log stores each op's result, so a client whose ack was lost gets the original outcome back."
+   }
+  ],
+  "extra_risks": [
+   {
+    "risk": "Using setTypeParser(20, BigInt) makes JSON.stringify throw 'Do not know how to serialize a BigInt' on the WebSocket and HTTPS syscall path, and every count(*), ino, size or used_bytes result fails at runtime.",
+    "mitigation": "Parse int8 to Number behind a Number.isSafeInteger guard (throw EOVERFLOW otherwise), align kysely-codegen with --type-mapping, and add a unit test that serialises a stat result."
+   },
+   {
+    "risk": "The production image is built with --omit=dev, so the entrypoint's 'dbmate up' is missing, and the examiner's 3-command clean bring-up fails on first boot.",
+    "mitigation": "Add a one-shot compose 'migrate' service from ghcr.io/amacneil/dbmate:2.36.0 with --no-dump-schema, and have the server depend_on it with service_completed_successfully. Rehearse the whole bring-up on a clean VM with an empty Docker cache."
+   },
+   {
+    "risk": "An RC lock protocol with a missing lock on one code path allows an anomaly that SERIALIZABLE would have caught.",
+    "mitigation": "Put all locking in one lockPlan(op) helper per syscall with the global order users \u2192 dirmove advisory lock \u2192 inodes by ino. Add a property-based concurrency test that runs random interleavings of mv, rm -r, cp -r, create and chmod -R across 2-8 clients, then fsck, the reachability probe and quota reconciliation, on every PR. Any failure triggers the fallback to SERIALIZABLE with set-based bulk ops."
+   },
+   {
+    "risk": "Filtered vector search (RAG-03/05) through HNSW returns fewer than k rows once the permission predicate is applied.",
+    "mitigation": "Run the query inside a transaction with SET LOCAL hnsw.iterative_scan = 'relaxed_order' and an appropriate hnsw.ef_search. Join the current inodes.mode and uid at query time, and cover it with an integration test that checks for zero leaks."
+   },
+   {
+    "risk": "Repeatable Q2 p99 of 8-9 ms through Kysely+pg (raw pg: 1.8 ms) turns into p95 misses on the slower lab-spec machine or under nightly CI noise.",
+    "mitigation": "Track p99 in the nightly report, profile the GC and result-copy path, and swap to kysely-postgres-js (one file) if the p99 on the lab machine exceeds 5 ms."
+   }
+  ]
+ }
+}

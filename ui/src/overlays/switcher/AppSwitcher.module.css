@@ -1,0 +1,213 @@
+/*
+ * Window switcher HUD (docs/design/stitch/overview-switcher, the bottom HUD): heavy HUD glass
+ * (live blur, DSN-24), 72 px app icons, and one highlight plate that slides by translateX to the
+ * chosen icon (a wrap-around cross-fades instead). The chosen icon grows to 1.08. Transform and
+ * opacity only; timings are tokens or calc(ms * --pl-k).
+ */
+.layer {
+  position: fixed;
+  inset: 0;
+  z-index: var(--pl-z-hud);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.contained {
+  position: absolute;
+  z-index: auto;
+}
+.hudWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--pl-space-3);
+  pointer-events: auto;
+}
+@keyframes hudIn {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+}
+@keyframes hudOut {
+  to {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+}
+/* backwards, not both: a finished opacity animation that keeps filling would make this wrapper a
+   backdrop root, and the HUD's backdrop-filter would stop seeing the desktop behind it. */
+.in {
+  animation: hudIn var(--pl-motion-med) var(--pl-ease-spring) backwards;
+}
+.out {
+  animation: hudOut calc(120ms * var(--pl-k)) var(--pl-ease-in) forwards;
+}
+.hud {
+  --pl-switch-index: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--pl-space-3);
+  padding: var(--pl-space-5) var(--pl-space-5) var(--pl-space-3);
+  border-radius: calc(var(--pl-radius-dock) + 6px);
+  background: var(--pl-glass-hud-bg);
+  -webkit-backdrop-filter: var(--pl-glass-hud-filter);
+  backdrop-filter: var(--pl-glass-hud-filter);
+  box-shadow:
+    var(--pl-shadow-dialog),
+    var(--pl-glass-specular),
+    inset 0 0 0 1px var(--pl-hairline);
+  color: var(--pl-text);
+  outline: none;
+}
+.hud:focus-visible {
+  outline: var(--pl-focus-ring);
+  outline-offset: var(--pl-focus-offset);
+}
+.row {
+  position: relative;
+  display: flex;
+  gap: 20px;
+}
+/* The plate sits under the chosen icon: 72 px icon + 8 px margin on each side. */
+.plate {
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  width: 88px;
+  height: 88px;
+  border-radius: calc(var(--pl-radius-sheet) + 4px);
+  background: color-mix(in srgb, var(--pl-text) 12%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--pl-accent) 50%, transparent),
+    0 8px 28px var(--pl-accent-glow),
+    inset 0 1px 0 color-mix(in srgb, var(--pl-text) 18%, transparent);
+  opacity: 0;
+  transform: translateX(calc(var(--pl-switch-index) * (72px + 20px)));
+  transition:
+    transform calc(180ms * var(--pl-k)) var(--pl-ease-spring-soft),
+    opacity var(--pl-motion-fast) var(--pl-ease);
+  pointer-events: none;
+}
+.plate[data-visible='true'] {
+  opacity: 1;
+}
+.plate[data-jump='true'] {
+  transition: opacity var(--pl-motion-fast) var(--pl-ease);
+}
+@keyframes itemIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+.item {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  animation: itemIn var(--pl-motion-med) var(--pl-ease-spring) backwards;
+  animation-delay: calc(var(--pl-stagger-index, 0) * 15ms * var(--pl-k));
+  cursor: default;
+}
+.icon {
+  display: block;
+  transform-origin: 50% 60%;
+  transition: transform calc(180ms * var(--pl-k)) var(--pl-ease-spring-soft);
+}
+.item[data-selected='true'] .icon {
+  transform: scale(1.08);
+}
+.item[data-state='minimised'] .icon,
+.item[data-state='suspended'] .icon {
+  opacity: 0.72;
+}
+.stateBadge,
+.count {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 var(--pl-space-1);
+  border-radius: var(--pl-radius-pill);
+  box-shadow: 0 0 0 1.5px var(--pl-glass-hud-bg);
+  font: var(--pl-type-caption);
+  font-size: calc(var(--pl-text-xs) - 1px);
+  font-weight: var(--pl-weight-bold);
+}
+.stateBadge {
+  right: -4px;
+  bottom: -4px;
+  background: var(--pl-surface-3);
+  color: var(--pl-text);
+}
+.count {
+  top: -6px;
+  right: -6px;
+  background: var(--pl-accent);
+  color: var(--pl-on-accent);
+}
+@keyframes captionIn {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+}
+.caption {
+  display: flex;
+  align-items: baseline;
+  gap: var(--pl-space-2);
+  margin: var(--pl-space-1) 0 0;
+  animation: captionIn var(--pl-motion-fast) var(--pl-ease) backwards;
+}
+.captionTitle {
+  font: var(--pl-type-headline);
+  font-size: var(--pl-text-md);
+}
+.captionMeta {
+  font: var(--pl-type-body);
+  font-variant-numeric: tabular-nums;
+  color: var(--pl-text-muted);
+}
+.hints {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--pl-space-1) var(--pl-space-2);
+  margin: 0;
+  padding: var(--pl-space-1) var(--pl-space-3);
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-glass-hud-bg);
+  -webkit-backdrop-filter: var(--pl-glass-hud-filter);
+  backdrop-filter: var(--pl-glass-hud-filter);
+  box-shadow: inset 0 0 0 var(--pl-hairline-width) var(--pl-hairline);
+  font: var(--pl-type-caption);
+  color: var(--pl-text-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .in,
+  .out,
+  .item,
+  .caption {
+    animation: none;
+  }
+  .plate,
+  .icon {
+    transition: none;
+  }
+  .item[data-selected='true'] .icon {
+    transform: none;
+  }
+}
+@media (forced-colors: active) {
+  .hud {
+    border: 1px solid CanvasText;
+  }
+  .plate {
+    border: 2px solid Highlight;
+  }
+}

@@ -1,0 +1,20 @@
+# One kernel per origin
+
+## The problem
+
+Plotinium's kernel runs in a dedicated worker started by the page. If the user opens the desktop in a second window or tab, a naive design starts a second kernel on the same IndexedDB database. Two schedulers, two process tables and two writers to the same inode store: corrupted state and duplicated background jobs.
+
+## Options we looked at
+
+1. **SharedWorker:** one worker shared by all same-origin pages. Clean, but no SharedWorker on Chrome for Android and harder debugging.
+2. **Leader election with the Web Locks API:** every page requests an exclusive lock named `plotinium-kernel`. Only the holder boots the kernel; the others wait in the lock queue and attach to it as clients through a BroadcastChannel. When the holder closes, the lock is released automatically and the next page in the queue takes over and boots.
+3. **localStorage heartbeat:** fragile, timers get throttled in background tabs.
+
+## Decision
+
+Option 2. The lock is released by the browser even if the tab crashes, which a heartbeat can't guarantee. The follower tab shows a small banner "Plotinium is running in another window — [Use here]" which asks the leader to hand over.
+
+## Consequences
+
+- No leader election for the indexer: there is exactly one per origin automatically.
+- Tests must open two contexts and check that only one boot log appears.

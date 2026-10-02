@@ -1,0 +1,7 @@
+<!doctype html><meta charset="utf-8"><title>bench</title>
+<script type="module">
+const w = new Worker('/worker2.mjs', { type: 'module' });
+w.onmessage = (e) => { if (e.data.progress) console.log('done ' + e.data.progress + ' @' + Math.round(e.data.t)); else window.__result = e.data; };
+w.onerror = (e) => { window.__result = { ok:false, err: 'worker error ' + e.message }; };
+w.postMessage('go');
+</script>

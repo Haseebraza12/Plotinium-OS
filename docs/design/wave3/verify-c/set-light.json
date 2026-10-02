@@ -1,0 +1,945 @@
+{
+  "sections": {
+    "general": {
+      "text": "Ctrl | + | F | E | examiner2 | Plotinium Account · uid 1201 | General | Appearance | Desktop & Dock | Memory | Scheduler | Network & Sync | Privacy & AI | Users & Groups | Storage | Updates | About | General | THIS DEVICE | Name | Not available in this build: nothing uses the device name yet. | Device name | About | Plotinium 0.1.0-dev.0 | Storage | 61 MB of 5.1 GB | Updates | Up to date | LANGUAGE & TIME | Language | Not available in this build: Plotinium is in English (UK) only. | Language | English (UK) | 24-hour time | The menu bar clock and file times. | STARTUP | Show the boot menu on next boot | Once only: Normal, Safe mode, Verbose or Recovery. | Verbose boot by default | Show the service log instead of the splash. | Plotinium 0.1.0-dev.0 · build 6df55c0",
+      "controls": [
+        {
+          "t": "Search settings",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "examiner2, Plotinium Account, uid 1201",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Back",
+          "dis": true,
+          "desc": ""
+        },
+        {
+          "t": "Forward",
+          "dis": true,
+          "desc": ""
+        },
+        {
+          "t": "Plotinium",
+          "dis": true,
+          "desc": ""
+        },
+        {
+          "t": "About Plotinium 0.1.0-dev.0",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Storage 61 MB of 5.1 GB",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Updates Up to date",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "English (UK)",
+          "dis": true,
+          "desc": "Not available in this build: Plotinium is in English (UK) only."
+        },
+        {
+          "t": "switch",
+          "dis": false,
+          "desc": "The menu bar clock and file times."
+        },
+        {
+          "t": "switch",
+          "dis": false,
+          "desc": "Once only: Normal, Safe mode, Verbose or Recovery."
+        },
+        {
+          "t": "switch",
+          "dis": false,
+          "desc": "Show the service log instead of the splash."
+        }
+      ],
+      "clipped": [],
+      "overflow": 0,
+      "low": [
+        {
+          "t": "E",
+          "c": 1.01,
+          "fs": "20.16px",
+          "cls": ""
+        },
+        {
+          "t": "General",
+          "c": 1.01,
+          "fs": "13px",
+          "cls": "_label_1ijtm_204"
+        }
+      ]
+    },
+    "appearance": {
+      "text": "Ctrl | + | F | E | examiner2 | Plotinium Account · uid 1201 | General | Appearance | Desktop & Dock | Memory | Scheduler | Network & Sync | Privacy & AI | Users & Groups | Storage | Updates | About | Appearance | THEME | Follow system | Light | Dark | ACCENT COLOUR | Violet | Controls, selections and focus rings use the accent. | ACCESSIBILITY | Reduce motion | Animations become instant changes. Live charts redraw in place. | Reduce motion | Follow system | Reduce transparency | Glass surfaces become solid for easier reading. | Reduce transparency | Follow system | Plotinium 0.1.0-dev.0 · build 6df55c0",
+      "controls": [
+        {
+          "t": "Search settings",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "examiner2, Plotinium Account, uid 1201",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Back",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Forward",
+          "dis": true,
+          "desc": ""
+        },
+        {
+          "t": "Follow system",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Light",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Dark",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Violet",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Blue",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Purple",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Pink",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Red",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Orange",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Yellow",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Green",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Graphite",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Follow system",
+          "dis": false,
+          "desc": "Animations become instant changes. Live charts redraw in place."
+        },
+        {
+          "t": "Follow system",
+          "dis": false,
+          "desc": "Glass surfaces become solid for easier reading."
+        }
+      ],
+      "clipped": [],
+      "overflow": 0,
+      "low": [
+        {
+          "t": "E",
+          "c": 1.01,
+          "fs": "20.16px",
+          "cls": ""
+        },
+        {
+          "t": "Appearance",
+          "c": 1.01,
+          "fs": "13px",
+          "cls": "_label_1ijtm_204"
+        }
+      ]
+    },
+    "desktop": {
+      "text": "Ctrl | + | F | E | examiner2 | Plotinium Account · uid 1201 | General | Appearance | Desktop & Dock | Memory | Scheduler | Network & Sync | Privacy & AI | Users & Groups | Storage | Updates | About | Desktop & Dock | DOCK | Size | 52 px | 40 px | 80 px | Magnification | Icons grow under the pointer. Off when motion is reduced. | Magnified size | 145% | 110% | 180% | Minimise windows using | Minimise windows using | Genie effect | Automatically hide and show the Dock | Show indicators for open apps | Show suggested apps in the Dock | Not available in this build. | WINDOWS | Double-click a window’s title bar to | Double-click a window’s title bar to | Zoom | Plotinium 0.1.0-dev.0 · build 6df55c0",
+      "controls": [
+        {
+          "t": "Search settings",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "examiner2, Plotinium Account, uid 1201",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Back",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Forward",
+          "dis": true,
+          "desc": ""
+        },
+        {
+          "t": "Size",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "switch",
+          "dis": false,
+          "desc": "Icons grow under the pointer. Off when motion is reduced."
+        },
+        {
+          "t": "Magnified size",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Genie effect",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "switch",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "switch",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "switch",
+          "dis": true,
+          "desc": "Not available in this build."
+        },
+        {
+          "t": "Zoom",
+          "dis": false,
+          "desc": ""
+        }
+      ],
+      "clipped": [],
+      "overflow": 0,
+      "low": [
+        {
+          "t": "E",
+          "c": 1.01,
+          "fs": "20.16px",
+          "cls": ""
+        },
+        {
+          "t": "Desktop & Dock",
+          "c": 1.01,
+          "fs": "13px",
+          "cls": "_label_1ijtm_204"
+        }
+      ]
+    },
+    "memory": {
+      "text": "Ctrl | + | F | E | examiner2 | Plotinium Account · uid 1201 | General | Appearance | Desktop & Dock | Memory | Scheduler | Network & Sync | Privacy & AI | Users & Groups | Storage | Updates | About | Memory | How much memory processes may hold, and where paged-out memory goes. | MEMORY BUDGET | Global budget | Resident process memory the kernel may hand out (MEM-01). Raising it applies at once. | 256 MB | 64 MB | 2,048 MB | In use now | 0 MB accounted | Per-process soft limit | Above it a process is marked ! and its pages are evicted first. It is never blocked for it. | 64 MB | 8 MB | 256 MB | Background reclaim starts above 85% and stops at 75% of the budget. | SWAP | Keep swapped pages only on the server | Demo mode, the same as swapctl --tier remote: page-outs skip the local tier. | Local tier | OPFS · write-behind to server: on | Restore defaults | Plotinium 0.1.0-dev.0 · build 6df55c0",
+      "controls": [
+        {
+          "t": "Search settings",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "examiner2, Plotinium Account, uid 1201",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Back",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Forward",
+          "dis": true,
+          "desc": ""
+        },
+        {
+          "t": "Global budget",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Per-process soft limit",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "switch",
+          "dis": false,
+          "desc": "Demo mode, the same as swapctl --tier remote: page-outs skip the local tier."
+        },
+        {
+          "t": "Restore defaults",
+          "dis": false,
+          "desc": ""
+        }
+      ],
+      "clipped": [],
+      "overflow": 0,
+      "low": [
+        {
+          "t": "E",
+          "c": 1.01,
+          "fs": "20.16px",
+          "cls": ""
+        },
+        {
+          "t": "Memory",
+          "c": 1.01,
+          "fs": "13px",
+          "cls": "_label_1ijtm_204"
+        }
+      ]
+    },
+    "scheduler": {
+      "text": "Ctrl | + | F | E | examiner2 | Plotinium Account · uid 1201 | General | Appearance | Desktop & Dock | Memory | Scheduler | Network & Sync | Privacy & AI | Users & Groups | Storage | Updates | About | Scheduler | How the CPU is shared between processes, and the longest any of them can wait. | QUANTUM PER BAND | Interactive (PRI 0–9) | The focused window and the foreground job. Default 5 ms. | 5 ms | 2 ms | 50 ms | Normal (PRI 10–29) | Default 10 ms. | 10 ms | 2 ms | 50 ms | Background (PRI 30–39) | The indexer and pre-fetch jobs. Paused while you drag. Default 20 ms. | 20 ms | 2 ms | 50 ms | Round-robin among equal priorities; a change applies from the next dispatch. | AGING | Aging interval (T_age) | A waiting process gains one priority level per interval. Default 100 ms. | 100 ms | 50 ms | 1,000 ms | Declared starvation bound (PROC-04) | (p + 1)·Tage + ⌈(N − 1)/E⌉·(Q + δ) + Hkill with p = 39, N = 51, E = 1 | 5,450 ms | Restore defaults | Plotinium 0.1.0-dev.0 · build 6df55c0",
+      "controls": [
+        {
+          "t": "Search settings",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "examiner2, Plotinium Account, uid 1201",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Back",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Forward",
+          "dis": true,
+          "desc": ""
+        },
+        {
+          "t": "Interactive (PRI 0–9)",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Normal (PRI 10–29)",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Background (PRI 30–39)",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Aging interval (T_age)",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Restore defaults",
+          "dis": false,
+          "desc": ""
+        }
+      ],
+      "clipped": [],
+      "overflow": 0,
+      "low": [
+        {
+          "t": "E",
+          "c": 1.01,
+          "fs": "20.16px",
+          "cls": ""
+        },
+        {
+          "t": "Scheduler",
+          "c": 1.01,
+          "fs": "13px",
+          "cls": "_label_1ijtm_204"
+        }
+      ]
+    },
+    "network": {
+      "text": "Ctrl | + | F | E | examiner2 | Plotinium Account · uid 1201 | General | Appearance | Desktop & Dock | Memory | Scheduler | Network & Sync | Privacy & AI | Users & Groups | Storage | Updates | About | Network & Sync | Your connection to the Plotinium server and what syncs through it. | CONNECTION | Status | Last synced never | Online | Sync now | Server | localhost:4718 | SYNC | Sync files | Not available in this build. | Write paged-out memory to the server | Not available in this build. | Telemetry sync | Off | Plotinium 0.1.0-dev.0 · build 6df55c0",
+      "controls": [
+        {
+          "t": "Search settings",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "examiner2, Plotinium Account, uid 1201",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Back",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Forward",
+          "dis": true,
+          "desc": ""
+        },
+        {
+          "t": "Sync now",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "switch",
+          "dis": true,
+          "desc": "Not available in this build."
+        },
+        {
+          "t": "switch",
+          "dis": true,
+          "desc": "Not available in this build."
+        },
+        {
+          "t": "Telemetry sync Off",
+          "dis": false,
+          "desc": ""
+        }
+      ],
+      "clipped": [],
+      "overflow": 0,
+      "low": [
+        {
+          "t": "E",
+          "c": 1.01,
+          "fs": "20.16px",
+          "cls": ""
+        },
+        {
+          "t": "Network & Sync",
+          "c": 1.01,
+          "fs": "13px",
+          "cls": "_label_1ijtm_204"
+        }
+      ]
+    },
+    "privacy": {
+      "text": "Ctrl | + | F | E | examiner2 | Plotinium Account · uid 1201 | General | Appearance | Desktop & Dock | Memory | Scheduler | Network & Sync | Privacy & AI | Users & Groups | Storage | Updates | About | Privacy & AI | Control what Plotinium records, what stays on this device, and what the AI agent may do. | USAGE TELEMETRY | Keep telemetry on this device | Always on. Telemetry never leaves the device unless you opt in. | Required for app pre-fetch. Never leaves the device unless you opt in. | Sync telemetry to server | Off. Sends launch, focus and close events to your account so a new device can predict your apps. | Recent events | 2 events · 0 KB · oldest 30 Sept 2026, 20:50 · predictor cold start 0/50 launches | Recent telemetry events | Time\tEvent\tApp\tPrevious app\tTime bucket | 20:50:28\t | focus\tsettings\t—\t20:00–24:00 weekday | 20:50:28\t | launch\tsettings\t—\t20:00–24:00 weekday | App ids and times only. No file names, paths or content. | All events shown | Export… | Clear telemetry | SEMANTIC SEARCH | Embedding model | Model loading — showing keyword matches | MongoDB/mdbr-leaf-ir@4262131b-q8-d384-chunker-v1 | (starting) | On-device | Index status | Checking for changes | Rebuild index | 0 of 0 chunks indexed · ai.indexer pid 14 · priority 32 | Rebuilding the index from Settings is not available in this build. | AI AGENT | Provider | Plotinium server (LLM proxy) | Connected | Monthly budget | The server has not reported this month’s budget yet. | Not reported | Require confirm",
+      "controls": [
+        {
+          "t": "Search settings",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "examiner2, Plotinium Account, uid 1201",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Back",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Forward",
+          "dis": true,
+          "desc": ""
+        },
+        {
+          "t": "switch",
+          "dis": true,
+          "desc": "Always on. Telemetry never leaves the device unless you opt in. Required for app pre-fetch"
+        },
+        {
+          "t": "switch",
+          "dis": false,
+          "desc": "Off. Sends launch, focus and close events to your account so a new device can predict your"
+        },
+        {
+          "t": "All events shown",
+          "dis": true,
+          "desc": ""
+        },
+        {
+          "t": "Export…",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Clear telemetry",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Rebuild index",
+          "dis": true,
+          "desc": "Rebuilding the index from Settings is not available in this build."
+        },
+        {
+          "t": "switch",
+          "dis": true,
+          "desc": "The kernel always asks before deletes, overwrites, permission changes, system paths and pl"
+        },
+        {
+          "t": "Open ai log…",
+          "dis": false,
+          "desc": ""
+        }
+      ],
+      "clipped": [],
+      "overflow": 0,
+      "low": [
+        {
+          "t": "E",
+          "c": 1.01,
+          "fs": "20.16px",
+          "cls": ""
+        },
+        {
+          "t": "Privacy & AI",
+          "c": 1.01,
+          "fs": "13px",
+          "cls": "_label_1ijtm_204"
+        }
+      ]
+    },
+    "users": {
+      "text": "Ctrl | + | F | E | examiner2 | Plotinium Account · uid 1201 | General | Appearance | Desktop & Dock | Memory | Scheduler | Network & Sync | Privacy & AI | Users & Groups | Storage | Updates | About | Users & Groups | USERS | R | root | Administrator · uid 0 · root | E | examiner2 | Standard · uid 1201 · users, examiners | You | Accounts live on the server; this device keeps an offline verifier. | Add user… | Only an administrator can add users | GROUPS | root | gid 0 | root | users | gid 100 | examiner2 | examiners | gid 300 | examiner2 | Accounts are changed on the Plotinium server. This build cannot change them from Settings yet. | Change password… | Forget this device | Plotinium 0.1.0-dev.0 · build 6df55c0",
+      "controls": [
+        {
+          "t": "Search settings",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "examiner2, Plotinium Account, uid 1201",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Back",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Forward",
+          "dis": true,
+          "desc": ""
+        },
+        {
+          "t": "Add user…",
+          "dis": true,
+          "desc": "Accounts are changed on the Plotinium server. This build cannot change them from Settings "
+        },
+        {
+          "t": "Change password…",
+          "dis": true,
+          "desc": "Accounts are changed on the Plotinium server. This build cannot change them from Settings "
+        },
+        {
+          "t": "Forget this device",
+          "dis": true,
+          "desc": "Accounts are changed on the Plotinium server. This build cannot change them from Settings "
+        }
+      ],
+      "clipped": [],
+      "overflow": 0,
+      "low": [
+        {
+          "t": "E",
+          "c": 1.01,
+          "fs": "20.16px",
+          "cls": ""
+        },
+        {
+          "t": "Users & Groups",
+          "c": 1.01,
+          "fs": "13px",
+          "cls": "_label_1ijtm_204"
+        },
+        {
+          "t": "R",
+          "c": 1.01,
+          "fs": "10.08px",
+          "cls": ""
+        },
+        {
+          "t": "E",
+          "c": 1.01,
+          "fs": "10.08px",
+          "cls": ""
+        }
+      ]
+    },
+    "storage": {
+      "text": "Ctrl | + | F | E | examiner2 | Plotinium Account · uid 1201 | General | Appearance | Desktop & Dock | Memory | Scheduler | Network & Sync | Privacy & AI | Users & Groups | Storage | Updates | About | Storage | THIS DEVICE | 61 MB of 5.1 GB used | System & caches | 61 MB | Trash | Items in the Trash still count against the quota. | 0 KB | Empty Trash | CLOUD | Server storage | Synced files and remote swap. | 0 KB of 1.0 GB | Plotinium 0.1.0-dev.0 · build 6df55c0",
+      "controls": [
+        {
+          "t": "Search settings",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "examiner2, Plotinium Account, uid 1201",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Back",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Forward",
+          "dis": true,
+          "desc": ""
+        },
+        {
+          "t": "Empty Trash",
+          "dis": true,
+          "desc": ""
+        }
+      ],
+      "clipped": [],
+      "overflow": 0,
+      "low": [
+        {
+          "t": "E",
+          "c": 1.01,
+          "fs": "20.16px",
+          "cls": ""
+        },
+        {
+          "t": "Storage",
+          "c": 1.01,
+          "fs": "13px",
+          "cls": "_label_1ijtm_204"
+        }
+      ]
+    },
+    "updates": {
+      "text": "Ctrl | + | F | E | examiner2 | Plotinium Account · uid 1201 | General | Appearance | Desktop & Dock | Memory | Scheduler | Network & Sync | Privacy & AI | Users & Groups | Storage | Updates | About | Updates | Plotinium 0.1.0-dev.0 is up to date | Last checked at startup | SETTINGS | Install updates automatically | Not available in this build. | Channel | Not available in this build. | Channel | Stable | Check for updates | Plotinium 0.1.0-dev.0 · build 6df55c0",
+      "controls": [
+        {
+          "t": "Search settings",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "examiner2, Plotinium Account, uid 1201",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Back",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Forward",
+          "dis": true,
+          "desc": ""
+        },
+        {
+          "t": "switch",
+          "dis": true,
+          "desc": "Not available in this build."
+        },
+        {
+          "t": "Stable",
+          "dis": true,
+          "desc": "Not available in this build."
+        },
+        {
+          "t": "Check for updates",
+          "dis": false,
+          "desc": ""
+        }
+      ],
+      "clipped": [],
+      "overflow": 0,
+      "low": [
+        {
+          "t": "E",
+          "c": 1.01,
+          "fs": "20.16px",
+          "cls": ""
+        },
+        {
+          "t": "Updates",
+          "c": 1.01,
+          "fs": "13px",
+          "cls": "_label_1ijtm_204"
+        }
+      ]
+    },
+    "about": {
+      "text": "Ctrl | + | F | E | examiner2 | Plotinium Account · uid 1201 | General | Appearance | Desktop & Dock | Memory | Scheduler | Network & Sync | Privacy & AI | Users & Groups | Storage | Updates | About | About | Plotinium | A local-first web OS that pages its own memory and lets AI act only through the kernel. | Version 0.1.0-dev.0 (build 6df55c0) · up to date on this channel | SYSTEM | Version | 0.1.0-dev.0 (build 6df55c0) | Built | 2026-09-30 | Kernel | plotinium 0.1.0-dev.0-6df55c0 | Host | Chrome 153 · 12 cores | Memory budget | 256 MB | Storage | OPFS 61 MB | Signed in | examiner2 · uid 1201 | TEAM | Member to be announced | R1 · Systems Architect | Kernel | Member to be announced | R2 · Database Engineer | VFS / Database | Member to be announced | R3 · UI Subsystem Lead | WM / UI | Member to be announced | R4 · Pipeline Specialist | AI Pipeline | Member to be announced | R5 · Integration Engineer | QA / DevOps | System Report… | Licences | Copy uname | Capstone, Fall 2026 | © 2026 Plotinium Team",
+      "controls": [
+        {
+          "t": "Search settings",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "examiner2, Plotinium Account, uid 1201",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Back",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Forward",
+          "dis": true,
+          "desc": ""
+        },
+        {
+          "t": "Copy version",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Copy built",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Copy kernel",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Copy host",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Copy memory budget",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Copy storage",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Copy signed in",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "System Report…",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Licences",
+          "dis": false,
+          "desc": ""
+        },
+        {
+          "t": "Copy uname",
+          "dis": false,
+          "desc": ""
+        }
+      ],
+      "clipped": [],
+      "overflow": 0,
+      "low": [
+        {
+          "t": "E",
+          "c": 1.01,
+          "fs": "20.16px",
+          "cls": ""
+        },
+        {
+          "t": "About",
+          "c": 1.01,
+          "fs": "13px",
+          "cls": "_label_1ijtm_204"
+        },
+        {
+          "t": "QA / DevOps",
+          "c": 4.25,
+          "fs": "12px",
+          "cls": "_roleChip_vbxsq_260 _role-R5_vbxsq_284"
+        }
+      ]
+    }
+  },
+  "winBox": {
+    "x": 40,
+    "y": 68,
+    "width": 880,
+    "height": 620
+  },
+  "testids": {
+    "settings": true
+  },
+  "sidebar": [
+    "General",
+    "Appearance",
+    "Desktop & Dock",
+    "Memory",
+    "Scheduler",
+    "Network & Sync",
+    "Privacy & AI",
+    "Users & Groups",
+    "Storage",
+    "Updates",
+    "About"
+  ],
+  "avatarPix": [
+    {
+      "bg": [240, 240, 242],
+      "fg": [150, 43, 94],
+      "ratio": 6.58
+    },
+    {
+      "bg": [254, 254, 255],
+      "fg": [142, 70, 23],
+      "ratio": 6.86
+    },
+    {
+      "bg": [254, 254, 255],
+      "fg": [151, 43, 94],
+      "ratio": 7.38
+    }
+  ],
+  "clearPix": {
+    "bg": [254, 226, 226],
+    "fg": [167, 6, 19],
+    "ratio": 6.42
+  },
+  "themeToggle": true,
+  "accents": {
+    "Violet": {
+      "attr": "violet",
+      "accent": "#5856d6",
+      "text": "#4f4dc9"
+    },
+    "Blue": {
+      "attr": "blue",
+      "accent": "#0066d6",
+      "text": "#0062c8"
+    },
+    "Purple": {
+      "attr": "purple",
+      "accent": "#a233ca",
+      "text": "#9a2ec2"
+    },
+    "Pink": {
+      "attr": "pink",
+      "accent": "#d21767",
+      "text": "#c0155f"
+    },
+    "Red": {
+      "attr": "red",
+      "accent": "#d9151f",
+      "text": "#c4131c"
+    },
+    "Orange": {
+      "attr": "orange",
+      "accent": "#b04c00",
+      "text": "#a84800"
+    },
+    "Yellow": {
+      "attr": "yellow",
+      "accent": "#8c5f00",
+      "text": "#875c00"
+    },
+    "Green": {
+      "attr": "green",
+      "accent": "#1c7835",
+      "text": "#1b7433"
+    }
+  },
+  "accentNames": [
+    "Violet",
+    "Blue",
+    "Purple",
+    "Pink",
+    "Red",
+    "Orange",
+    "Yellow",
+    "Green",
+    "Graphite"
+  ],
+  "notice": {
+    "text": "",
+    "box": [52, 249, 1, 1],
+    "overlaps": ["General"]
+  },
+  "memSlider": {
+    "before": "256 KB/256 MB",
+    "after": "256 KB/272 MB",
+    "back": "256 KB/256 MB",
+    "disabled": false
+  },
+  "viewMenu": [
+    "General",
+    "Appearance",
+    "Desktop & Dock",
+    "Memory",
+    "Scheduler",
+    "Network & Sync",
+    "Privacy & AI",
+    "Users & Groups",
+    "Storage",
+    "Updates",
+    "About"
+  ],
+  "axe": {
+    "General": [],
+    "Appearance": [],
+    "Privacy & AI": [],
+    "Users & Groups": [],
+    "About": []
+  },
+  "csp": [],
+  "errors": [],
+  "warnings": []
+}

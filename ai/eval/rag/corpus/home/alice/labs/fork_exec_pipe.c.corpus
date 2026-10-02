@@ -1,0 +1,37 @@
+/* Lab 3: run `ls -l | sort -k5 -n` by hand: pipe, two forks, dup2, exec, wait. */
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
+int main(void) {
+    int fd[2];
+    if (pipe(fd) < 0) { perror("pipe"); return 1; }
+
+    pid_t left = fork();
+    if (left == 0) {
+        dup2(fd[1], STDOUT_FILENO);
+        close(fd[0]);
+        close(fd[1]);
+        execlp("ls", "ls", "-l", (char *)NULL);
+        perror("exec ls");
+        _exit(127);
+    }
+
+    pid_t right = fork();
+    if (right == 0) {
+        dup2(fd[0], STDIN_FILENO);
+        close(fd[0]);
+        close(fd[1]);
+        execlp("sort", "sort", "-k5", "-n", (char *)NULL);
+        perror("exec sort");
+        _exit(127);
+    }
+
+    /* the parent must close both ends or sort never sees EOF */
+    close(fd[0]);
+    close(fd[1]);
+    waitpid(left, NULL, 0);
+    waitpid(right, NULL, 0);
+    return 0;
+}

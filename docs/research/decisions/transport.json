@@ -1,0 +1,771 @@
+{
+ "key": "transport",
+ "title": "Real-time transport, sync protocol & distributed locks",
+ "record": {
+  "decision_title": "DR-04: Real-time transport, sync protocol and distributed locks (Plotinium OS)",
+  "context_constraints_ranked": [
+   "1. Multi-user correctness is graded directly. VFS-09: lease-based S/X locks, a second writer gets EBUSY or read-only access, and a crashed holder's lock expires within the lease time. VFS-10: concurrent writes are detected by version and the loser is kept as a conflicted copy, never silently overwritten. OFF-02: a durable outbox replayed exactly once using idempotency keys. DB-02/DB-03: one transaction per user-visible operation. The server is the authority for locks and quotas (architecture boundary 3).",
+   "2. The server has to push events: lock grants, change broadcasts to the user's other sessions, and process events for server-side jobs (agent executor, indexer), at up to about 20 msgs/s per client during bulk operations. Team-set target, following the spec's own example trigger: lock-grant latency p95 <= 200 ms with 50 clients on the production VPS, network included.",
+   "3. Local-first and non-blocking boot. sync and lockd are non-critical services (BOOT-07, and the spec's reference boot log shows 'lockd: DEGRADED ... local advisory locks only'). Boot to a usable desktop offline (BOOT-09, OFF-01). Warm boot <= 1.5 s and cold <= 3.0 s (BOOT-10), so the desktop must never wait for the socket. The taskbar shows connectivity and degraded services (OFF-04).",
+   "4. The main thread only renders (boundary 2; PROC-05; at most 4 ms of kernel work per frame). Socket I/O, JSON parsing and IndexedDB writes run in a Worker. Client bundle size counts against the boot budget.",
+   "5. Network robustness. The final defence runs on a machine and network the team does not control. Reverse proxies close idle sockets (nginx defaults to 60 s). Some networks block the WebSocket Upgrade or UDP/QUIC. Chrome throttles and freezes background tabs.",
+   "6. Student budget: one cheap VPS that must hold thousands of mostly idle long-lived connections, so memory and idle traffic per connection matter.",
+   "7. Team skills and time. The team knows JS/TS and some Node, has 18 weeks, and every member must be able to defend the protocol in the viva. The spec penalises arbitrary extra components."
+  ],
+  "options": [
+   {
+    "name": "A. Raw WebSocket + own JSON protocol (browser-native WebSocket in the kernel's sync Worker; `ws` on Node)",
+    "current_version": "ws 8.21.3 (MIT, published 2026-08-07); browser WebSocket is native",
+    "summary": "One full-duplex, TCP-ordered connection per OS session. On top of it the team writes a small protocol: sequence numbers, cumulative acks, idempotent ops, app-level heartbeats that renew leases, resume from a durable server feed, and exponential backoff with full jitter. Blobs and swap pages travel over HTTPS.",
+    "status_notes": "ws is actively maintained (8.21.3, Aug 2026). The server disables permessage-deflate by default. The README documents the ping/pong liveness pattern and noServer/handleUpgrade authentication. Reconnection and fallback must be hand-written (about 300-500 LOC). The old helper `reconnecting-websocket` was last published in 2020, so it should not be used. EXPECTED WINNER."
+   },
+   {
+    "name": "B. Socket.IO v4 (engine.io, long-polling fallback, rooms, acks, connection-state recovery)",
+    "current_version": "socket.io 4.8.3 / socket.io-client 4.8.3 (MIT, 2025-12-23)",
+    "summary": "A framework over WebSocket with an HTTP long-polling fallback, automatic reconnection, rooms and acks.",
+    "status_notes": "Still maintained, but no release since Dec 2025. Its own docs say delivery is at-most-once by default, there is no exactly-once, and at-least-once needs app-level IDs and offsets. Connection-state recovery 'will not always be successful' and depends on the adapter. Measured: 13.5 KB gz client and about 4x the server memory per connection of ws. The main reason to pick it is the polling fallback for networks that block Upgrade."
+   },
+   {
+    "name": "C. Server-Sent Events (server->client) + HTTP POST (client->server) over HTTP/2",
+    "current_version": "Native EventSource/fetch; no library",
+    "summary": "Push arrives on an SSE stream with built-in reconnection and Last-Event-ID resume. Client ops go as individual POSTs.",
+    "status_notes": "Works through most HTTP proxies. It needs HTTP/2, because on HTTP/1.1 Chrome caps SSE at 6 connections per browser and domain across all tabs. Buffering proxies must be configured off. It uses two channels, so client ops and server events have no shared ordering. It is the natural fallback adapter if Upgrade is blocked."
+   },
+   {
+    "name": "D. HTTP long polling (and 1-second short polling as the baseline)",
+    "current_version": "Native fetch; no library",
+    "summary": "The client holds a pending request that the server completes on the next event (since=cursor), then re-polls. Short polling asks every second.",
+    "status_notes": "Works everywhere. Each event burst costs a full request and response with headers, plus a re-poll round trip. With 1-second polling, a lock grant waits a measured p50 of 476 ms (see evidence) and each idle client makes 3,600 requests per hour. EXPECTED TO LOSE."
+   },
+   {
+    "name": "E. WebTransport (HTTP/3 / QUIC)",
+    "current_version": "Browser: Chrome 97+, Firefox 114+, Safari 26.4+ (Baseline in 2026). Node server: @fails-components/webtransport 1.6.8 (BSD-3) or experimental node:quic",
+    "summary": "Multiplexed bidirectional streams and datagrams over QUIC, with no head-of-line blocking between streams.",
+    "status_notes": "Browser support is fine in 2026, but the server side is not. The main Node library calls itself a 'duct tape-style solution until ... native support ... is provided by node itself' and needs a native build toolchain. node:quic sits behind --experimental-quic at an early-development stability level. QUIC also needs UDP/443, which institutional networks often block."
+   },
+   {
+    "name": "F. WebRTC data channels",
+    "current_version": "Browser-native RTCPeerConnection; server: node-datachannel 0.33.4 (MPL-2.0, native) or werift 0.24.4",
+    "summary": "SCTP over DTLS/UDP channels, reliable and ordered or not.",
+    "status_notes": "It is built for peer-to-peer, not client-server. It still needs a signalling channel (a WebSocket or HTTP anyway), plus STUN/TURN for restrictive networks and a native server addon. RTCPeerConnection setup runs on the main thread. A data channel is transferable to a worker in Chrome 130+. EXPECTED TO LOSE."
+   }
+  ],
+  "criteria": [
+   {
+    "name": "C1 Server push + bidirectional ordering",
+    "weight": 20,
+    "why": "Lock grants, vfs.changed broadcasts and remote process events start on the server. Client ops and server events on one ordered channel make causality and the ack protocol simple (VFS-09, VFS-10, OFF-02)."
+   },
+   {
+    "name": "C2 Push latency",
+    "weight": 15,
+    "why": "A waiting editor needs its lock grant fast. The team target is lock-grant p95 <= 200 ms with 50 clients on the VPS. Change broadcasts feed RAG-02 (index consistent within 30 s)."
+   },
+   {
+    "name": "C3 Control over delivery/resume semantics",
+    "weight": 15,
+    "why": "Exactly-once replay (OFF-02) and resume after a disconnect need our own sequence numbers and idempotency keys. A layer that hides buffering or retries makes these harder to reason about and to defend in the viva."
+   },
+   {
+    "name": "C4 Network robustness",
+    "weight": 15,
+    "why": "The final defence runs on a network the team does not control. Upgrade-blocking proxies, UDP blocking and reverse-proxy idle timeouts are all real risks."
+   },
+   {
+    "name": "C5 Server memory and idle cost per connection",
+    "weight": 10,
+    "why": "One cheap VPS has to hold thousands of mostly idle sessions (spec s14.2 asks about memory per connection)."
+   },
+   {
+    "name": "C6 Client footprint and Worker fit",
+    "weight": 10,
+    "why": "It must run off the main thread (boundary 2, PROC-05), and its bundle size counts against the 1.5 s / 3.0 s boot budget (BOOT-10)."
+   },
+   {
+    "name": "C7 Implementation/debug effort, maturity and team skills",
+    "weight": 10,
+    "why": "18 weeks and a JS/TS team. Every member must be able to explain the protocol, and the frames should be readable in DevTools during demos."
+   },
+   {
+    "name": "C8 Operational simplicity",
+    "weight": 5,
+    "why": "It has to work behind a TLS reverse proxy in Docker Compose on one VPS and come up in <= 3 commands, with no extra servers (TURN, UDP ports)."
+   }
+  ],
+  "scores": [
+   {
+    "option": "A. Raw WebSocket + own protocol",
+    "weighted_total": 92,
+    "per_criterion": [
+     {
+      "criterion": "C1 Server push + bidirectional ordering",
+      "score": 5,
+      "reason": "One full-duplex TCP stream gives total order in each direction, and the server can push at any time."
+     },
+     {
+      "criterion": "C2 Push latency",
+      "score": 5,
+      "reason": "Measured on loopback: p50 0.26 ms, p95 0.52 ms, the lowest of all transports tested."
+     },
+     {
+      "criterion": "C3 Control over delivery/resume semantics",
+      "score": 5,
+      "reason": "We own seq/ack/resume, and nothing is hidden underneath. The same design is what Socket.IO's docs recommend building anyway."
+     },
+     {
+      "criterion": "C4 Network robustness",
+      "score": 3,
+      "reason": "Some proxies and antivirus products block Upgrade and there is no built-in fallback. wss:// on 443 plus the SSE fallback adapter reduces this."
+     },
+     {
+      "criterion": "C5 Server memory and idle cost per connection",
+      "score": 5,
+      "reason": "Measured 6.8 KB RSS (2.6 KB heap) per idle connection at 3,000 connections. Idle traffic is only heartbeat frames."
+     },
+     {
+      "criterion": "C6 Client footprint and Worker fit",
+      "score": 5,
+      "reason": "The WebSocket is native and available in Workers, so it adds 0 KB. Our client code is small."
+     },
+     {
+      "criterion": "C7 Implementation/debug effort, maturity and team skills",
+      "score": 4,
+      "reason": "ws is mature and familiar. We must write reconnection, heartbeats and backpressure (about 300-500 LOC). Plain JSON frames are readable in DevTools."
+     },
+     {
+      "criterion": "C8 Operational simplicity",
+      "score": 5,
+      "reason": "Supported by nginx, Caddy and Cloudflare (all plans). A single TCP port on 443."
+     }
+    ]
+   },
+   {
+    "option": "B. Socket.IO v4",
+    "weighted_total": 83,
+    "per_criterion": [
+     {
+      "criterion": "C1 Server push + bidirectional ordering",
+      "score": 5,
+      "reason": "Bidirectional, and the docs guarantee ordering across transports."
+     },
+     {
+      "criterion": "C2 Push latency",
+      "score": 5,
+      "reason": "Measured on loopback: p50 0.39 ms, p95 0.72 ms."
+     },
+     {
+      "criterion": "C3 Control over delivery/resume semantics",
+      "score": 3,
+      "reason": "At-most-once by default, and no exactly-once. Connection-state recovery 'will not always be successful', so we would still build seq and idempotency on top of it, duplicating mechanisms."
+     },
+     {
+      "criterion": "C4 Network robustness",
+      "score": 5,
+      "reason": "Built-in HTTP long-polling fallback for corporate proxies, firewalls and antivirus."
+     },
+     {
+      "criterion": "C5 Server memory and idle cost per connection",
+      "score": 3,
+      "reason": "Measured 27.3 KB RSS (11.3 KB heap) per idle connection, about 4x ws."
+     },
+     {
+      "criterion": "C6 Client footprint and Worker fit",
+      "score": 3,
+      "reason": "Measured client bundle 42.9 KB minified / 13.5 KB gzipped. Works in a Worker."
+     },
+     {
+      "criterion": "C7 Implementation/debug effort, maturity and team skills",
+      "score": 4,
+      "reason": "Familiar API with rooms and acks. Its wire framing is non-standard, and the release cadence is slower (last release Dec 2025)."
+     },
+     {
+      "criterion": "C8 Operational simplicity",
+      "score": 4,
+      "reason": "Fine on one node. Polling across several nodes would need sticky sessions."
+     }
+    ]
+   },
+   {
+    "option": "C. SSE + HTTP POST (HTTP/2)",
+    "weighted_total": 77,
+    "per_criterion": [
+     {
+      "criterion": "C1 Server push + bidirectional ordering",
+      "score": 3,
+      "reason": "Push is fine. Upstream POSTs are separate requests that can reorder against each other and against the stream."
+     },
+     {
+      "criterion": "C2 Push latency",
+      "score": 4,
+      "reason": "Measured on loopback: p50 1.12 ms, p95 1.71 ms. Each upstream op also pays per-request overhead."
+     },
+     {
+      "criterion": "C3 Control over delivery/resume semantics",
+      "score": 4,
+      "reason": "Last-Event-ID resume maps directly onto srvSeq. POST idempotency is simple."
+     },
+     {
+      "criterion": "C4 Network robustness",
+      "score": 4,
+      "reason": "Plain HTTP passes most proxies. Buffering proxies can stall the stream."
+     },
+     {
+      "criterion": "C5 Server memory and idle cost per connection",
+      "score": 4,
+      "reason": "One stream plus keep-alive comments. Each POST carries headers (compressed by HPACK on HTTP/2)."
+     },
+     {
+      "criterion": "C6 Client footprint and Worker fit",
+      "score": 5,
+      "reason": "EventSource and fetch are native and available in Workers."
+     },
+     {
+      "criterion": "C7 Implementation/debug effort, maturity and team skills",
+      "score": 4,
+      "reason": "Simple and well understood, but it means two server code paths."
+     },
+     {
+      "criterion": "C8 Operational simplicity",
+      "score": 3,
+      "reason": "Needs HTTP/2 end to end (6-connection cap otherwise), proxy buffering and compression turned off for the stream, and read-timeout tuning."
+     }
+    ]
+   },
+   {
+    "option": "D. Long polling (1 s short polling as baseline)",
+    "weighted_total": 67,
+    "per_criterion": [
+     {
+      "criterion": "C1 Server push + bidirectional ordering",
+      "score": 2,
+      "reason": "Push is emulated at one request per event batch. Upstream is a separate channel."
+     },
+     {
+      "criterion": "C2 Push latency",
+      "score": 3,
+      "reason": "Long poll on loopback: p50 0.79 ms. On a real link, events after the first in a burst wait an extra re-poll round trip. 1 s polling measured p50 476 ms, p95 925 ms."
+     },
+     {
+      "criterion": "C3 Control over delivery/resume semantics",
+      "score": 3,
+      "reason": "A cursor (since=seq) resume is natural, but the timeout, duplicate-request and overlap edge cases are many."
+     },
+     {
+      "criterion": "C4 Network robustness",
+      "score": 5,
+      "reason": "Works through almost anything."
+     },
+     {
+      "criterion": "C5 Server memory and idle cost per connection",
+      "score": 3,
+      "reason": "Constant connection churn with full headers per poll: at least 120 requests/h idle at a 30 s timeout, and 3,600/h for 1 s polling."
+     },
+     {
+      "criterion": "C6 Client footprint and Worker fit",
+      "score": 5,
+      "reason": "Plain fetch in a Worker."
+     },
+     {
+      "criterion": "C7 Implementation/debug effort, maturity and team skills",
+      "score": 3,
+      "reason": "Easy to start, fiddly to make correct under bursts."
+     },
+     {
+      "criterion": "C8 Operational simplicity",
+      "score": 4,
+      "reason": "Proxy read timeouts must be tuned."
+     }
+    ]
+   },
+   {
+    "option": "E. WebTransport (HTTP/3)",
+    "weighted_total": 62,
+    "per_criterion": [
+     {
+      "criterion": "C1 Server push + bidirectional ordering",
+      "score": 5,
+      "reason": "Bidirectional streams, plus datagrams."
+     },
+     {
+      "criterion": "C2 Push latency",
+      "score": 4,
+      "reason": "Likely excellent, but not measured: no production-grade Node server was available to test."
+     },
+     {
+      "criterion": "C3 Control over delivery/resume semantics",
+      "score": 4,
+      "reason": "Streams help, but seq, idempotency and resume would still be ours."
+     },
+     {
+      "criterion": "C4 Network robustness",
+      "score": 1,
+      "reason": "UDP/443 is often blocked on institutional networks, so a WebSocket fallback would be needed anyway."
+     },
+     {
+      "criterion": "C5 Server memory and idle cost per connection",
+      "score": 2,
+      "reason": "Unmeasured, and depends on a native quiche addon, so scored conservatively."
+     },
+     {
+      "criterion": "C6 Client footprint and Worker fit",
+      "score": 4,
+      "reason": "Native in Chrome 97+ and exposed to Workers."
+     },
+     {
+      "criterion": "C7 Implementation/debug effort, maturity and team skills",
+      "score": 1,
+      "reason": "The server library calls itself 'duct tape'. node:quic is experimental and flag-gated. The team has no experience with it."
+     },
+     {
+      "criterion": "C8 Operational simplicity",
+      "score": 1,
+      "reason": "Needs HTTP/3 termination, an open UDP port, and a native build in Docker."
+     }
+    ]
+   },
+   {
+    "option": "F. WebRTC data channels",
+    "weighted_total": 56,
+    "per_criterion": [
+     {
+      "criterion": "C1 Server push + bidirectional ordering",
+      "score": 4,
+      "reason": "Reliable, ordered mode exists, but it needs a second signalling channel."
+     },
+     {
+      "criterion": "C2 Push latency",
+      "score": 4,
+      "reason": "Low once connected. ICE/DTLS setup adds startup latency on every reconnect."
+     },
+     {
+      "criterion": "C3 Control over delivery/resume semantics",
+      "score": 3,
+      "reason": "Everything still has to be built by us, on top of a peer-to-peer model."
+     },
+     {
+      "criterion": "C4 Network robustness",
+      "score": 2,
+      "reason": "UDP-based. Restrictive networks need a TURN relay."
+     },
+     {
+      "criterion": "C5 Server memory and idle cost per connection",
+      "score": 2,
+      "reason": "The DTLS/SCTP stack per connection runs in a native addon."
+     },
+     {
+      "criterion": "C6 Client footprint and Worker fit",
+      "score": 3,
+      "reason": "RTCPeerConnection lives on the main thread. The channel is transferable in Chrome 130+."
+     },
+     {
+      "criterion": "C7 Implementation/debug effort, maturity and team skills",
+      "score": 1,
+      "reason": "Signalling, ICE and TURN are niche skills, and the server-side libraries are native."
+     },
+     {
+      "criterion": "C8 Operational simplicity",
+      "score": 1,
+      "reason": "Needs extra STUN/TURN servers and UDP port ranges."
+     }
+    ]
+   }
+  ],
+  "evidence": [
+   {
+    "claim": "ws latest is 8.21.3 (MIT), published 2026-08-07, so it is actively maintained. @types/ws is 8.18.1.",
+    "source": "https://registry.npmjs.org/ws (queried 2026-09-23)",
+    "verified": true
+   },
+   {
+    "claim": "socket.io and socket.io-client latest are 4.8.3 (MIT), published 2025-12-23.",
+    "source": "https://registry.npmjs.org/socket.io (queried 2026-09-23)",
+    "verified": true
+   },
+   {
+    "claim": "OUR PROTOTYPE, loopback, Node 24.13.1, one host, events at 150-250 ms intervals, n=200. Server-event-to-client-receipt latency: ws p50 0.26 / p95 0.52 ms; Socket.IO (websocket-only) 0.39 / 0.72 ms; SSE via fetch stream 1.12 / 1.71 ms; long polling 0.79 / 1.31 ms. With sparse events (1.3-2.7 s apart, n=45), 1 s short polling was p50 475.7 / p95 925.4 ms. Loopback excludes network RTT, so the team must repeat this against the VPS from campus.",
+    "source": "Local benchmark written for this record (server.mjs/client.mjs); scripts to be re-created under tests/performance/transport/",
+    "verified": true
+   },
+   {
+    "claim": "OUR PROTOTYPE: server memory per idle connection at 3,000 connections (Node 24.13.1, perMessageDeflate off, after forced GC). ws: 6.8 KB RSS / 2.6 KB heap. Socket.IO 4.8.3 (websocket transport): 27.3 KB RSS / 11.3 KB heap, about 4x.",
+    "source": "Local benchmark (memserver.mjs/memclient.mjs)",
+    "verified": true
+   },
+   {
+    "claim": "OUR MEASUREMENT: socket.io-client 4.8.3 bundles to 42,899 B minified / 13,519 B gzipped (esbuild, browser ESM). A native WebSocket adds 0 B.",
+    "source": "Local esbuild bundle + gzip -9",
+    "verified": true
+   },
+   {
+    "claim": "OUR MEASUREMENT, JSON vs MessagePack. A vfs.changed event with 5 changes: JSON 825 B, msgpackr 615 B, msgpackr with records 413 B. A lock.granted frame: JSON 117 B, msgpack 85 B. Encode+decode round trip in Node 24: JSON 5.0 us vs msgpackr 6.7 us. msgpackr 2.1.0 adds 10.7 KB gz to the client. At 20 msgs/s x ~0.8 KB that is about 16 KB/s, so JSON costs nothing that matters.",
+    "source": "Local benchmark (enc.mjs) with msgpackr 2.1.0",
+    "verified": true
+   },
+   {
+    "claim": "Socket.IO delivery is at-most-once by default and does not provide exactly-once. For server-to-client at-least-once, its docs recommend unique event IDs, persisting events, and the client sending its last offset on reconnection.",
+    "source": "https://socket.io/docs/v4/delivery-guarantees",
+    "verified": true
+   },
+   {
+    "claim": "Socket.IO connection-state recovery 'will not always be successful', is meant for intermittent disconnections, and depends on the adapter (the Postgres adapter is 'in progress').",
+    "source": "https://socket.io/docs/v4/connection-state-recovery",
+    "verified": true
+   },
+   {
+    "claim": "Socket.IO starts with long polling because a WebSocket connection is not always possible 'due to corporate proxies, personal firewall, antivirus software'.",
+    "source": "https://socket.io/docs/v4/how-it-works/",
+    "verified": true
+   },
+   {
+    "claim": "WebTransport is supported in Chrome 97+, Firefox 114+ and Safari 26.4+.",
+    "source": "https://caniuse.com/webtransport",
+    "verified": true
+   },
+   {
+    "claim": "The main Node WebTransport server library describes itself as 'a duct tape-style solution until a bulletproof native support of HTTP/3 and WebTransport is provided by node itself'. It needs libquiche bindings, and a source build takes a native toolchain and 15+ minutes.",
+    "source": "https://github.com/fails-components/webtransport",
+    "verified": true
+   },
+   {
+    "claim": "node:quic is at stability 1.0 (early development) and needs --experimental-quic. This is based on Node nightly docs and a Sept 2026 issue. The current-release doc page returned 404 when fetched.",
+    "source": "https://nodejs.org/download/nightly/v24.0.0-nightly202501160e7ec5e7a1/docs/api/quic.html ; https://github.com/nodejs/node/issues/66003",
+    "verified": false
+   },
+   {
+    "claim": "Without HTTP/2, SSE is limited to 6 open connections per browser and domain across all tabs, and Chrome marked this 'Won't fix'. EventSource is available in Web Workers.",
+    "source": "https://developer.mozilla.org/en-US/docs/Web/API/EventSource",
+    "verified": true
+   },
+   {
+    "claim": "WebSocketStream (streams backpressure) is supported only in Chrome 124+, not in Firefox or Safari. MDN marks it experimental and non-standard.",
+    "source": "https://caniuse.com/mdn-api_websocketstream ; https://developer.mozilla.org/en-US/docs/Web/API/WebSocketStream",
+    "verified": true
+   },
+   {
+    "claim": "The classic WebSocket.bufferedAmount reports bytes queued by send() that have not yet been transmitted. It is available in Workers.",
+    "source": "https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/bufferedAmount",
+    "verified": true
+   },
+   {
+    "claim": "ws README: permessage-deflate is disabled by default on the server and 'adds a significant overhead in terms of performance and memory consumption'. It documents the ping/isAlive/terminate liveness pattern, says pongs are sent automatically in response to pings, and shows authentication in the upgrade handler via noServer + handleUpgrade.",
+    "source": "https://github.com/websockets/ws/blob/master/README.md",
+    "verified": true
+   },
+   {
+    "claim": "nginx closes a proxied WebSocket if the backend sends no data for 60 s by default. Periodic ping frames prevent this.",
+    "source": "https://nginx.org/en/docs/http/websocket.html",
+    "verified": true
+   },
+   {
+    "claim": "Cloudflare supports WebSockets on all plans, closes idle WebSocket connections, and recommends client heartbeats.",
+    "source": "https://developers.cloudflare.com/network/websockets/",
+    "verified": true
+   },
+   {
+    "claim": "Chrome's intensive wake-up throttling applies when a page has been hidden > 5 min, the timer chain count is >= 5, the page has been silent for 30 s, and WebRTC is not in use. Timers are then checked only once per minute.",
+    "source": "https://developer.chrome.com/blog/timer-throttling-in-chrome-88",
+    "verified": true
+   },
+   {
+    "claim": "Timers in dedicated Workers are not subject to intensive throttling. This comes from secondary sources, and the Chromium intent scopes the throttling to Window timers. The team must confirm it with the prototype.",
+    "source": "https://groups.google.com/a/chromium.org/g/blink-dev/c/8En_5DqV_fU/m/I8e9vaecAgAJ ; https://github.com/Colonizer-dev/harness/issues/159",
+    "verified": false
+   },
+   {
+    "claim": "Since Chrome 133, with Energy Saver on, background tabs that have been hidden and silent for > 5 min and are CPU-intensive are frozen. Exemptions are narrow (conferencing, device APIs, a Web Lock or IndexedDB connection that blocks another group). A frozen holder can therefore miss lease renewals.",
+    "source": "https://developer.chrome.com/blog/freezing-on-energy-saver",
+    "verified": true
+   },
+   {
+    "claim": "Fencing tokens: the lock service issues a number that increases on every acquisition, and storage rejects writes carrying an older token. This protects against a paused client whose lease has expired.",
+    "source": "https://martin.kleppmann.com/2016/02/08/how-to-do-distributed-locking.html",
+    "verified": true
+   },
+   {
+    "claim": "PostgreSQL NOTIFY inside a transaction is delivered only if the transaction commits, in send order. The default payload limit is under 8000 bytes. The current docs are for PostgreSQL 18.",
+    "source": "https://www.postgresql.org/docs/current/sql-notify.html",
+    "verified": true
+   },
+   {
+    "claim": "PostgreSQL sequences cannot provide gapless numbers, because values are not reclaimed on abort. A BIGSERIAL is therefore unsafe as a resume cursor, and we use a per-user counter updated under the already-locked quota row.",
+    "source": "https://www.postgresql.org/docs/current/functions-sequence.html",
+    "verified": true
+   },
+   {
+    "claim": "Full-jitter backoff: sleep = random(0, min(cap, base * 2^attempt)). It substantially outperforms plain exponential backoff under contention.",
+    "source": "https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/",
+    "verified": true
+   },
+   {
+    "claim": "Hybrid Logical Clocks capture happened-before like Lamport clocks, stay close to NTP time, and fit in 64 bits.",
+    "source": "Kulkarni et al., 'Logical Physical Clocks and Consistent Snapshots in Globally Distributed Databases' https://cse.buffalo.edu/tech-reports/2014-04.pdf",
+    "verified": true
+   },
+   {
+    "claim": "A correct move operation for replicated trees under concurrent moves, without cycles, is a research result formally verified in Isabelle/HOL. Google Drive and Dropbox showed bugs with concurrent moves. A tree CRDT is therefore research-grade scope, not a library drop-in.",
+    "source": "Kleppmann, Mulligan, Gomes, Beresford, 'A highly-available move operation for replicated trees' https://martin.kleppmann.com/papers/move-op.pdf",
+    "verified": true
+   },
+   {
+    "claim": "OUR MEASUREMENT: yjs 13.6.32 bundles to 95.5 KB minified / 30.1 KB gz. @automerge/automerge 3.5.0 ships a 3.64 MB WASM binary (1.14 MB gzipped). Both are current (Aug and Sep 2026).",
+    "source": "npm registry + local esbuild/gzip",
+    "verified": true
+   },
+   {
+    "claim": "OWASP says to validate the Origin header against an explicit allowlist on every handshake (against Cross-Site WebSocket Hijacking), and to enforce message size limits (typically <= 64 KB via maxPayload) and rate limits.",
+    "source": "https://cheatsheetseries.owasp.org/cheatsheets/WebSocket_Security_Cheat_Sheet.html",
+    "verified": true
+   },
+   {
+    "claim": "Playwright's WebSocketRoute (since v1.48) can mock, intercept, modify and close WebSocket traffic, which is usable for fault-injecting dropped acks and disconnects. The latest @playwright/test is 1.63.0.",
+    "source": "https://playwright.dev/docs/api/class-websocketroute ; npm registry",
+    "verified": true
+   },
+   {
+    "claim": "Node 24 'Krypton' is the current LTS line (v24.21.0, 2026-09-07). Node 26 is the Current line.",
+    "source": "https://nodejs.org/dist/index.json",
+    "verified": true
+   },
+   {
+    "claim": "RTCDataChannel is transferable to workers in Chrome 130+, but WebRTC still needs signalling plus STUN/TURN.",
+    "source": "https://caniuse.com/mdn-api_rtcdatachannel_transferable ; https://developer.mozilla.org/en-US/docs/Web/API/RTCDataChannel",
+    "verified": true
+   }
+  ],
+  "recommendation": "DECISION: Option A, raw WebSocket (wss:// on 443) with our own versioned JSON protocol. The client side is the browser-native WebSocket running inside the kernel's `syncd` Web Worker. The server side is `ws` 8.21.3 on Node 24 LTS, attached in noServer mode to the same HTTP server as the REST API. If the backend-runtime record chooses Bun, Bun.serve's built-in WebSocket replaces ws and the protocol does not change. File blobs and swap pages move over HTTPS (content-addressed PUT/GET), never over the socket. JSON text frames; MessagePack is kept only as a reversal. No CRDT library.\n\nProtocol summary. Every client op carries an idempotency key (opId), a per-session sequence number (cseq), a Hybrid Logical Clock stamp and base inode versions. The server applies each op in ONE database transaction: op_log insert for dedup, version check, lock and fence check, quota check under the user row's FOR UPDATE, per-user change_seq++, NOTIFY. It answers with op.result and broadcasts vfs.changed with that srvSeq to the user's other sessions and to directory watchers. A version mismatch creates a conflicted copy 'name (conflict from <user>, <date>).ext' on the server in the same transaction and notifies the user (VFS-10). Locks are leases: TTL 30 s, renewed by an app-level heartbeat from the Worker every 10 s, with a fencing token on every grant, persisted in Postgres, and expired by an in-memory sweeper built on the team's own dsa/heap (VFS-09). Reconnection uses full-jitter backoff and resumes from lastSrvSeq using the durable op_log feed, so it survives any offline duration. The outbox is replayed in cseq order with at most 16 ops in flight, and the dedup rule gives an exactly-once effect (OFF-02). sync and lockd are non-critical services and never block boot (BOOT-07/09/10). Their state drives the taskbar indicator (OFF-04).\n\nConsequences. The team writes about 300-500 LOC of reconnection, heartbeat, resume and backpressure logic that Socket.IO would partly provide. That logic is exactly what gets graded and examined, and Socket.IO's own docs say exactly-once still has to be built by the application. There is no built-in fallback for Upgrade-blocking networks. This is mitigated by a transport-agnostic envelope and a pre-designed SSE+POST adapter, triggered by the Week-3 campus network test. The weighted score is 92 vs 83 for Socket.IO. A sensitivity check that doubles the network-robustness weight still ranks A first (87.8 vs 85.2).",
+  "runner_up": "Socket.IO 4.8.3 (score 83). Its HTTP long-polling fallback would make it the winner if the university or examiner network blocks WebSocket upgrades. The costs: about 4x the server memory per connection (27.3 vs 6.8 KB measured), +13.5 KB gz client bundle, and the same app-level seq/idempotency protocol still has to be built on top of it (at-most-once by default, and recovery 'not always successful'). If the Week-3 network test fails, the first move is the cheaper SSE+POST adapter behind the same envelope (option C, score 77), not switching frameworks.",
+  "chat_reason": "Use plain WebSockets (the browser's built-in WebSocket running in a Web Worker, plus the `ws` library on Node) carrying our own small JSON protocol with sequence numbers, acks, heartbeats and lease-based locks with fencing tokens. Lock grants and file-change events must be pushed by the server immediately. In our localhost test, WebSocket delivered events in 0.26 ms (median) against 476 ms for 1-second polling, using about 7 KB of server memory per connection against 27 KB for Socket.IO. Socket.IO does not give exactly-once delivery, so we would have to build the same protocol anyway. CRDTs like Yjs or Automerge merge edits automatically, which contradicts the spec's rule to keep the losing write as a conflicted copy, so they are overkill here.",
+  "gave_up": "1) Socket.IO's built-in long-polling fallback, auto-reconnect and rooms. We hand-write reconnection with full-jitter backoff, heartbeats, resume and backpressure (about 300-500 LOC plus tests). 2) Automatic merging of concurrent edits. With no CRDT, users get conflicted copies, which is exactly what VFS-10 requires, and simultaneous co-editing is out of scope for v1. 3) HTTP/3/QUIC benefits (no head-of-line blocking across streams, connection migration), because WebTransport's Node server side is immature and UDP is often blocked. 4) Frame compactness: JSON frames are 25-50% larger than MessagePack (measured 825 B vs 615/413 B), accepted for readability in DevTools and a 0 KB bundle. 5) Horizontal scale-out. One Node process holds all sockets. Multi-instance fan-out would need Postgres LISTEN/NOTIFY and sticky routing, which we do not build.",
+  "risks": [
+   {
+    "risk": "The campus/lab or examiner network (or a TLS-inspecting proxy or antivirus) blocks or drops the WebSocket Upgrade. The live final defence then loses sync, locks and the two-user demo.",
+    "mitigation": "Serve only wss:// on 443 behind Caddy/nginx. In Week 2-3, run 100 connect attempts from the actual LGU lab network, campus Wi-Fi and a 4G hotspot. The message envelope is transport-agnostic (Transport interface: send/onMessage/close). A pre-designed SSE (Last-Event-ID = srvSeq) + POST adapter (about 1-2 days) is built if any network test fails. The OS keeps working offline regardless (sync/lockd degrade, BOOT-07)."
+   },
+   {
+    "risk": "Chrome throttles timers in hidden tabs (1 wake-up per minute after 5 min) or freezes the tab (Energy Saver). Heartbeats stop, leases expire, and a thawed tab tries to save under a dead lease.",
+    "mitigation": "Heartbeats run in the syncd dedicated Worker (worker exemption to be verified in the prototype). Lease TTL = 3x the heartbeat interval. Every grant carries a fencing token and the server rejects writes with fence < inodes.lock_fence (EBUSY). On the Page Lifecycle 'resume'/'visibilitychange' events the client immediately re-verifies leases and reconnects. A lost lease makes the Editor read-only and saves unsaved work as a conflicted copy."
+   },
+   {
+    "risk": "Bugs in the hand-written protocol: duplicate or lost ops, wrong resume cursor, reordering.",
+    "mitigation": "Server dedup via op_log PK inside the same transaction, with rejected outcomes also recorded. Gap-free per-user change_seq taken under the locked user row, never a BIGSERIAL. fast-check property tests with random disconnect/drop-ack/duplicate points, plus Playwright routeWebSocket fault injection, run on every PR. An invariant probe checks that every acknowledged outbox op has exactly one op_log row."
+   },
+   {
+    "risk": "Reverse-proxy and CDN idle timeouts (nginx 60 s default, Cloudflare idle close) silently kill sockets.",
+    "mitigation": "Server WS ping every 20 s and client app heartbeat every 10 s. The client treats the connection as dead after 25 s with no inbound frames, and the server terminates after a missed pong (<= 40 s)."
+   },
+   {
+    "risk": "A slow or stalled client makes the server buffer grow without bound (bulk ops at ~20 msgs/s, agent renaming 500 files).",
+    "mitigation": "Coalesce progress and quota events (latest per key) once bufferedAmount > 256 KB. Above 4 MB, close with 4508 'slow consumer'; the client resumes from its lastSrvSeq using the DB feed, so nothing is lost. Large changesets are sent as {dirs, refetch:true} instead of per-node lists. maxPayload is 64 KB, the client allows at most 16 unacked ops in flight, and each session has a token bucket of 50 msgs/s with a burst of 200."
+   },
+   {
+    "risk": "A blob or swap page sent over the socket would block lock grants behind it (a 5 MB page at 10 Mbit/s takes about 4 s).",
+    "mitigation": "Binary payloads go only over HTTPS: PUT/GET /blobs/{sha256} (idempotent, content-addressed) and /swap/{sid}/{pid}/{page} (MEM-04/MEM-05). The socket carries only small JSON control frames."
+   },
+   {
+    "risk": "Cross-Site WebSocket Hijacking, or a malicious client flooding or holding locks forever.",
+    "mitigation": "Exact Origin allowlist check in the upgrade handler, HttpOnly SameSite=Strict session cookie, and schema validation of every inbound frame. The server re-checks permissions on every op and never trusts the client's kernel. At most 256 leases per session. Owner or root can break locks, and holders are visible via lsof. All of this goes in SECURITY.md."
+   },
+   {
+    "risk": "Thundering-herd reconnection after a server deploy or restart.",
+    "mitigation": "Close with 1012 (service restart) and use full-jitter backoff (base 500 ms, cap 30 s). Leases live in Postgres, so the sweeper reloads its heap on start and clients resume without losing locks inside the TTL."
+   },
+   {
+    "risk": "Offline clock skew corrupts timestamps.",
+    "mitigation": "Conflict detection uses inode versions, never clocks. The HLC only orders the outbox and dates conflicted copies. The server clamps HLC wall time to server_now + 60 s."
+   }
+  ],
+  "reversal_trigger": "Revisit this decision if any of the following happens. (a) From the LGU lab network, campus Wi-Fi or the examiner network, wss:// fails in more than 1 of 20 connection attempts, or is dropped more than once per 10 minutes while idle. Then build the SSE+POST adapter, and if that also fails, switch to Socket.IO. (b) Lock-grant latency p95 exceeds 200 ms with 50 concurrent clients each receiving 20 msgs/s on the production VPS, measured from the campus network, and profiling shows the ws layer (not the DB) is the bottleneck. Then move to uWebSockets.js or Bun's native WebSocket. (c) Server RSS per idle connection exceeds 50 KB at 1,000 connections. (d) Sustained socket bandwidth exceeds 50 KB/s per client, or JSON.parse takes more than 1 ms per frame on the reference lab machine. Then switch the encoding to msgpackr with records. (e) Worker heartbeats in a tab hidden for 10 minutes drift beyond 2x the interval. Then shorten the heartbeat, lengthen the TTL, or move lease renewal into a Service Worker. (f) The spec or instructor makes simultaneous co-editing a requirement. Then evaluate Yjs for the Editor only, keeping the versioned write path for the VFS.",
+  "team_prototype": "Build proto/rt-bench in Weeks 2-3 (owner: Role 5 QA/DevOps; secondary: Role 2 VFS/DB) and commit the scripts to tests/performance/transport/ with a results table in docs/evidence/transport.md.\n(1) Lock-grant latency. The server runs on the real VPS (Docker Compose, Caddy TLS) and exposes ws, Socket.IO, SSE+POST and 1 s polling endpoints, all backed by the same mock lock manager (FIFO waiters, TTL 30 s). Playwright launches two browser contexts on ONE lab machine, so both share one clock. Context A holds an X lock and releases it at random times. Record the time from A's release send to B's lock.granted receipt. Take 1,000 samples per transport, from the LGU lab network and from 4G, and report p50/p95.\n(2) Load. A Node load generator opens 50, 500 and 2,000 sockets, with 50 of them receiving 20 msgs/s. Record lock-grant p95, server CPU and RSS per connection.\n(3) Idle cost. Leave 1 client idle for 1 hour per transport and count bytes and requests using server counters and chrome://net-export.\n(4) VFS-09 crash test. Tab A holds an X lock. Kill its renderer from Chrome's Task Manager, and separately cut its network with context.setOffline(true). Measure when B is granted the lock. It must be <= TTL + 0.5 s. Also show that a second writer gets EBUSY and the Editor opens read-only.\n(5) Background throttling. Minimise the window for 10 minutes and log heartbeat send times from the syncd Worker vs a main-thread timer. Then enable Energy Saver with CPU load to trigger freezing, and verify that a stale-fence write is rejected.\n(6) Exactly-once replay (OFF-02). A fast-check property test generates 200 random ops. Playwright routeWebSocket drops acks, duplicates frames and closes the socket at random points, and the server process is killed once after commit but before ack. Assert that the final server tree checksum equals applying each op exactly once, that op_log has exactly one row per opId, and that the outbox is empty.\n(7) Encoding. Log real frame sizes and JSON.parse time on the reference lab machine to confirm the JSON choice.\nPresent (1), (4) and (6) at the Week-4 defence. These numbers replace the loopback figures in this record.",
+  "requirement_ids_served": [
+   "VFS-09",
+   "VFS-10",
+   "OFF-02",
+   "OFF-04",
+   "OFF-01",
+   "BOOT-07",
+   "BOOT-09",
+   "BOOT-10",
+   "BOOT-12",
+   "PROC-05",
+   "PROC-07",
+   "MEM-04",
+   "MEM-05",
+   "DB-02",
+   "DB-03",
+   "SYS-01",
+   "RAG-02",
+   "AGT-09"
+  ],
+  "packages": [
+   {
+    "name": "ws",
+    "version": "8.21.3",
+    "licence": "MIT",
+    "purpose": "Server-side WebSocket for Node (noServer + handleUpgrade for Origin and cookie auth; ping/pong liveness; maxPayload 64 KB; permessage-deflate off). The browser uses the native WebSocket, so there is no client library."
+   },
+   {
+    "name": "@types/ws",
+    "version": "8.18.1",
+    "licence": "MIT",
+    "purpose": "TypeScript types for ws."
+   },
+   {
+    "name": "zod (or valibot 1.5.0; use whichever the syscall-interface record picks)",
+    "version": "4.6.5",
+    "licence": "MIT",
+    "purpose": "One shared schema per message type in a protocol/ package. The server validates every inbound frame, and client and server share the TS types."
+   },
+   {
+    "name": "@playwright/test",
+    "version": "1.63.0",
+    "licence": "Apache-2.0",
+    "purpose": "E2E: offline/reconnect (context.setOffline) and WebSocket fault injection with routeWebSocket (drop acks, duplicate frames, forced close). Also drives the two-user lock test and the latency benchmark."
+   },
+   {
+    "name": "fast-check",
+    "version": "4.10.2",
+    "licence": "MIT",
+    "purpose": "Property-based tests for outbox replay (exactly-once under random disconnects) and lock-manager invariants."
+   },
+   {
+    "name": "msgpackr",
+    "version": "2.1.0",
+    "licence": "MIT",
+    "purpose": "NOT adopted. Reserved as the encoding reversal if the bandwidth or parse-time trigger (d) fires."
+   },
+   {
+    "name": "Hand-written (no package): reconnect/backoff, HLC, outbox, lease sweeper",
+    "version": "n/a",
+    "licence": "own code",
+    "purpose": "Full-jitter reconnection (~40 LOC), HLC (~40 LOC), the outbox/replay engine, and the lease-expiry min-heap, which reuses the team's own dsa/heap with its index map (renew = changePriority). reconnecting-websocket (4.4.0, last published 2020) and Socket.IO 4.8.3 were rejected."
+   }
+  ],
+  "design_notes": "PLACEMENT\n- Client: `syncd` (pid visible in ps, priority 20) owns the socket inside a dedicated Worker. `lockd` (depends on syncd) is a kernel service. Apps never touch the socket; they call sys.* syscalls, and the kernel forwards to syncd over MessageChannel.\n- Both services are non-critical, and the DAG starts them after vfs. Boot never awaits the socket (BOOT-10). When the socket fails, lockd runs \"DEGRADED: local advisory locks only\".\n- Server: one Node 24 process. The HTTP API and WS share port 443 behind Caddy.\n- The socket carries control only. Binary data goes over HTTPS: PUT/GET /blobs/{sha256} (idempotent, the server verifies the hash, blobs refcounted and GC'd) and PUT/GET /swap/{sid}/{pid}/{page} with checksum (MEM-03/04/05). Other HTTPS endpoints: GET /sync/snapshot, POST /auth/*, POST /llm/* (streaming).\n\nENVELOPE\n- JSON text frame, at most 64 KB: {\"v\":1,\"t\":\"<type>\",\"id\":<frame no.>,\"ack\":<lastSrvSeq applied, client->server only>,\"body\":{...}}\n- Close codes: 1000/1001 normal; 1008 bad Origin; 1009 too big; 1012 server restart (fast jittered retry); 1013 overloaded (back off); 4401 auth required (stop retrying, show \"Sign in to sync\"); 4408 heartbeat timeout; 4409 session superseded; 4429 rate limited; 4508 slow consumer (resume).\n\nMESSAGE CATALOGUE, client -> server\n- hello {sessionId, deviceId, resumeFromSrvSeq, outboxHead, hlc, heldLeases[]}: must be the first frame, within 5 s.\n- op.submit {opId (UUIDv7 = op_log PK), cseq, hlc, call, args, base:{ino:version} | {root:ino, digest:sha256(sorted ino:version of subtree)}, fence?}\n- op.batch {ops[<=32]}: used for replay after offline.\n- lock.acquire {reqId, ino, mode:'S'|'X', wait}\n- lock.release {leaseId}\n- hb {t, leases[], ack}: sent every 10 s from the Worker.\n- watch / unwatch {ino}: directories open in Files, Terminal or Editor.\n- proc.signal {rpid, sig}: kill a server-side job such as the agent executor, which aborts its transaction (AGT-09).\n- bye {reason}: graceful shutdown after the outbox is flushed and leases are released (BOOT-12).\n\nMESSAGE CATALOGUE, server -> client\n- welcome {sessionId, resumed, srvSeq, serverHlc, leaseTtlMs:30000, hbMs:10000, maxInflight:16, lostLeases[]}\n- op.result {opId, status:'applied'|'duplicate'|'conflict'|'rejected', errno?, srvSeq?, versions{ino:v}, keptAs?{ino,path}}\n- vfs.changed {srvSeq, originSession, opId, changes:[{ino,parent,name,kind,version,size,mode,uid,mtime}] | {dirs[],refetch:true}}\n- lock.granted {reqId, leaseId, ino, mode, fence, expiresAt}: pushed by the server when a waiter is promoted.\n- lock.queued {reqId, position}\n- lock.denied {reqId, errno:'EBUSY', holder}\n- lock.lost {leaseId, reason:'expired'|'revoked'}\n- hb.ack {t, serverTime}\n- quota {used/limit bytes and inodes}\n- proc.event {rpid, state, progress?, exitCode?}: coalesced to at most 20 Hz per pid.\n- resync {reason, snapshotUrl}\n- throttle {retryAfterMs}\n- error {code, msg}\n\nCLIENT CONNECTION STATE MACHINE\nIDLE -start-> CONNECTING -open-> HANDSHAKING (hello sent) -welcome-> RESUMING (apply feed events > lastSrvSeq, then drain the outbox in cseq order, window 16) -drained-> LIVE.\n- Any close or 25 s of inbound silence -> BACKOFF, sleeping random(0, min(30 s, 0.5 s x 2^n)) -> CONNECTING.\n- The 'offline' event -> OFFLINE (probe every 60 s; the 'online' or 'visible' event -> CONNECTING immediately).\n- 4401 -> AUTH_REQUIRED (the outbox is kept).\n- Shutdown -> CLOSING (flush the outbox, release leases, send bye) -> CLOSED.\n- Taskbar mapping (OFF-04): LIVE = Online; RESUMING = \"Syncing n ops\"; BACKOFF = \"Reconnecting in Xs\"; OFFLINE = \"Offline - n queued\". lockd shows DEGRADED whenever the state is not LIVE.\n\nOUTBOX (OFF-02, DB rule 5)\n- IndexedDB store `outbox`: {cseq, opId, hlc, call, args, base, inverse, state}.\n- The local VFS change and the outbox append happen in ONE IDB transaction. The ack handling (delete the entry, apply authoritative versions or the conflicted copy, advance lastSrvSeq) is also ONE IDB transaction.\n- Resending until op.result gives at-least-once delivery. The server dedups via the op_log PK in the same DB transaction as the effect. So the effect happens exactly once.\n- A rejection applies the stored inverse and re-validates the ops that follow it. The terminal prints the errno (walk-through step 6).\n- Several tabs share one IndexedDB, so only the holder of the Web Lock 'plotinium-outbox' replays the outbox. Its results go to the other tabs over BroadcastChannel.\n\nHLC\n- Format: {w: ms, c: counter, node}.\n- Send: w' = max(w, now); if w' == w then c++ else c = 0.\n- Receive: merge per Kulkarni et al.\n- The server clamps w to server_now + 60 s.\n- Used for outbox order, offline mtime, and the date in a conflicted copy's name. Conflict DETECTION uses versions only.\n\nSERVER OP PIPELINE\n- Ops from one session are processed sequentially. The transaction is SERIALIZABLE with up to 5 retries on SQLSTATE 40001, or the isolation level from the DB record.\n```\nBEGIN;\n  SELECT result FROM op_log WHERE op_id=$opId;  -- found => return it as 'duplicate'\n  SELECT ... FROM users WHERE uid=$uid FOR UPDATE;  -- quota + change_seq\n  lock/fence check -> EBUSY; permission re-check -> EACCES\n  version check: inodes.version = base (or subtree digest)\n    mismatch on a content write => create sibling dentry\n      '<stem> (conflict from <username>, <YYYY-MM-DD>)<ext>' (+ ' 2', ' 3'; name <= 255 B)\n      holding the losing blob, quota-checked, status='conflict'\n    structural mismatch (rm -r / mv over a subtree someone else changed) => rejected, nothing deleted\n  apply op; UPDATE users SET change_seq=change_seq+1, used_bytes=..., used_inodes=...;\n  INSERT INTO op_log(op_id, uid, session_id, op, payload, client_ts, srv_seq, result, applied_at);\n  SELECT pg_notify('vfs_changed', json{uid, srvSeq});  -- delivered only on commit\nCOMMIT;\n```\n- A rejected op writes its op_log row with the rejection in a separate short transaction, so a replay returns the same outcome.\n- Offline writes whose parent directory has since been deleted land in ~/lost+found as conflicted copies. Nothing is silently lost.\n- After commit:\n  - The origin session gets op.result {srvSeq}.\n  - The user's other sessions and directory watchers (r permission re-checked at send time) get vfs.changed.\n  - Clients apply an incoming change only if its version > the local version and no pending local op touches that inode.\n- AI indexer: NOTIFY wakes it, and it reads op_log rows with srv_seq > its durable cursor (index_cursor table), so it never misses a change even after downtime (RAG-02). If embeddings run in the browser, syncd forwards vfs.changed to the kernel event bus, which delivers it to the ai.indexer process.\n- Resume: feed = op_log WHERE uid AND srv_seq > since, retained for 30 days. Older than that => resync via the HTTPS snapshot. Watched directories owned by other users are re-validated with readdir versions.\n\nLOCK MANAGER (VFS-09)\n- Table locks(ino, session_id, uid, mode CHECK IN ('S','X'), fence, lease_expires_at, PRIMARY KEY (ino, session_id)). The spec's single-holder PK cannot represent shared locks; align this with the DB record. Plus column inodes.lock_fence.\n- acquire: in one transaction, pg_advisory_xact_lock(ino); delete expired rows; if compatible and no earlier waiter (FIFO, so writers are not starved), insert with fence = nextval('lock_fence') (only monotonicity is needed, gaps are fine). For X, also set inodes.lock_fence = fence.\n- If the lock is not available: wait => an in-memory per-inode FIFO queue and a lock.queued reply; otherwise lock.denied EBUSY, and the Editor opens read-only.\n- renew: each hb runs UPDATE locks SET lease_expires_at = now() + 30 s WHERE session_id = $1, then changePriority in the expiry min-heap (the team's dsa/heap).\n- A sweeper tick every 250 ms pops expired leases, deletes their rows, pushes lock.lost to the holder, and grants to waiters (a server-initiated lock.granted).\n- Guarantee: a crashed holder's lease expires <= 30.25 s after its last renewal. A clean close (1000/1001) releases immediately. An abnormal close keeps the lease until the TTL so a quick resume keeps the lock.\n- Writes to a locked inode must carry a live fence from the same session. A fence below inodes.lock_fence => EBUSY (stale lease).\n- Leases are renewed by the APP heartbeat, not by WS pong, because the browser answers pings itself even when the page is frozen or hung.\n- Offline: lockd grants local advisory locks between local processes only. Server truth is reconciled by versions on replay.\n- kill (PROC-07) releases the process's leases through lock.release.\n\nTIMINGS\n- Client heartbeat 10 s.\n- Client dead-man timer 25 s.\n- Server ping 20 s (nginx idle limit is 60 s); terminate after 1 missed pong.\n- Lease TTL 30 s.\n- Backoff base 0.5 s, cap 30 s.\n- At most 16 ops in flight.\n- Token bucket 50 msgs/s, burst 200.\n- bufferedAmount thresholds: coalesce above 256 KB, close 4508 above 4 MB.\n\nCRDT VERDICT: overkill; rejected\n- Yjs 13.6.32 (30 KB gz) and Automerge 3.5.0 (1.14 MB gz WASM) auto-merge edits. The spec instead wants conflicts detected and kept as conflicted copies (VFS-10).\n- Server-authoritative EACCES/EDQUOT/EBUSY rejections do not fit peer-symmetric merges.\n- CRDT state stored as blobs defeats the relational inode and dentry schema, the Q1-Q5 indexes and the transactional fault-injection tests.\n- Safe concurrent tree moves are a research-grade CRDT problem (Kleppmann et al.).\n- Only simultaneous co-editing of one text file would justify Yjs, and that is out of scope for v1.\n\nOWNERSHIP\n- Role 2: server sync engine and lock manager.\n- Role 5: client outbox, syncd/Service Worker and the transport benchmark.\n- Role 1: syscall bridge to syncd.\n- Role 3: taskbar status and read-only Editor state.\n- Role 4: indexer cursor.\n- Each part has a secondary reviewer from another role. All five members must be able to explain this record in the viva."
+ },
+ "examiner_review": {
+  "verdict": "upheld_with_changes",
+  "factual_errors": [
+   {
+    "claim": "Reversal trigger (e): if Worker heartbeats drift in a hidden tab, 'move lease renewal into a Service Worker'.",
+    "correction": "This would not work. Chrome terminates a web page's Service Worker after about 30 s of inactivity, and an open WebSocket does not keep it alive. The Chrome 116 WebSocket keep-alive applies only to extension service workers. A Service Worker is more restricted than a dedicated Worker, so it cannot hold heartbeats or leases. The correct fallback: shorten the heartbeat, lengthen the TTL, have the main thread forward visibilitychange/resume to syncd so it re-verifies leases immediately, and rely on the fencing token.",
+    "source": "https://developer.chrome.com/docs/extensions/how-to/web-platform/websockets ; https://developer.chrome.com/docs/extensions/develop/concepts/service-workers/lifecycle"
+   },
+   {
+    "claim": "Evidence: 'PostgreSQL NOTIFY inside a transaction is delivered only if the transaction commits, in send order' (used to justify pg_notify inside every op transaction).",
+    "correction": "The quote is correct but leaves out two things. (1) A transaction that ran NOTIFY takes a database-wide lock (AccessExclusiveLock on object 0 of database 0) while it commits, so every notifying commit is serialised. (2) Identical notifications within one transaction are collapsed. With one Node process, NOTIFY is also unnecessary: the process can emit events after COMMIT resolves, and the indexer can tail op_log by its cursor. Remove it from the hot path.",
+    "source": "https://www.postgresql.org/docs/current/sql-notify.html (PG 18.6) ; https://www.recall.ai/blog/postgres-listen-notify-does-not-scale ; https://www.postgresql.org/message-id/CADWG95t0j9zF0uwdcMH81KMnDsiTAVHxmBvgYqrRJcD-iLwQhw%40mail.gmail.com"
+   },
+   {
+    "claim": "OWASP evidence is cited only for the Origin allowlist and the <=64 KB maxPayload.",
+    "correction": "The same cheat sheet also says to close WebSocket connections when sessions expire, close all of a user's sockets on logout, and re-validate sessions periodically (about 30 min). Its rate-limit example is 100 msgs/min, far below the record's 50 msgs/s with a burst of 200. The record must justify that gap from the measured replay burst and add the close-on-logout/expiry rule.",
+    "source": "https://cheatsheetseries.owasp.org/cheatsheets/WebSocket_Security_Cheat_Sheet.html"
+   },
+   {
+    "claim": "Reversal trigger (b): 'move to uWebSockets.js' is presented as a drop-in like the other npm packages.",
+    "correction": "uWebSockets.js is not on the npm registry (registry lookup returns nothing). It is installed from GitHub tags as prebuilt native binaries, so the Docker base image and Node ABI must be checked before relying on it. Bun's native WebSocket is the lower-risk reversal.",
+    "source": "https://registry.npmjs.org/uWebSockets.js (no package) ; https://github.com/uNetworking/uWebSockets.js"
+   },
+   {
+    "claim": "Criterion C2 evidence: loopback event latency (ws 0.26 ms, Socket.IO 0.39 ms, SSE 1.12 ms, long poll 0.79 ms) differentiates the push transports and is presented as lock-grant evidence.",
+    "correction": "This measures server-event-to-receipt time on loopback, not lock-grant latency. Differences of 0.1 to 1 ms disappear under real network RTT. Only 1 s short polling (p50 476 ms) is really separated. C2 should score A, B and C equally until the VPS lock-grant test exists. The spec's own strong example uses measured lock-grant latency (s14.3).",
+    "source": "Spec s14.1(4) and s14.3, p44-45; the record's own evidence note 'Loopback excludes network RTT'"
+   }
+  ],
+  "spec_gaps": [
+   "Multi-tab (spec s2 table: 'Several tabs, devices and users can change the same data at the same time'). Several tabs share one IndexedDB outbox, but cseq and fences are per session and only the Web-Lock leader replays. The leader would send tab A's ops over tab B's socket, and they would fail the 'live fence from the same session' check. Chrome's Duplicate Tab also copies sessionStorage, so two tabs claim one sessionId and kick each other off with 4409 in a loop. Session identity and outbox partitioning are not defined.",
+   "su/root/guest principals (s9.6 command list includes su; chown is root-only; AGT-04 lets root touch /system after confirmation). The socket is authenticated as one uid and op.submit has no principal field. The server 'never trusts the client's kernel', so it has no way to authorise an op issued after 'su root'.",
+   "VFS-10 'no update is ever silently lost'. When a replayed offline write is rejected (EBUSY because another user now holds an X lock, or EACCES/EDQUOT), the client applies the stored inverse, and the offline content is discarded. Only 'parent deleted' is routed to lost+found.",
+   "Walk-through step 4 ('the server acquires locks' for rm -r) and DB atomic bulk ops. The pipeline checks lock and fence on the target inode only. rm -r, mv, cp -r, chmod -R and batch rename must also fail with EBUSY when any descendant is locked by another session.",
+   "OFF-02 exactly-once and DB rule 6 (retries safe via idempotency keys). op_log is 'retained for 30 days'. After pruning, a late replay of an op whose ack was lost would be applied twice. Transient failures (40001 after 5 retries, 40P01 deadlock, statement timeout) are written as permanent rejections, which turns a retryable error into lost work. 40P01 is not in the retry loop.",
+   "AGT-05 / batch rename of 500 files as ONE atomic op versus maxPayload 64 KB. With paths up to 4096 B (VFS-08), the op cannot fit in one frame, and no oversize path is defined.",
+   "VFS-09 'expires within the lease time'. The 250 ms sweeper tick gives TTL + 0.25 s. That is small, but it should be stated and measured precisely, or the timer should be set to the heap's earliest deadline.",
+   "DB-01. The record changes the spec schema (locks PK (ino, session_id); new fence column, inodes.lock_fence, users.change_seq, op_log.srv_seq/result, index_cursor table). Each change needs a versioned migration with a rollback script, aligned with the DB record.",
+   "s14.1(4) evidence. At the Phase-1 defence there is no measured network lock-grant latency, idle cost or reconnection behaviour. Every network number is planned, not measured.",
+   "s17 final defence ('two users contending for a lock', 'on a machine the team does not control'). The record never says whether the lock demo runs on the examiner's local bring-up (localhost is not proxied, so the Upgrade risk disappears) or on the production URL (where the risk exists). This choice changes how the C4 risk should be weighed.",
+   "Boundary 2 / PROC-05. The Page Lifecycle 'resume' and visibilitychange events fire only on the document, not in the syncd Worker. The main thread must forward them in a small, bounded handler.",
+   "SECURITY.md (s15). Closing sockets on logout and session expiry, and periodic session re-validation, are missing from the risk table."
+  ],
+  "weaknesses": [
+   "All version, date and licence claims checked out as of 2026-09-23 against the npm registry, nodejs.org/dist/index.json and MDN browser-compat-data 8.1.2: ws 8.21.3 (2026-08-07), socket.io 4.8.3 (2025-12-23), @types/ws 8.18.1, zod 4.6.5, valibot 1.5.0, @playwright/test 1.63.0, fast-check 4.10.2, msgpackr 2.1.0, yjs 13.6.32, @automerge/automerge 3.5.0, node-datachannel 0.33.4, werift 0.24.4, @fails-components/webtransport 1.6.8, Node 24.21.0 LTS 'Krypton', Node 26.10.0 Current, WebTransport Chrome 97 / Firefox 114 / Safari 26.4, transferable RTCDataChannel Chrome 130, WebSocketStream Chrome 124 only. The problems are in the evidence, the weighting and the protocol design, not the facts.",
+   "The weights look partly reverse-engineered. The A-vs-B margin comes almost entirely from C5 (memory per connection) and C6 (bundle size), 20% combined. At this project's real scale (about 50 to a few hundred sessions, 27 vs 7 KB per connection, 13.5 KB gz loaded from the Service Worker cache) neither difference matters. If Socket.IO gets 4/4 on those two criteria and C4 is doubled, Socket.IO wins 88.7 to 87.8. The claimed sensitivity check ('A still first at 87.8 vs 85.2') only holds because C5 and C6 are exaggerated.",
+   "A's C4 score of 3 gives credit for an SSE fallback that will not be built unless a test fails. Without it, A's robustness is closer to 2.",
+   "C3 ('control over delivery semantics') rewards building it yourself almost by definition, and it overlaps with C7 (defendability). It can be defended through OFF-02, but examiners will probe it.",
+   "Ops from one session are processed sequentially, and nothing separates heartbeats, lock.* and proc.signal from that queue. A 1,000-node rm -r or a 500-file rename under SERIALIZABLE retries can delay lock grants and lease renewals behind it.",
+   "pg_notify inside every op transaction adds a database-wide commit lock and gives nothing that a single-process emit after COMMIT does not already give.",
+   "The HLC adds some complexity where a Lamport counter plus cseq would satisfy 'logical timestamp' (s9.5). The team must be ready to explain why a wall-clock component is needed (dating conflicted copies and offline mtime).",
+   "A 30 s lease TTL means about 30 s of dead air during the live crash-expiry demo. It should be configurable, with a countdown shown in lsof or the Editor.",
+   "The degraded-mode 'local advisory locks' are per kernel (per tab), so they do not protect two tabs of the same user offline. navigator.locks already provides shared/exclusive cross-tab locks that release automatically when a tab dies, and the record does not use it.",
+   "Nothing in the record has been measured on a real network yet. The decision is sound, but the Phase-1 evidence is weaker than the record's confident tone suggests."
+  ],
+  "amended_recommendation": "DECISION (upheld with changes): Option A. Raw WebSocket (wss:// on 443, on the same origin as the app and the REST API) carrying our own versioned JSON protocol.\n- Client: the browser-native WebSocket, owned by the kernel's `syncd` dedicated Web Worker, one per tab (= one OS session).\n- Server: `ws` 8.21.3 on Node 24 LTS. Pin 24.21.x and re-run every benchmark on it. ws runs in noServer mode on the same HTTP server as the REST API. If the backend record picks Bun, Bun.serve's WebSocket replaces ws and the protocol does not change.\n- File blobs, swap pages and any op envelope over 60 KB go over HTTPS.\n- JSON text frames. msgpackr is kept only as a reversal.\n- No CRDT library.\n\nCORE PROTOCOL (kept)\nEvery client op carries:\n- opId (UUIDv7, the op_log PK)\n- a per-session cseq\n- an HLC stamp\n- base inode versions, or a subtree digest for subtree ops\n- an optional fence\n\nThe server runs each op in ONE transaction: dedup on op_log; lock the users row FOR UPDATE (quota and gap-free change_seq); re-check permissions; lock/fence check; version check; apply; insert into op_log. The lock/fence check covers every descendant for rm -r, mv, cp -r, chmod -R and batch rename. On a version mismatch, a content write becomes a conflicted copy 'name (conflict from <user>, <date>).ext' (VFS-10), and a structural op is rejected with no side effects.\n\nLocks are S/X leases:\n- TTL 30 s by default, set in config.\n- An app-level heartbeat every 10 s from the Worker renews them.\n- Every grant carries a fencing token.\n- Postgres rows are the truth. Our own dsa/heap is the expiry index.\n- Reconnection uses full-jitter backoff (base 0.5 s, cap 30 s) and resumes from lastSrvSeq using the op_log feed.\n- The outbox is replayed in cseq order with at most 16 ops in flight. Server dedup makes the effect exactly-once (OFF-02).\n- sync and lockd are non-critical services that never block boot (BOOT-07/09/10). They drive the taskbar indicator (OFF-04).\n\nAMENDMENTS\n1. Session identity and multi-tab.\n   - A session is one tab's OS instance. The sessionId lives in sessionStorage but is valid only while the tab holds the Web Lock `plotinium:session:<id>` (requested with ifAvailable).\n   - A duplicated tab inherits a copy of sessionStorage, fails to get that lock, and mints a new id. This prevents a 4409 'superseded' loop.\n   - Outbox rows carry their sessionId. Each tab's syncd drains only its own partition, over its own socket.\n   - The holder of `plotinium:outbox-leader` adopts any partition whose session lock is free (the tab closed or crashed). It re-sends those ops with their ORIGINAL opIds, so dedup still holds, and without fences. A write that depended on a dead lease goes through the version check and becomes a conflicted copy if needed.\n   - BroadcastChannel tells the other tabs about local changes.\n   - In degraded mode, local advisory locks use navigator.locks (`vfs:<ino>`, shared/exclusive). They therefore work across tabs and release automatically when a tab dies.\n\n2. A principal on every op.\n   - op.submit carries a `principal` uid. The server accepts it only if it matches the socket's authenticated user, or if the session holds a server-issued elevation for that principal.\n   - An elevation comes from POST /auth/su, which verifies the password server-side. It has a short TTL and is revoked on exit or logout.\n   - Offline su is local-only. Its queued ops replay only after the principal re-authenticates. Otherwise they get EACCES, and the content is kept (see 4).\n\n3. A control lane. hb, lock.*, watch/unwatch, proc.signal and bye bypass the per-session sequential op queue. A long bulk transaction therefore cannot delay lease renewal or lock grants. There is also a statement_timeout on op transactions.\n\n4. Replay never discards content. If a replayed content write is rejected (EBUSY, EACCES, EDQUOT, or the parent is gone), the bytes are kept before the local inverse is applied:\n   - server-side as a conflicted copy in ~/lost+found when quota allows;\n   - otherwise as a pinned local 'unsynced copy', named in the notification.\n\n5. Only deterministic outcomes become op_log rejections.\n   - Transient errors are never persisted: 40001 after retries, 40P01 deadlock, 57014 statement timeout, and lost DB connections. They return error{retryable:true}.\n   - The retry loop covers 40001 and 40P01, with jitter.\n\n6. Idempotency tombstones. op_log payloads may be pruned after 30 days, but (op_id, uid, srv_seq, result) is kept for the life of the account. Beyond the feed horizon, resume goes through the HTTPS snapshot, and an unknown op older than the horizon is never applied blindly.\n\n7. No pg_notify inside the op transaction, because it serialises commits behind a database-wide lock. The single Node process sends op.result and vfs.changed after COMMIT resolves. The AI indexer tails op_log from its durable cursor (index_cursor), polling every 1 s, well inside RAG-02's 30 s.\n\n8. Large atomic ops. An op envelope over 60 KB (for example a 500-file rename with long paths) goes to POST /ops/{opId} over HTTPS, through the same pipeline and the same idempotency. Its result and broadcast still arrive on the socket.\n\n9. Lease expiry.\n   - The sweeper sets one timer to the heap's earliest deadline instead of polling every 250 ms.\n   - acquire also expires stale rows lazily, so a crashed holder's lock expires within the lease time (VFS-09).\n   - The DB clock (clock_timestamp()) is the only time source for leases.\n   - A clean close (1000/1001) releases leases at once. An abnormal close keeps them until the TTL.\n   - Leases are renewed by the app heartbeat, never by WS pong.\n   - Writes to a locked inode must carry a live fence. A stale fence gets EBUSY.\n\n10. Security.\n   - Exact Origin allowlist in the upgrade handler.\n   - HttpOnly SameSite=Strict session cookie.\n   - One zod schema per frame type.\n   - maxPayload 64 KB.\n   - Per-session token bucket, with its size justified from the measured replay burst (OWASP's example is 100/min).\n   - Close all of a user's sockets on logout or session expiry (4401), and re-validate the session every 30 min.\n   - At most 256 leases per session. The owner or root can break a lock, and holders are visible in lsof.\n\n11. Same origin for everything. Blobs and swap are served through our own origin, with no presigned cross-origin URLs, so enabling COOP/COEP for performance.measureUserAgentSpecificMemory (MEM-01) changes nothing. The Service Worker bypasses /ws, /sync/*, /ops, /auth/* and blob PUTs.\n\n12. Honest evidence and scoring.\n   - Re-score C2 as 5/5/5 for A/B/C, because loopback differences are below network RTT. Re-score Socket.IO on C5 and C6 as 4/4, because the differences are immaterial at this scale.\n   - Result: A 92, Socket.IO 87, SSE+POST 80.\n   - State openly that doubling C4 would flip the ranking to Socket.IO (88.7 vs 87.8). The Week-3 network test is therefore decision-critical and reversal trigger (a) is binding.\n   - At the defence, present lock-grant p50/p95 measured on the VPS from the LGU lab network and from 4G, the VFS-09 crash test, and the exactly-once property test, in place of the loopback figures.\n\n13. Demo plan.\n   - Run the two-user lock contention and the crash-expiry test on the examiner's local bring-up (localhost is not proxied) and on the production URL.\n   - Use two browser windows side by side, not background tabs, on AC power.\n   - Keep a 4G hotspot as a fallback.\n   - The scheduler must not treat 'tab hidden' as 'user idle, run AI jobs at full speed'. Under Energy Saver, Chrome 133+ freezes a hidden tab that stays CPU-intensive for more than 5 minutes.\n\nPROCESS PLACEMENT (kept)\n- syncd owns the socket in its Worker and is visible in ps. lockd depends on syncd. Apps reach both only through syscalls.\n- The server is one Node process. HTTPS and WSS share port 443 behind Caddy.\n- Close codes: 1008, 1009, 1012, 1013, 4401, 4408, 4409, 4429, 4508.\n- Backpressure: coalesce events once bufferedAmount exceeds 256 KB; above 4 MB close with 4508 and let the client resume from the feed.\n\nREVERSAL TRIGGERS\n(a) wss:// fails in more than 1 of 20 connection attempts, or is dropped more than once per 10 idle minutes, on the LGU lab network, campus Wi-Fi or the examiner network. Then build the SSE (Last-Event-ID = srvSeq) + POST adapter behind the same Transport interface. If that also fails, switch to Socket.IO.\n(b) Lock-grant p95 exceeds 200 ms with 50 clients each receiving 20 msgs/s, measured on the VPS from campus, and profiling blames the socket layer. Then move to Bun's native WebSocket. uWebSockets.js comes only after checking its GitHub-only native binaries against our Docker image.\n(c) Server RSS exceeds 50 KB per idle connection at 1,000 connections.\n(d) Socket traffic exceeds 50 KB/s per client, or JSON.parse takes more than 1 ms per frame on the lab machine. Then switch to msgpackr with records.\n(e) Worker heartbeats drift beyond 2x the interval in a tab hidden for 10 minutes. Then shorten the heartbeat, lengthen the TTL and re-verify leases on resume. Never use a Service Worker for this, because Chrome terminates idle page Service Workers after about 30 s.\n(f) Simultaneous co-editing becomes a requirement. Then evaluate Yjs for the Editor only.\n\nCONSEQUENCES\nWe hand-write:\n- about 300-500 LOC for reconnection, heartbeats, resume and backpressure;\n- about 150-250 LOC for tab/session identity and outbox adoption;\n- the elevation check.\nAll of this is covered by fast-check property tests and Playwright routeWebSocket fault injection on every PR.\n\nWe give up:\n- a built-in fallback for networks that block the WebSocket Upgrade;\n- automatic merging of concurrent edits (users get conflicted copies instead);\n- HTTP/3/QUIC;\n- about 25-50% frame compactness compared with MessagePack;\n- multi-instance fan-out.\n\nThe margin over Socket.IO is narrow. It rests on C3 (we must build exactly-once ourselves either way) and operational simplicity, not on memory or bundle size.\n\nSCHEMA CHANGES\nEach of these ships as a versioned migration with a rollback script (DB-01), aligned with the DB record:\n- locks PK (ino, session_id), plus a fence column;\n- inodes.lock_fence;\n- users.change_seq;\n- op_log.srv_seq and op_log.result;\n- a new index_cursor table.",
+  "amended_chat_reason": "Keep plain WebSockets: the browser's built-in WebSocket inside a Web Worker, and the `ws` library on Node, carrying our own small JSON protocol with sequence numbers, acks, heartbeats and lease locks with fencing tokens. Lock grants and file changes have to be pushed by the server. Socket.IO does not give exactly-once delivery, so we would build the same protocol on top of it anyway. Its one real advantage is a polling fallback for networks that block WebSockets. We handle that risk by testing the campus network in Week 3 and keeping an SSE fallback ready.\n\nSeveral parts of the plan need fixing:\n- Define what a 'session' is when a user has several tabs open.\n- Let `su` and root commands be authorised by the server.\n- Never throw away offline edits when the server rejects them; keep them as conflicted copies.\n- Keep heartbeats and lock traffic out of the queue behind long bulk operations.\n- Drop Postgres NOTIFY from every transaction.\n- Remove the Service Worker idea from reversal trigger (e), because Chrome stops idle Service Workers after about 30 seconds.\n- Base the latency evidence on real-network lock-grant measurements, not localhost figures.",
+  "defence_qa": [
+   {
+    "question": "Your latency numbers are from loopback, where every push transport is under 2 ms. Why does latency favour WebSocket at all, and where is your lock-grant evidence?",
+    "strong_answer": "On loopback it doesn't really favour it. The 0.26 vs 0.39 vs 1.1 ms differences are below any real network RTT, so we re-scored C2 equally for WebSocket, Socket.IO and SSE. Latency only rules out polling: 1 s polling measured p50 476 ms and p95 925 ms because an event waits for the next poll. Our real evidence is the rt-bench run against the production VPS from the LGU lab network and from 4G. Two Playwright contexts on one machine share one clock, and we timed release-to-lock.granted over 1,000 samples. [Quote p50/p95 here.] Our reversal trigger is p95 > 200 ms with 50 clients at 20 msgs/s, with profiling showing the socket layer, not the DB, is the cause."
+   },
+   {
+    "question": "The two criteria where Socket.IO loses, memory per connection and bundle size, don't matter for 50 users. Isn't the matrix reverse-engineered? Why not Socket.IO for its polling fallback?",
+    "strong_answer": "We agree those differences are small at our scale, so we re-scored them 4/4 for Socket.IO. We also show that doubling the network-robustness weight would flip the result to Socket.IO. The decision rests on something else. Socket.IO's own docs say delivery is at-most-once by default, there is no exactly-once, and its connection-state recovery 'will not always be successful'. OFF-02 requires exactly-once, so we must build opIds, sequence numbers, the durable feed and dedup ourselves either way. With Socket.IO we would run two overlapping retry and buffering layers that we then have to explain in the viva. The fallback is its one real advantage, which is why the campus network test is binding. If wss fails in more than 1 of 20 attempts, we add an SSE+POST adapter behind the same Transport interface, and switch to Socket.IO if that also fails."
+   },
+   {
+    "question": "The server commits the op, then crashes before sending the ack. The client resends after reconnecting. Prove the file isn't changed twice, including a month later.",
+    "strong_answer": "The op_log row, keyed by opId, is inserted in the same transaction as the effect, so if the effect committed, the row exists. The resend hits the op_log lookup first and gets the stored result back as 'duplicate', and nothing runs again. Transient failures such as serialization failure, deadlock and timeout are never stored as results, so a retry can still succeed. We prune op payloads after 30 days but keep the (op_id, result, srv_seq) tombstone for the life of the account, so a very late replay still deduplicates. The fast-check property test kills the server between commit and ack, drops and duplicates frames with routeWebSocket, and then asserts one op_log row per opId, an empty outbox, and a tree checksum equal to applying each op exactly once."
+   },
+   {
+    "question": "User A holds an exclusive lock and puts the tab in the background. Chrome's Energy Saver freezes it, the lease expires, B edits the file, and then A's tab wakes up and saves. What happens?",
+    "strong_answer": "A's heartbeats stopped while the tab was frozen, so the lease expired after 30 s and the lock went to B with a higher fencing token. On wake-up, the main thread forwards the resume event to syncd, which re-verifies its leases and receives lock.lost. Even if A's save goes out first, it carries the old fence, which is lower than inodes.lock_fence, so the server rejects it with EBUSY. A's Editor switches to read-only, and A's unsaved text becomes a conflicted copy, so nothing is lost silently (VFS-10). We renew leases with an app heartbeat, not WebSocket ping/pong, because the browser answers pings itself even while the page is frozen. For the demo we keep both windows visible and plugged in, and the scheduler never treats a hidden tab as idle time for heavy AI jobs."
+   },
+   {
+    "question": "Two tabs of the same user are open, one of them a duplicate. Which session holds the lock, and which tab replays the offline outbox?",
+    "strong_answer": "Each tab is its own OS session. The sessionId is valid only while the tab holds the Web Lock plotinium:session:<id>. A duplicated tab inherits a copy of sessionStorage, fails to get that lock and mints a new id, so the two tabs never evict each other. Each tab drains its own outbox rows over its own socket, so cseq and fences stay consistent. If a tab closes with ops still queued, the outbox leader adopts them and resends them with their original opIds, so dedup still makes the effect exactly-once. Offline, the local advisory locks use navigator.locks in shared or exclusive mode, so they work across tabs and are released when a tab dies."
+   },
+   {
+    "question": "A student runs 'su root' and then 'chown bob notes.txt'. The socket was authenticated as the student. How does the server know it may run the chown as root?",
+    "strong_answer": "It doesn't take the client's word for it. Every op.submit carries a principal. The server accepts a principal that differs from the socket's authenticated user only if the session holds an elevation the server issued through POST /auth/su, which checks the root password server-side, expires quickly, and is revoked on exit or logout. Offline, su works only against the local salted verifier (OFF-03). Ops queued under an offline su replay only after root re-authenticates online. Otherwise the server returns EACCES, the local change is reverted, and the content is kept as an unsynced copy. The server also re-checks rwx on every op, so a modified client kernel gains nothing."
+   }
+  ],
+  "extra_risks": [
+   {
+    "risk": "pg_notify in every op transaction takes a database-wide lock during commit, so all notifying commits run one at a time. Bulk agent operations and several users then queue behind each other.",
+    "mitigation": "Remove NOTIFY from the op transaction. The single Node process emits events after COMMIT resolves, and the indexer tails op_log from its durable cursor, polling every 1 s. Use LISTEN/NOTIFY only for a rare wake-up outside the hot path, if at all."
+   },
+   {
+    "risk": "Chrome's Duplicate Tab copies sessionStorage, so two tabs share one sessionId. Each connection supersedes the other (4409), their leases collide, and outbox replay runs over the wrong session.",
+    "mitigation": "A session is valid only while its tab holds the Web Lock plotinium:session:<id> (ifAvailable). Otherwise the tab mints a new id. Outbox rows are partitioned by session, and the leader adopts orphaned partitions using their original opIds."
+   },
+   {
+    "risk": "Head-of-line blocking. A 1,000-node rm -r or a 500-file rename with SERIALIZABLE retries sits in the per-session sequential queue and delays heartbeats and lock grants, causing false lease expiry or a breach of the 200 ms target.",
+    "mitigation": "Give hb, lock.*, proc.signal and bye a separate control lane. Set a statement_timeout on op transactions. Add a load test that measures lock-grant p95 while a bulk op runs in the same session."
+   },
+   {
+    "risk": "An atomic batch op (500 renames with long paths, VFS-08 allows 4096-byte paths) is larger than the 64 KB maxPayload and is closed with 1009, so the atomic operation never reaches the server.",
+    "mitigation": "Send envelopes over 60 KB as POST /ops/{opId} over HTTPS, through the same pipeline and idempotency. Results and broadcasts still arrive on the socket. Add a boundary test at 64 KB + 1."
+   },
+   {
+    "risk": "Under Energy Saver, Chrome freezes a hidden tab that stays CPU-intensive for more than 5 minutes. If the scheduler reads 'tab hidden' as 'user idle' and runs the indexer at full speed, it causes the freeze and the lease loss itself.",
+    "mitigation": "Throttle background AI jobs while document.hidden is true. Test for freezing at chrome://discards. For the live demo, use two visible windows on AC power. Fencing plus a conflicted copy covers whatever is left."
+   },
+   {
+    "risk": "Offline edits are reverted when replay gets EBUSY, EACCES or EDQUOT, which loses user content and contradicts VFS-10.",
+    "mitigation": "Before applying any inverse, keep the bytes as a conflicted copy in ~/lost+found (quota permitting) or as a pinned local unsynced copy. Notify the user. Add a Playwright test: B locks the file while A edits offline, then A reconnects."
+   },
+   {
+    "risk": "If blobs or swap pages are ever served from presigned cross-origin object-storage URLs, enabling COOP/COEP for measureUserAgentSpecificMemory (MEM-01) makes those fetches fail.",
+    "mitigation": "Serve /blobs and /swap through our own origin, proxied by Node or Caddy, or use COEP: credentialless. WebSocket itself is not affected by COEP."
+   },
+   {
+    "risk": "The Service Worker intercepts /sync, /ops or the SSE fallback stream and caches or breaks it, or the offline shell serves stale auth responses.",
+    "mitigation": "The Service Worker's fetch handler bypasses /ws, /sync/*, /ops, /auth/* and blob PUTs. The offline e2e test checks that these routes never come from the cache."
+   },
+   {
+    "risk": "The lease clock is split between Node's in-memory heap and Postgres now(), which is fixed at transaction start, so expiry decisions can disagree.",
+    "mitigation": "The DB (clock_timestamp()) is the only time source. The heap is only an index that is re-read from the DB before a lease is expired or a waiter is granted."
+   },
+   {
+    "risk": "After logout or session expiry, an already-open socket remains authorised.",
+    "mitigation": "Close all of a user's sockets with 4401 on logout or expiry, re-validate every 30 min (OWASP), and document this in SECURITY.md."
+   }
+  ]
+ }
+}

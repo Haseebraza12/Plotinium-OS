@@ -1,0 +1,23 @@
+{
+  "tr": [
+    "57ms mark 288 word 408 ver 497 bar 561 step 585 count hidden inter true fontsStatus loaded",
+    "138ms mark 287 word 408 ver 497 bar 561 step 585 count hidden inter true fontsStatus loaded",
+    "179ms mark 287 word 407 ver 497 bar 561 step 585 count hidden inter false fontsStatus loading",
+    "185ms mark 287 word 405 ver 496 bar 561 step 585 count hidden inter false fontsStatus loading",
+    "220ms mark 287 word 404 ver 495 bar 561 step 585 count hidden inter true fontsStatus loading",
+    "240ms mark 287 word 403 ver 493 bar 559 step 585 count hidden inter true fontsStatus loaded",
+    "252ms mark 286 word 403 ver 493 bar 558 step 585 count hidden inter true fontsStatus loaded",
+    "284ms mark 268 word 384 ver 473 bar 539 step 565 count 593 inter true fontsStatus loaded",
+    "313ms mark 268 word 384 ver 473 bar 538 step 564 count 593 inter true fontsStatus loaded",
+    "325ms mark 268 word 384 ver 472 bar 537 step 562 count 593 inter true fontsStatus loaded",
+    "334ms mark 268 word 383 ver 472 bar 537 step 562 count 593 inter true fontsStatus loaded",
+    "409ms mark 268 word 383 ver 472 bar 536 step 561 count 593 inter true fontsStatus loaded"
+  ],
+  "ls": [
+    "245 0.0002 plb-word,plb-ver",
+    "310 0.0017 plb-col,[object SVGAnimatedString],plb-swap plb-step",
+    "346 0.0000 plb-swap plb-step",
+    "434 0.0000 plb-swap plb-step",
+    "465 0.0000 plb-swap plb-step"
+  ]
+}

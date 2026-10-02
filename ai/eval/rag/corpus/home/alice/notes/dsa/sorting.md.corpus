@@ -1,0 +1,18 @@
+# Sorting algorithms
+
+| Algorithm | Best | Average | Worst | Space | Stable |
+|---|---|---|---|---|---|
+| insertion | n | n² | n² | 1 | yes |
+| merge | n log n | n log n | n log n | n | yes |
+| quick | n log n | n log n | n² | log n | no |
+| heap | n log n | n log n | n log n | 1 | no |
+| counting | n + k | n + k | n + k | k | yes |
+| radix (LSD) | d(n + k) | d(n + k) | d(n + k) | n + k | yes |
+
+Comparison sorts can't beat Ω(n log n) in the worst case (decision tree has n! leaves, height ≥ log2 n!).
+
+Quicksort pivot: median of three, or random. Introsort (C++ std::sort) switches to heapsort if recursion gets too deep, and to insertion sort for tiny ranges.
+
+Timsort (Python, Java objects): finds natural runs, merges them with galloping. Excellent on partially sorted data.
+
+Stability matters when you sort by one key and then another (sort by name, then stable sort by grade).

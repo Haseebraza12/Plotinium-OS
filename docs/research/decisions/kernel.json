@@ -1,0 +1,812 @@
+{
+ "key": "kernel",
+ "title": "Kernel & DSA language, threading and IPC architecture",
+ "record": {
+  "decision_title": "D2: Kernel and DSA language, threading and IPC design. Decision: TypeScript kernel in a dedicated kernel Web Worker, a pool of nested executor workers, a hand-written {id, call, args} protocol with Valibot schemas",
+  "context_constraints_ranked": [
+   "1. Main-thread responsiveness (boundary 2, PROC-05, WM-03). The main thread only renders and dispatches. p95 frame must be <=16.7 ms with a CPU-bound job and 10 windows open, OS code must cause no long task over 50 ms, and the kernel may use at most about 4 ms of main-thread time per frame.",
+   "2. Typed syscall boundary (boundary 1, SYS-01, AGT-01/02). Every app, built-in ones included, talks to the kernel only with {id, call, args} -> {id, ok, value|errno}. The kernel checks permissions on every call. Agent tools are typed syscalls described by JSON Schema, and nothing is ever eval'd.",
+   "3. Hand-written DSA with provable complexity (s10). The heap, trie, tree, DAG with topological sort, and LRU list are written by the team, each in its own module under dsa/ with tests and a micro-benchmark. Budgets: SYS-03 p95 <=1 ms over >=10k entries; PROC-02 O(log n) push, pop and changePriority; MEM-02 O(1) touch and evict.",
+   "4. Testability. CI must report >=85% coverage on dsa/, kernel/ and vfs/ (>=70% overall) on every PR, plus property tests and integration tests for concurrency and kill paths.",
+   "5. Team skills and defensibility. Five BSCS students who know JS/TS, 18 weeks, Phase 2 due in week 7. Every member must defend every decision in the viva, and a decision only one person can explain counts as undefended.",
+   "6. Memory subsystem (MEM-01/03/05/06). A 5 MB page-in needs p95 <=300 ms locally. The accounting model has to be validated with performance.measureUserAgentSpecificMemory, which only works when the page is cross-origin isolated (COOP/COEP headers).",
+   "7. Boot budget (BOOT-10). Warm boot <=1.5 s and cold boot <=3.0 s to an interactive desktop on the modest lab machine, so every KB and every instantiate in the kernel path counts.",
+   "8. Robustness (PROC-05/07/09). Runaway processes are force-killed with worker.terminate() and the pool respawns. Kill frees fds and locks and re-parents children to init. The system must hold >=256 concurrent processes.",
+   "9. Offline and single local writer (OFF-01/02). The kernel runs fully from local state, and only one kernel may write the shared IndexedDB/OPFS store at a time, even when several tabs are open."
+  ],
+  "options": [
+   {
+    "name": "A. TypeScript kernel in a dedicated kernel worker (recommended)",
+    "current_version": "TypeScript 7.0.2 (GA 2026-07-08; npm latest 2026-09); Chrome 153 stable Dedicated/nested Workers",
+    "summary": "The kernel core (process table, scheduler, memory manager/pager, VFS, service manager, syscall dispatcher, sync client) runs in one dedicated module worker. That worker spawns the executor pool as nested dedicated workers. The main thread keeps only the compositor/WM, the app views and a small message router. App processes run as generator programs on executors. Syscalls go straight from each executor to the kernel over a MessagePort, so they never touch the main thread.",
+    "status_notes": "The TS 7 native compiler has no programmatic API until 7.1 (beta planned for Oct 2026). Until then typescript-eslint runs on @typescript/typescript6 6.0.2."
+   },
+   {
+    "name": "B. TypeScript kernel on the main thread (spec reference layout)",
+    "current_version": "TypeScript 7.0.2; Chrome 153",
+    "summary": "This is Figure 8.1 as drawn. The kernel lives on the main thread next to the compositor and keeps within 4 ms per frame, and only process slices run on workers. It is the simplest to debug (one thread, direct access to the compositor), but every syscall and every kernel computation queues behind rendering.",
+    "status_notes": "The runner-up. Because the kernel core is transport-agnostic, this layout can be restored cheaply if we reverse the decision."
+   },
+   {
+    "name": "C. TypeScript kernel in a SharedWorker (one kernel for all tabs)",
+    "current_version": "TypeScript 7.0.2; SharedWorker in Chrome 153",
+    "summary": "One kernel is shared by every tab of the origin, which gives true multi-tab consistency and a single WebSocket.",
+    "status_notes": "Measured in Chrome 153 with the same COOP/COEP headers: no Worker constructor (so it cannot own the executor pool), no createSyncAccessHandle, crossOriginIsolated=false and no SharedArrayBuffer. MDN lists SharedWorker as Baseline only since May 2026."
+   },
+   {
+    "name": "D. Rust -> WASM kernel core and DSA (wasm-bindgen) in a kernel worker",
+    "current_version": "wasm-bindgen 0.2.128 (2026-09-04); wasm-pack 0.15.0 (2026-05-15, now under the wasm-bindgen org)",
+    "summary": "Same placement as A, but the heap, LRU, trie, inode tree and permission logic are written in Rust and compiled to WASM. PCBs, strings and UI stay in TypeScript. The structures would still be hand-written, with no priority-queue or lru crates.",
+    "status_notes": "The Rust project sunset the rustwasm GitHub org in July 2025. wasm-bindgen moved to its own org and is actively released. No team member is assumed to know Rust."
+   },
+   {
+    "name": "E. Go (TinyGo) -> WASM kernel (expected to lose)",
+    "current_version": "Go 1.27.1 is latest (we measured with the locally installed Go 1.22.2 syscall/js); TinyGo v0.42.0 (2026-09-01)",
+    "summary": "Kernel and DSA written in Go with goroutines, exported to JS through syscall/js (or go:wasmexport).",
+    "status_notes": "Measured: a 50-line heap compiles to 1.56 MB of WASM (456 KB gzip), takes 130-208 ms to instantiate, costs 20-26 us per JS->Go call and 30-70 us per heap pop+push. In Go 1.24 the release notes describe go:wasmexport and reactor builds for wasip1."
+   },
+   {
+    "name": "F. AssemblyScript kernel and DSA in a kernel worker",
+    "current_version": "assemblyscript 0.28.20 (2026-07-22)",
+    "summary": "TypeScript-like syntax compiled to WASM. It gives near-WASM numeric speed without learning Rust.",
+    "status_notes": "Still pre-1.0 with regular releases. Its semantics differ from TS (limited closures and unions, its own GC and runtime), and it has its own niche coverage and debug tooling."
+   }
+  ],
+  "criteria": [
+   {
+    "name": "C1 Main-thread responsiveness and syscall latency under UI load",
+    "weight": 20,
+    "why": "Covers boundary 2, PROC-05 and WM-03, the only hard numeric budgets this decision directly controls. Examiners test it live with a frame meter."
+   },
+   {
+    "name": "C2 Fine-grained op performance, including JS<->WASM boundary cost",
+    "weight": 10,
+    "why": "Covers SYS-03 (<=1 ms), PROC-02 and MEM-02. It matters only if a budget is at risk, so the weight is moderate."
+   },
+   {
+    "name": "C3 Testability and coverage tooling",
+    "weight": 15,
+    "why": "Covers >=85% coverage on dsa/, kernel/ and vfs/ on every PR, property tests and fault-injection tests (Code Quality 10%, DSA Rigour 20%)."
+   },
+   {
+    "name": "C4 Debuggability and viva defensibility",
+    "weight": 15,
+    "why": "Every member is examined on the whole system, and a design only one person can explain is treated as undefended."
+   },
+   {
+    "name": "C5 Team skills and 18-week delivery risk",
+    "weight": 15,
+    "why": "The team knows JS/TS. Phase 2 (VFS, WM, terminal) is due in week 7 and an unmet gate caps the grade."
+   },
+   {
+    "name": "C6 Platform capability fit",
+    "weight": 10,
+    "why": "Whether the option can use OPFS sync handles (MEM-05), nested workers to own the pool, worker.terminate (PROC-05), SAB/Atomics and cross-origin isolation (MEM-01 validation)."
+   },
+   {
+    "name": "C7 Boot budget (bundle and instantiate cost)",
+    "weight": 10,
+    "why": "BOOT-10: warm <=1.5 s, cold <=3.0 s on a modest machine."
+   },
+   {
+    "name": "C8 Multi-tab consistency and fault containment",
+    "weight": 5,
+    "why": "OFF-01/02 need one writer of local state, and a UI crash should not corrupt kernel state."
+   }
+  ],
+  "scores": [
+   {
+    "option": "A. TypeScript kernel in a dedicated kernel worker (recommended)",
+    "per_criterion": [
+     {
+      "criterion": "C1 Main-thread responsiveness and syscall latency under UI load",
+      "score": 5,
+      "reason": "Pilot: open-loop syscall RTT p95 was 125-165 us while the main thread rendered at 60 fps with 10 ms of work per frame. The kernel adds zero main-thread work apart from the compositor."
+     },
+     {
+      "criterion": "C2 Fine-grained op performance, including JS<->WASM boundary cost",
+      "score": 4,
+      "reason": "The idiomatic TS heap took 0.57-1.45 us per pop+push and the struct-of-arrays TS heap 0.09-0.20 us. Trie p95 was 30-50 us, flat from 10^3 to 10^5 entries. Every budget is met by more than 20x, though raw speed is not the best of the options."
+     },
+     {
+      "criterion": "C3 Testability and coverage tooling",
+      "score": 5,
+      "reason": "The kernel core is plain TS with no DOM, so Vitest runs it in Node with V8 coverage (AST-remapped). One language gives one coverage report and one fast-check suite."
+     },
+     {
+      "criterion": "C4 Debuggability and viva defensibility",
+      "score": 4,
+      "reason": "DevTools shows each worker as its own thread with source maps. Cross-thread tracing needs correlation IDs, which costs one point."
+     },
+     {
+      "criterion": "C5 Team skills and 18-week delivery risk",
+      "score": 5,
+      "reason": "The team's existing language, and the same language as UI and server."
+     },
+     {
+      "criterion": "C6 Platform capability fit",
+      "score": 5,
+      "reason": "Measured in the kernel worker: createSyncAccessHandle works, nested workers spawn (p50 6-8 ms), terminate works, SAB and Atomics.wait are available, and crossOriginIsolated is true."
+     },
+     {
+      "criterion": "C7 Boot budget (bundle and instantiate cost)",
+      "score": 5,
+      "reason": "No WASM instantiate step, and the kernel is plain JS modules."
+     },
+     {
+      "criterion": "C8 Multi-tab consistency and fault containment",
+      "score": 4,
+      "reason": "Needs a Web Locks leader election so only one tab runs the kernel. The kernel is isolated from UI jank and crashes."
+     }
+    ],
+    "weighted_total": 4.7
+   },
+   {
+    "option": "B. TypeScript kernel on the main thread (spec reference layout)",
+    "per_criterion": [
+     {
+      "criterion": "C1 Main-thread responsiveness and syscall latency under UI load",
+      "score": 2,
+      "reason": "Pilot: syscall RTT p50 was 1.8-2.0 ms and p95 9.3-9.5 ms under the same render load, about 60x worse than A. A 100k-node du walk took 7-15 ms at p95, far over the 4 ms/frame budget, so every kernel operation would have to be chunked."
+     },
+     {
+      "criterion": "C2 Fine-grained op performance, including JS<->WASM boundary cost",
+      "score": 4,
+      "reason": "Same TS structures as A."
+     },
+     {
+      "criterion": "C3 Testability and coverage tooling",
+      "score": 5,
+      "reason": "Same TS tooling as A."
+     },
+     {
+      "criterion": "C4 Debuggability and viva defensibility",
+      "score": 5,
+      "reason": "One thread and direct compositor access make it the simplest to trace."
+     },
+     {
+      "criterion": "C5 Team skills and 18-week delivery risk",
+      "score": 4,
+      "reason": "Simple to start. The risk is that the chunking discipline for the 4 ms budget has to hold in every kernel path."
+     },
+     {
+      "criterion": "C6 Platform capability fit",
+      "score": 2,
+      "reason": "No OPFS sync access handles on the main thread (they exist only in dedicated workers), and Atomics.wait is not allowed there."
+     },
+     {
+      "criterion": "C7 Boot budget (bundle and instantiate cost)",
+      "score": 5,
+      "reason": "No extra instantiate step."
+     },
+     {
+      "criterion": "C8 Multi-tab consistency and fault containment",
+      "score": 3,
+      "reason": "Needs the same leader election as A, and a UI stall also stalls the kernel."
+     }
+    ],
+    "weighted_total": 3.75
+   },
+   {
+    "option": "C. TypeScript kernel in a SharedWorker (one kernel for all tabs)",
+    "per_criterion": [
+     {
+      "criterion": "C1 Main-thread responsiveness and syscall latency under UI load",
+      "score": 4,
+      "reason": "Off the main thread, but the executor pool has to be created by a page, so processes die when that tab closes."
+     },
+     {
+      "criterion": "C2 Fine-grained op performance, including JS<->WASM boundary cost",
+      "score": 4,
+      "reason": "Same TS structures."
+     },
+     {
+      "criterion": "C3 Testability and coverage tooling",
+      "score": 3,
+      "reason": "Browser-mode tests and coverage for SharedWorker contexts are awkward."
+     },
+     {
+      "criterion": "C4 Debuggability and viva defensibility",
+      "score": 2,
+      "reason": "Debugged through the separate chrome://inspect page, and its lifetime rules surprise people."
+     },
+     {
+      "criterion": "C5 Team skills and 18-week delivery risk",
+      "score": 2,
+      "reason": "Many platform gaps to work around."
+     },
+     {
+      "criterion": "C6 Platform capability fit",
+      "score": 1,
+      "reason": "Measured in Chrome 153: no Worker constructor, no createSyncAccessHandle, not cross-origin isolated, so no SAB."
+     },
+     {
+      "criterion": "C7 Boot budget (bundle and instantiate cost)",
+      "score": 5,
+      "reason": "Plain JS."
+     },
+     {
+      "criterion": "C8 Multi-tab consistency and fault containment",
+      "score": 5,
+      "reason": "A genuine single kernel across tabs."
+     }
+    ],
+    "weighted_total": 3.1
+   },
+   {
+    "option": "D. Rust -> WASM kernel core and DSA (wasm-bindgen) in a kernel worker",
+    "per_criterion": [
+     {
+      "criterion": "C1 Main-thread responsiveness and syscall latency under UI load",
+      "score": 5,
+      "reason": "Same placement as A."
+     },
+     {
+      "criterion": "C2 Fine-grained op performance, including JS<->WASM boundary cost",
+      "score": 5,
+      "reason": "Our hand-written WASM heap took 65-128 ns per pop+push, 5-10x faster than the idiomatic TS heap. Numeric calls cost only 4-5 ns, but strings must be marshalled: 5-15 us just to encode and decode one trie completion, about a third of the whole TS completion time."
+     },
+     {
+      "criterion": "C3 Testability and coverage tooling",
+      "score": 2,
+      "reason": "Rust coverage needs cargo-llvm-cov on native tests, and it would be a second report to merge with V8 coverage. WASM executed from JS tests is not attributed to Rust lines."
+     },
+     {
+      "criterion": "C4 Debuggability and viva defensibility",
+      "score": 2,
+      "reason": "Chrome's DWARF debugging is documented for C/C++ through an extension. Every member would also have to defend ownership and borrowing in the viva."
+     },
+     {
+      "criterion": "C5 Team skills and 18-week delivery risk",
+      "score": 1,
+      "reason": "The team would be learning Rust and wasm-bindgen while Phase 2 is due in week 7."
+     },
+     {
+      "criterion": "C6 Platform capability fit",
+      "score": 4,
+      "reason": "Same worker capabilities as A, plus a build toolchain."
+     },
+     {
+      "criterion": "C7 Boot budget (bundle and instantiate cost)",
+      "score": 4,
+      "reason": "A small module for DSA only, but it adds an instantiate step to boot."
+     },
+     {
+      "criterion": "C8 Multi-tab consistency and fault containment",
+      "score": 4,
+      "reason": "Same as A."
+     }
+    ],
+    "weighted_total": 3.25
+   },
+   {
+    "option": "E. Go (TinyGo) -> WASM kernel (expected to lose)",
+    "per_criterion": [
+     {
+      "criterion": "C1 Main-thread responsiveness and syscall latency under UI load",
+      "score": 3,
+      "reason": "Off the main thread, but each JS->Go call measured 20-26 us, which adds latency to every syscall."
+     },
+     {
+      "criterion": "C2 Fine-grained op performance, including JS<->WASM boundary cost",
+      "score": 1,
+      "reason": "Heap pop+push measured 30-70 us, about 50x slower than idiomatic TS."
+     },
+     {
+      "criterion": "C3 Testability and coverage tooling",
+      "score": 2,
+      "reason": "go test coverage would be a separate report."
+     },
+     {
+      "criterion": "C4 Debuggability and viva defensibility",
+      "score": 2,
+      "reason": "Go runtime and goroutine scheduling inside WASM are hard to reason about."
+     },
+     {
+      "criterion": "C5 Team skills and 18-week delivery risk",
+      "score": 1,
+      "reason": "A new language for the team."
+     },
+     {
+      "criterion": "C6 Platform capability fit",
+      "score": 3,
+      "reason": "The runtime needs a blocking select{} and its own scheduler."
+     },
+     {
+      "criterion": "C7 Boot budget (bundle and instantiate cost)",
+      "score": 1,
+      "reason": "456 KB gzip for a heap alone, and 130-208 ms to instantiate, which is 4-7% of the cold-boot budget."
+     },
+     {
+      "criterion": "C8 Multi-tab consistency and fault containment",
+      "score": 4,
+      "reason": "Same placement as A."
+     }
+    ],
+    "weighted_total": 2.05
+   },
+   {
+    "option": "F. AssemblyScript kernel and DSA in a kernel worker",
+    "per_criterion": [
+     {
+      "criterion": "C1 Main-thread responsiveness and syscall latency under UI load",
+      "score": 5,
+      "reason": "Same placement as A."
+     },
+     {
+      "criterion": "C2 Fine-grained op performance, including JS<->WASM boundary cost",
+      "score": 4,
+      "reason": "Numeric speed near WASM, but strings still cross the boundary."
+     },
+     {
+      "criterion": "C3 Testability and coverage tooling",
+      "score": 2,
+      "reason": "Niche coverage tooling, outside Vitest V8 coverage."
+     },
+     {
+      "criterion": "C4 Debuggability and viva defensibility",
+      "score": 2,
+      "reason": "Looks like TS but behaves differently, which is easy to get wrong in a viva."
+     },
+     {
+      "criterion": "C5 Team skills and 18-week delivery risk",
+      "score": 3,
+      "reason": "Familiar syntax, but pre-1.0 and a small ecosystem."
+     },
+     {
+      "criterion": "C6 Platform capability fit",
+      "score": 4,
+      "reason": "Same as D."
+     },
+     {
+      "criterion": "C7 Boot budget (bundle and instantiate cost)",
+      "score": 4,
+      "reason": "A small module, plus an instantiate step."
+     },
+     {
+      "criterion": "C8 Multi-tab consistency and fault containment",
+      "score": 4,
+      "reason": "Same as A."
+     }
+    ],
+    "weighted_total": 3.45
+   }
+  ],
+  "evidence": [
+   {
+    "claim": "Pilot environment for all 'own pilot' rows: headless Google Chrome 153.0.8010.52 driven by playwright-core 1.63.0 on Linux, AMD Ryzen 5 7530U (6 cores / 12 threads), 31 GB RAM. Pages served with COOP same-origin and COEP require-corp; crossOriginIsolated was true and hardwareConcurrency 12. Results are from 2-3 repeated runs, so we report ranges. The pilot is indicative only: the team must repeat it on the Week-2 lab machine spec.",
+    "source": "Own pilot harness: /tmp/claude-1000/-home-haseeb-raza-Desktop-Plotinium-OS/6bdb43c3-e62e-4f77-88ef-40bcd9948f85/scratchpad/kbench/run.mjs (+ www/main.js, kworker.js, appworker.js)",
+    "verified": true
+   },
+   {
+    "claim": "Syscall round trip for a stat call with the result object, open-loop at one call every ~2-4 ms for 3 s (~730 calls). Kernel on the main thread: idle p50 85-140 us, p95 180-350 us. Same kernel while the main thread renders at 60 fps with 10 ms of work per frame: p50 1.8-2.0 ms, p95 9.3-9.5 ms, p99 ~10 ms. Kernel in a dedicated worker: idle p50 75-110 us, p95 140-340 us; under the same render load p50 65-75 us, p95 125-165 us.",
+    "source": "Own pilot (Chrome 153), syscall_rtt_us",
+    "verified": true
+   },
+   {
+    "claim": "Kernel work would break the main-thread budget. A du-style walk over a 100,000-node n-ary tree (Map children) took p50 4.2-6.9 ms and p95 7.0-14.8 ms, above the 4 ms per frame the reference allows for kernel work on the main thread.",
+    "source": "Own pilot, vfs_du_walk_100k_nodes_ms",
+    "verified": true
+   },
+   {
+    "claim": "Throughput is not the bottleneck: 10,000 pipelined stat syscalls ran at 78k-131k calls/s to a kernel worker and 66k-120k calls/s to a main-thread kernel (idle).",
+    "source": "Own pilot, burst_kernel_worker / burst_kernel_main",
+    "verified": true
+   },
+   {
+    "claim": "Binary heap, pop+push pair, steady state, n = 256 / 10^3 / 10^4 / 10^5. Idiomatic TS object heap with a Map index: 570-1,453 ns. changePriority: 86-422 ns. Struct-of-arrays TS heap (Float64Array keys, Int32Array pids): 92-198 ns. Hand-written WAT/WASM heap called from JS: 65-128 ns. An empty JS->WASM call costs 4.4-5.2 ns.",
+    "source": "Own pilot, heap + wasm_noop_call_ns (heap.wat compiled with wabt 1.0.39)",
+    "verified": true
+   },
+   {
+    "claim": "Trie complete(prefix, k=20) over path-like entries: p50 10-25 us and p95 30-50 us, flat from 10^3 to 10^5 entries. That is 20x under the SYS-03 1 ms budget. Just encoding the prefix and decoding 20 results through WASM linear memory costs p50 5 us and p95 5-15 us, so a WASM trie would pay about a third of the current total in marshalling alone. Timer resolution is 5 us in cross-origin-isolated pages (values were quantised to 5 us).",
+    "source": "Own pilot, trie",
+    "verified": true
+   },
+   {
+    "claim": "Page transfer, worker to worker, 5 MB ArrayBuffer: structured clone p50 6.9-9.3 ms, p95 9-14 ms. Transfer list: p50 0.05 ms, p95 0.85-1.2 ms.",
+    "source": "Own pilot, pagein_5MB_ms",
+    "verified": true
+   },
+   {
+    "claim": "SharedArrayBuffer control word: an Atomics.wait/notify ping-pong between two workers takes 8.0-9.4 us per round trip, and an Atomics.load pre-emption check at a yield point costs about 7.6-8.2 ns.",
+    "source": "Own pilot, sab_atomics",
+    "verified": true
+   },
+   {
+    "claim": "The kernel worker can own the pool. A nested dedicated worker spawned from the kernel worker is ready in p50 6.0-7.7 ms, p95 8.5-22 ms. worker.terminate() on a worker stuck in for(;;){} returns in about 0.01 ms, and a fresh worker replaces it.",
+    "source": "Own pilot, nested_worker_respawn",
+    "verified": true
+   },
+   {
+    "claim": "Local swap in the kernel worker with an OPFS FileSystemSyncAccessHandle: 5 MB page-in including SHA-256 verification takes p50 24-31 ms and p95 35-56 ms, well inside the MEM-05 limit of 300 ms. Page-out (truncate, write, flush, hash) p95 is 59-194 ms.",
+    "source": "Own pilot, opfs_kernel_worker",
+    "verified": true
+   },
+   {
+    "claim": "createSyncAccessHandle() is only available in dedicated Web Workers.",
+    "source": "https://developer.mozilla.org/en-US/docs/Web/API/FileSystemFileHandle/createSyncAccessHandle",
+    "verified": true
+   },
+   {
+    "claim": "A SharedWorker in Chrome 153 on the same COOP/COEP origin has no Worker constructor, no createSyncAccessHandle, crossOriginIsolated=false and no SharedArrayBuffer. navigator.locks is available.",
+    "source": "Own pilot, sharedworker_caps; MDN SharedWorker page (Baseline since May 2026): https://developer.mozilla.org/en-US/docs/Web/API/SharedWorker",
+    "verified": true
+   },
+   {
+    "claim": "measureUserAgentSpecificMemory() requires cross-origin isolation (COOP+COEP) and has shipped since Chrome 89. It counts workers in the process. It resolves at the next GC, with a GC forced after about 20 s, so it suits calibrating the MEM-01 accounting model, not live accounting. In our headless pilot it took about 60 s to resolve.",
+    "source": "https://web.dev/articles/monitor-total-page-memory-usage + own pilot",
+    "verified": true
+   },
+   {
+    "claim": "COEP 'credentialless' is available from Chrome 96 and lets pages load cross-origin resources without CORP headers. Document-Isolation-Policy (Chrome 137+, desktop only) is a lighter alternative for getting crossOriginIsolated.",
+    "source": "https://web.dev/articles/cross-origin-isolation-guide ; https://developer.chrome.com/blog/document-isolation-policy",
+    "verified": true
+   },
+   {
+    "claim": "The Web Locks API works in workers and supports ifAvailable (fail immediately) and steal (force release). It has been Baseline widely available since March 2022, which makes it suitable for choosing one kernel tab.",
+    "source": "https://developer.mozilla.org/en-US/docs/Web/API/Web_Locks_API",
+    "verified": true
+   },
+   {
+    "claim": "Long Animation Frames (Chrome 123+) attribute scripts only on the main thread, not in workers. So a kernel in a worker cannot produce main-thread long tasks, and LoAF attribution can show that no long frame comes from OS code (PROC-05).",
+    "source": "https://developer.chrome.com/docs/web-platform/long-animation-frames",
+    "verified": true
+   },
+   {
+    "claim": "TypeScript 7.0, the Go-native compiler, went GA on 2026-07-08 and npm latest is 7.0.2. It ships without a stable programmatic API until 7.1, so typescript-eslint needs the @typescript/typescript6 compatibility package (6.0.2).",
+    "source": "https://www.infoq.com/news/2026/08/typescript-7-released/ ; https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/ ; npm registry (typescript 7.0.2, @typescript/typescript6 6.0.2)",
+    "verified": true
+   },
+   {
+    "claim": "The Rust project sunset the rustwasm GitHub org in July 2025 and moved wasm-bindgen to a new org. wasm-bindgen 0.2.128 was released 2026-09-04 and wasm-pack 0.15.0 on 2026-05-15 under the wasm-bindgen org.",
+    "source": "https://blog.rust-lang.org/inside-rust/2025/07/21/sunsetting-the-rustwasm-github-org ; crates.io API ; https://github.com/wasm-bindgen/wasm-pack/releases/tag/v0.15.0",
+    "verified": true
+   },
+   {
+    "claim": "V8 still lists inlining across the JS-to-Wasm language boundary as future work (M137 speculative-optimisation post). JS->WASM calls stay cheap for numbers (about 5 ns measured), but strings and objects must be copied.",
+    "source": "https://v8.dev/blog/wasm-speculative-optimizations + own pilot",
+    "verified": true
+   },
+   {
+    "claim": "Go 1.22.2 with syscall/js: a 50-line heap compiles to 1,560,642 bytes of WASM (455,851 gzip), instantiates in 130-208 ms, costs 20-26 us per JS->Go call, and takes 30-70 us per heap pop+push. Go 1.24 added go:wasmexport and wasip1 reactor builds; the team could re-measure with Go 1.27 or TinyGo 0.42 if anyone argues for Go.",
+    "source": "Own pilot (kbench/rungo.mjs, goheap/main.go); https://go.dev/doc/go1.24 ; go.dev/dl (go1.27.1); GitHub releases (TinyGo v0.42.0, 2026-09-01)",
+    "verified": true
+   },
+   {
+    "claim": "AssemblyScript latest is 0.28.20 (2026-07-22), still pre-1.0.",
+    "source": "npm registry (assemblyscript)",
+    "verified": true
+   },
+   {
+    "claim": "Schema libraries on the same 8-variant syscall union, bundled with esbuild 0.28.2 (minify, gzip -9) and timed in Node 24.13.1: Valibot 1.5.0 is 2,535 B gzip, 925 ns per valid message and 1,510 ns per invalid one, with no Function constructor. zod 4.6.5 is 27,200 B gzip and 398 ns with JIT, but 3,700 ns with jitless:true (needed under a no-eval CSP). zod/mini is 7,832 B gzip and 981 ns. ArkType 2.2.3 is 47,266 B gzip, 64 ns valid but 5,051 ns invalid, and builds validators with new Function. TypeBox 1.3.34 Compile is 42,063 B gzip and 32 ns (new Function); its Value.Check takes 18.5 us. All five exported JSON Schema for the union (anyOf plus pattern).",
+    "source": "Own pilot: kbench/valbench.mjs, val/*.js; zod source node_modules/zod/v4/core/util.js (jitless probe); @ark/schema/out/shared/compile.js (DynamicFunction); https://zod.dev/v4 ; https://valibot.dev/guides/json-schema/",
+    "verified": true
+   },
+   {
+    "claim": "Comlink's latest release is 4.4.2 from 2024-11-07, with no release in about 22 months and 125 open issues. Its Proxy-based RPC hides the {id, call, args} envelope that the spec requires the kernel to validate, permission-check and audit.",
+    "source": "npm registry (comlink time); GitHub API GoogleChromeLabs/comlink",
+    "verified": true
+   },
+   {
+    "claim": "Hand-written PID hash table (open addressing, linear probing, Fibonacci hashing, backward-shift delete, load factor <=0.5): a 200,000-op random differential test against Map passed. A mixed get/set/delete load took 61-397 ns/op against Map's 142-975 ns/op at n = 256 to 10^5 (Node 24, single run, noisy).",
+    "source": "Own pilot: kbench/pidtable.mjs",
+    "verified": true
+   },
+   {
+    "claim": "Vitest's V8 coverage has used AST-based remapping since 3.2, giving Istanbul-identical reports without instrumentation. Vitest 5.0.1 and @vitest/coverage-v8 5.0.1 are current.",
+    "source": "https://vitest.dev/guide/coverage ; npm registry",
+    "verified": true
+   },
+   {
+    "claim": "Chrome DevTools source-level WASM debugging relies on the 'C/C++ DevTools Support (DWARF)' extension. The documentation covers C/C++ and does not mention Rust.",
+    "source": "https://developer.chrome.com/docs/devtools/wasm",
+    "verified": true
+   }
+  ],
+  "recommendation": "DECISION: Option A. The kernel and all of dsa/ are written in TypeScript (strict, TS 7.0.x). The kernel core runs in ONE dedicated module worker (kernel.worker.ts). That worker spawns a pool of nested executor workers, N = clamp(navigator.hardwareConcurrency - 2, 2, 8), plus one lazily started AI-runtime worker after the desktop is interactive. The main thread hosts only the compositor/WM (registry, z-order, focus, taskbar, pointer capture, transforms batched per requestAnimationFrame), the app views and a small router. It is budgeted at <=4 ms of OS script per frame and checked with Long Animation Frames attribution.\n\nWHY. (1) In our Chrome 153 pilot, a main-thread kernel's syscall p95 grew from 0.2-0.35 ms to 9.4 ms as soon as the UI did 10 ms of work per frame. The worker kernel stayed at 0.13-0.17 ms p95. Kernel bookkeeping such as a 100k-node walk (7-15 ms p95) would otherwise break the 4 ms/frame rule. (2) Only a dedicated worker has OPFS sync access handles, Atomics.wait and the ability to own and terminate nested workers. In the pilot, a 5 MB page-in with SHA-256 verification took 35-56 ms p95, against the 300 ms MEM-05 limit. (3) WASM makes a heap op 5-10x faster in isolation (65-128 ns vs 570-1,453 ns), but one IPC hop costs 65-110 us and every structure already beats its budget by 20x or more in TS. The costs are real by contrast: a second coverage toolchain, weaker debugging, string marshalling (5-15 us per trie completion) and a language the team does not know. (4) A SharedWorker kernel cannot spawn workers, use sync OPFS or get cross-origin isolation (measured in Chrome 153).\n\nPROCESS MODEL. Every program is a generator ('function*'). yield is either a syscall request or a cheap yield point. An executor runs one quantum per dispatch: 5, 10 or 20 ms for the interactive, normal and background bands, configurable for PROC-03. It stops early when a SharedArrayBuffer pre-empt flag is set, then reports {pid, cpuMs, status}. The kernel keeps a watchdog: past the hard limit it sets a kill flag, waits 100 ms, then calls worker.terminate(), respawns the executor (about 6-8 ms) and records exit code 137 for the runaway. CPU hogs are moved to executors of their own so a forced kill takes no other process with it. State stays on its home executor; it moves only through the pager (page-out, then page-in elsewhere).\n\nIPC. A hand-written protocol, not Comlink: requests {id, call, args}, replies {id, ok:true, value} or {id, ok:false, errno}. The caller's identity comes from the executor port and the kernel's resident table, never from the message. Every call is validated with a Valibot schema, permission-checked against the PCB's uid/gid and appended to the audit ring buffer. Payloads over 64 KB are transferred, not cloned (5 MB: 0.05 ms vs 9 ms). SharedArrayBuffer is used only for a 32-byte control block per executor (pre-empt/kill flag, running pid, heartbeat, slice sequence), never for data. COOP same-origin plus COEP credentialless are set everywhere, including on Service-Worker-served offline navigations. If the page is not cross-origin isolated, the OS degrades to message-based pre-emption.\n\nSCHEMAS. Valibot 1.5 plus @valibot/to-json-schema 1.8. One schema per syscall. Agent tools are a typed subset of these schemas, exported at build time as JSON Schema for the server-side LLM gateway. Valibot is 2.5 KB gzip, uses no eval (compatible with a strict script-src 'self' CSP) and validates in about 0.9 us, roughly 1% of one IPC hop.\n\nHASH TABLE. Yes, write one for distinction credit: dsa/hashtable/PidTable.ts (open addressing, linear probing, Fibonacci hashing, backward-shift deletion, load factor <=0.5, doubling). It backs the process table (PROC-01) and is differential-tested against Map with fast-check. Every other registry uses the built-in Map.\n\nMULTI-TAB. Only one tab may run the kernel. navigator.locks.request('plotinium:kernel', {ifAvailable:true}) elects it. A second tab shows 'Plotinium is running in another tab: use here', and a BroadcastChannel message asks the leader to shut down gracefully first.\n\nIF SKILLS DIFFER. If two or more members are already fluent in Rust, keep this design and allow at most one numeric hot module (heap or LRU) in Rust->WASM behind the same TS interface. Do that only if its micro-benchmark misses budget, and add cargo-llvm-cov to CI so coverage still applies.",
+  "runner_up": "Option B, the TypeScript kernel on the main thread (the spec's reference layout), scored 3.75 against A's 4.70. It wins only on debuggability, and it loses heavily on syscall latency under UI load (measured p95 9.4 ms vs 0.13-0.17 ms) and on capabilities (no OPFS sync handles, no Atomics.wait). Switching back is cheap because the kernel core is transport-agnostic: kernel/core has no self, document or Worker references, and a host adapter (worker.ts, main.ts or loopback.ts for tests) binds it to ports. Moving it to the main thread would mean changing the host file plus chunking long kernel operations.",
+  "chat_reason": "Write the kernel and all data structures in TypeScript, and run the kernel in its own Web Worker instead of on the main thread. In our Chrome 153 test, system calls to a main-thread kernel took up to 9.4 ms while the UI was busy, against about 0.15 ms from a worker kernel. Rust/WASM did make a heap operation 5-10x faster, but that gain is under 1 microsecond against a 65-110 microsecond message hop, and it would cost us coverage tooling, easy debugging and time spent learning a new language. Messages use a small hand-written {id, call, args} protocol checked by Valibot schemas, big buffers are transferred instead of copied, and a tiny shared-memory flag lets the kernel pre-empt a running process.",
+  "gave_up": "1. WASM's raw numeric speed: a 5-10x faster heap in micro-benchmarks, and Rust's memory-safety story. 2. The simplicity of a single-threaded kernel. Window syscalls now take two hops (app -> kernel -> compositor), and the kernel has to mirror window ownership (wid -> pid) while the compositor owns geometry, z-order and focus. 3. A true multi-tab kernel. Only one tab runs Plotinium at a time, and other tabs offer a takeover. 4. Zod's familiarity and larger ecosystem, and Comlink's convenience (proxied objects, no envelope code). 5. Strong isolation between processes that share an executor. JS gives no memory isolation inside one worker, so untrusted or CPU-heavy code gets an executor of its own, and real third-party app isolation (sandboxed iframes) is deferred to future work. 6. Freedom from cross-origin-isolation headaches. We accept COOP/COEP on every response, including cached offline ones.",
+  "risks": [
+   {
+    "risk": "Cross-thread bugs between the compositor and the kernel's window-ownership mirror: stale focus, windows left behind after kill (WM-01..06, PROC-07).",
+    "mitigation": "Single-authority rule: the compositor owns geometry, z-order and focus; the kernel owns wid->pid ownership and lifecycle. Every cross-thread message carries a sequence number and correlation ID and is traced in the kernel log ring buffer. A fast-check model test fires random spawn, kill, close and focus sequences and checks that both sides agree."
+   },
+   {
+    "risk": "Cross-origin isolation gets lost: headers missing from Service-Worker-cached responses offline, a CDN resource blocked, or the examiners' proxy stripping headers.",
+    "mitigation": "Use COEP credentialless, so the model CDN needs no CORP. The Service Worker stores the whole Response and re-emits COOP/COEP on navigations. The POST boot stage logs crossOriginIsolated, and an e2e test checks it both online and on offline boot. If isolation is missing, the SAB control block is switched off, pre-emption falls back to messages, and MEM calibration is marked unavailable in bootlog. Document-Isolation-Policy (Chrome 137+ desktop) is a fallback."
+   },
+   {
+    "risk": "worker.terminate() on a shared executor also kills co-resident processes.",
+    "mitigation": "Placement policy: a process that overruns its quantum twice is moved to its own executor, and AI jobs have a dedicated worker. Before termination, co-residents with a clean swap copy are restored on the respawned executor; any others get exit 137 with reason 'collateral', logged and explained in the defence."
+   },
+   {
+    "risk": "The single kernel worker becomes a bottleneck with 256 processes, or a long bulk operation (rm -r on 1,000 nodes) blocks other syscalls.",
+    "mitigation": "Measured capacity is 78k-131k simple syscalls/s. Heavy user-space commands (find, grep, du) run in executors and call syscalls. Bulk kernel operations are resumable generators that yield every 2 ms; only the final commit is non-pre-emptible. The kernel's busy fraction is tracked and shown in top."
+   },
+   {
+    "risk": "The generator programming model is unfamiliar, and a missing yield in a loop causes runaway slices.",
+    "mitigation": "Provide a tiny proc runtime (yield* sys.read(...), yield ctx.tick) with examples and an ESLint rule that flags loops with no yield inside function* in apps/ and bin/. The watchdog plus terminate is the safety net, and each slice overrun is logged with its pid."
+   },
+   {
+    "risk": "Code that only runs in workers is not counted toward the 85% coverage target.",
+    "mitigation": "Keep kernel/core and dsa/ free of DOM and worker globals, enforced with ESLint no-restricted-globals, and test them in Node through a loopback transport with V8 coverage. The worker host shims stay under 50 lines and are covered by Vitest browser-mode or Playwright integration tests."
+   },
+   {
+    "risk": "TypeScript 7 tooling gaps: no programmatic API until 7.1 (beta around October 2026).",
+    "mitigation": "Use tsc 7.0.x for type-checking and @typescript/typescript6 6.0.2 for typescript-eslint. Vite and Vitest transpile without tsc. Pin exact versions at the week-4 freeze; moving to 7.1 requires a new decision record."
+   },
+   {
+    "risk": "Micro-benchmark noise: timers in cross-origin-isolated pages have 5 us resolution, and CPU frequency scaling makes idle latency look worse than loaded latency.",
+    "mitigation": "Time batches of N operations and divide. Report p50 and p95 over at least 1,000 runs, discard warm-up, fix seeds, and run on the published lab-spec machine plus a 4x CPU-throttled CDP profile."
+   },
+   {
+    "risk": "Valibot's JSON Schema output does not match the LLM provider's accepted tool-schema subset (strict mode, additionalProperties).",
+    "mitigation": "A CI contract test generates every tool schema and validates it against the provider's rules. Tool schemas are generated at build time on the server side only. The fallback is Zod 4 toJSONSchema in the shared abi/ package, a swap limited to that one package."
+   }
+  ],
+  "reversal_trigger": "Revisit this decision if any of the following is measured on the published lab-spec machine in Chrome stable:\n\n(1) Under the PROC-05 stress (10 windows dragged plus a CPU-bound process), the kernel-worker syscall RTT p95 exceeds 2 ms, or the kernel worker is busy more than 50% of any 1 s window at 256 processes (PROC-09). Then split VFS and sync into a second worker first, and only after that consider option B.\n\n(2) After a struct-of-arrays rewrite in TypeScript, a DSA benchmark still misses its budget: trie completion p95 >1 ms at 10^5 entries, heap push/pop p95 >5 us at 10^5, LRU touch/evict p95 >5 us at 10^5 pages, or scheduler dispatch overhead >50 us per decision at 256 processes. Then port only that numeric module to Rust->WASM behind the same interface.\n\n(3) Window syscall round trips (app -> kernel -> compositor) exceed p95 16.7 ms, or the ownership-mirror model test finds divergence that cannot be fixed. Then move window ownership into a main-thread kernel shim.\n\n(4) Cross-origin isolation cannot be kept on the production host or on offline boot. Then drop the SAB control block and use message-only pre-emption.\n\n(5) Syscall-heavy tools such as find over 10k inodes spend more than 50% of their time in the IPC hop even with batched calls (readdirPlus). Then add a SharedArrayBuffer ring-buffer fast path for stat and readdir.",
+  "team_prototype": "KERNEL PLACEMENT AND LANGUAGE SPIKE. Weeks 2-3, owned by Role 1 (Kernel) with Role 5 (QA/DevOps), about 4 person-days. It lives in bench/spikes/kernel/ and runs with 'pnpm bench:kernel'. Playwright drives Chrome stable on the Week-2 lab-spec machine, once as-is and once with a 4x CPU throttle through CDP Emulation.setCPUThrottlingRate. Pages are served with COOP same-origin and COEP credentialless. Rebuild the pilot harness in TypeScript (the pilot's plain-JS version is at /tmp/claude-1000/-home-haseeb-raza-Desktop-Plotinium-OS/6bdb43c3-e62e-4f77-88ef-40bcd9948f85/scratchpad/kbench/).\n\nMeasure p50, p95 and p99 over at least 1,000 samples, with fixed seeds and warm-up discarded:\n\n(M1) Syscall RTT for stat, open-loop at about 500 calls/s for 5 s, in four cases: kernel on the main thread vs kernel worker, each with the UI idle and with a real 10-window drag prototype (plus a synthetic 10 ms/frame load). Record p95 frame time and LoAF entries at the same time.\nPass: kernel-worker RTT p95 <=1 ms under load, and drag p95 frame <=16.7 ms.\n\n(M2) DSA micro-benchmarks at n = 256, 10^3, 10^4, 10^5: idiomatic TS heap vs struct-of-arrays TS heap vs WASM heap. Use the WAT heap or, if one member already has Rust, a wasm-bindgen heap, so the losing option has our own numbers. Also measure trie completion (k=20), LRU touch/evict and PidTable vs Map, and plot ns/op against n to show the complexity is flat or logarithmic.\n\n(M3) The cost of passing strings through WASM memory for a trie completion.\n\n(M4) 5 MB page transfer, structured clone vs transferable. Then OPFS sync-handle page-out and page-in with SHA-256 verification, compared with IndexedDB, in the kernel worker.\nPass: page-in p95 <=300 ms.\n\n(M5) Pre-emption latency. While an executor runs a chunked 10 ms loop, compare a SharedArrayBuffer flag with a postMessage 'yield' request, measuring the time from request to slice end. Also measure worker.terminate() plus respawn-to-ready.\n\n(M6) Validator bundle size and ns per call for Valibot, zod/mini and Zod (JIT and jitless) on the real syscall union, plus a JSON Schema export checked against the chosen LLM provider's tool format.\n\n(M7) Offline check: boot from the Service Worker cache with the network disabled and assert crossOriginIsolated === true.\n\nCommit the raw JSON, a results table and charts to docs/evidence/kernel/. STACK_DECISION.md D2 cites these numbers, not the pilot's.",
+  "requirement_ids_served": [
+   "PROC-01",
+   "PROC-02",
+   "PROC-03",
+   "PROC-04",
+   "PROC-05",
+   "PROC-06",
+   "PROC-07",
+   "PROC-08",
+   "PROC-09",
+   "MEM-01",
+   "MEM-02",
+   "MEM-03",
+   "MEM-04",
+   "MEM-05",
+   "MEM-06",
+   "MEM-07",
+   "MEM-08",
+   "SYS-01",
+   "SYS-02",
+   "SYS-03",
+   "WM-03",
+   "WM-05",
+   "OFF-01",
+   "BOOT-03",
+   "BOOT-10",
+   "AGT-01",
+   "AGT-02",
+   "AGT-08",
+   "AGT-09",
+   "RAG-01",
+   "PRE-04",
+   "s10 DSA (heap, trie, tree, DAG, LRU, hand-written hash table)",
+   "s14.2 Kernel and DSA language",
+   "s15 coverage >=85% on dsa/ kernel/ vfs/"
+  ],
+  "packages": [
+   {
+    "name": "typescript",
+    "version": "7.0.2",
+    "licence": "Apache-2.0",
+    "purpose": "Language for kernel/, dsa/, vfs/ and apps. The native tsc is used for fast 'tsc --noEmit' type-checks in CI."
+   },
+   {
+    "name": "@typescript/typescript6",
+    "version": "6.0.2",
+    "licence": "Apache-2.0",
+    "purpose": "TS 6 API and tsc6 for typescript-eslint until TS 7.1 exposes a programmatic API."
+   },
+   {
+    "name": "typescript-eslint",
+    "version": "8.70.1",
+    "licence": "MIT",
+    "purpose": "Lint rules for module boundaries: apps/ may not import kernel/, wm/ or storage globals; kernel/core may not use DOM or worker globals; plus a rule against loops with no yield inside function*."
+   },
+   {
+    "name": "valibot",
+    "version": "1.5.0",
+    "licence": "MIT",
+    "purpose": "Runtime validation of every syscall's args and of agent plans (AGT-01/02). 2.5 KB gzip, no eval."
+   },
+   {
+    "name": "@valibot/to-json-schema",
+    "version": "1.8.0",
+    "licence": "MIT",
+    "purpose": "Build-time export of agent tool schemas as JSON Schema for the server-side LLM gateway. Never shipped in the client bundle."
+   },
+   {
+    "name": "vite",
+    "version": "8.3.0",
+    "licence": "MIT",
+    "purpose": "Bundles the module workers (new Worker(new URL(...), {type:'module'})) and sets COOP/COEP headers on the dev and preview servers."
+   },
+   {
+    "name": "vitest",
+    "version": "5.0.1",
+    "licence": "MIT",
+    "purpose": "Unit and integration tests for dsa/ and kernel/core in Node, using the loopback transport."
+   },
+   {
+    "name": "@vitest/coverage-v8",
+    "version": "5.0.1",
+    "licence": "MIT",
+    "purpose": "V8 coverage with AST remapping. Enforces thresholds of 85% on dsa/, kernel/ and vfs/ and 70% overall."
+   },
+   {
+    "name": "@vitest/browser-playwright",
+    "version": "5.0.1",
+    "licence": "MIT",
+    "purpose": "Tests the worker host shims, MessagePort protocol, SAB control block and terminate/respawn in real Chromium."
+   },
+   {
+    "name": "fast-check",
+    "version": "4.10.2",
+    "licence": "MIT",
+    "purpose": "Property tests: heap invariants, PidTable differential test against Map, scheduler aging bound, WM ownership-mirror model test."
+   },
+   {
+    "name": "tinybench",
+    "version": "6.2.0",
+    "licence": "MIT",
+    "purpose": "Micro-benchmarks for each dsa/ structure (bench/ folders), run nightly with budgets that fail the build."
+   },
+   {
+    "name": "@playwright/test",
+    "version": "1.63.0",
+    "licence": "Apache-2.0",
+    "purpose": "E2E and performance tests (frame time under load, LoAF attribution, offline boot with crossOriginIsolated), plus the kernel spike harness."
+   },
+   {
+    "name": "(rejected) comlink",
+    "version": "4.4.2",
+    "licence": "Apache-2.0",
+    "purpose": "Not adopted. Last release 2024-11-07, and its Proxy RPC hides the mandatory {id, call, args} envelope."
+   },
+   {
+    "name": "(evaluated, not adopted) zod / arktype / typebox",
+    "version": "4.6.5 / 2.2.3 / 1.3.34",
+    "licence": "MIT",
+    "purpose": "Schema-library alternatives measured in the pilot. Zod 4 (toJSONSchema) is the fallback if Valibot's JSON Schema export falls short."
+   },
+   {
+    "name": "(evaluated, not adopted) wasm-bindgen / wasm-pack / assemblyscript / tinygo",
+    "version": "0.2.128 / 0.15.0 / 0.28.20 / 0.42.0",
+    "licence": "MIT OR Apache-2.0 / MIT OR Apache-2.0 / Apache-2.0 / BSD-3-Clause",
+    "purpose": "WASM kernel alternatives, kept only as the reversal path for one numeric hot module."
+   }
+  ],
+  "design_notes": "THREAD MAP\n- Main thread:\n  - compositor/WM, the single authority for geometry, z-order, focus and the taskbar\n  - app view components\n  - boot and login screens\n  - kernel-link router\n  - frame and LoAF monitor\n  It never runs VFS, scheduler or pager logic.\n- kernel.worker.ts, one dedicated module worker. It holds:\n  - the syscall dispatcher, permission checks and audit ring buffer\n  - the PCB table (own PidTable)\n  - the scheduler (ready heap, timer/sleep heap, aging, RR by seq)\n  - the memory manager (LRU list plus page tables; swap through OPFS sync handles and IndexedDB, remote swap over HTTPS)\n  - the VFS (inode tree, dentry Maps, trie index updates, and one IndexedDB transaction per operation)\n  - the service manager (DAG and Kahn levels)\n  - the IPC bus, the sync client (the WebSocket lives here, since workers support it) and the outbox\n- Executor pool: nested dedicated workers owned by the kernel, N = clamp(hardwareConcurrency - 2, 2, 8).\n- ai.runtime worker: a separate executor class, started only after the desktop is interactive (BOOT-10). The indexer and predictor are ordinary PCBs with priority 32.\n- The kernel core has no dependency on the thread it runs in. kernel/host/{worker,main,loopback}.ts bind ports; kernel/core imports none of self, document, Worker or indexedDB (ESLint no-restricted-globals).\n\nABI (kernel/abi, shared by the kernel, the executor runtime and the server gateway)\ntype Errno = 'ENOENT'|'EEXIST'|'ENOTDIR'|'EISDIR'|'ENOTEMPTY'|'EINVAL'|'EACCES'|'EPERM'|'ELOOP'|'EDQUOT'|'EBUSY'|'ENAMETOOLONG'|'ESRCH'|'EBADF'|'ENOSYS'|'EINTR'|'EAGAIN';\ninterface Req { id: number; pid: number; call: CallName; args: unknown }   // an executor forwards pid; the kernel checks it is resident on THAT executor's port\ntype Res = { id: number; ok: true; value: unknown } | { id: number; ok: false; errno: Errno; msg?: string };\nconst table = { stat: { schema: StatArgs, cls: 'fast', run: (p, a) => vfs.stat(p.cred, a.path, a) },\n                unlink: { schema: UnlinkArgs, cls: 'bulk-nonpreemptive', run: ... }, ... } satisfies Record<CallName, Entry>;\n\nDispatch order for each call:\n1. Look up the resident table for this port and pid; on failure return ESRCH.\n2. Look up table[call]; if missing return ENOSYS.\n3. v.safeParse(schema, args); on failure return EINVAL.\n4. Permission check with PCB uid/gid.\n5. audit.push({pid, uid, call, args, actor: agent? 'agent':'user'}).\n6. Run the handler.\n7. Reply.\n\nBlocking calls (read on an empty pipe, a lock wait, a page fault) set PCB.state = BLOCKED and waitingOn; the kernel replies later. Payloads over 64 KB always go in the transfer list. Pipes are kernel ring buffers (extra DSA credit). Batched calls such as readdirPlus return stat together with names, so find needs fewer hops.\n\nPROGRAM MODEL (bin/*.ts, apps/*/proc.ts)\nexport default function* wc(ctx: Ctx): Program {\n  const fd = yield* ctx.sys.open(ctx.argv[1], 'r');\n  let n = 0;\n  for (;;) {\n    const b = yield* ctx.sys.read(fd, 65536);\n    if (!b.byteLength) break;\n    for (const c of b) if (c === 10) n++;\n    yield ctx.tick;\n  }\n  yield* ctx.sys.write(1, n + '\\n');\n  return 0;\n}\n\nEXECUTOR SLICE LOOP\nfunction runSlice(pid, quantumMs, resume) {\n  const P = resident.get(pid), end = performance.now() + quantumMs;\n  let input = resume;\n  for (;;) {\n    const r = P.gen.next(input); input = undefined;\n    if (r.done) return report(pid, 'exit', r.value);\n    if (r.value !== TICK) { kport.postMessage(r.value); return report(pid, 'syscall', r.value.id); }\n    Atomics.add(ctl, HB, 1);\n    if (Atomics.load(ctl, PREEMPT) || performance.now() >= end) return report(pid, 'yield');\n  }\n}\n\nA syscall ends the slice implicitly. For 'fast' calls the kernel replies with {type:'resume', pid, res, quantumLeft} straight away if peek() shows nothing with higher priority is READY, which is O(1). The result travels inside the dispatch or resume message on the executor's control port, so there is no ordering race between two ports.\n\nQuanta: 5 ms for interactive (priority 0-9), 10 ms for normal (10-29), 20 ms for background (30-39); configurable. Heap key = effPrio * 2^32 + seq, stored in a Float64Array and exact below 2^53. Aging is changePriority through the index map, O(log n).\n\nSAB CONTROL BLOCK (only when crossOriginIsolated)\nInt32Array(8) per executor:\n- [0] PREEMPT: 0 none, 1 yield, 2 kill\n- [1] RUNNING_PID\n- [2] HEARTBEAT\n- [3] SLICE_SEQ\n- [4..7] reserved (accounting)\n\nThe kernel sets PREEMPT=1 when a higher-priority process becomes READY and no executor is idle. Measured cost of the check is about 8 ns per yield point, and wake-up latency about 9 us.\n\nWATCHDOG\nEvery 50 ms (setInterval is fine here; only boot progress must not be timer-driven) the kernel checks each running slice:\n1. If elapsed > hardLimit (default max(20 * quantum, 250 ms)) and HEARTBEAT has not changed, set PREEMPT=2.\n2. If there is still no report 100 ms later, call worker.terminate() and respawn the executor (measured p50 6-8 ms).\n3. Mark the runaway TERMINATED with exit code 137, close its fds, release its locks, re-parent its children to pid 1 and tell the compositor to close its windows (PROC-07).\n4. Restore co-resident processes from clean swap copies where possible; otherwise kill them with exit 137 and reason 'collateral'.\n\nMid-slice termination loses nothing in the kernel. Syscalls are atomic at call granularity, VFS operations commit in one IndexedDB transaction, and the kernel owns every fd and lock.\n\nPAGING PATH\n1. The memory manager calls executor.pageOut(pid, pageIds).\n2. The executor serializes the pages with its codec into an ArrayBuffer and transfers it to the kernel (5 MB transferred in about 0.05 ms).\n3. The kernel writes the OPFS sync handle and verifies SHA-256 with crypto.subtle.\n4. Only then does it tell the executor to release the pages (MEM-03).\n\nPage-in reverses the path and can target any executor, which is also how processes migrate. The accounting model is serialized bytes plus declared assets. It is calibrated offline against measureUserAgentSpecificMemory, which is slow (20-60 s), so it is never used in the live loop.\n\nWINDOW SYSCALLS\nPath: app -> kernel (checks that pid owns wid) -> compositor over the kernel-only port. The compositor accepts commands only from that port. Pointer drags stay local to the main thread (translate3d batched per requestAnimationFrame). Only the final geometry is sent to the kernel, for session restore (WM-06). Focus and minimise events flow to the kernel, which pins the focused process and makes minimised ones the first paging candidates.\n\nViews talk to their process over a display MessageChannel (state snapshots and diffs out, input events in) that the kernel creates at sys.window.create. Before loading app code, the executor shadows indexedDB, caches, navigator.storage and Worker. This is defence in depth and does not replace the lint rules and the SYS-01 bypass test.\n\nHASH TABLE (dsa/hashtable/PidTable.ts, distinction credit)\n- Keys in an Int32Array, -1 means empty; values in an array.\n- Capacity is a power of two; slot = (Math.imul(k, 0x9E3779B1) >>> shift) & mask.\n- Linear probing; resize by doubling at load factor >0.5.\n- Deletion uses backward shift, so there are no tombstones.\n- Tests: edge cases (empty, one element, reinsert after delete, wrap-around cluster), a fast-check differential test against Map, and a benchmark of get/set/delete from 10^3 to 10^5.\n- Used by the process table. Everything else uses Map/Set, as the spec allows.\n\nHEADERS\nCross-Origin-Opener-Policy: same-origin and Cross-Origin-Embedder-Policy: credentialless go on every HTML and JS response: Vite server.headers, the production proxy (Caddy/nginx), and Service-Worker-served navigations, which re-emit the headers from the cached Response. CSP: script-src 'self', worker-src 'self', no 'unsafe-eval'. Valibot needs no eval.\n\nMULTI-TAB\nIn the kernel worker at the POST stage:\n1. Call navigator.locks.request('plotinium:kernel', {ifAvailable:true}, () => new Promise(never)).\n2. If the lock is null, the tab shows a takeover screen. BroadcastChannel('plotinium:ctl') asks the leader to shut down gracefully (flush dirty pages and the outbox, stop services in reverse topological order, release the lock).\n3. {steal:true} is used only if the leader is unresponsive after 3 s.\n\nREPO\nkernel/{core,host,abi,runtime}, dsa/{heap,trie,tree,dag,lru,hashtable,ringbuffer}/{src,tests,bench}, wm/, vfs/, apps/, bin/, bench/spikes/kernel/.",
+  "open_questions": [
+   "What is the Week-2 lab machine spec (hardwareConcurrency, RAM, integrated GPU)? It sets the executor pool size and whether the 256 MB budget plus model weights fit, and the pilot must be re-run on it.",
+   "Will the examiners' network or proxy keep the COOP/COEP headers on the production URL? If not, the SAB pre-emption flag and measureUserAgentSpecificMemory calibration fall back to degraded modes.",
+   "Can apps other than the built-in ones be installed? If yes, same-worker JS gives no memory isolation, and running them in sandboxed cross-origin iframes should be decided now instead of left as future work.",
+   "Will the instructor accept moving the kernel off the main thread, away from the Figure 8.1 reference? The spec says the architecture is a reference, not a prescription; confirm at or before the week-4 defence.",
+   "Does any team member already know Rust well? That changes the reversal path (one numeric module in Rust->WASM) and who owns it.",
+   "Which LLM provider's tool-schema dialect (strict JSON Schema subset) must the exported agent tool schemas satisfy? This depends on decision D8 (AI models) and determines whether Valibot's JSON Schema export is enough."
+  ]
+ },
+ "examiner_review": {
+  "verdict": "upheld_with_changes",
+  "factual_errors": [
+   {
+    "claim": "Chrome 153 is the current stable, and the pilot ran on it (options A-F, evidence, reversal triggers, 'measured in Chrome 153').",
+    "correction": "Chrome moved to a two-week stable cadence starting with 153 (stable 2026-09-08). Chrome 154 went stable on 2026-09-22 and 156 is due 2026-10-20, so the pilot already ran on the previous stable, and about 8 stable versions will ship between the Week-4 freeze and v1.0.0. The spec requires 'current stable at each gate', so the spike and the capability checks (nested workers, SAB in workers, sync handles, crossOriginIsolated) must be re-run on the stable that is current at each gate, and CI should also run them on beta.",
+    "source": "https://chromiumdash.appspot.com/fetch_milestone_schedule?mstone=153 (stable 2026-09-08), ?mstone=154 (2026-09-22), ?mstone=156 (2026-10-20); https://developer.chrome.com/blog/chrome-two-week-release ; https://9to5google.com/2026/09/08/chrome-updates-two-weeks/"
+   },
+   {
+    "claim": "Packages: 'typescript 7.0.2' is installed as the typescript package, with @typescript/typescript6 6.0.2 alongside it for typescript-eslint.",
+    "correction": "typescript-eslint 8.70.1 declares peerDependency typescript '>=4.8.4 <6.1.0' and imports the package literally named 'typescript', so a plain typescript@7.0.2 install breaks type-aware linting. The Microsoft-documented setup uses npm aliases: \"typescript\": \"npm:@typescript/typescript6@6.0.2\" (provides the TS6 API and the tsc6 binary) and \"@typescript/native\": \"npm:typescript@7.0.2\" (provides the tsc 7 binary). TS 7.0 also removed baseUrl, moduleResolution node/node10, target es5 and module amd/umd/system. Svelte, Vue, Astro and MDX template checking cannot use TS 7 until the 7.1 API, which interacts with D1 (the UI framework). 7.1 beta is 2026-10-06 and stable 2026-11-24, both after the freeze.",
+    "source": "npm view typescript-eslint@8.70.1 peerDependencies (run 2026-09-23); https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/ ; https://github.com/microsoft/TypeScript/issues/63703 (7.1 iteration plan)"
+   },
+   {
+    "claim": "Option E, 'Go (TinyGo) -> WASM', was measured at 1.56 MB of WASM (456 KB gzip), 130-208 ms instantiate and 20-26 us per call, and scored C7=1 on that basis.",
+    "correction": "The measurement used the standard gc toolchain, Go 1.22.2 with syscall/js (confirmed by `go version` on the pilot machine). Go 1.22 has been out of support since Go 1.24 shipped, and the current release is go1.27.1. TinyGo 0.42.0 (2026-09-01) typically emits binaries an order of magnitude smaller, so the numbers do not represent the option as it is named. Either rename the option 'Go (gc 1.22, syscall/js)' or re-measure it with TinyGo 0.42 or Go 1.27. E still loses on C3-C5, but an examiner will spot a loser measured with a stale toolchain.",
+    "source": "local `go version` = go1.22.2; https://go.dev/dl/?mode=json (go1.27.1, go1.26.8); https://github.com/tinygo-org/tinygo/releases (v0.42.0)"
+   },
+   {
+    "claim": "C2 for A: 'Trie p95 was 30-50 us, flat from 10^3 to 10^5 entries ... Every budget is met by more than 20x.'",
+    "correction": "The latency figure is right, but it leaves out memory. The pilot's Map-per-node trie (kbench/www/dsa.js), fed the same path-like generator, takes 225 bytes per node: 55.6 MB of JS heap at 10^4 entries and 492.7 MB at 10^5 (2.30 M nodes). That is roughly twice the 256 MB MEM-01 default budget, on a 'modest' lab machine where MEM-06 requires that the tab never crashes. A struct-of-arrays TypeScript trie (left-child/right-sibling in typed arrays) holds the same 10^5 entries in 24 MB used (44 MB allocated) with completion p95 of 34 us, so the fix stays in TypeScript and is not an argument for WASM.",
+    "source": "Examiner re-measurement, Node 24.13.1 --expose-gc: /tmp/claude-1000/-home-haseeb-raza-Desktop-Plotinium-OS/6bdb43c3-e62e-4f77-88ef-40bcd9948f85/scratchpad/exam/triemem.mjs and .../exam/soatrie.mjs"
+   },
+   {
+    "claim": "Design notes put the POST stage in the kernel worker (lock election, logging crossOriginIsolated), and the memory manager in the worker is calibrated with measureUserAgentSpecificMemory. POST also has to request persistent storage and handle Service Worker updates.",
+    "correction": "Three of these calls do not exist in a dedicated worker. StorageManager.persist() is [Exposed=Window] (persisted() and estimate() work in workers). performance.measureUserAgentSpecificMemory() is Exposed=(Window,ServiceWorker,SharedWorker), not DedicatedWorker. Chrome does not implement WorkerNavigator.serviceWorker. So persist(), memory calibration and SW registration and updates (OFF-05 'restart to update') must run on the main thread and forward their results to the kernel.",
+    "source": "https://storage.spec.whatwg.org/ (StorageManager IDL); https://wicg.github.io/performance-measure-memory/ (IDL); @mdn/browser-compat-data 8.1.2 api.WorkerNavigator.serviceWorker (chrome: false)"
+   },
+   {
+    "claim": "measureUserAgentSpecificMemory 'took about 60 s to resolve' in the headless pilot, so it is usable only for offline calibration.",
+    "correction": "This holds for production pages. In CI or the calibration harness, launching Chrome with --enable-blink-features=ForceEagerMeasureMemory makes it resolve in 16-27 ms (measured on Chrome 153 with Vite 8.3 preview and COEP credentialless), so MEM-01 calibration can be an automated nightly test. The same run measured about 0.3 MB of JS heap per idle module worker (0.40 MB with 0 workers, 3.14 MB with 8, 9.74 MB with 32). Native isolate overhead is not included in that figure.",
+    "source": "Examiner measurement: .../scratchpad/exam/vt/mem.mjs + public/mem.html"
+   },
+   {
+    "claim": "Open question 4: 'Will the instructor accept moving the kernel off the main thread, away from the Figure 8.1 reference?'",
+    "correction": "The spec already answers this. \u00a78, p.22 says: 'The architecture below is a reference, not a prescription. You may restructure it, merge or split components, or choose different technologies', provided the three boundaries hold. Cite that sentence and boundary 2 ('The kernel's own work on the main thread is small and bounded') instead of leaving it open.",
+    "source": "Spec PDF p.22, Section 8"
+   }
+  ],
+  "spec_gaps": [
+   "MEM-03/MEM-04 vs the generator process model: the record says 'Every program is a generator', that state moves only through the pager, and that co-resident processes are 'restored from clean swap copies'. A suspended JS generator cannot be serialized (structuredClone throws DataCloneError), yet MEM-03 requires page-out to serialize 'the state' and restore it byte-identical, and MEM-04 is verified by 'Close the tab, reopen it, restore the state'. The record needs an explicit process-state model: serializable state plus a re-creatable generator, page-out only at yield points, and a deterministic codec.",
+   "Boundary 1 on the main thread: app view components run in the same realm as the compositor and can reach indexedDB, localStorage and other windows' DOM. The record shadows globals only inside executors. It needs lint rules (no storage globals, no document queries outside the window's own root) for apps/*/view, a shadow root per window, and a SYS-01 bypass test that also covers view code.",
+   "AGT-08 (every agent syscall audited, viewable with 'ai log') and the s11 audit_log table: the record appends every call to an in-memory audit RING BUFFER, which overwrites old entries. Agent-originated calls need a durable audit row written in the same IndexedDB transaction as the operation and replicated to the server audit_log through the outbox.",
+   "DB-02 / fault injection on the client mirror: the risk mitigation says bulk kernel operations 'yield every 2 ms'. An IndexedDB transaction auto-commits once no requests are pending across a task boundary, and interleaved syscalls would see a half-applied in-memory tree. rm -r, mv, cp -r and chmod -R must therefore be two-phase: a pre-emptible plan phase under an in-kernel subtree lock with no transaction open, then a non-pre-emptible apply phase that mutates memory and issues one IDB transaction with no await on crypto or network inside it, plus an undo log so the in-memory tree reverts if the transaction aborts.",
+   "Security model / AGT-04: the executor forwards the pid and the kernel only checks that the pid is resident on that port. Processes that share an executor share a JS realm, so a process can forge a co-resident process's pid. Executors must be partitioned by credential (uid, and agent vs user) or the threat model must say explicitly that only first-party code runs.",
+   "BOOT-01 POST and OFF-05: persist(), Service Worker registration and updates, and measureUserAgentSpecificMemory are Window-only in Chrome, so part of POST has to stay on the main thread. The record places POST in the kernel worker.",
+   "BOOT-10: the kernel-worker spawn plus executor-pool spawn on the boot critical path was never measured, and C7 gives A a 5 while penalising only WASM instantiate. Spawn one executor at boot and the rest after the desktop is interactive, and measure time-to-kernel-ready on the lab machine.",
+   "PROC-05/WM-03 input latency: the display MessageChannel goes from view to process directly and bypasses the kernel, so the kernel cannot pre-empt a background slice when input arrives. The input then waits up to one quantum (20 ms), or until the watchdog (\u2265350 ms) if a runaway shares the executor. Also, structured-clone deserialization of large kernel-to-view payloads costs main-thread time.",
+   "MEM-06 / DSA memory: C2 and reversal trigger (2) cover time only. There is no bytes-per-entry budget, although the pilot trie design needs about 493 MB at 10^5 entries.",
+   "Several tabs (spec \u00a72 table, line 'Several tabs, devices and users can change the same data') and VFS-09 ('Two browsers, two users'): the record should state that two-user demos use two browsers, profiles or machines, because a second tab in the same profile gets the takeover screen.",
+   "Secure context: OPFS, Service Workers and SharedArrayBuffer all require a secure context. If examiners open the Docker bring-up at a plain-http LAN address rather than http://localhost, OPFS swap and the offline shell disappear, and the degrade path only covers losing SAB. The README and POST must say so.",
+   "The s14.2 row is 'Kernel and DSA language' (raw performance vs JS-WASM boundary, debugging, team skills). The record merges it with a thread-placement decision, so C1/C6/C8 (35%) do not discriminate between the language options at all. Present it as linked sub-decisions D2a (language) and D2b (placement/IPC), each with its own options and weights."
+  ],
+  "weaknesses": [
+   "The weights do not look reverse-engineered in effect, but there is no proof that they were declared first. A scores \u2265 every other option on 5 of 8 criteria and is at most 1 point behind on the other 3. I recomputed: under equal weights A=4.63, B=3.75, F=3.50, D=3.38, C=3.25, E=2.13, so A wins without the chosen weights. D beats A only under a pure-performance weighting (C1 30 / C2 50 / C7 20: D 4.8 vs A 4.5). Commit the criteria and weights in a git commit that predates the spike results, and include this sensitivity table.",
+   "Option B is partly scored as a strawman. C6=2 assumes a main-thread kernel cannot use OPFS sync handles, but the spec's reference layout already has a worker layer where swap I/O could run. C7 gives A the same 5 as B even though A adds a worker spawn to the boot path. Neither change alters the ranking, but examiners will press on both.",
+   "B's 9.4 ms p95 under load comes from a synthetic 10 ms busy loop per frame (about 60% main-thread utilisation), so the number is set by the load chosen. It demonstrates queueing, not realistic magnitude. The M1 prototype's real 10-window drag is the evidence that should go into STACK_DECISION.md.",
+   "The pilot ran with COEP require-corp and raw files and no bundler, while the recommendation uses COEP credentialless and Vite. I closed that gap: Vite 8.3.0 builds nested module workers (main -> kernel.worker -> executor.worker), and with COOP same-origin + COEP credentialless, crossOriginIsolated and SharedArrayBuffer are available in both the kernel and the nested executor, in dev and preview (Chrome 153; .../scratchpad/exam/vt/run.mjs). The team should reproduce this in M7.",
+   "The pilot ran on a 12-thread Ryzen with 31 GB of RAM. On a 4-thread lab machine the pool is main + kernel + 2 executors + the AI worker (plus onnxruntime-web threads), which oversubscribes the cores. The reversal trigger covers this, but none of the evidence does yet.",
+   "The idiomatic Map-per-node DSA style that the record benchmarks is memory-infeasible at 10^5 entries (trie: 493 MB). The record prefers struct-of-arrays only for the heap. The same argument ('TS with typed arrays is enough, no WASM needed') should be applied and measured for the trie and the LRU.",
+   "The toolchain runs on very fresh releases at freeze time: TS 7.0.2 with no API plus a TS6 alias, Vitest 5.0.1 (5.0.0 released 2026-09-03), Vite 8.3.0. Two compilers can disagree on type errors. Declare which one is the CI gate and pin exact versions.",
+   "Trie key design is not specified. If the trie indexes full paths, one 'mv' of a large directory means O(subtree \u00d7 path length) re-indexing, which works against SYS-03's 'updated incrementally'. Index basenames or per-directory entries instead.",
+   "The generator/executor model moves every built-in app's logic (Editor, Files, Task Manager) into an executor behind a state-diff display protocol. That is a large Phase-2 (week 7) engineering load for the UI owner, and the record gives no estimate. Say explicitly which UI-local state (for example, the editor buffer before save) may stay in the view without breaching boundary 1."
+  ],
+  "amended_recommendation": "DECISION (upheld with changes): Option A. The kernel and all of dsa/ are written in strict TypeScript. The kernel core runs in ONE dedicated module worker (kernel.worker.ts), which owns a pool of nested executor workers, N = clamp(navigator.hardwareConcurrency - 2, 2, 8). Only one executor starts during boot; the others start after the desktop is interactive, and so does the AI-runtime worker (BOOT-10). The main thread hosts the compositor/WM (registry, z-order, focus, taskbar, pointer capture, translate3d batched per requestAnimationFrame), the app views and a small router. It also makes the platform calls a dedicated worker cannot make, and forwards the results to the kernel: navigator.storage.persist() at POST, Service Worker registration and 'restart to update' (OFF-05), and performance.measureUserAgentSpecificMemory() for MEM-01 calibration (in CI, run Chrome with --enable-blink-features=ForceEagerMeasureMemory, which resolves in about 20 ms). Main-thread OS script is budgeted at 4 ms or less per frame and checked with Long Animation Frames attribution. Payloads from the kernel to views are paginated or sent as transferables, because structured-clone deserialization is paid on the main thread. In STACK_DECISION.md this is presented as two linked records: D2a, language (TS vs Rust->WASM vs AssemblyScript vs Go), and D2b, placement and IPC (main thread vs dedicated worker vs SharedWorker).\n\nTOOLCHAIN (corrected). devDependencies: \"typescript\": \"npm:@typescript/typescript6@6.0.2\" (the TS6 API, used by typescript-eslint 8.70.x, whose peer range is typescript <6.1.0, by editors, and by any template checker D1 needs) and \"@typescript/native\": \"npm:typescript@7.0.2\" (the native tsc). CI's type-check gate is TS 7 'tsc --noEmit'. tsconfig avoids the options removed in 7.0 (baseUrl, moduleResolution node10, target es5). Pin exact versions of valibot 1.5.0, @valibot/to-json-schema 1.8.0, vite 8.3.0, vitest, @vitest/coverage-v8 and @vitest/browser-playwright 5.0.1, fast-check 4.10.2, tinybench 6.2.0 and @playwright/test 1.63.0 (all confirmed as npm latest on 2026-09-23). Moving to TS 7.1 (stable 2026-11-24) needs a new record.\n\nWHY. (1) Pilot on Chrome 153: a main-thread kernel's syscall p95 rose to 9.4 ms under 10 ms of render work per frame, while the worker kernel stayed at 0.13-0.17 ms. A 100k-node walk (7-15 ms p95) would break the 4 ms/frame rule. (2) Only a dedicated worker has OPFS sync access handles, Atomics.wait and the ability to own and terminate nested workers. A 5 MB page-in with SHA-256 verification took 35-56 ms p95, against the 300 ms limit. Vite 8.3 builds nested module workers, and with COOP same-origin plus COEP credentialless both the kernel and the executors are crossOriginIsolated with SharedArrayBuffer (examiner re-check). (3) WASM makes a heap operation faster in isolation (65-128 ns, against 92-198 ns for the struct-of-arrays TS heap), but one IPC hop costs 65-110 us, TS already meets every time budget by 20x or more, and WASM would add a second coverage toolchain, weaker debugging, string marshalling (5-15 us per trie completion) and a new language. (4) A SharedWorker cannot spawn workers, use sync OPFS or become cross-origin isolated.\n\nDSA LAYOUT RULE. Large structures use struct-of-arrays typed-array layouts written from first principles: the trie (left-child/right-sibling or radix), the LRU list, the ready heap and the page tables. The pilot's Map-per-node trie needs 493 MB at 10^5 path entries (56 MB at 10^4). A TS typed-array trie holds the same data in 24 MB with completion p95 of 34 us. The trie indexes basenames or per-directory entries rather than full paths, so an mv of a directory stays an incremental update. Every dsa/ benchmark reports bytes per entry next to ns per op.\n\nPROCESS MODEL (amended). A program is { init(argv) -> state, *run(ctx, state) }. Everything a process must keep lives in the serializable state or in ctx.mem segments, because generator objects cannot be serialized. Page-out happens only at a yield point: the state is encoded with a deterministic codec, SHA-256 is computed and verified after the write, and then the generator and state are dropped. Page-in rebuilds the generator with run(ctx, restoredState), on any executor. This is what makes MEM-03 byte-identical restore, MEM-04 restore from a new browser session, migration, and restore after collateral termination possible. Short-lived commands are not checkpointable, are never paged, and on collateral termination exit with 137 and the reason 'collateral'. Quanta are 5, 10 and 20 ms for the interactive, normal and background bands (configurable). A SharedArrayBuffer pre-empt flag is checked at yield points (about 8 ns). The watchdog sets the kill flag, waits 100 ms, then calls worker.terminate() and respawns the executor (6-8 ms), and a process that overruns twice gets an executor of its own. Placement: processes with different uids, and agent processes versus user processes, never share an executor, because processes in the same realm could forge each other's pid. The focused process is placed on the least-loaded executor. When input reaches a view's display channel, a flag is also set in the kernel's SAB, so a background slice on that executor is pre-empted at its next yield point.\n\nBULK OPERATIONS. rm -r, cp -r, mv, batch rename and chmod/chown -R run in two phases. Phase 1 can be pre-empted and yields every 2 ms: it takes an in-kernel subtree lock (conflicting syscalls queue or get EBUSY), checks permissions and quota, hashes content and builds the plan and an undo log. No IndexedDB transaction is open during this phase. Phase 2 cannot be pre-empted: it applies the in-memory mutation and ONE readwrite IndexedDB transaction across all affected stores, issuing only IDB requests and never awaiting crypto or the network (IndexedDB auto-commits once nothing is pending). If the transaction aborts, the undo log reverts the in-memory tree. The fault-injection hook lives inside both phases.\n\nIPC. A hand-written {id, call, args} -> {id, ok, value | errno} protocol, not Comlink. For each call the kernel checks residency (ESRCH), looks up the call (ENOSYS), validates it with Valibot (EINVAL), checks permissions against the PCB's uid/gid, audits it and runs it. Agent-originated calls are audited durably: the row is written in the same IDB transaction as the operation and queued in the outbox for the server's audit_log (AGT-08). The ring buffer holds only the in-memory kernel log. Payloads over 64 KB are transferred rather than cloned. SharedArrayBuffer is used only for the 32-byte control block per executor. Every HTML and JS response carries COOP same-origin and COEP credentialless, including navigations served by the Service Worker. The page must be served from a secure context (https, or http://localhost for the Docker bring-up), and POST logs isSecureContext and crossOriginIsolated. Without isolation, pre-emption falls back to messages; without a secure context, swap falls back to IndexedDB only and bootlog says so.\n\nSCHEMAS. Valibot 1.5, one schema per syscall. Agent tool schemas are exported to JSON Schema at build time, on the server side only. A CI contract test checks them against the provider dialect chosen in D8; the fallback is Zod 4 toJSONSchema, confined to the abi/ package.\n\nHASH TABLE. dsa/hashtable/PidTable.ts, for distinction credit: open addressing with linear probing, Fibonacci hashing, backward-shift deletion and load factor 0.5 or less. It is differential-tested against Map with fast-check and backs the process table (PROC-01).\n\nMULTI-TAB. navigator.locks 'plotinium:kernel' with ifAvailable elects one kernel tab. A second tab offers takeover, with a graceful shutdown over BroadcastChannel and steal only after 3 s. Two-user demos (VFS-09 'two browsers, two users') use separate browsers, profiles or machines. Several local users share one kernel through login and su.\n\nCHROME CADENCE. Chrome now ships stable every two weeks (154 on 2026-09-22). Nightly CI runs the capability and performance suite on Chrome stable and beta, and the spike is re-run on the stable that is current at each gate.\n\nIF SKILLS DIFFER. If two or more members are fluent in Rust, keep this design and allow at most one numeric module in Rust->WASM behind the same TS interface. Do this only if its struct-of-arrays TS benchmark misses its time or memory budget, and add cargo-llvm-cov to CI.\n\nADDED REVERSAL TRIGGERS, on top of the original five. (6) After the struct-of-arrays rewrite, any dsa/ structure exceeds 32 MB at 10^5 entries: port that module only. (7) A new Chrome stable removes or regresses nested workers, SAB in workers or sync access handles: fall back to message pre-emption or IndexedDB swap, and re-open D2b. (8) Two-phase bulk operations cannot pass fault injection with a single IndexedDB transaction: re-open D2b together with the client-storage decision.\n\nEVIDENCE HYGIENE. Rename option E to 'Go (gc, syscall/js)' or re-measure it with TinyGo 0.42 or Go 1.27.",
+  "amended_chat_reason": "Keep the decision: write the kernel and every data structure in TypeScript, and run the kernel in its own Web Worker. In our test, system calls to a main-thread kernel took up to 9.4 ms while the UI was busy, against about 0.15 ms from a worker kernel. Rust/WASM only saves nanoseconds against a message hop of about 100 microseconds, and it would cost us coverage tooling, debugging and time learning a new language. The review found fixes to make before the defence. Install TypeScript 7 under an alias so ESLint keeps working. Use compact typed-array layouts for big structures: the prototype trie needs about 490 MB at 100k entries, a typed-array one needs 24 MB. Store each process's state explicitly so it can be paged out and restored, because a generator cannot be saved. Do bulk file operations in two phases so they stay atomic. Keep a few browser calls on the main thread, because a worker cannot make them. Retest on each new Chrome, which now ships every two weeks.",
+  "defence_qa": [
+   {
+    "question": "Figure 8.1 puts the kernel on the main thread. Why did you move it, and what did that cost you?",
+    "strong_answer": "Section 8 calls the figure 'a reference, not a prescription' and asks us to keep three boundaries. Boundary 2 says the main thread only renders and dispatches. We measured both layouts in Chrome. With the UI busy, a main-thread kernel's syscall p95 was 9.4 ms against 0.13-0.17 ms in a worker, and a single 100k-node walk took 7-15 ms, over the 4 ms-per-frame budget. The cost is two hops for window syscalls and a wid-to-pid mirror between kernel and compositor. We control that with a single-authority rule (compositor owns geometry, z-order and focus; kernel owns ownership and lifecycle), sequence numbers, and a fast-check model test that kills and closes windows at random. Going back is cheap: kernel/core never touches self or document, so moving it means swapping one host adapter and chunking long operations."
+   },
+   {
+    "question": "Your processes are generators. How do you page one out and restore it byte-identical in a new browser session (MEM-03, MEM-04)?",
+    "strong_answer": "We don't serialize the generator; a JS generator can't be serialized. A program is init(argv) -> state plus *run(ctx, state), and everything worth keeping lives in state or ctx.mem. We page out only at a yield point. The state is encoded with a deterministic codec, SHA-256 is computed, and it is written to OPFS or remote swap and read back to verify before anything is released. Page-in decodes, checks the hash, and calls run(ctx, state) again on any executor. Because of that, the same process restores after the tab is closed and reopened. Short-lived commands such as wc are never paged."
+   },
+   {
+    "question": "Rust->WASM made your heap 5-10x faster. Why isn't that decisive?",
+    "strong_answer": "The gain is under a microsecond per operation: 65-128 ns in WASM against 92-198 ns for our struct-of-arrays TypeScript heap. One syscall hop costs 65-110 us, so it would not show in any user-facing latency. Every DSA budget is already met 20x over in TypeScript. The costs of WASM are measured too: 5-15 us of string marshalling per trie completion (a third of the whole completion), a second coverage toolchain, DWARF debugging documented only for C/C++, and a language none of us knows while Phase 2 is due in week 7. Our reversal trigger says that if one structure misses its time or memory budget after a struct-of-arrays rewrite, we port only that module to Rust behind the same interface."
+   },
+   {
+    "question": "A process on a shared executor hangs in for(;;){}. What exactly happens, and what does it cost the other processes on that worker?",
+    "strong_answer": "The heartbeat in the SAB control block stops. Past the hard limit (at least 250 ms) the kernel sets PREEMPT=2, waits 100 ms, then calls worker.terminate() and respawns the executor in about 7 ms. The runaway gets exit code 137, and the kernel closes its fds, releases its locks, re-parents its children to init and closes its windows. The kernel owns all of that state, so nothing in the kernel is lost. Co-resident processes lose their un-yielded slice. Those with a clean checkpoint are restored on the new executor; the rest exit with 137 'collateral', and that is logged. We limit the damage in two ways: executors are split by uid and by agent versus user, and a process that overruns twice gets an executor of its own."
+   },
+   {
+    "question": "Your kernel yields every 2 ms during long operations. How is rm -r on 1,000 nodes still atomic when the fault hook fires at node 500?",
+    "strong_answer": "It runs in two phases. Phase 1 can be pre-empted: it takes an in-kernel subtree lock so conflicting syscalls queue or get EBUSY, checks permissions and quota, and builds the plan and an undo log, with no IndexedDB transaction open. Phase 2 cannot be pre-empted: it applies the in-memory change and one readwrite IndexedDB transaction across inodes, dentries, quota and outbox, issuing only IDB requests so it can't auto-commit early. The hook throwing at node 500 aborts that transaction and the undo log restores the tree. The tree checksum, the orphan probe and the quota are all unchanged, and the server repeats the same thing in one Postgres transaction."
+   },
+   {
+    "question": "Your trie is flat at 30-50 us up to 10^5 entries. How much memory does it use, and does that fit a 256 MB budget on the lab machine?",
+    "strong_answer": "In the pilot's Map-per-node form, no: 225 bytes per node, which is 56 MB at 10^4 entries and about 490 MB at 10^5. That is why the final trie is a struct-of-arrays left-child/right-sibling trie in typed arrays. It holds the same 10^5 entries in 24 MB with completion p95 of 34 us. Every dsa/ benchmark now reports bytes per entry next to ns per op, and one reversal trigger fires if any structure goes over 32 MB at 10^5 entries."
+   }
+  ],
+  "extra_risks": [
+   {
+    "risk": "Chrome now ships a new stable every two weeks (153 on 2026-09-08, 154 on 2026-09-22), so about 8 versions arrive before v1.0.0. Gates run on 'current stable', so a platform regression could break a live gate.",
+    "mitigation": "Nightly CI runs the capability probe (nested module workers, SAB in executors, createSyncAccessHandle, crossOriginIsolated, Web Locks) and the perf budgets on Chrome stable and beta. The team re-runs the spike on the stable current before each gate, and reversal trigger (7) defines the fallbacks."
+   },
+   {
+    "risk": "IndexedDB auto-commit breaks one-transaction atomicity if kernel code awaits crypto.subtle, a lock reply or a timer inside a VFS transaction.",
+    "mitigation": "Use the two-phase bulk-op design. Add a lint rule that forbids await on anything but IDB request wrappers inside txn(). Run the fault-injection suite in real Chromium (Vitest browser mode), not only against fake-indexeddb, whose commit timing can differ."
+   },
+   {
+    "risk": "The two type-checkers can disagree: TS 7 tsc for the CI gate, the TS 6 API for typescript-eslint type info and editors.",
+    "mitigation": "Make TS 7 'tsc --noEmit' the single gate. Keep tsconfig inside the option set both versions accept. Add a weekly job that also runs tsc6. If they diverge for more than a week, pin everything to TS 6.0 and record the change."
+   },
+   {
+    "risk": "Examiners open the Docker bring-up at a LAN IP over plain http, which is not a secure context. OPFS, the Service Worker and SAB then disappear and offline boot fails (OFF-01).",
+    "mitigation": "The README tells examiners to open http://localhost:<port>, or the Compose file puts Caddy with local TLS in front. POST logs isSecureContext and shows a clear degraded banner. An e2e test runs the non-secure path and asserts that it degrades gracefully."
+   },
+   {
+    "risk": "Input lag in interactive apps. The display channel bypasses the kernel, so a keystroke waits behind another process's 20 ms background slice on the same executor.",
+    "mitigation": "When input arrives, set the kernel's SAB pre-empt flag for the target process's executor, and place focused processes on the least-loaded executor. Measure keypress-to-paint p95 in the M1 spike, with a budget of 50 ms or less."
+   },
+   {
+    "risk": "Main-thread cost of receiving large structured-clone payloads (for example, a 10k-entry listing sent to File Explorer), which would count as OS long tasks against PROC-05.",
+    "mitigation": "Paginate or virtualize kernel-to-view messages, and send bulk data as transferable ArrayBuffers. LoAF attribution in the perf suite flags any router handler over 4 ms."
+   },
+   {
+    "risk": "Vitest 5.0 is weeks old (5.0.0 released 2026-09-03, 5.0.1 on 2026-09-15), so browser-mode or coverage bugs could block the 85% coverage gate.",
+    "mitigation": "Pin exact versions and keep a tested fallback branch on Vitest 4.x with the same config. Coverage thresholds are enforced from the Node loopback suite, which does not depend on browser mode."
+   }
+  ]
+ }
+}

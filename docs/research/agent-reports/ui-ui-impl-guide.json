@@ -1,0 +1,67 @@
+{
+ "files_changed": [
+  "/home/haseeb-raza/Desktop/Plotinium OS/specs/05-wm/ui-implementation-guide.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/docs/design/ui-checklist.md"
+ ],
+ "verification": [
+  {
+   "command": "pnpm exec tsc -p ui/tsconfig.json --noEmit",
+   "outcome": "Passed with 0 errors. The 1 TypeScript error that the task mentions no longer occurs; a parallel agent probably fixed it."
+  },
+  {
+   "command": "pnpm exec vitest run --project ui",
+   "outcome": "FAILED: 25 of 26 test files could not be parsed. The root vitest.config.ts declares the 'ui' project without vite-plugin-solid, so Solid JSX does not compile (this is the TODO(R5) noted in ui/vitest.config.ts). Nothing I changed causes this: my files are Markdown."
+  },
+  {
+   "command": "pnpm exec vitest run --config ui/vitest.config.ts",
+   "outcome": "Passed: 27 test files, 101 tests."
+  },
+  {
+   "command": "pnpm exec eslint ui --max-warnings 0",
+   "outcome": "Passed (exit 0, no warnings)."
+  },
+  {
+   "command": "pnpm --filter @plotinium/ui gallery:build",
+   "outcome": "Built in 1.1 s (JS 49.6 KB gzip, CSS 15.8 KB gzip)."
+  },
+  {
+   "command": "pnpm exec prettier --check docs/design/ui-checklist.md",
+   "outcome": "Passes after one prettier --write, which only added blank lines and padded one table. Prettier does not check specs/ (it is in .prettierignore)."
+  },
+  {
+   "command": "python link check of relative Markdown links in both files",
+   "outcome": "0 broken links in either file."
+  },
+  {
+   "command": "grep for the spec structure and checklist items",
+   "outcome": "The guide has the 7-field header block and sections 1\u20139 in the order SPX-01 requires (1,160 lines). The checklist has 784 tick items covering 24 screens plus the global and shared-chrome sections."
+  }
+ ],
+ "problems": [
+  "Status: done. Neither assigned file existed when this run resumed, so both were written from scratch. The guide specs/05-wm/ui-implementation-guide.md is complete and covers all six parts of the task: the component inventory for primitives, shell, overlays, login, apps and boot; the compositor/Solid split for window open, close, minimise and maximise using WAAPI; the kernel wiring; 13 vertical slices mapped to P2/P3/P4 and requirement IDs; the asset pipeline and budgets; and the test plan. The checklist docs/design/ui-checklist.md is complete, with per-screen, per-element, per-state and per-animation ticks and the reduced-motion outcome for each animation.",
+  "The design sources contain no Stitch output. Every generate call timed out on 2026-09-24. The folders hold hand-built reference.html and reference.png files, not screen.html and screenshot.png. files-light and files-semantic-search have notes only and no render. The guide and checklist treat the references as the visual target.",
+  "Several points in the user's design direction contradict normative specs. The guide records each one as a decision (D-01 to D-25) and sends a cross-spec request. The owners must approve them: the atom logo against the identity spec's ring mark and its ban on 'glowing' and gradients (PLT-ID-16); the self-hosted Inter and JetBrains Mono fonts against DSN-06; glass and gradients against DSN-01; the menu bar and dock replacing the taskbar and tray (DSN \u00a73.8.7, WM \u00a73.10\u20133.11); the violet accent replacing orbit blue; and tokens living in ui/src/tokens instead of wm/tokens.",
+  "The Stitch notes include looping animations and spinners: login wallpaper drift, halo breathing, the About orbit rotation, the speculative hatch loop, shimmer loops and spinners. These break DSN-07 and WCAG 2.2.2. The guide overrides them (D-08, D-09), and the checklist lists what to build instead.",
+  "The agent-confirm-sheet design is a second way to answer the destructive-plan confirmation, which conflicts with C12 and DSN \u00a73.8.15. It is blocked until an ADR approves it (D-14).",
+  "A parallel agent built a Spinner primitive (ui/src/primitives/spinner). It conflicts with DSN-07 and UIG-07. The guide forbids its use on any Plotinium screen and leaves removal as an open question.",
+  "ui/README.md and ui/src/primitives/index.ts cite specs/05-wm/visual-language-macos.md, which does not exist.",
+  "ui/src/tokens/tokens.css is 5.0 KB gzip, over DSN-10's 4 KB budget. motion.css still hard-codes durations as calc(ms * var(--pl-k)) instead of named tokens.",
+  "The editor-conflict and task-manager-processes reference renders draw the identity spec's ring mark, not the atom logo.",
+  "All 24 docs/design/stitch/*/notes.md files fail prettier --check. These are not my files, but CI format:check would flag them.",
+  "The protocol does not yet have several things the UI needs: tty.ack is missing from CALL_NAMES; NetStatus has no retryAt or in-flight op count; there is no window.setCloseGuard, perf.frame topic or outbox listing; there are no compositor-port messages for pref, svc.retry, net.retry, notify.action or apps; login.* router messages and create.kind 'palette' are missing. All are listed in guide \u00a74.9 and \u00a79.2."
+ ],
+ "todos_for_team": [
+  "R5: register the ui Vitest project at the root with vite-plugin-solid, so that `vitest run --project ui` works.",
+  "R3/foundation: add named motion tokens (--pl-motion-window-open 360 ms, -window-close 160 ms, -window-flip 260 ms, --pl-motion-overview 420 ms, --pl-motion-stage 1200 ms). Add ui/src/tokens/motion.ts, resolve.ts and the package export './motion'. Add the terminal ANSI and syntax tokens (--pl-term-*, --pl-ansi-0..15, --pl-syn-*). Consider using light-dark() to bring tokens.css under budget.",
+  "R3/primitives: build the primitives the guide marks '(to build)': Meter, StatePill, Banner, Listbox, Toolbar, Sparkline, Skeleton, Disclosure, DigitRoll, Countdown, LiveRegion, FocusScope and GlassSurface. Extend the existing ones: Toggle.locked, Kbd.pressed, Avatar lock and disabled badges, and Table (context menu, rowState, loading, error, virtualisation above 2,000 rows). Decide whether to delete the Spinner primitive or keep it gallery-only.",
+  "R3 with R1: update ui-design-system.md and window-manager.md for D-01 to D-25 (menu bar and dock, traffic lights, titled and unified chrome with data-pl-drag-region, toasts top-right, Overview and the switcher HUD, the D-11 key bindings, work area, the Search palette window kind).",
+  "R3/identity owner: ratify the atom logo in identity-and-branding.md \u00a73.6, then regenerate logo.svg, logo-mono.svg and favicon.svg from ui/src/icons/atom-logo.ts.",
+  "R1/R2/R4 (protocol owners): add tty.ack, window.setCloseGuard, the perf.frame event topic, NetStatus.retryAt and the syncing count, an outbox listing, the ViewContext type, and the compositor and router messages in guide \u00a74.9.",
+  "R5 (boot and web): extend tools/check-boot-truth.ts (SVC-10) to cover ui/src/boot/**; build the Vite plugin that inlines the boot-ui (guide \u00a73.8.5); add the budget rows of guide \u00a73.8.6 to tools/bundle-budget.ts; add the login.* router messages; settle the boot-menu countdown (3 s or 5 s).",
+  "R5 (quality): add tests/visual with gallery baselines, 4 per slug; the gallery axe pass; the CSS scans for UIG-05, UIG-07 and UIG-08; and the guide \u00a77 budgets in tests/performance/budgets.json.",
+  "R5 (traceability): register the prefixes UIG-nn and UI-<Component> in requirements-traceability \u00a73.13, and add ui-implementation-guide.md to the specs/README.md \u00a73.1 index.",
+  "Team: fill in TEAM_CONTRACT.md \u00a71, which Settings \u2192 About needs. Decide on the ADR for agent-confirm-sheet. Choose the wording of the offline lease and lock banner. Run the W5 key audit for Ctrl+Space, Alt+S, Alt+O, Alt+C, Alt+B and Alt+N.",
+  "Anyone re-running Stitch: when screens return, save screen.html and screenshot.png next to the references and run the fidelity review in guide \u00a73.9.5."
+ ],
+ "deps_requested": []
+}

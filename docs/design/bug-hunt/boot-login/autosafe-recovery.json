@@ -1,0 +1,7 @@
+{
+  "mode": "recovery",
+  "boots": ["/?boot=recovery -> recovery", "/?boot=recovery -> recovery", "/ -> login"],
+  "console": [],
+  "pageErrors": [],
+  "failed": ["401 GET /api/auth/me"]
+}

@@ -1,0 +1,6 @@
+# Interview prep (private)
+
+- explain MVCC and vacuum simply
+- design question: rate limiter → token bucket, where to store counters
+- behavioural: a conflict in the team and how it was resolved (the Files app ownership split)
+- salary expectation: research first, don't say a number first

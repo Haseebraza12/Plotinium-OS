@@ -1,0 +1,9 @@
+# Hybrid search notes
+
+Neither method wins everywhere:
+- vectors find paraphrases ("car won't start" ↔ "engine fails to turn over");
+- keywords find exact tokens (error codes, function names, file names) that embeddings blur.
+
+Reciprocal rank fusion: for each document, score = Σ over the lists of 1 / (60 + rank in that list). Uses ranks, not raw scores, so no calibration between BM25 scores and cosine similarities is needed. Documents found by both lists rise to the top.
+
+Our rule: turn hybrid on only if the evaluation set shows a Recall@5 gain over vectors alone; otherwise keep the simpler path. Keyword-only is always the fallback when the model isn't loaded.

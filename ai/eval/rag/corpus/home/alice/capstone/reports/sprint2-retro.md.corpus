@@ -1,0 +1,11 @@
+# Sprint 2 retro
+
+**Keep:** Friday syncs; reviews from outside your role caught real bugs twice; the requirement-ID test titles make the traceability table trivial.
+
+**Stop:** merging on Friday evening; two broken weekends.
+
+**Start:** integration day every Wednesday; writing the test before fixing a reported bug.
+
+**Mood (1–5):** Dan 4, Carol 3, Bob 4, Alice 3, Esha 2 (on-call for CI all week).
+
+Action: rotate CI babysitting weekly instead of leaving it all to Esha.

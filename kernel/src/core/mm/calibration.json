@@ -1,0 +1,8 @@
+{
+  "$comment": "Accounting-model constants (memory-and-paging.md §3.2.3). Placeholder until the first nightly calibration on the lab machine (tests/performance/mem/calibrate.spec.ts) overwrites it; loaded at boot by loadCalibration().",
+  "overheadProc": 65536,
+  "kappa": 1,
+  "bMain": 0,
+  "bExec": 0,
+  "bSpecial": 0
+}

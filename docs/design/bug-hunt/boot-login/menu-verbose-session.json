@@ -1,0 +1,106 @@
+{
+  "console": [],
+  "pageErrors": [],
+  "failed": [],
+  "samples": [
+    {
+      "verbose": true,
+      "exit": null,
+      "colTop": 43,
+      "colTransform": "matrix(0.806313, 0, 0, 0.806313, 0, -258.454)",
+      "scroll": [102, 664, 538],
+      "newPill": "↓ 0 new lines",
+      "rows": 32
+    },
+    {
+      "verbose": true,
+      "exit": null,
+      "colTop": 6,
+      "colTransform": "matrix(0.779735, 0, 0, 0.779735, 0, -300.419)",
+      "scroll": [122, 964, 538],
+      "newPill": "↓ 0 new lines",
+      "rows": 41
+    },
+    {
+      "verbose": true,
+      "exit": "desktop",
+      "colTop": 6,
+      "colTransform": "matrix(0.78, 0, 0, 0.78, 0, -300)",
+      "scroll": [122, 10544, 538],
+      "newPill": "↓ 479 new lines",
+      "rows": 41
+    },
+    {
+      "verbose": true,
+      "exit": "desktop",
+      "colTop": 204,
+      "colTransform": "matrix(0.981862, 0, 0, 0.981862, 0, -67.0824)",
+      "scroll": [122, 10544, 538],
+      "newPill": "↓ 479 new lines",
+      "rows": 41
+    },
+    {
+      "verbose": true,
+      "exit": "desktop",
+      "colTop": 261,
+      "colTransform": "matrix(1.04, 0, 0, 1.04, 0, 0)",
+      "scroll": [122, 10544, 538],
+      "newPill": "↓ 479 new lines",
+      "rows": 41
+    },
+    {
+      "verbose": true,
+      "exit": "desktop",
+      "colTop": 261,
+      "colTransform": "matrix(1.04, 0, 0, 1.04, 0, 0)",
+      "scroll": [122, 10544, 538],
+      "newPill": "↓ 479 new lines",
+      "rows": 41
+    },
+    {
+      "verbose": true,
+      "exit": "desktop",
+      "colTop": 261,
+      "colTransform": "matrix(1.04, 0, 0, 1.04, 0, 0)",
+      "scroll": [122, 10544, 538],
+      "newPill": "↓ 479 new lines",
+      "rows": 41
+    },
+    {
+      "verbose": true,
+      "exit": "desktop",
+      "colTop": 261,
+      "colTransform": "matrix(1.04, 0, 0, 1.04, 0, 0)",
+      "scroll": [122, 10544, 538],
+      "newPill": "↓ 479 new lines",
+      "rows": 41
+    },
+    {
+      "verbose": true,
+      "exit": "desktop",
+      "colTop": 261,
+      "colTransform": "matrix(1.04, 0, 0, 1.04, 0, 0)",
+      "scroll": [122, 10544, 538],
+      "newPill": "↓ 479 new lines",
+      "rows": 41
+    },
+    {
+      "verbose": true,
+      "exit": "desktop",
+      "colTop": 261,
+      "colTransform": "matrix(1.04, 0, 0, 1.04, 0, 0)",
+      "scroll": [122, 10544, 538],
+      "newPill": "↓ 479 new lines",
+      "rows": 41
+    },
+    {
+      "verbose": true,
+      "exit": "desktop",
+      "colTop": 261,
+      "colTransform": "matrix(1.04, 0, 0, 1.04, 0, 0)",
+      "scroll": [122, 10544, 538],
+      "newPill": "↓ 479 new lines",
+      "rows": 41
+    }
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "id": "AGT40-G06",
+  "category": "glob",
+  "tags": [],
+  "user": "alice",
+  "cwd": "/home/alice",
+  "now": "2026-10-05T10:00:00+05:00",
+  "tz": "Asia/Karachi",
+  "fixture": "fx-agt@v1",
+  "prompt": "make the shell scripts in src executable",
+  "expect": {
+    "kind": "plan",
+    "ops": [
+      ["chmod", "/home/alice/src/build.sh", "+0100-0000"],
+      ["chmod", "/home/alice/src/deploy.sh", "+0100-0000"]
+    ],
+    "confirm": true
+  },
+  "reference": {
+    "tool": "submit_plan",
+    "input": {
+      "summary": "plan",
+      "steps": [
+        {
+          "id": "s1",
+          "span": "the shell scripts in src",
+          "op": {
+            "call": "glob",
+            "args": {
+              "path": "~/src",
+              "name": "*.sh"
+            }
+          },
+          "sources": null
+        },
+        {
+          "id": "s2",
+          "span": "make the shell scripts in src executable",
+          "op": {
+            "call": "chmod",
+            "args": {
+              "path": "~/src",
+              "mode": {
+                "symbolic": "u+x"
+              },
+              "recursive": false
+            }
+          },
+          "sources": {
+            "ref": "s1"
+          }
+        }
+      ],
+      "assumptions": [],
+      "suspicious_content_seen": false
+    }
+  }
+}

@@ -1,0 +1,409 @@
+/*
+ * Control Centre (visual-language-macos.md §3.4: the HUD material for the panel, the static card
+ * material for its tiles). One live blur region: the panel. Tiles are static tints, their hover
+ * is a ::before opacity crossfade, and their press is the shared scale.
+ */
+.panel {
+  width: var(--pl-popover-max-w);
+  max-width: calc(100vw - 2 * var(--pl-space-2));
+  padding: var(--pl-space-3);
+  border-radius: calc(var(--pl-radius-tile) + var(--pl-space-2));
+  background: var(--pl-glass-hud-bg);
+  -webkit-backdrop-filter: var(--pl-glass-hud-filter);
+  backdrop-filter: var(--pl-glass-hud-filter);
+  box-shadow:
+    var(--pl-shadow-dialog),
+    var(--pl-glass-specular),
+    inset 0 0 0 var(--pl-hairline-width) var(--pl-border-subtle);
+  color: var(--pl-text);
+  font: var(--pl-type-body);
+  outline: none;
+}
+.inline {
+  position: relative;
+  z-index: var(--pl-z-popover);
+}
+
+.grid {
+  display: grid;
+  /* The connectivity tile gets a little more room, so its two text lines rarely wrap. */
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: var(--pl-space-2);
+}
+/* Focus and the frame meter: an even pair across the full width. */
+.pair {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--pl-space-2);
+}
+
+/*
+ * Entrance stagger positions as data attributes, so no static style attribute reaches the
+ * template (the CSP drops those; UI-091).
+ */
+[data-stagger='0'] {
+  --pl-stagger-index: 0;
+}
+[data-stagger='1'] {
+  --pl-stagger-index: 1;
+}
+[data-stagger='3'] {
+  --pl-stagger-index: 3;
+}
+[data-stagger='4'] {
+  --pl-stagger-index: 4;
+}
+[data-stagger='7'] {
+  --pl-stagger-index: 7;
+}
+
+.tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--pl-space-2);
+  min-width: 0;
+  padding: var(--pl-space-2) var(--pl-space-3);
+  border-radius: var(--pl-radius-tile);
+  background: var(--pl-glass-card-bg);
+  box-shadow:
+    inset 0 0 0 var(--pl-hairline-width) var(--pl-hairline),
+    var(--pl-glass-specular);
+}
+.tall {
+  grid-row: span 2;
+  justify-content: space-evenly;
+  padding: var(--pl-space-1) var(--pl-space-2);
+}
+.wide {
+  grid-column: 1 / -1;
+}
+.toggleTile {
+  justify-content: center;
+  gap: var(--pl-space-1);
+}
+.toggleRow {
+  display: flex;
+  align-items: center;
+  gap: var(--pl-space-1);
+  min-width: 0;
+}
+.toggleLabel {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--pl-text-xs);
+  font-weight: var(--pl-weight-semibold);
+  line-height: var(--pl-leading-tight);
+  cursor: default;
+}
+.toggleSwitch {
+  flex: none;
+}
+.toggleDesc {
+  color: var(--pl-text-muted);
+  font: var(--pl-type-caption);
+  line-height: var(--pl-leading-tight);
+  cursor: default;
+}
+
+/* A tile row: circle glyph, two lines of text, an optional trailing control. */
+.row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--pl-space-2);
+  width: 100%;
+  min-width: 0;
+  padding: var(--pl-space-1);
+  border: 0;
+  border-radius: var(--pl-radius-md);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  isolation: isolate;
+}
+button.row {
+  cursor: default;
+  transition: transform var(--pl-motion-med) var(--pl-ease-spring-soft);
+}
+button.row::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--pl-control-hover);
+  opacity: 0;
+  transition: opacity var(--pl-motion-fast) var(--pl-ease);
+}
+button.row:hover::before {
+  opacity: 1;
+}
+button.row:active {
+  transform: scale(var(--pl-press-scale));
+  transition-duration: var(--pl-motion-press);
+}
+button.row[aria-disabled='true']:hover::before {
+  opacity: 0;
+}
+button.row[aria-disabled='true']:active {
+  transform: none;
+}
+button.row:focus-visible {
+  outline: var(--pl-focus-ring);
+  outline-offset: 0;
+}
+
+.circle {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: var(--pl-control-h);
+  height: var(--pl-control-h);
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-control-hover);
+  color: var(--pl-text);
+}
+.circleSm {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: var(--pl-control-h-sm);
+  height: var(--pl-control-h-sm);
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-control-hover);
+  color: var(--pl-text);
+}
+.circleSm[data-tone='on'] {
+  background: var(--pl-accent);
+  box-shadow: 0 0 10px var(--pl-accent-glow);
+  color: var(--pl-on-accent);
+}
+.circle[data-tone='on'] {
+  background: var(--pl-accent);
+  box-shadow: 0 0 14px var(--pl-accent-glow);
+  color: var(--pl-on-accent);
+}
+.circle[data-tone='warn'] {
+  background: var(--pl-warning-subtle);
+  color: var(--pl-warning);
+}
+.circle[data-tone='ok'] {
+  background: var(--pl-success-subtle);
+  color: var(--pl-success);
+}
+
+.text {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+}
+.title {
+  font-weight: var(--pl-weight-semibold);
+  line-height: var(--pl-leading-tight);
+  overflow-wrap: anywhere;
+}
+.sub {
+  color: var(--pl-text-muted);
+  font: var(--pl-type-caption);
+  line-height: var(--pl-leading-tight);
+  overflow-wrap: anywhere;
+}
+/* The connectivity tile's short line never wraps the tile to three lines (UI-151). */
+.oneLine {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow-wrap: normal;
+}
+.inlineLink {
+  align-self: flex-start;
+  min-height: var(--pl-target-min);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--pl-accent-text);
+  font: var(--pl-type-caption);
+  font-weight: var(--pl-weight-semibold);
+  cursor: pointer;
+}
+.inlineLink:hover {
+  text-decoration: underline;
+}
+.num {
+  font-variant-numeric: tabular-nums;
+}
+.num[data-active='true'] {
+  color: var(--pl-accent-text);
+  font-weight: var(--pl-weight-semibold);
+}
+.warnText {
+  color: var(--pl-warning);
+}
+
+.tileHead {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pl-space-1);
+  color: var(--pl-text-muted);
+  font: var(--pl-type-section);
+}
+
+.chevron {
+  display: grid;
+  flex: none;
+  place-items: center;
+  color: var(--pl-text-muted);
+  transition: transform var(--pl-motion-med) var(--pl-ease-spring-soft);
+}
+.chevron[data-open='true'] {
+  transform: rotate(90deg);
+}
+
+@keyframes row-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+.services {
+  display: grid;
+  gap: var(--pl-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.service {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--pl-space-2);
+  padding: var(--pl-space-1) var(--pl-space-1) var(--pl-space-1) var(--pl-space-2);
+  border-radius: var(--pl-radius-sm);
+  background: var(--pl-control-bg);
+  animation: row-in var(--pl-motion-med) var(--pl-ease-spring-soft) both;
+  animation-delay: calc(var(--pl-stagger-index, 0) * 24ms * var(--pl-k));
+}
+.serviceText {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  font: var(--pl-type-caption);
+  overflow-wrap: anywhere;
+}
+.serviceError {
+  color: var(--pl-warning);
+  font-weight: var(--pl-weight-semibold);
+}
+/* The row button keeps its whole label ("Retry now", "Retrying…"); the text wraps instead. */
+.retryButton {
+  flex: none;
+  white-space: nowrap;
+}
+
+.memHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.memValue {
+  font-weight: var(--pl-weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+.slider {
+  width: 100%;
+}
+.ticks {
+  display: flex;
+  justify-content: space-between;
+  color: var(--pl-text-tertiary);
+  font: var(--pl-type-caption);
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes error-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+.error {
+  margin: 0;
+  color: var(--pl-danger);
+  font: var(--pl-type-caption);
+  animation: error-in var(--pl-motion-med) var(--pl-ease-out) both;
+}
+.note {
+  margin: 0;
+  color: var(--pl-text-muted);
+  font: var(--pl-type-caption);
+}
+
+@keyframes moon-in {
+  from {
+    opacity: 0.5;
+    transform: rotate(-30deg) scale(0.8);
+  }
+}
+.moonOn {
+  animation: moon-in calc(300ms * var(--pl-k)) var(--pl-ease-spring) both;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--pl-space-2);
+  margin-top: var(--pl-space-2);
+  padding: 0 var(--pl-space-1);
+  color: var(--pl-text-tertiary);
+  font: var(--pl-type-caption);
+}
+.version {
+  display: inline-flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: var(--pl-space-1);
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+  user-select: text;
+  -webkit-user-select: text;
+}
+.versionMark {
+  flex: none;
+}
+/* One line: the UI face fits "Plotinium 0.1.0-dev.0 · build 0000000" beside Settings… */
+.versionText {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.link {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--pl-space-1);
+  min-height: var(--pl-target-min);
+  padding: 0 var(--pl-space-1);
+  border: 0;
+  border-radius: var(--pl-radius-sm);
+  background: none;
+  color: var(--pl-text-muted);
+  font: inherit;
+  cursor: default;
+}
+.link:hover {
+  color: var(--pl-text);
+}
+
+@media (forced-colors: active) {
+  .panel,
+  .tile {
+    border: 1px solid CanvasText;
+  }
+}

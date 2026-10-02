@@ -1,0 +1,22 @@
+# CI red on 20 Oct: frozen lockfile
+
+**Author:** Esha.
+
+## What happened
+
+Every pipeline on `main` failed from about 10:40 to 16:15. The failing step was `pnpm install --frozen-lockfile`, with `ERR_PNPM_OUTDATED_LOCKFILE`.
+
+## Why
+
+Dan added a dev dependency (`@types/wicg-file-system-access`) to `kernel/package.json` on his branch and pushed without committing the regenerated `pnpm-lock.yaml`. Review didn't catch it because the diff was one line. On merge, `main` had a package.json that no longer matched the lockfile, and CI correctly refuses to install in that case.
+
+Two other PRs merged after it inherited the red state, so it looked like three separate breakages.
+
+## Fix
+
+- Dan pushed the lockfile at 16:10; green at 16:15.
+- New CI step early in the pipeline: `pnpm install --lockfile-only` and fail if `git diff --exit-code pnpm-lock.yaml` shows changes, with a clear message.
+- Branch protection: `main` requires the pipeline to pass on the merge result, not just the branch.
+- Team rule: dependency changes go in their own small PR.
+
+Time lost: roughly 5 person-hours.

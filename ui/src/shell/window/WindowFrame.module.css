@@ -1,0 +1,368 @@
+/*
+ * Window chrome (visual-language-macos.md §3.4 "Window (static)", §3.3.6 elevation tiers).
+ * The outer <section> is what the compositor moves: it carries the unfocused shadow tier and,
+ * through .pl-focus-shadow, a ::before with the focused tier whose opacity crossfades. The inner
+ * .frame holds everything else and is contained (layout paint), so its ::before shadow is never
+ * clipped. No backdrop-filter: windows use static tinted glass (DSN-24).
+ */
+.window {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: var(--pl-radius-win);
+  box-shadow: var(--pl-shadow-win);
+  color: var(--pl-text);
+  font: var(--pl-type-body);
+  contain: layout style;
+}
+.window[data-dragging='true'] {
+  box-shadow: var(--pl-shadow-win-drag);
+}
+.window[data-state='maximised'],
+.window[data-state='fullscreen'] {
+  border-radius: 0;
+}
+/* A window snapped to a half is square on the screen edge it touches (D-24). */
+.window[data-snap='left'] {
+  border-radius: 0 var(--pl-radius-win) var(--pl-radius-win) 0;
+}
+.window[data-snap='right'] {
+  border-radius: var(--pl-radius-win) 0 0 var(--pl-radius-win);
+}
+.window[data-state='minimised']:not([data-phase]) {
+  visibility: hidden;
+}
+
+.frame {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow: clip;
+  border-radius: inherit;
+  /*
+   * The static tint is painted twice (about 99.6% coverage). With no live blur on windows
+   * (DSN-24), a single 94% tint lets the text of windows underneath ghost through.
+   */
+  background:
+    linear-gradient(var(--pl-glass-window-bg-idle), var(--pl-glass-window-bg-idle)),
+    var(--pl-glass-window-bg-idle);
+  contain: layout paint;
+}
+.window[data-focused='true'] .frame {
+  background:
+    linear-gradient(var(--pl-glass-window-bg), var(--pl-glass-window-bg)), var(--pl-glass-window-bg);
+}
+/* Hairline edge and specular top highlight, drawn over the content. */
+.frame::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  border-radius: inherit;
+  box-shadow:
+    var(--pl-glass-specular),
+    inset 0 0 0 var(--pl-hairline-width) var(--pl-hairline);
+  pointer-events: none;
+}
+
+/* ---------- title bar ---------- */
+.titlebar {
+  position: relative;
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--pl-space-2);
+  height: var(--pl-titlebar-h);
+  padding: 0 var(--pl-space-3);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.titlebar[data-toolbar='true'] {
+  height: var(--pl-toolbar-h);
+}
+
+.title {
+  position: absolute;
+  inset: 0 calc(var(--pl-target-min) * 4);
+  margin: 0;
+  overflow: hidden;
+  color: var(--pl-text);
+  font: var(--pl-type-body);
+  font-weight: var(--pl-weight-semibold);
+  line-height: var(--pl-titlebar-h);
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.titlebar[data-toolbar='true'] .title {
+  line-height: var(--pl-toolbar-h);
+}
+.window[data-focused='false'] .title {
+  color: var(--pl-text-muted);
+}
+
+.toolbar {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: var(--pl-space-2);
+  min-width: 0;
+}
+
+/*
+ * Overlay title bar (unified chrome): only the lights remain, floating over the app's own
+ * toolbar row or sidebar top. The bar itself lets pointers through to the app underneath.
+ */
+.frame[data-titlebar='overlay'] > .titlebar {
+  position: absolute;
+  z-index: 4;
+  top: 0;
+  left: 0;
+  height: var(--pl-toolbar-h);
+  padding: 0 0 0 calc(var(--pl-space-5) - (var(--pl-target-min) - var(--pl-traffic-size)) / 2);
+  pointer-events: none;
+}
+.frame[data-titlebar='overlay'] .lights {
+  margin-left: 0;
+  pointer-events: auto;
+}
+
+/* ---------- traffic lights ---------- */
+/*
+ * Each control is a 24 x 24 target (WCAG 2.5.8) with the 12 px circle drawn by ::before, so the
+ * circles sit 12 px apart. Colours stay the same in both themes; the glyphs carry the meaning.
+ */
+.lights {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex: none;
+  align-items: center;
+  margin-left: calc((var(--pl-traffic-size) - var(--pl-target-min)) / 2);
+}
+
+.light {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: var(--pl-target-min);
+  height: var(--pl-target-min);
+  padding: 0;
+  border: 0;
+  border-radius: var(--pl-radius-pill);
+  background: none;
+  color: var(--pl-traffic-glyph);
+  cursor: default;
+}
+.light::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--pl-traffic-size);
+  height: var(--pl-traffic-size);
+  margin: calc(var(--pl-traffic-size) / -2) 0 0 calc(var(--pl-traffic-size) / -2);
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-traffic-idle);
+  box-shadow: inset 0 0 0 var(--pl-hairline-width) var(--pl-border-subtle);
+}
+.window[data-focused='true'] .close::before,
+.lights:hover .close::before,
+.lights:focus-within .close::before {
+  background: var(--pl-traffic-close);
+}
+.window[data-focused='true'] .minimise::before,
+.lights:hover .minimise::before,
+.lights:focus-within .minimise::before {
+  background: var(--pl-traffic-minimise);
+}
+.window[data-focused='true'] .zoom::before,
+.lights:hover .zoom::before,
+.lights:focus-within .zoom::before {
+  background: var(--pl-traffic-zoom);
+}
+.light:active::before {
+  filter: brightness(0.78);
+}
+/* Disabled beats the focused colours (same element, higher specificity). */
+.window .lights .light[aria-disabled='true']::before {
+  background: none;
+  box-shadow: inset 0 0 0 1px var(--pl-traffic-idle);
+}
+.light:focus-visible {
+  outline: var(--pl-focus-ring);
+  outline-offset: -2px;
+}
+
+.glyph {
+  position: relative;
+  opacity: 0;
+  transform: scale(0.6);
+  transition:
+    opacity var(--pl-motion-fast) var(--pl-ease),
+    transform var(--pl-motion-fast) var(--pl-ease);
+}
+.lights:hover .glyph,
+.lights:focus-within .glyph {
+  opacity: 1;
+  transform: none;
+}
+.light[aria-disabled='true'] .glyph {
+  visibility: hidden;
+}
+
+/* ---------- content ---------- */
+.content {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  isolation: isolate;
+}
+/* Unfocused windows sit under a faint dim layer; it fades out as the window gains focus. */
+.content::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: var(--pl-glass-window-dim);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--pl-motion-med) var(--pl-ease);
+}
+.window[data-focused='false'] .content::before {
+  opacity: 1;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  padding: var(--pl-space-6);
+  background: var(--pl-scrim-sheet);
+}
+.overlayCard {
+  display: grid;
+  gap: var(--pl-space-3);
+  width: min(var(--pl-popover-max-w), 100%);
+  padding: var(--pl-space-4);
+  border-radius: var(--pl-radius-md);
+  background: var(--pl-glass-window-bg);
+  box-shadow:
+    var(--pl-shadow-pop),
+    inset 0 0 0 var(--pl-hairline-width) var(--pl-hairline);
+  text-align: center;
+}
+.overlayTitle {
+  margin: 0;
+  font: var(--pl-type-headline);
+}
+.overlayActions {
+  display: flex;
+  justify-content: center;
+  gap: var(--pl-space-2);
+}
+.suspended {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: none;
+  color: var(--pl-text-muted);
+  font: var(--pl-type-callout);
+  cursor: pointer;
+}
+.suspended:focus-visible {
+  outline: var(--pl-focus-ring);
+  outline-offset: -4px;
+}
+
+/* ---------- resize handles: 8 px edges, 16 px corners, inside the border box (WM §3.5) ---------- */
+.handle {
+  position: absolute;
+  z-index: 4;
+  touch-action: none;
+}
+.handle[data-edge='n'],
+.handle[data-edge='s'] {
+  right: var(--pl-resize-corner);
+  left: var(--pl-resize-corner);
+  height: var(--pl-resize-hit);
+  cursor: ns-resize;
+}
+.handle[data-edge='n'] {
+  top: 0;
+}
+.handle[data-edge='s'] {
+  bottom: 0;
+}
+.handle[data-edge='e'],
+.handle[data-edge='w'] {
+  top: var(--pl-resize-corner);
+  bottom: var(--pl-resize-corner);
+  width: var(--pl-resize-hit);
+  cursor: ew-resize;
+}
+.handle[data-edge='e'] {
+  right: 0;
+}
+.handle[data-edge='w'] {
+  left: 0;
+}
+.handle[data-edge='ne'],
+.handle[data-edge='nw'],
+.handle[data-edge='se'],
+.handle[data-edge='sw'] {
+  width: var(--pl-resize-corner);
+  height: var(--pl-resize-corner);
+}
+.handle[data-edge='ne'] {
+  top: 0;
+  right: 0;
+  cursor: nesw-resize;
+}
+.handle[data-edge='sw'] {
+  bottom: 0;
+  left: 0;
+  cursor: nesw-resize;
+}
+.handle[data-edge='nw'] {
+  top: 0;
+  left: 0;
+  cursor: nwse-resize;
+}
+.handle[data-edge='se'] {
+  right: 0;
+  bottom: 0;
+  cursor: nwse-resize;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (forced-colors: active) {
+  .frame {
+    border: 1px solid CanvasText;
+  }
+  .window[data-focused='true'] .frame {
+    outline: 2px solid Highlight;
+  }
+  .light::before {
+    border: 1px solid ButtonText;
+  }
+}

@@ -1,0 +1,13 @@
+// Pure package (architecture.md §3.7): web-standard APIs that exist in the browser, in workers and
+// on Node (TextEncoder, structuredClone, console) type-check here; DOM-only, worker-only and Node
+// globals are rejected by ESLint (tools/eslint-rules/boundaries.js, with failing fixtures).
+// Tests live in tests/ with their own tsconfig.json, which adds Node types for node: built-ins.
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "types": []
+  },
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules", "dist", "coverage", "tests"]
+}

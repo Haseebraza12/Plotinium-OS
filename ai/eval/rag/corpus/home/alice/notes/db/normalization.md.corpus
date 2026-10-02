@@ -1,0 +1,17 @@
+# Normalisation
+
+Goal: remove redundancy that causes update, insert and delete anomalies.
+
+- **1NF:** atomic values, no repeating groups.
+- **2NF:** 1NF + no non-key attribute depends on part of a composite key.
+- **3NF:** 2NF + no transitive dependency (non-key → non-key).
+- **BCNF:** every determinant is a candidate key. Stricter than 3NF; a BCNF decomposition may lose dependency preservation.
+
+Example from class: `Enrolment(student_id, course_id, student_name, course_title, grade)`.
+student_name depends only on student_id (partial dependency) → split out `Student`. course_title depends only on course_id → `Course`. Left with `Enrolment(student_id, course_id, grade)`.
+
+Lossless join test for a binary decomposition: the common attributes must be a key of at least one side.
+
+Denormalise deliberately for read-heavy reporting, and write down why.
+
+Our capstone schema: inodes and dentries are separate because one inode can have several names (hard links), which is itself a normalisation argument.

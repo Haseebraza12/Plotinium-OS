@@ -1,0 +1,57 @@
+{
+  "id": "AGT40-P08",
+  "category": "pipeline",
+  "tags": ["needs-observation", "content-predicate"],
+  "user": "alice",
+  "cwd": "/home/alice",
+  "now": "2026-10-05T10:00:00+05:00",
+  "tz": "Asia/Karachi",
+  "fixture": "fx-agt@v1",
+  "prompt": "move the notes that mention budget into Documents",
+  "expect": {
+    "kind": "plan",
+    "ops": [
+      ["rename", "/home/alice/notes/ideas.md", "/home/alice/Documents/ideas.md"],
+      [
+        "rename",
+        "/home/alice/notes/meeting-2026-09-28.md",
+        "/home/alice/Documents/meeting-2026-09-28.md"
+      ]
+    ],
+    "confirm": false
+  },
+  "reference": {
+    "observe": [
+      {
+        "name": "fs_grep",
+        "input": {
+          "paths": ["~/notes"],
+          "text": "budget",
+          "ignoreCase": true,
+          "mode": "l"
+        }
+      }
+    ],
+    "tool": "submit_plan",
+    "input": {
+      "summary": "plan",
+      "steps": [
+        {
+          "id": "s1",
+          "span": "move the notes that mention budget into Documents",
+          "op": {
+            "call": "rename",
+            "args": {
+              "from": "~/notes",
+              "to": "~/Documents",
+              "noReplace": null
+            }
+          },
+          "sources": ["/home/alice/notes/ideas.md", "/home/alice/notes/meeting-2026-09-28.md"]
+        }
+      ],
+      "assumptions": [],
+      "suspicious_content_seen": false
+    }
+  }
+}

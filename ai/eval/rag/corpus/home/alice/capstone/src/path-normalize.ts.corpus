@@ -1,0 +1,31 @@
+/**
+ * Normalise an absolute or relative path against a working directory, POSIX style.
+ * Collapses repeated slashes, resolves `.` and `..` (never above the root) and drops a trailing
+ * slash. Does not touch the file system and does not follow symlinks.
+ */
+export function normalizePath(path: string, cwd = '/'): string {
+  const input = path.startsWith('/') ? path : `${cwd}/${path}`;
+  const out: string[] = [];
+  for (const part of input.split('/')) {
+    if (part === '' || part === '.') continue;
+    if (part === '..') {
+      out.pop();
+      continue;
+    }
+    out.push(part);
+  }
+  return `/${out.join('/')}`;
+}
+
+export function dirname(path: string): string {
+  const p = normalizePath(path);
+  const i = p.lastIndexOf('/');
+  return i <= 0 ? '/' : p.slice(0, i);
+}
+
+export function basename(path: string): string {
+  const p = normalizePath(path);
+  return p.slice(p.lastIndexOf('/') + 1);
+}
+
+// normalizePath('../b//c/./d/', '/home/alice/a') === '/home/alice/b/c/d'

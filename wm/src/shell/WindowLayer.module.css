@@ -1,0 +1,37 @@
+/*
+ * The snap preview (window-manager.md §3.6; ui-design-system.md "Snap preview";
+ * ui-implementation-guide.md §3.5.6): one compositor-owned element on its own layer, above the
+ * windows and below the dock, showing where a dragged window will land. The compositor writes its
+ * rectangle only when the zone changes (never per pointermove) and toggles `data-visible`; it
+ * fades with opacity on --pl-motion-fast (0 ms under reduced motion). No backdrop-filter.
+ */
+.snapPreview {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: var(--pl-z-snap-preview);
+  box-sizing: border-box;
+  border: 2px solid var(--pl-accent);
+  border-radius: var(--pl-radius-win);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--pl-motion-fast) var(--pl-ease);
+}
+/* The fill: --pl-accent-subtle at 60% opacity. */
+.snapPreview::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--pl-accent-subtle);
+  opacity: 0.6;
+}
+.snapPreview[data-visible='true'] {
+  opacity: 1;
+}
+
+@media (forced-colors: active) {
+  .snapPreview {
+    border-color: Highlight;
+  }
+}

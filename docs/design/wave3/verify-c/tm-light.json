@@ -1,0 +1,144 @@
+{
+  "testid": true,
+  "winBox": {
+    "x": 40,
+    "y": 68,
+    "width": 1160,
+    "height": 700
+  },
+  "rows": [
+    "PID Name User State Priority / Nice CPU % Memory Faults Executor",
+    "21 taskmgr examiner2 BLOCKED , sleeping 10 / 0 0.1 128 KB 0 exec-1",
+    "12 ai.predictor background Idle-priority background job · yields to foreground input examiner2 BLOCKED , sleep",
+    "15 ai.indexer background Idle-priority background job · yields to foreground input examiner2 BLOCKED , io 32 /",
+    "1 init kernel root BLOCKED , wait 0 / 0 0.0 0 B 0 —",
+    "2 sched service root BLOCKED , idle 0 / 0 0.0 0 B 0 —",
+    "3 storage service root BLOCKED , idle 2 / 0 0.0 0 B 0 —",
+    "4 wm service root BLOCKED , idle 2 / 0 0.0 0 B 0 —",
+    "5 vfs service root BLOCKED , idle 4 / 0 0.0 0 B 0 —",
+    "6 login service root BLOCKED , idle 8 / 0 0.0 0 B 0 —",
+    "7 mm service root BLOCKED , idle 2 / 0 0.0 0 B 0 —",
+    "8 ai.runtime service background Idle-priority background job · yields to foreground input root BLOCKED , idle ",
+    "9 session service root BLOCKED , idle 10 / 0 0.0 0 B 0 —",
+    "10 auth service root BLOCKED , idle 15 / 0 0.0 0 B 0 —",
+    "11 ai.predictor service background Idle-priority background job · yields to foreground input root BLOCKED , id",
+    "13 desktop service root BLOCKED , idle 10 / 0 0.0 0 B 0 —",
+    "14 ai.indexer service background Idle-priority background job · yields to foreground input root BLOCKED , idle",
+    "16 sync service root BLOCKED , idle 20 / 0 0.0 0 B 0 —",
+    "17 lockd service root BLOCKED , idle 20 / 0 0.0 0 B 0 —",
+    "18 ai.agent service root BLOCKED , idle 20 / 0 0.0 0 B 0 —",
+    "19 complete service background Idle-priority background job · yields to foreground input root BLOCKED , idle 3",
+    "20 update service background Idle-priority background job · yields to foreground input root BLOCKED , idle 38 "
+  ],
+  "selected": {
+    "text": "21 taskmgr examiner2 BLOCKED , sleeping 10 / 0 0.1 128 KB 0 exec-1",
+    "low": []
+  },
+  "lowProcesses": [
+    {
+      "t": "End taskmgr (21)?",
+      "c": 1,
+      "fs": "13px",
+      "cls": "_confirm_lq3sx_72"
+    }
+  ],
+  "tableBefore": 447,
+  "viewAsTable": 1,
+  "tableAfter": 446,
+  "frameCard": "FRAME TIME P95 View as chart",
+  "renice": {
+    "enabled": true,
+    "walk": [
+      "button:Cancel",
+      "button:Apply",
+      "input[Search processes]:",
+      "button:PID",
+      "button:Name",
+      "button:User",
+      "button:State",
+      "button:Priority / Nice"
+    ]
+  },
+  "tab_Memory": "Task Manager | Processes | Memory | Scheduler | AI | End Process | End taskmgr (21)? | / | MEMORY BUDGET | 0.3 / 256 MB | accounted | 0% · healthy | Reclaim now | Reclaim runs by itself above the high watermark. A manual reclaim needs the mem.pageOut call, which this build does not have yet. | LOW 75% | HIGH 85% | Kernel 0 MB | Apps 0.3 MB | Free 255.8 MB | Page faults | 0 | +0/s · 0 major | Hit ratio | 100.0% | ▲ 0.0 vs 5 min ago | Paged out | 0 MB | since boot · 0 pages | Paged in | 0 MB | p95 page-in 0 ms local | Swap | Local (OPFS) | 0 B | Server | 0 B | write-behind to the server · storage may be evicted | PID | Process | User | Resident | Swapped local / remote | Faults | Pin | 21 | taskmgr | · hit 100.0% | examiner2 | 64 KB | 0 / 0 | 0 | Pin taskmgr, pid 21 | Pinning needs a kernel pin call, which this build does not have yet. | 1 | init | · hit 100.0% | root | 0 B | 0 / 0 | 0 | Pin init, pid 1 | Kernel processes are always resident | 2 | sched | · hit 100.0% | root | 0 B | 0 / 0 | 0 | Pin sched, pid 2 | Kernel processes are always resident | 3 | storage | · hit 100.0% | root | 0 B | 0 / 0 | 0 | Pin storage, pid 3 | Kernel processes are always resident | 4 | wm | · hit 100.0% | root | 0 B | 0 / 0 | 0 | Pin wm, pid 4 | Kernel processes are always resident | 5 | vfs | · hit 100.0% | root | 0 B | 0 / 0 | 0 | Pin vfs, pid 5 | Kernel processes are always resident | 6 | login | · hit 100.0% | root | 0 B | 0 / 0 | 0 | Pin login, pid 6 | Kernel processes are always resident | 7 | mm | · hit 100.0% | root | 0 B | 0 / 0 | 0 | Pin mm, pid 7 | Kernel processes are always residen",
+  "low_Memory": [
+    {
+      "t": "End taskmgr (21)?",
+      "c": 1,
+      "fs": "13px",
+      "cls": "_confirm_lq3sx_72"
+    }
+  ],
+  "tab_Scheduler": "Task Manager | Processes | Memory | Scheduler | AI | Run tokens | 0 / 11 in use | Dispatches | 0 /s | 0 pre-emptions/s | Ready | 0 waiting | aging every 100 ms | Longest wait | 0 ms of 5,450 ms | RUNNING NOW | exec-0 | idle | exec-1 | idle | READY QUEUE BY BAND | Quanta… | Interactive | 0 | PRI 0–9 · quantum 5 ms | Nothing waiting | Normal | 0 | PRI 10–29 · quantum 10 ms | Nothing waiting | Background | 0 | PRI 30–39 · quantum 20 ms | Nothing waiting | AGING BOUND (PROC-04) | W(P) ≤ (p + 1)·Tage + ⌈(N − 1)/E⌉·(Q + δ) + Hkill | p · worst base priority | 39 | Tage · aging interval | 100 ms | N · runnable processes | 51 | E · parallelism (declared) | 1 | Q + δ · longest slice | 21 ms | Hkill · runaway kill | 400 ms | Declared bound | 5,450 ms | 4000 + 50 × 21 + 400. No runnable process waits longer, whatever its priority. | Plotinium 0.1.0-dev.0 · build 0872260 | Selected: taskmgr, pid 21 | Updated every 1 s",
+  "low_Scheduler": [],
+  "tab_AI": "Task Manager | Processes | Memory | Scheduler | AI | Semantic indexer | Paused while you search | Chunks indexed | 0 of 0 chunks | Pending | 0 chunks | Rate | 0 chunks/s | Process | ai.indexer pid 15 · priority 32 | Model | MongoDB/mdbr-leaf-ir@4262131b-q8-d384-chunker-v1 | Runs in the background band and yields while you type or drag. | Agent budget | Connected | The server has not reported this month’s budget yet. It shows here once the agent gateway answers. | Provider | Plotinium server (LLM proxy) | Requests today | 0 | Confirmation | Asks before deletes, overwrites, permission changes, system paths and plans over 20 files | Privacy & AI settings… | Audit log | All | Agent | User | System | Open Terminal… | The last 50 entries. For the full history, run ai log in the Terminal. | No agent actions yet | Plotinium 0.1.0-dev.0 · build 0872260 | Selected: taskmgr, pid 21 | Updated every 1 s",
+  "low_AI": [],
+  "buttons": [
+    {
+      "t": "Processes",
+      "dis": false,
+      "title": ""
+    },
+    {
+      "t": "Memory",
+      "dis": false,
+      "title": ""
+    },
+    {
+      "t": "Scheduler",
+      "dis": false,
+      "title": ""
+    },
+    {
+      "t": "AI",
+      "dis": false,
+      "title": ""
+    },
+    {
+      "t": "Privacy & AI settings…",
+      "dis": false,
+      "title": ""
+    },
+    {
+      "t": "All",
+      "dis": false,
+      "title": ""
+    },
+    {
+      "t": "Agent",
+      "dis": false,
+      "title": ""
+    },
+    {
+      "t": "User",
+      "dis": false,
+      "title": ""
+    },
+    {
+      "t": "System",
+      "dis": false,
+      "title": ""
+    },
+    {
+      "t": "Open Terminal…",
+      "dis": false,
+      "title": ""
+    },
+    {
+      "t": "Updated every 1 s",
+      "dis": false,
+      "title": ""
+    }
+  ],
+  "axe": [],
+  "viewMenu": [
+    "Processes Ctrl + 1",
+    "Memory Ctrl + 2",
+    "Scheduler Ctrl + 3",
+    "AI Ctrl + 4",
+    "Refresh Now Ctrl + R",
+    "Pause or Resume Live Updates"
+  ],
+  "csp": [],
+  "errors": [],
+  "warnings": []
+}

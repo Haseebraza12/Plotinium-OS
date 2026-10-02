@@ -1,0 +1,127 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+/* The tab list and its trailing slot on one line (was an inline style the CSP refuses, UI-147). */
+.bar {
+  display: flex;
+  align-items: center;
+  gap: var(--pl-space-3);
+}
+.list {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: stretch;
+  gap: var(--pl-space-1);
+}
+/* segmented: equal-width capsule with a sliding thumb (Task Manager). */
+.segmented {
+  display: inline-grid;
+  grid-template-columns: repeat(var(--pl-tab-count), minmax(0, 1fr));
+  gap: 0;
+  align-self: flex-start;
+  height: var(--pl-control-h);
+  padding: var(--pl-space-half);
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-control-bg);
+  box-shadow: inset 0 0 0 var(--pl-hairline-width) var(--pl-hairline-subtle);
+}
+.thumb {
+  position: absolute;
+  z-index: -1;
+  top: var(--pl-space-half);
+  bottom: var(--pl-space-half);
+  left: var(--pl-space-half);
+  width: calc((100% - 2 * var(--pl-space-half)) / var(--pl-tab-count));
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-accent-subtle);
+  box-shadow: inset 0 0 0 var(--pl-hairline-width) var(--pl-accent-subtle);
+  transform: translateX(calc(var(--pl-tab-index) * 100%));
+  transition: transform var(--pl-motion-slow) var(--pl-ease-spring);
+}
+.tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--pl-space-1);
+  padding: 0 var(--pl-space-3);
+  border: 0;
+  background: transparent;
+  color: var(--pl-text-muted);
+  font: var(--pl-type-callout);
+  white-space: nowrap;
+  cursor: default;
+}
+.segmented .tab {
+  border-radius: var(--pl-radius-pill);
+}
+.tab:hover {
+  color: var(--pl-text);
+}
+.tab[aria-selected='true'] {
+  color: var(--pl-text);
+}
+.segmented .tab[aria-selected='true'] {
+  color: var(--pl-accent-text);
+}
+.tab:focus-visible {
+  outline: var(--pl-focus-ring);
+  outline-offset: calc(var(--pl-focus-offset) * -1);
+}
+.tab:disabled {
+  color: var(--pl-text-disabled);
+}
+/* underline: each tab owns its indicator, which scales in (transform only). */
+.underline {
+  height: calc(var(--pl-control-h) + var(--pl-space-2));
+  border-bottom: var(--pl-hairline-width) solid var(--pl-separator);
+}
+.indicator {
+  position: absolute;
+  right: var(--pl-space-2);
+  bottom: -1px;
+  left: var(--pl-space-2);
+  height: 2px;
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-accent);
+  transform: scaleX(0);
+  opacity: 0;
+  transition:
+    transform var(--pl-motion-med) var(--pl-ease-spring),
+    opacity var(--pl-motion-fast) var(--pl-ease);
+}
+.tab[aria-selected='true'] .indicator {
+  transform: none;
+  opacity: 1;
+}
+.icon {
+  display: inline-flex;
+}
+.count {
+  font: var(--pl-type-caption);
+  font-variant-numeric: tabular-nums;
+  color: var(--pl-text-tertiary);
+}
+.panel {
+  flex: 1;
+  min-height: 0;
+  outline: none;
+}
+.panel:focus-visible {
+  outline: var(--pl-focus-ring);
+  outline-offset: calc(var(--pl-focus-offset) * -1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .thumb,
+  .indicator {
+    transition: none;
+  }
+}
+@media (forced-colors: active) {
+  .tab[aria-selected='true'] {
+    outline: 1px solid Highlight;
+  }
+}

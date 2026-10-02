@@ -1,0 +1,996 @@
+{
+  "suite": "rag",
+  "version": "0.1.0-dev",
+  "date": "2026-09-26",
+  "machine": "dev-workstation",
+  "fixtures": "rag-corpus@223-40+rag-perm@v1",
+  "runs": 1,
+  "metrics": {
+    "recallAt5": {
+      "value": 0.8,
+      "ci95": [0.675, 0.9125]
+    },
+    "mrr": {
+      "value": 0.6402,
+      "ci95": [0.5137, 0.7558]
+    },
+    "ndcg10": {
+      "value": 0.6822,
+      "ci95": [0.5977, 0.7714]
+    },
+    "fullRecallAt5": {
+      "value": 31
+    },
+    "zeroHitAt10": {
+      "value": 4
+    },
+    "documents": {
+      "value": 223
+    },
+    "queries": {
+      "value": 40
+    },
+    "chunks": {
+      "value": 357
+    },
+    "leaks": {
+      "value": 0
+    },
+    "meanLexicalOverlap": {
+      "value": 0.3115
+    },
+    "recallAt5.paraphrase": {
+      "value": 0.6765
+    },
+    "mrr.paraphrase": {
+      "value": 0.4917
+    },
+    "recallAt5.keyword": {
+      "value": 1
+    },
+    "mrr.keyword": {
+      "value": 1
+    },
+    "recallAt5.code": {
+      "value": 1
+    },
+    "mrr.code": {
+      "value": 1
+    },
+    "recallAt5.question": {
+      "value": 0.8333
+    },
+    "mrr.question": {
+      "value": 0.6167
+    }
+  },
+  "gates": [
+    {
+      "id": "RAG-04",
+      "target": "Recall@5 ≥ 0.80",
+      "pass": true
+    },
+    {
+      "id": "RAG-03",
+      "target": "no result the querying user cannot read (0 leaks)",
+      "pass": true
+    }
+  ],
+  "cases": [
+    {
+      "id": "RQ01",
+      "pass": true,
+      "detail": {
+        "kind": "paraphrase",
+        "query": "find the document where I discussed the memory leak in the UI component",
+        "mode": "hybrid",
+        "recallAt5": 1,
+        "reciprocalRank": 0.5,
+        "ndcg10": 0.3568,
+        "firstRelevantRank": 2,
+        "missedAt5": [],
+        "top5": [
+          "/home/alice/capstone/reports/memory-budget-report.md",
+          "/home/alice/capstone/reports/dock-hover-retention.md",
+          "/home/alice/capstone/meetings/2026-09-25-w4-defence-feedback.md",
+          "/home/alice/notes/os/memory-leaks-in-c.md",
+          "/home/alice/notes/os/virtual-memory-lecture-7.txt"
+        ],
+        "lexicalOverlap": 0.2857
+      }
+    },
+    {
+      "id": "RQ02",
+      "pass": true,
+      "detail": {
+        "kind": "question",
+        "query": "how can a background thread holding a mutex make the most important thread miss its deadline?",
+        "mode": "hybrid",
+        "recallAt5": 1,
+        "reciprocalRank": 0.5,
+        "ndcg10": 0.8085,
+        "firstRelevantRank": 2,
+        "missedAt5": [],
+        "top5": [
+          "/home/alice/notes/os/mutex-vs-semaphore.md",
+          "/home/alice/notes/os/priority-inversion-draft.txt",
+          "/home/alice/notes/os/priority-inversion.md",
+          "/home/alice/notes/capstone/examiner-faq.md",
+          "/home/alice/labs/pingpong_condvar.c"
+        ],
+        "lexicalOverlap": 0.3125
+      }
+    },
+    {
+      "id": "RQ03",
+      "pass": true,
+      "detail": {
+        "kind": "paraphrase",
+        "query": "how the kernel chooses what to kick out of physical memory when there is no room left",
+        "mode": "hybrid",
+        "recallAt5": 1,
+        "reciprocalRank": 0.3333,
+        "ndcg10": 0.3631,
+        "firstRelevantRank": 3,
+        "missedAt5": [],
+        "top5": [
+          "/home/alice/notes/os/virtual-memory-lecture-7.txt",
+          "/home/alice/notes/os/memory-management.md",
+          "/home/alice/notes/os/page-replacement.md",
+          "/home/alice/notes/os/working-set-thrashing.md",
+          "/home/alice/capstone/reports/memory-budget-report.md"
+        ],
+        "lexicalOverlap": 0.2857
+      }
+    },
+    {
+      "id": "RQ04",
+      "pass": true,
+      "detail": {
+        "kind": "code",
+        "query": "the C program where two threads take turns using a condition variable",
+        "mode": "hybrid",
+        "recallAt5": 1,
+        "reciprocalRank": 1,
+        "ndcg10": 0.9752,
+        "firstRelevantRank": 1,
+        "missedAt5": [],
+        "top5": [
+          "/home/alice/labs/pingpong_condvar.c",
+          "/home/alice/notes/os/condition-variables.md",
+          "/home/alice/labs/matrix_threads.c",
+          "/home/alice/labs/pingpong_busywait.c",
+          "/home/alice/labs/bounded_buffer.c"
+        ],
+        "lexicalOverlap": 0.5556
+      }
+    },
+    {
+      "id": "RQ05",
+      "pass": false,
+      "detail": {
+        "kind": "question",
+        "query": "which vector model did the team settle on for search, and what is the backup plan?",
+        "mode": "hybrid",
+        "recallAt5": 0.5,
+        "reciprocalRank": 0.2,
+        "ndcg10": 0.3907,
+        "firstRelevantRank": 5,
+        "missedAt5": ["/home/alice/capstone/meetings/2026-09-18-model-bakeoff.md"],
+        "top5": [
+          "/home/alice/notes/ai/hybrid-search-notes.md",
+          "/home/alice/notes/ai/knn-and-ann.md",
+          "/home/alice/capstone/meetings/2026-09-25-w4-defence-feedback.md",
+          "/home/alice/notes/capstone/permission-model.md",
+          "/home/alice/capstone/reports/embedding-decision.md"
+        ],
+        "lexicalOverlap": 0.2143
+      }
+    },
+    {
+      "id": "RQ06",
+      "pass": false,
+      "detail": {
+        "kind": "paraphrase",
+        "query": "my grandmother's recipe for the lentil soup",
+        "mode": "hybrid",
+        "recallAt5": 0,
+        "reciprocalRank": 0,
+        "ndcg10": 0.1377,
+        "firstRelevantRank": null,
+        "missedAt5": ["/home/alice/personal/recipes/masoor-daal.md"],
+        "top5": [
+          "/home/alice/personal/recipes/chicken-soup.md",
+          "/home/alice/personal/photo-memories-nani.txt",
+          "/home/alice/personal/recipes/masoor-daal-quick.md",
+          "/home/alice/personal/beach-day-shells.txt",
+          "/home/alice/personal/closet-decluttering.txt"
+        ],
+        "lexicalOverlap": 0
+      }
+    },
+    {
+      "id": "RQ07",
+      "pass": false,
+      "detail": {
+        "kind": "paraphrase",
+        "query": "what I have to buy for the seven-year-old's celebration",
+        "mode": "hybrid",
+        "recallAt5": 0,
+        "reciprocalRank": 0,
+        "ndcg10": 0.2754,
+        "firstRelevantRank": null,
+        "missedAt5": ["/home/alice/personal/party-supplies.txt"],
+        "top5": [
+          "/home/alice/personal/party-supplies-last-year.txt",
+          "/home/alice/personal/closet-decluttering.txt",
+          "/home/alice/personal/photo-memories-nani.txt",
+          "/home/alice/personal/birthday-gift-ideas.md",
+          "/home/alice/personal/new-year-resolutions.txt"
+        ],
+        "lexicalOverlap": 0
+      }
+    },
+    {
+      "id": "RQ08",
+      "pass": true,
+      "detail": {
+        "kind": "question",
+        "query": "preventing duplicate OS instances when the user has the site open in several windows",
+        "mode": "hybrid",
+        "recallAt5": 1,
+        "reciprocalRank": 0.25,
+        "ndcg10": 0.4307,
+        "firstRelevantRank": 4,
+        "missedAt5": [],
+        "top5": [
+          "/home/alice/notes/os/process-lifecycle.md",
+          "/home/alice/notes/os/os-midterm-review.md",
+          "/home/alice/capstone/reports/accessibility-audit.md",
+          "/home/alice/notes/capstone/single-kernel-per-origin.md",
+          "/home/alice/notes/os/file-descriptors.txt"
+        ],
+        "lexicalOverlap": 0.2222
+      }
+    },
+    {
+      "id": "RQ09",
+      "pass": false,
+      "detail": {
+        "kind": "paraphrase",
+        "query": "summary of the meeting where the team split up the work for the first sprint",
+        "mode": "hybrid",
+        "recallAt5": 0.5,
+        "reciprocalRank": 0.3333,
+        "ndcg10": 0.6617,
+        "firstRelevantRank": 3,
+        "missedAt5": ["/home/alice/capstone/meetings/2026-09-04-kickoff-whatsapp-recap.txt"],
+        "top5": [
+          "/home/alice/capstone/reports/sprint1-plan.md",
+          "/home/alice/capstone/reports/sprint2-retro.md",
+          "/home/alice/capstone/meetings/2026-09-04-kickoff.md",
+          "/home/alice/capstone/team-budget.md",
+          "/home/alice/capstone/notes-to-self.md"
+        ],
+        "lexicalOverlap": 0.2143
+      }
+    },
+    {
+      "id": "RQ10",
+      "pass": true,
+      "detail": {
+        "kind": "code",
+        "query": "python script that counts how often each word appears in a text file",
+        "mode": "hybrid",
+        "recallAt5": 1,
+        "reciprocalRank": 1,
+        "ndcg10": 1,
+        "firstRelevantRank": 1,
+        "missedAt5": [],
+        "top5": [
+          "/home/alice/labs/word_freq.py",
+          "/home/alice/labs/word_freq_v2.py",
+          "/home/alice/capstone/src/markov_predict.py",
+          "/home/alice/notes/ai/word2vec.md",
+          "/home/alice/notes/ai/tokenizers-wordpiece.md"
+        ],
+        "lexicalOverlap": 0.375
+      }
+    },
+    {
+      "id": "RQ11",
+      "pass": true,
+      "detail": {
+        "kind": "paraphrase",
+        "query": "the space-saving lookup trick that sometimes lies about having seen something but never about not having seen it",
+        "mode": "hybrid",
+        "recallAt5": 1,
+        "reciprocalRank": 1,
+        "ndcg10": 0.8262,
+        "firstRelevantRank": 1,
+        "missedAt5": [],
+        "top5": [
+          "/home/alice/notes/dsa/bloom-filters.md",
+          "/home/alice/notes/dsa/tries.md",
+          "/home/alice/notes/dsa/skip-lists.md",
+          "/home/alice/private/journal-2026-10-15.txt",
+          "/home/alice/capstone/meetings/2026-09-18-model-bakeoff.md"
+        ],
+        "lexicalOverlap": 0.2222
+      }
+    },
+    {
+      "id": "RQ12",
+      "pass": true,
+      "detail": {
+        "kind": "question",
+        "query": "what has to be true at the same time for a group of programs to freeze up waiting on one another?",
+        "mode": "hybrid",
+        "recallAt5": 1,
+        "reciprocalRank": 0.2,
+        "ndcg10": 0.5086,
+        "firstRelevantRank": 5,
+        "missedAt5": [],
+        "top5": [
+          "/home/alice/notes/os/os-midterm-review.md",
+          "/home/alice/notes/os/monitors.md",
+          "/home/alice/notes/os/priority-inversion-draft.txt",
+          "/home/alice/capstone/meetings/2026-11-20-code-freeze.md",
+          "/home/alice/notes/os/deadlock.md"
+        ],
+        "lexicalOverlap": 0.25
+      }
+    },
+    {
+      "id": "RQ13",
+      "pass": false,
+      "detail": {
+        "kind": "paraphrase",
+        "query": "what the repair shop said was wrong with the car in August",
+        "mode": "hybrid",
+        "recallAt5": 0,
+        "reciprocalRank": 0.1429,
+        "ndcg10": 0.4492,
+        "firstRelevantRank": 7,
+        "missedAt5": ["/home/alice/personal/car/service-2026-08.md"],
+        "top5": [
+          "/home/alice/personal/laptop-repair.txt",
+          "/home/alice/personal/budget-2026-08.md",
+          "/home/alice/personal/traffic-jam-rant.txt",
+          "/home/alice/capstone/reports/retro-week6-demo.md",
+          "/home/alice/private/journal-2026-10-15.txt"
+        ],
+        "lexicalOverlap": 0.1667
+      }
+    },
+    {
+      "id": "RQ14",
+      "pass": true,
+      "detail": {
+        "kind": "code",
+        "query": "TypeScript function that debounces calls so autosave doesn't fire on every keystroke",
+        "mode": "hybrid",
+        "recallAt5": 1,
+        "reciprocalRank": 1,
+        "ndcg10": 0.9639,
+        "firstRelevantRank": 1,
+        "missedAt5": [],
+        "top5": [
+          "/home/alice/capstone/src/debounce.ts",
+          "/home/alice/capstone/src/event-bus.ts",
+          "/home/alice/capstone/src/throttle.ts",
+          "/home/alice/notes/capstone/stack-decision-summary.md",
+          "/home/alice/capstone/reports/retro-week6-demo.md"
+        ],
+        "lexicalOverlap": 0.5
+      }
+    },
+    {
+      "id": "RQ15",
+      "pass": true,
+      "detail": {
+        "kind": "question",
+        "query": "how does the database get back to a consistent state after the power goes out in the middle of a transaction?",
+        "mode": "hybrid",
+        "recallAt5": 1,
+        "reciprocalRank": 1,
+        "ndcg10": 0.8305,
+        "firstRelevantRank": 1,
+        "missedAt5": [],
+        "top5": [
+          "/home/alice/notes/db/wal-and-recovery.md",
+          "/home/alice/notes/db/mvcc-postgres.md",
+          "/home/alice/notes/os/cpu-scheduling-mlfq.md",
+          "/home/alice/notes/os/journaling-filesystems.md",
+          "/home/alice/notes/db/transactions-isolation.md"
+        ],
+        "lexicalOverlap": 0.2222
+      }
+    },
+    {
+      "id": "RQ16",
+      "pass": true,
+      "detail": {
+        "kind": "paraphrase",
+        "query": "notes comparing ways to hand out CPU time fairly in proportion to shares",
+        "mode": "hybrid",
+        "recallAt5": 1,
+        "reciprocalRank": 0.25,
+        "ndcg10": 0.5296,
+        "firstRelevantRank": 4,
+        "missedAt5": [],
+        "top5": [
+          "/home/alice/capstone/notes-to-self.md",
+          "/home/alice/notes/os/cfs-notes.md",
+          "/home/alice/notes/os/rtos-notes.txt",
+          "/home/alice/notes/os/lottery-and-stride-scheduling.md",
+          "/home/alice/labs/lab-notes-week3.txt"
+        ],
+        "lexicalOverlap": 0.2222
+      }
+    },
+    {
+      "id": "RQ17",
+      "pass": false,
+      "detail": {
+        "kind": "question",
+        "query": "which of my pots can go a fortnight without a drink?",
+        "mode": "hybrid",
+        "recallAt5": 0,
+        "reciprocalRank": 0.1,
+        "ndcg10": 0.3765,
+        "firstRelevantRank": 10,
+        "missedAt5": ["/home/alice/personal/plants/snake-plant-care.txt"],
+        "top5": [
+          "/home/alice/personal/kitchen-inventory.txt",
+          "/home/alice/notes/os/dining-philosophers.md",
+          "/home/alice/personal/plants/watering-schedule.md",
+          "/home/alice/notes/dsa/dsa-lab-questions.txt",
+          "/home/alice/personal/beach-day-shells.txt"
+        ],
+        "lexicalOverlap": 0
+      }
+    },
+    {
+      "id": "RQ18",
+      "pass": true,
+      "detail": {
+        "kind": "paraphrase",
+        "query": "bug report about the window jumping around when you drag it quickly",
+        "mode": "hybrid",
+        "recallAt5": 1,
+        "reciprocalRank": 1,
+        "ndcg10": 0.9409,
+        "firstRelevantRank": 1,
+        "missedAt5": [],
+        "top5": [
+          "/home/alice/capstone/reports/window-drag-jitter.md",
+          "/home/alice/capstone/reports/window-resize-flicker.md",
+          "/home/alice/notes/capstone/window-manager-ideas.md",
+          "/home/alice/capstone/reports/dock-hover-retention.md",
+          "/home/alice/capstone/meetings/2026-10-30-design-review-wm.md"
+        ],
+        "lexicalOverlap": 0.2857
+      }
+    },
+    {
+      "id": "RQ19",
+      "pass": true,
+      "detail": {
+        "kind": "code",
+        "query": "C code for a program that makes a child process and waits for it to finish",
+        "mode": "hybrid",
+        "recallAt5": 1,
+        "reciprocalRank": 1,
+        "ndcg10": 0.9056,
+        "firstRelevantRank": 1,
+        "missedAt5": [],
+        "top5": [
+          "/home/alice/labs/fork_wait.c",
+          "/home/alice/notes/os/process-lifecycle.md",
+          "/home/alice/labs/shell_mini.c",
+          "/home/alice/notes/os/deadlock.md",
+          "/home/alice/notes/os/pipes-and-redirection.md"
+        ],
+        "lexicalOverlap": 0.375
+      }
+    },
+    {
+      "id": "RQ20",
+      "pass": true,
+      "detail": {
+        "kind": "question",
+        "query": "what's the difference between a mutex and a binary semaphore?",
+        "mode": "hybrid",
+        "recallAt5": 1,
+        "reciprocalRank": 1,
+        "ndcg10": 0.9091,
+        "firstRelevantRank": 1,
+        "missedAt5": [],
+        "top5": [
+          "/home/alice/notes/os/mutex-vs-semaphore.md",
+          "/home/alice/notes/os/readers-writers.md",
+          "/home/alice/labs/sem_barrier.c",
+          "/home/alice/notes/os/priority-inversion-draft.txt",
+          "/home/alice/labs/pingpong_condvar.c"
+        ],
+        "lexicalOverlap": 0.5
+      }
+    },
+    {
+      "id": "RQ21",
+      "pass": true,
+      "detail": {
+        "kind": "paraphrase",
+        "query": "my honest look back at our disastrous presentation in front of the examiners",
+        "mode": "hybrid",
+        "recallAt5": 1,
+        "reciprocalRank": 0.2,
+        "ndcg10": 0.4736,
+        "firstRelevantRank": 5,
+        "missedAt5": [],
+        "top5": [
+          "/home/alice/private/journal-2026-10-15.txt",
+          "/home/alice/personal/traffic-jam-rant.txt",
+          "/home/alice/notes/db/wal-and-recovery.md",
+          "/home/alice/private/grade-appeal-draft.md",
+          "/home/alice/capstone/reports/retro-week6-demo.md"
+        ],
+        "lexicalOverlap": 0
+      }
+    },
+    {
+      "id": "RQ22",
+      "pass": true,
+      "detail": {
+        "kind": "question",
+        "query": "how much did I spend on groceries and fuel in September?",
+        "mode": "hybrid",
+        "recallAt5": 1,
+        "reciprocalRank": 0.5,
+        "ndcg10": 0.7003,
+        "firstRelevantRank": 2,
+        "missedAt5": [],
+        "top5": [
+          "/home/alice/personal/car/fuel-log.txt",
+          "/home/alice/personal/budget-2026-09.md",
+          "/home/alice/personal/new-year-resolutions.txt",
+          "/home/alice/personal/electricity-bill-dispute.txt",
+          "/home/alice/personal/weekend-plans.txt"
+        ],
+        "lexicalOverlap": 0.4
+      }
+    },
+    {
+      "id": "RQ23",
+      "pass": false,
+      "detail": {
+        "kind": "paraphrase",
+        "query": "why two differently worded sentences can land next to each other in a model's coordinate space",
+        "mode": "hybrid",
+        "recallAt5": 0,
+        "reciprocalRank": 0.1,
+        "ndcg10": 0.2388,
+        "firstRelevantRank": 10,
+        "missedAt5": ["/home/alice/notes/ai/sentence-embeddings.md"],
+        "top5": [
+          "/home/alice/notes/ai/transformers-attention.md",
+          "/home/alice/capstone/meetings/2026-09-18-model-bakeoff.md",
+          "/home/alice/notes/os/mutual-exclusion.md",
+          "/home/alice/private/journal-2026-10-15.txt",
+          "/home/alice/personal/traffic-jam-rant.txt"
+        ],
+        "lexicalOverlap": 0.1111
+      }
+    },
+    {
+      "id": "RQ24",
+      "pass": true,
+      "detail": {
+        "kind": "code",
+        "query": "python code that trains a tiny next-app predictor from a list of past launches",
+        "mode": "hybrid",
+        "recallAt5": 1,
+        "reciprocalRank": 1,
+        "ndcg10": 1,
+        "firstRelevantRank": 1,
+        "missedAt5": [],
+        "top5": [
+          "/home/alice/capstone/src/markov_predict.py",
+          "/home/alice/notes/ai/markov-chains.md",
+          "/home/alice/personal/reading-list.md",
+          "/home/alice/notes/dsa/ring-buffers.md",
+          "/home/alice/notes/dsa/skip-lists.md"
+        ],
+        "lexicalOverlap": 0.6
+      }
+    },
+    {
+      "id": "RQ25",
+      "pass": true,
+      "detail": {
+        "kind": "question",
+        "query": "why did the build fail on CI last Tuesday?",
+        "mode": "hybrid",
+        "recallAt5": 1,
+        "reciprocalRank": 1,
+        "ndcg10": 1,
+        "firstRelevantRank": 1,
+        "missedAt5": [],
+        "top5": [
+          "/home/alice/capstone/reports/ci-failure-lockfile.md",
+          "/home/alice/capstone/meetings/2026-10-23-weekly-sync.md",
+          "/home/alice/capstone/reports/sprint2-retro.md",
+          "/home/alice/capstone/meetings/2026-10-16-weekly-sync.md",
+          "/home/alice/notes/capstone/examiner-faq.md"
+        ],
+        "lexicalOverlap": 0.4
+      }
+    },
+    {
+      "id": "RQ26",
+      "pass": true,
+      "detail": {
+        "kind": "paraphrase",
+        "query": "notes about keeping files usable without internet and reconciling edits later",
+        "mode": "hybrid",
+        "recallAt5": 1,
+        "reciprocalRank": 0.5,
+        "ndcg10": 0.6074,
+        "firstRelevantRank": 2,
+        "missedAt5": [],
+        "top5": [
+          "/home/alice/notes/ai/rag-reading-notes.md",
+          "/home/alice/notes/capstone/offline-sync-design.md",
+          "/home/alice/capstone/notes-to-self.md",
+          "/home/alice/notes/ai/hybrid-search-notes.md",
+          "/home/alice/notes/db/wal-and-recovery.md"
+        ],
+        "lexicalOverlap": 0.2222
+      }
+    },
+    {
+      "id": "RQ27",
+      "pass": true,
+      "detail": {
+        "kind": "question",
+        "query": "what is the time complexity of building a heap from an unsorted array?",
+        "mode": "hybrid",
+        "recallAt5": 1,
+        "reciprocalRank": 1,
+        "ndcg10": 0.879,
+        "firstRelevantRank": 1,
+        "missedAt5": [],
+        "top5": [
+          "/home/alice/notes/dsa/heaps.md",
+          "/home/alice/capstone/src/heap.ts",
+          "/home/alice/notes/os/cfs-notes.md",
+          "/home/alice/notes/dsa/hash-tables.md",
+          "/home/alice/notes/dsa/tries.md"
+        ],
+        "lexicalOverlap": 0.5
+      }
+    },
+    {
+      "id": "RQ28",
+      "pass": true,
+      "detail": {
+        "kind": "keyword",
+        "query": "Belady anomaly FIFO",
+        "mode": "hybrid",
+        "recallAt5": 1,
+        "reciprocalRank": 1,
+        "ndcg10": 1,
+        "firstRelevantRank": 1,
+        "missedAt5": [],
+        "top5": [
+          "/home/alice/notes/os/page-replacement.md",
+          "/home/alice/labs/clock-sim.py",
+          "/home/alice/notes/os/pipes-and-redirection.md",
+          "/home/alice/notes/os/mutual-exclusion.md",
+          "/home/alice/capstone/meetings/2026-10-16-weekly-sync.md"
+        ],
+        "lexicalOverlap": 1
+      }
+    },
+    {
+      "id": "RQ29",
+      "pass": true,
+      "detail": {
+        "kind": "keyword",
+        "query": "B+ tree leaf split",
+        "mode": "hybrid",
+        "recallAt5": 1,
+        "reciprocalRank": 1,
+        "ndcg10": 0.8262,
+        "firstRelevantRank": 1,
+        "missedAt5": [],
+        "top5": [
+          "/home/alice/notes/db/btree-indexes.md",
+          "/home/alice/personal/garden-tree-pruning.txt",
+          "/home/alice/capstone/meetings/2026-09-18-model-bakeoff.md",
+          "/home/alice/notes/dsa/interval-trees.md",
+          "/home/alice/notes/dsa/union-find.md"
+        ],
+        "lexicalOverlap": 1
+      }
+    },
+    {
+      "id": "RQ30",
+      "pass": true,
+      "detail": {
+        "kind": "paraphrase",
+        "query": "where we are staying each night on the December holiday up north",
+        "mode": "hybrid",
+        "recallAt5": 1,
+        "reciprocalRank": 1,
+        "ndcg10": 0.9448,
+        "firstRelevantRank": 1,
+        "missedAt5": [],
+        "top5": [
+          "/home/alice/personal/travel/hunza-trip-plan.md",
+          "/home/alice/notes/os/cpu-scheduling-mlfq.md",
+          "/home/alice/capstone/meetings/2026-10-16-weekly-sync.md",
+          "/home/alice/personal/travel/hunza-packing-list.txt",
+          "/home/alice/capstone/meetings/2026-09-25-w4-defence-feedback.md"
+        ],
+        "lexicalOverlap": 0.4
+      }
+    },
+    {
+      "id": "RQ31",
+      "pass": true,
+      "detail": {
+        "kind": "question",
+        "query": "how does the shell connect the output of one command to the input of the next?",
+        "mode": "hybrid",
+        "recallAt5": 1,
+        "reciprocalRank": 0.5,
+        "ndcg10": 0.4582,
+        "firstRelevantRank": 2,
+        "missedAt5": [],
+        "top5": [
+          "/home/alice/labs/shell_mini.c",
+          "/home/alice/notes/os/pipes-and-redirection.md",
+          "/home/alice/capstone/src/path-normalize.ts",
+          "/home/alice/capstone/src/markov_predict.py",
+          "/home/alice/notes/dsa/tries.md"
+        ],
+        "lexicalOverlap": 0.1429
+      }
+    },
+    {
+      "id": "RQ32",
+      "pass": true,
+      "detail": {
+        "kind": "paraphrase",
+        "query": "what the examiners told us to fix after we presented our tech choices",
+        "mode": "hybrid",
+        "recallAt5": 1,
+        "reciprocalRank": 1,
+        "ndcg10": 0.8262,
+        "firstRelevantRank": 1,
+        "missedAt5": [],
+        "top5": [
+          "/home/alice/capstone/meetings/2026-09-25-w4-defence-feedback.md",
+          "/home/alice/capstone/reports/retro-week6-demo.md",
+          "/home/alice/notes/os/os-quiz-3-mistakes.txt",
+          "/home/alice/notes/ai/rag-reading-notes.md",
+          "/home/alice/capstone/meetings/2026-10-16-weekly-sync.md"
+        ],
+        "lexicalOverlap": 0.1667
+      }
+    },
+    {
+      "id": "RQ33",
+      "pass": true,
+      "detail": {
+        "kind": "code",
+        "query": "a TypeScript class that keeps the most recently used items and drops the oldest when full",
+        "mode": "hybrid",
+        "recallAt5": 1,
+        "reciprocalRank": 1,
+        "ndcg10": 0.7262,
+        "firstRelevantRank": 1,
+        "missedAt5": [],
+        "top5": [
+          "/home/alice/capstone/src/lru-cache.ts",
+          "/home/alice/notes/dsa/ring-buffers.md",
+          "/home/alice/capstone/src/throttle.ts",
+          "/home/alice/notes/dsa/bloom-filters.md",
+          "/home/alice/capstone/src/event-bus.ts"
+        ],
+        "lexicalOverlap": 0.3
+      }
+    },
+    {
+      "id": "RQ34",
+      "pass": true,
+      "detail": {
+        "kind": "question",
+        "query": "what is thrashing and how can the system detect it?",
+        "mode": "hybrid",
+        "recallAt5": 1,
+        "reciprocalRank": 1,
+        "ndcg10": 1,
+        "firstRelevantRank": 1,
+        "missedAt5": [],
+        "top5": [
+          "/home/alice/notes/os/working-set-thrashing.md",
+          "/home/alice/notes/os/memory-management.md",
+          "/home/alice/notes/db/wal-and-recovery.md",
+          "/home/alice/notes/os/threads-vs-processes.md",
+          "/home/alice/notes/os/monitors.md"
+        ],
+        "lexicalOverlap": 0.6667
+      }
+    },
+    {
+      "id": "RQ35",
+      "pass": true,
+      "detail": {
+        "kind": "paraphrase",
+        "query": "how we stop malicious text planted in documents from hijacking the assistant",
+        "mode": "hybrid",
+        "recallAt5": 1,
+        "reciprocalRank": 1,
+        "ndcg10": 0.7262,
+        "firstRelevantRank": 1,
+        "missedAt5": [],
+        "top5": [
+          "/home/alice/notes/ai/prompt-injection.md",
+          "/home/alice/notes/dsa/bloom-filters.md",
+          "/home/alice/notes/ai/rag-reading-notes.md",
+          "/home/alice/capstone/meetings/2026-10-13-advisor-meeting.md",
+          "/home/alice/notes/ai/sentence-embeddings.md"
+        ],
+        "lexicalOverlap": 0.1429
+      }
+    },
+    {
+      "id": "RQ36",
+      "pass": true,
+      "detail": {
+        "kind": "question",
+        "query": "which book did I say I'd lend to Sara?",
+        "mode": "hybrid",
+        "recallAt5": 1,
+        "reciprocalRank": 1,
+        "ndcg10": 1,
+        "firstRelevantRank": 1,
+        "missedAt5": [],
+        "top5": [
+          "/home/alice/personal/reading-list.md",
+          "/home/alice/notes/ai/rag-reading-notes.md",
+          "/home/alice/labs/word_freq.py",
+          "/home/alice/capstone/notes-to-self.md",
+          "/home/alice/labs/bankers.py"
+        ],
+        "lexicalOverlap": 0.25
+      }
+    },
+    {
+      "id": "RQ37",
+      "pass": true,
+      "detail": {
+        "kind": "paraphrase",
+        "query": "how do I make tea the way my mother likes it?",
+        "mode": "hybrid",
+        "recallAt5": 1,
+        "reciprocalRank": 1,
+        "ndcg10": 1,
+        "firstRelevantRank": 1,
+        "missedAt5": [],
+        "top5": [
+          "/home/alice/personal/recipes/chai.md",
+          "/home/alice/personal/plants/snake-plant-care.txt",
+          "/home/alice/personal/photo-memories-nani.txt",
+          "/home/alice/notes/db/btree-indexes.md",
+          "/home/alice/personal/recipes/masoor-daal.md"
+        ],
+        "lexicalOverlap": 0.2
+      }
+    },
+    {
+      "id": "RQ38",
+      "pass": false,
+      "detail": {
+        "kind": "paraphrase",
+        "query": "the short test where I dropped points for silly errors",
+        "mode": "hybrid",
+        "recallAt5": 0,
+        "reciprocalRank": 0,
+        "ndcg10": 0,
+        "firstRelevantRank": null,
+        "missedAt5": ["/home/alice/notes/os/os-quiz-3-mistakes.txt"],
+        "top5": [
+          "/home/alice/capstone/src/retry-backoff.ts",
+          "/home/alice/capstone/meetings/2026-09-25-w4-defence-feedback.md",
+          "/home/alice/capstone/reports/sprint2-retro.md",
+          "/home/alice/private/grade-appeal-draft.md",
+          "/home/alice/private/journal-2026-10-15.txt"
+        ],
+        "lexicalOverlap": 0
+      }
+    },
+    {
+      "id": "RQ39",
+      "pass": true,
+      "detail": {
+        "kind": "question",
+        "query": "what did the plumber fix under the kitchen sink?",
+        "mode": "hybrid",
+        "recallAt5": 1,
+        "reciprocalRank": 1,
+        "ndcg10": 1,
+        "firstRelevantRank": 1,
+        "missedAt5": [],
+        "top5": [
+          "/home/alice/personal/plumber-visit.txt",
+          "/home/alice/personal/kitchen-inventory.txt",
+          "/home/alice/notes/capstone/examiner-faq.md",
+          "/home/alice/personal/plants/watering-schedule.md",
+          "/home/alice/capstone/meetings/2026-10-16-weekly-sync.md"
+        ],
+        "lexicalOverlap": 0.75
+      }
+    },
+    {
+      "id": "RQ40",
+      "pass": false,
+      "detail": {
+        "kind": "question",
+        "query": "why startup took nine seconds at the checkpoint and what we changed to make it faster",
+        "mode": "hybrid",
+        "recallAt5": 0,
+        "reciprocalRank": 0,
+        "ndcg10": 0.2421,
+        "firstRelevantRank": null,
+        "missedAt5": ["/home/alice/capstone/reports/boot-time-measurements.md"],
+        "top5": [
+          "/home/alice/capstone/reports/retro-week6-demo.md",
+          "/home/alice/private/journal-2026-10-15.txt",
+          "/home/alice/capstone/notes-to-self.md",
+          "/home/alice/capstone/meetings/2026-10-16-weekly-sync.md",
+          "/home/alice/capstone/meetings/2026-09-25-w4-defence-feedback.md"
+        ],
+        "lexicalOverlap": 0
+      }
+    },
+    {
+      "id": "RAG-03/alice",
+      "pass": true,
+      "detail": {
+        "uid": 1001,
+        "searches": 53,
+        "results": 530,
+        "leaks": []
+      }
+    },
+    {
+      "id": "RAG-03/bob",
+      "pass": true,
+      "detail": {
+        "uid": 1002,
+        "searches": 53,
+        "results": 530,
+        "leaks": []
+      }
+    },
+    {
+      "id": "RAG-03/carol",
+      "pass": true,
+      "detail": {
+        "uid": 1003,
+        "searches": 53,
+        "results": 530,
+        "leaks": []
+      }
+    }
+  ],
+  "model": {
+    "requested": "MongoDB/mdbr-leaf-ir@4262131b-q8-d384-chunker-v1",
+    "served": ["MongoDB/mdbr-leaf-ir@4262131b-q8-d384-chunker-v1"],
+    "mode": "replay"
+  }
+}

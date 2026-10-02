@@ -1,0 +1,910 @@
+{
+ "key": "quality",
+ "title": "Authentication, security & testing/benchmark tooling",
+ "record": {
+  "decision_title": "Authentication and security model, and the test and benchmark toolchain (Plotinium OS, STACK_DECISION.md record)",
+  "context_constraints_ranked": [
+   "1. OFF-03 / OFF-01 / BOOT-09: login must work with the network disabled, never storing a plain-text password (a salted verifier or a platform authenticator). The whole boot, login and core-utilities path has to work offline.",
+   "2. The server is authoritative for shared multi-user state (reference architecture, section 9.5): sessions, su elevation, locks, quotas. Every operation replayed from a client outbox has to be re-authorised on the server against a uid taken from the session, never from the payload. The kernel checks permissions on every syscall (SYS-01).",
+   "3. Long-lived WebSockets carry sync, process and lock events. VFS-09 leases are tied to session_id, so a session must be revocable and its sockets closed at once (logout, password change, disabled user). A crashed holder's lease must expire within the lease time.",
+   "4. Cross-origin isolation (COOP + COEP) is needed for performance.measureUserAgentSpecificMemory (MEM-01 validation), SharedArrayBuffer and 5 us timers. It must not break loading of model weights and WASM, which load only after the desktop is interactive (BOOT-10), and it must survive an offline, Service-Worker-served boot.",
+   "5. Sections 12.6 and 18: API keys never go in the client bundle or the repo. Every model call goes through the backend with per-user rate limits, token and cost logging and a budget cap. A leaked key is revoked and reported in SECURITY.md.",
+   "6. Section 15.3: unit, property, integration, e2e, performance and AI-eval levels. Performance budgets must fail the build. Coverage of at least 70% overall and 85% on dsa/, vfs/ and kernel/ is reported on every PR. The fault-injection suite covers every bulk op (DB-02) and is repeated live at the final defence. CI uses recorded model responses.",
+   "7. Rubric: arbitrary technology is penalised and every member must defend every choice in the viva. The team knows TypeScript and Node. Use the fewest moving parts.",
+   "8. Budget: a student team in Pakistan. Free tiers, one small VPS, GitHub Actions free minutes. Nothing that needs a paid SaaS.",
+   "9. Timeline: the CI skeleton runs on PRs by Registration (W2). Login screen and public deployment by Phase 2 (W7). Multi-user sync, locks, offline and fault injection by Phase 3 (W11). The stack freezes after the W4 defence."
+  ],
+  "options": [
+   {
+    "name": "A1: Hand-rolled opaque sessions (Lucia 2026 single-file reference) + node:crypto Argon2id + WebCrypto PBKDF2 offline verifier + SimpleWebAuthn passkeys (optional)",
+    "current_version": "Lucia reference code/auth_session.ts (0BSD, site updated July 2026); Node 24.13.x LTS (crypto.argon2 since 24.7.0); @simplewebauthn/server 14.0.2",
+    "summary": "Tokens are random <id>.<secret> strings in a __Host- HttpOnly, Secure, SameSite=Strict cookie. Postgres stores SHA-256(secret) in auth_sessions with a 10-day sliding expiry. Passwords are hashed with Argon2id (m=19456 KiB, t=2, p=1). su works through server-issued time-boxed grants; guests get ephemeral uids. Rate limiting uses in-memory token buckets bounded by the team's own LRU, plus a Postgres LLM budget table.",
+    "status_notes": "Lucia the library was deprecated in March 2025. It now survives as a learning resource with a maintained single-file replacement. Node 24 is LTS until 2028-04-30, and Node 26 becomes LTS on 2026-10-28."
+   },
+   {
+    "name": "A2: Better Auth (username + anonymous + @better-auth/passkey plugins, Argon2id via custom hash/verify)",
+    "current_version": "better-auth 1.7.5 (npm, 2026-09-14)",
+    "summary": "A full-featured TypeScript auth framework: DB sessions, built-in endpoint rate limits, origin checks, plugins for username, guest and passkeys, and serial integer IDs. Its own user/session/account/verification tables sit next to the OS users table.",
+    "status_notes": "Very active, and has maintained Auth.js since September 2025. The default hash is scrypt, and a request to default to Argon2id was closed as not planned. CLI migrations are forward-only. The June 2026 security update fixed High-severity issues in core and plugins."
+   },
+   {
+    "name": "A3: Auth.js v5 Credentials provider (expected to lose)",
+    "current_version": "next-auth 5.0.0-beta.32 (beta tag), next-auth 4.24.15 (latest), @auth/core 0.41.3",
+    "summary": "An OAuth-centric framework library with a Credentials provider for username and password.",
+    "status_notes": "In maintenance mode under the Better Auth team (security patches only, and new projects are told to use Better Auth). v5 is still beta. The docs recommend against passwords and leave hashing and rate limiting to the developer."
+   },
+   {
+    "name": "A4: Self-issued JWT access tokens + rotating refresh tokens (jose)",
+    "current_version": "jose 6.2.12",
+    "summary": "Stateless signed tokens carrying uid, gid and groups. The alternative session model, compared against opaque server-side sessions.",
+    "status_notes": "Revocation needs a denylist, which is server state anyway, and a WebSocket opened with a token outlives its expiry. Chosen against."
+   },
+   {
+    "name": "T1: Vitest 5 (node + browser + bench + coverage-v8) + Playwright Test + fast-check + k6 (+ gitleaks)",
+    "current_version": "vitest 5.0.1, @vitest/browser-playwright 5.0.1, @vitest/coverage-v8 5.0.1, @playwright/test 1.63.0, fast-check 4.10.2, k6 v2.3.0, gitleaks v8.30.1",
+    "summary": "One runner config holds projects for unit (node), browser (real Chromium for IndexedDB/OPFS/Workers), integration (node + Postgres), bench (Tinybench-backed fixture with assertions) and ai-eval (replayed LLM). Playwright covers e2e and performance (CDP CPU throttle, Long Animation Frames, two contexts, offline). fast-check handles property and model-based tests, and k6 handles WebSocket load with thresholds.",
+    "status_notes": "Vitest 5.0.0 shipped on 2026-09-03 and needs Node >= 22.12 and Vite >= 6.4. Bench is no longer experimental. Fallback is Vitest 4.1.11."
+   },
+   {
+    "name": "T2: Jest 30 + Playwright + fast-check + tinybench + Artillery + istanbul (expected to lose)",
+    "current_version": "jest 30.5.2, artillery 2.0.34, tinybench 6.2.0",
+    "summary": "The most familiar runner. It tests in jsdom with fake-indexeddb, uses a separate bench tool, and uses Artillery for load.",
+    "status_notes": "ESM support is still experimental (--experimental-vm-modules). There is no real-browser unit mode. Artillery's WS engine reports only message counters and rates."
+   },
+   {
+    "name": "T3: bun test + Playwright + fast-check + mitata + autocannon",
+    "current_version": "bun 1.4.2, mitata 1.0.34 (2025-02-04), autocannon 8.0.0 (2024-10-14)",
+    "summary": "The fastest all-in-one runner, with mitata for micro-benchmarks and autocannon for HTTP load.",
+    "status_notes": "Coverage thresholds are global only, so 85% on dsa/vfs/kernel cannot be enforced natively. DOM testing uses happy-dom, which ties tests to the Bun runtime. autocannon is HTTP-only, and mitata and autocannon have not had a release in 19+ months."
+   }
+  ],
+  "criteria": [
+   {
+    "name": "a1 OS identity-model fit",
+    "weight": 25,
+    "why": "(Auth matrix, declared before scoring, weights sum 100.) Plotinium needs UNIX semantics: integer uid/gid, groups, root (uid 0, chown root-only), su, guest/demo (BOOT-14), and a server that re-derives the uid for every replayed op. The model must also plug into the OFF-03 offline verifier. This is the constraint every other subsystem depends on."
+   },
+   {
+    "name": "a2 Revocation & WebSocket control",
+    "weight": 15,
+    "why": "(Auth) VFS-09 leases and sync ride long-lived WebSockets. Logout, password change or su expiry must take effect on open sockets at once."
+   },
+   {
+    "name": "a3 Security correctness by default",
+    "weight": 20,
+    "why": "(Auth) Argon2id at OWASP parameters, CSRF defence, timing-safe comparison, no user enumeration, login and LLM rate limits (section 12.6), and a small attack surface. SECURITY.md and the viva probe this."
+   },
+   {
+    "name": "a4 Viva defensibility",
+    "weight": 15,
+    "why": "(Auth) Section 14.4 says a decision only one member can explain counts as undefended. Every member must be able to walk through login, su and offline login."
+   },
+   {
+    "name": "a5 Fits DB-01 migration discipline",
+    "weight": 10,
+    "why": "(Auth) DB-01 requires versioned migrations, each with a rollback script, in one Postgres whose ERD the team owns and normalises."
+   },
+   {
+    "name": "a6 Build effort in 18 weeks",
+    "weight": 10,
+    "why": "(Auth) Login is needed by W7 and multi-user/su/offline by W11. Effort competes with the graded subsystems."
+   },
+   {
+    "name": "a7 2026 maintenance health",
+    "weight": 5,
+    "why": "(Auth) Release activity and deprecation status as of September 2026."
+   },
+   {
+    "name": "b1 Real-Chrome coverage of all 15.3 test levels",
+    "weight": 30,
+    "why": "(Toolchain matrix, declared before scoring, weights sum 100.) The system lives in Chrome APIs (IndexedDB transactions, OPFS, Workers, Service Worker, WebCrypto). Required tests include offline boot, CPU-throttled frame time, two users contending for a lock, and WebSocket load. Fakes such as jsdom or fake-indexeddb cannot prove DB-02-style client atomicity or MEM-05."
+   },
+   {
+    "name": "b2 Gates that fail the build",
+    "weight": 20,
+    "why": "(Toolchain) Section 15.3 demands performance budgets that fail the build, plus coverage of at least 70% overall and 85% on dsa/, vfs/ and kernel/ reported on every PR."
+   },
+   {
+    "name": "b3 Measurement fidelity",
+    "weight": 15,
+    "why": "(Toolchain) The DSA complexity curves (1e3 to 1e5), p95 budgets and lock-grant latency must be credible: warm-up, interleaving, per-message WS latency and a low-overhead load generator."
+   },
+   {
+    "name": "b4 Fewest tools / one config",
+    "weight": 20,
+    "why": "(Toolchain) The rubric penalises arbitrary technology. One config means less CI time on free minutes and less to explain in the viva, and TypeScript/ESM must work natively."
+   },
+   {
+    "name": "b5 Team familiarity",
+    "weight": 10,
+    "why": "(Toolchain) The team knows JS/TS and some Jest-style APIs. Familiarity is a legitimate factor but never the only justification."
+   },
+   {
+    "name": "b6 2026 maintenance health",
+    "weight": 5,
+    "why": "(Toolchain) Release activity and stability as of September 2026."
+   }
+  ],
+  "scores": [
+   {
+    "option": "A1: Hand-rolled opaque sessions + node:crypto Argon2id + PBKDF2 offline verifier (+ SimpleWebAuthn)",
+    "per_criterion": [
+     {
+      "criterion": "a1 OS identity-model fit",
+      "score": 5,
+      "reason": "Our own users table uses integer uid/gid, and su_grants, the guest uid range and root need no mapping layer. The same session carries the effective uid into the kernel PCB."
+     },
+     {
+      "criterion": "a2 Revocation & WebSocket control",
+      "score": 5,
+      "reason": "Deleting the row closes that session's sockets through a Map<sessionId, sockets>. Heartbeat revalidation is one primary-key lookup plus a 1.42 us hash (measured)."
+     },
+     {
+      "criterion": "a3 Security correctness by default",
+      "score": 4,
+      "reason": "The reference gives SHA-256-hashed secrets, constant-time comparison and a Sec-Fetch-Site CSRF check, and Argon2id uses OWASP parameters. We lose a point because rate limiting and CSRF are our own code and need dedicated tests and review."
+     },
+     {
+      "criterion": "a4 Viva defensibility",
+      "score": 5,
+      "reason": "About 250 lines the team writes and reviews. Every member can trace login, su and offline login end to end."
+     },
+     {
+      "criterion": "a5 Fits DB-01 migration discipline",
+      "score": 5,
+      "reason": "auth_sessions, su_grants, passkeys and llm_usage live in the team's own up/down migrations."
+     },
+     {
+      "criterion": "a6 Build effort in 18 weeks",
+      "score": 3,
+      "reason": "About 4-5 developer-days including tests: sessions and login 2, su and guest 1, rate limiting 1, WS auth 0.5, plus 2-3 more for passkeys if attempted."
+     },
+     {
+      "criterion": "a7 2026 maintenance health",
+      "score": 4,
+      "reason": "The Lucia reference was updated in July 2026, node:crypto argon2 ships in Node 24 LTS, and SimpleWebAuthn released in September 2026. We lose a point because no upstream will push session-logic fixes to us."
+     }
+    ],
+    "weighted_total": 4.55
+   },
+   {
+    "option": "A2: Better Auth 1.7.5",
+    "per_criterion": [
+     {
+      "criterion": "a1 OS identity-model fit",
+      "score": 3,
+      "reason": "Serial IDs and the username and anonymous plugins exist. But uid/gid/groups/quota become additionalFields, and su (checking another user's password and issuing a scoped grant) must be written outside the library."
+     },
+     {
+      "criterion": "a2 Revocation & WebSocket control",
+      "score": 4,
+      "reason": "DB sessions are revocable, but getSession has to be wired into the WS upgrade, and the optional cookie cache can delay revocation."
+     },
+     {
+      "criterion": "a3 Security correctness by default",
+      "score": 4,
+      "reason": "Built-in sign-in rate limit (3 per 10 s) and origin checks. The default hash is scrypt, so Argon2id needs an override. Rate limiting is keyed by IP and off in development. The June 2026 batch of advisories shows a large attack surface, mostly in plugins we would not use."
+     },
+     {
+      "criterion": "a4 Viva defensibility",
+      "score": 3,
+      "reason": "Examiners can ask about plugin hooks, cookie cache and schema ownership, which members did not write."
+     },
+     {
+      "criterion": "a5 Fits DB-01 migration discipline",
+      "score": 2,
+      "reason": "CLI migrations are forward-only with no down scripts, and the library owns user/session/account/verification tables that duplicate our users table."
+     },
+     {
+      "criterion": "a6 Build effort in 18 weeks",
+      "score": 4,
+      "reason": "The fastest route to a working login. su, the offline verifier and the LLM budget remain custom work."
+     },
+     {
+      "criterion": "a7 2026 maintenance health",
+      "score": 5,
+      "reason": "Very active (1.7.5 on 2026-09-14), MIT licence."
+     }
+    ],
+    "weighted_total": 3.45
+   },
+   {
+    "option": "A4: Self-issued JWT + refresh rotation (jose)",
+    "per_criterion": [
+     {
+      "criterion": "a1 OS identity-model fit",
+      "score": 4,
+      "reason": "Claims can carry uid, gid and groups. su needs re-issued tokens."
+     },
+     {
+      "criterion": "a2 Revocation & WebSocket control",
+      "score": 2,
+      "reason": "Revocation needs a server-side denylist, and a socket opened with a token outlives the token's expiry unless we recheck it, which is session state by another name."
+     },
+     {
+      "criterion": "a3 Security correctness by default",
+      "score": 2,
+      "reason": "The usual SPA bearer-token pattern exposes tokens to XSS, which matters because the terminal renders AI output. It also brings algorithm-pinning and key-rotation pitfalls, and refresh rotation needs the DB anyway."
+     },
+     {
+      "criterion": "a4 Viva defensibility",
+      "score": 4,
+      "reason": "Explainable, but the stateless benefit is hard to defend when every op already hits Postgres."
+     },
+     {
+      "criterion": "a5 Fits DB-01 migration discipline",
+      "score": 5,
+      "reason": "Our own tables."
+     },
+     {
+      "criterion": "a6 Build effort in 18 weeks",
+      "score": 2,
+      "reason": "Access plus refresh rotation plus denylist plus WS recheck is more code than opaque sessions."
+     },
+     {
+      "criterion": "a7 2026 maintenance health",
+      "score": 4,
+      "reason": "jose 6.2.12 is active."
+     }
+    ],
+    "weighted_total": 3.2
+   },
+   {
+    "option": "A3: Auth.js v5 Credentials",
+    "per_criterion": [
+     {
+      "criterion": "a1 OS identity-model fit",
+      "score": 2,
+      "reason": "The Credentials provider is a thin hook on an OAuth-centric model."
+     },
+     {
+      "criterion": "a2 Revocation & WebSocket control",
+      "score": 2,
+      "reason": "Credential logins typically run on JWT sessions, so revocation is weak."
+     },
+     {
+      "criterion": "a3 Security correctness by default",
+      "score": 2,
+      "reason": "The docs recommend against passwords and leave hashing and rate limiting to the developer."
+     },
+     {
+      "criterion": "a4 Viva defensibility",
+      "score": 3,
+      "reason": "Moderate, but framework-specific."
+     },
+     {
+      "criterion": "a5 Fits DB-01 migration discipline",
+      "score": 3,
+      "reason": "Adapter-owned tables."
+     },
+     {
+      "criterion": "a6 Build effort in 18 weeks",
+      "score": 3,
+      "reason": "Integration targets Next.js and SvelteKit, not a plain Node WS server."
+     },
+     {
+      "criterion": "a7 2026 maintenance health",
+      "score": 1,
+      "reason": "Maintenance mode since September 2025, and v5 is still 5.0.0-beta.32."
+     }
+    ],
+    "weighted_total": 2.3
+   },
+   {
+    "option": "T1: Vitest 5 + Playwright + fast-check + k6 (+ gitleaks)",
+    "per_criterion": [
+     {
+      "criterion": "b1 Real-Chrome coverage of all 15.3 test levels",
+      "score": 5,
+      "reason": "In our prototype, Vitest browser mode ran real IndexedDB, OPFS, Workers and PBKDF2 in Chrome 153. Playwright gives CDP CPU throttling, one context per user, offline mode and channel 'chrome'. k6 covers WebSockets."
+     },
+     {
+      "criterion": "b2 Gates that fail the build",
+      "score": 5,
+      "reason": "In the prototype, the glob coverage threshold 'dsa/**' failed the run with exit code 1. Bench files allow expect() on results, and k6 threshold breaches exit with code 99."
+     },
+     {
+      "criterion": "b3 Measurement fidelity",
+      "score": 4,
+      "reason": "The Tinybench-backed bench interleaves runs and took about 780k samples per size in the prototype. k6 custom Trend metrics give per-message lock latency. We lose a point because there is no native p95, so we use our own per-op sampler."
+     },
+     {
+      "criterion": "b4 Fewest tools / one config",
+      "score": 4,
+      "reason": "One Vitest config covers unit, browser, integration, bench, AI eval and coverage. Playwright shares the browser binaries. k6 is one extra binary."
+     },
+     {
+      "criterion": "b5 Team familiarity",
+      "score": 4,
+      "reason": "Jest-compatible expect/describe API. Playwright is widely documented."
+     },
+     {
+      "criterion": "b6 2026 maintenance health",
+      "score": 4,
+      "reason": "All tools released in August or September 2026. Vitest 5 is only 3 weeks old (fallback 4.1.11)."
+     }
+    ],
+    "weighted_total": 4.5
+   },
+   {
+    "option": "T3: bun test + Playwright + fast-check + mitata + autocannon",
+    "per_criterion": [
+     {
+      "criterion": "b1 Real-Chrome coverage of all 15.3 test levels",
+      "score": 2,
+      "reason": "happy-dom only, which ties tests to the Bun runtime. autocannon cannot load WebSockets."
+     },
+     {
+      "criterion": "b2 Gates that fail the build",
+      "score": 2,
+      "reason": "Coverage thresholds are global only, so 85% on dsa/vfs/kernel is not enforceable natively."
+     },
+     {
+      "criterion": "b3 Measurement fidelity",
+      "score": 3,
+      "reason": "mitata's statistics are excellent, but autocannon is HTTP-only."
+     },
+     {
+      "criterion": "b4 Fewest tools / one config",
+      "score": 4,
+      "reason": "Very fast, built-in runner."
+     },
+     {
+      "criterion": "b5 Team familiarity",
+      "score": 3,
+      "reason": "Jest-like, with Bun-specific parts."
+     },
+     {
+      "criterion": "b6 2026 maintenance health",
+      "score": 3,
+      "reason": "Bun is active, but mitata last released in February 2025 and autocannon in October 2024."
+     }
+    ],
+    "weighted_total": 2.7
+   },
+   {
+    "option": "T2: Jest 30 + Playwright + fast-check + tinybench + Artillery + istanbul",
+    "per_criterion": [
+     {
+      "criterion": "b1 Real-Chrome coverage of all 15.3 test levels",
+      "score": 2,
+      "reason": "jsdom plus fake-indexeddb, with no OPFS, real Workers or Service Worker."
+     },
+     {
+      "criterion": "b2 Gates that fail the build",
+      "score": 3,
+      "reason": "Per-path coverage thresholds exist, but perf budgets need custom glue, and Artillery thresholds need a plugin."
+     },
+     {
+      "criterion": "b3 Measurement fidelity",
+      "score": 2,
+      "reason": "Artillery's WS engine has no per-message latency, so lock-grant latency cannot be measured."
+     },
+     {
+      "criterion": "b4 Fewest tools / one config",
+      "score": 2,
+      "reason": "Experimental ESM means transform configuration, and it needs separate bench and load tools."
+     },
+     {
+      "criterion": "b5 Team familiarity",
+      "score": 5,
+      "reason": "The most familiar runner."
+     },
+     {
+      "criterion": "b6 2026 maintenance health",
+      "score": 4,
+      "reason": "Jest 30.5.2 released on 2026-09-18."
+     }
+    ],
+    "weighted_total": 2.6
+   }
+  ],
+  "evidence": [
+   {
+    "claim": "Lucia (the library) was deprecated in March 2025. The site was updated in July 2026 and points to code/auth_session.ts, a complete single-file, 0BSD-licensed replacement. It uses <id>.<secret> tokens, stores SHA-256(secret), extends a 10-day expiry when validated, and says to check Sec-Fetch-Site on non-GET requests for CSRF.",
+    "source": "https://lucia-auth.com/ ; https://raw.githubusercontent.com/lucia-auth/lucia/refs/heads/main/code/auth_session.ts (read 2026-09-23)",
+    "verified": true
+   },
+   {
+    "claim": "better-auth latest is 1.7.5 (published 2026-09-14). Its default password hash is scrypt, and Argon2 needs custom hash/verify functions. The request to default to Argon2id on Node 24.7+ was closed as not planned.",
+    "source": "npm registry (npm view better-auth time); https://better-auth.com/docs/authentication/email-password ; https://github.com/better-auth/better-auth/issues/6608",
+    "verified": true
+   },
+   {
+    "claim": "Better Auth CLI migrations are forward-only: 'There are no rollback (down) migrations generated'. The core schema is user/session/account/verification. generateId: 'serial' gives integer IDs.",
+    "source": "https://better-auth.com/docs/concepts/database",
+    "verified": true
+   },
+   {
+    "claim": "Better Auth's built-in rate limit defaults to 100 requests per 60 s, with /sign-in/email at 3 per 10 s. It is keyed by IP and disabled in development by default.",
+    "source": "https://better-auth.com/docs/concepts/rate-limit",
+    "verified": true
+   },
+   {
+    "claim": "The Better Auth June 2026 security update fixed High-severity issues in core (OAuth account linking), a Low one (session cleanup after user deletion), and High or Critical issues in the SSO, organization, device-auth and OAuth-provider plugins (fixed from 1.6.11 up to the 1.7.0 betas).",
+    "source": "https://better-auth.com/blog/security-update-june-2026",
+    "verified": true
+   },
+   {
+    "claim": "Auth.js has been maintained by the Better Auth team since September 2025 (security patches and urgent issues), and new projects are told to start with Better Auth. The next-auth beta dist-tag is 5.0.0-beta.32 and latest is 4.24.15.",
+    "source": "https://better-auth.com/blog/authjs-joins-better-auth ; npm view next-auth dist-tags (2026-09-23)",
+    "verified": true
+   },
+   {
+    "claim": "The Auth.js Credentials docs recommend OAuth, magic links or passkeys instead of passwords, and say the developer must implement password hashing and rate limiting.",
+    "source": "https://authjs.dev/getting-started/authentication/credentials",
+    "verified": true
+   },
+   {
+    "claim": "Node added crypto.argon2 / argon2Sync (argon2d, argon2i, argon2id; parameters memory, passes, parallelism, nonce, optional secret/pepper) in v24.7.0. Node 24 'Krypton' is LTS until 2028-04-30, and Node 26 enters LTS on 2026-10-28. Latest releases are 24.21.0 and 26.10.0.",
+    "source": "https://nodejs.org/api/crypto.html ; https://raw.githubusercontent.com/nodejs/Release/main/schedule.json ; https://nodejs.org/dist/index.json",
+    "verified": true
+   },
+   {
+    "claim": "Bun does not implement node:crypto argon2 (open request), so on Bun the equivalent is Bun.password. @node-rs/argon2 2.2.1 (2026-09-10) covers the other runtimes.",
+    "source": "https://github.com/oven-sh/bun/issues/26585 (title seen in search only); npm view @node-rs/argon2",
+    "verified": false
+   },
+   {
+    "claim": "OWASP recommends Argon2id m=19456 KiB (19 MiB), t=2, p=1, or equivalent settings such as m=47104, t=1, and PBKDF2-HMAC-SHA256 at 600,000 iterations.",
+    "source": "https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html",
+    "verified": true
+   },
+   {
+    "claim": "Our measurement (Ryzen 5 7530U, Node 24.13.1, not the lab machine): node:crypto argon2id m=19456, t=2, p=1 took p50 52.8 ms and p95 77.4 ms (n=30). m=47104, t=1 took p50 133 ms. 16 concurrent hashes took 530 ms wall time, with event-loop delay max 1.3 ms, so hashing runs on the libuv pool and does not stall WebSocket traffic, but bursts queue.",
+    "source": "Own prototype scratchpad/kdf-bench.mjs and lag.mjs (2026-09-23)",
+    "verified": true
+   },
+   {
+    "claim": "Our measurement: WebCrypto PBKDF2-SHA256 at 600,000 iterations took 78.4 ms in Chrome 153 (Vitest browser mode) and p50 75.9 ms in Node WebCrypto, so the OWASP-compliant offline verifier costs under 0.1 s on a mid-range laptop.",
+    "source": "Own prototype scratchpad/vtproto/tests/browser/idb.test.ts (2026-09-23)",
+    "verified": true
+   },
+   {
+    "claim": "Our measurement: session validation (SHA-256 of a 32-byte secret plus timingSafeEqual) costs 1.42 us per op, so per-heartbeat revalidation is dominated by one primary-key lookup.",
+    "source": "Own prototype scratchpad/kdf-bench.mjs",
+    "verified": true
+   },
+   {
+    "claim": "@simplewebauthn/server 14.0.2 (2026-09-13) supports Node 22+ and Deno 2.4+. The Better Auth passkey plugin (@better-auth/passkey) is built on SimpleWebAuthn.",
+    "source": "https://simplewebauthn.dev/docs/packages/server ; https://better-auth.com/docs/plugins/passkey ; npm registry",
+    "verified": true
+   },
+   {
+    "claim": "measureUserAgentSpecificMemory() requires a secure, cross-origin-isolated document (COOP: same-origin plus COEP: require-corp or credentialless). COEP credentialless is available from Chrome 96. Timers are clamped to 100 us without isolation and 5 us with it.",
+    "source": "https://developer.mozilla.org/en-US/docs/Web/API/Performance/measureUserAgentSpecificMemory ; https://developer.chrome.com/blog/coep-credentialless-origin-trial ; https://developer.chrome.com/blog/cross-origin-isolated-hr-timers",
+    "verified": true
+   },
+   {
+    "claim": "Our prototype (Chrome 153 + playwright-core 1.63, COOP/COEP/CSP headers, cache-first Service Worker): after setOffline(true), both page.reload() and a new tab rendered the shell from the SW. crossOriginIsolated stayed true, because the cached responses kept their headers, and measureUserAgentSpecificMemory returned 1,921,684 bytes.",
+    "source": "Own prototype scratchpad/pwproto/server.mjs + run.mjs (2026-09-23)",
+    "verified": true
+   },
+   {
+    "claim": "Our prototype: under Playwright setOffline(true), an existing WebSocket stayed in readyState OPEN with no close event while frames silently stopped for 7 s, then resumed after setOffline(false). The sync client therefore needs application-level heartbeats, and offline e2e tests must not rely on onclose.",
+    "source": "Own prototype scratchpad/pwproto/ws.mjs; related https://github.com/microsoft/playwright/issues/4910",
+    "verified": true
+   },
+   {
+    "claim": "Hugging Face model files (e.g. Xenova/all-MiniLM-L6-v2 model_quantized.onnx, x-linked-size 22,972,370 bytes) answer /resolve with a 302 to us.aws.cdn.hf.co (Xet), which sends Access-Control-Allow-Origin: *. jsDelivr sends CORP: cross-origin and ACAO: *. CORS fetches therefore work under COEP require-corp, but the CSP connect-src must list both HF hosts.",
+    "source": "Own curl -I measurement (2026-09-23)",
+    "verified": true
+   },
+   {
+    "claim": "Under CSP, WebAssembly needs 'wasm-unsafe-eval' in script-src (Chrome 97+). It allows WebAssembly.compile/instantiate but not eval().",
+    "source": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy/script-src",
+    "verified": true
+   },
+   {
+    "claim": "Vitest 5.0.0 was released on 2026-09-03 (5.0.1 on 2026-09-15) and requires Node >= 22.12 and Vite >= 6.4. Bench is now a test-context fixture ('no longer experimental'), powered by Tinybench, supports assertions and baselines, and outputs through the json reporter. It reports p50/p75/p99/p995/p999 but not p95.",
+    "source": "https://vitest.dev/blog/vitest-5.html ; https://vitest.dev/guide/benchmarking ; npm view vitest time",
+    "verified": true
+   },
+   {
+    "claim": "Vitest 4.0 (2025-10-22) made browser mode stable and made AST-aware V8 coverage remapping the only mode, giving istanbul-level accuracy. Coverage thresholds accept glob keys such as 'dsa/**': {lines: 85}.",
+    "source": "https://vitest.dev/config/coverage ; https://github.com/vitest-dev/vitest/issues/7928",
+    "verified": true
+   },
+   {
+    "claim": "Our prototype, Vitest 5.0.1: the thresholds {'dsa/**': {branches: 85}} failed the run with exit code 1 ('Coverage for branches (81.81%) does not meet \"dsa/**\" threshold (85%)'), so per-directory gates work without extra tools.",
+    "source": "Own prototype scratchpad/vtproto/vitest.config.ts (2026-09-23)",
+    "verified": true
+   },
+   {
+    "claim": "Our prototype, Vitest browser mode (@vitest/browser-playwright, Chrome 153): an IndexedDB transaction with a fault injected after 500 of 1,000 deletes aborted and left all 1,000 dentries and the quota row unchanged. OPFS writes and Workers ran for real, so client-mirror atomicity can be tested in CI.",
+    "source": "Own prototype scratchpad/vtproto/tests/browser/idb.test.ts",
+    "verified": true
+   },
+   {
+    "claim": "Our prototype, Vitest 5 bench on a toy trie (not the team's): mean complete() time was 1.28 / 1.27 / 1.26 us at 10^3 / 10^4 / 10^5 entries (about 780k samples each), with p99 of 5.5 / 3.9 / 5.3 us. That is the flat-curve evidence format DSA.md needs. Per-op performance.now() sampling of the same op showed 4-34 us because of timer overhead and JIT warm-up, which shows why complexity curves should use the bench fixture and absolute budgets should use per-op sampling only when an op is much longer than timer resolution.",
+    "source": "Own prototype scratchpad/vtproto/dsa/trie.bench.ts, bench.json",
+    "verified": true
+   },
+   {
+    "claim": "bun test supports only global coverage thresholds (lines/functions), with text and lcov reporters.",
+    "source": "https://bun.com/docs/test/code-coverage",
+    "verified": true
+   },
+   {
+    "claim": "Jest 30 ESM support is still experimental and needs node --experimental-vm-modules.",
+    "source": "https://jestjs.io/docs/ecmascript-modules",
+    "verified": true
+   },
+   {
+    "claim": "k6 v2.3.0 was released on 2026-09-21. k6/websockets is the stable module (k6/experimental/websockets is deprecated) and uses a global event loop, so one VU can hold many sockets. A threshold breach exits with code 99. Custom Trend metrics can carry thresholds.",
+    "source": "https://github.com/grafana/k6/releases ; https://grafana.com/docs/k6/latest/javascript-api/k6-websockets/ ; https://grafana.com/docs/k6/latest/using-k6/thresholds/ ; https://grafana.com/docs/k6/latest/using-k6/metrics/create-custom-metrics/",
+    "verified": true
+   },
+   {
+    "claim": "The Artillery 2.0.34 WebSocket engine reports only websocket.messages_sent/received and send/receive rates, with no per-message latency or response matching. autocannon 8.0.0 (2024-10-14) is an HTTP benchmarking tool.",
+    "source": "https://www.artillery.io/docs/reference/engines/websocket ; npm view autocannon description/time",
+    "verified": true
+   },
+   {
+    "claim": "Playwright 1.63.0 was released on 2026-09-04. CDP sessions (context.newCDPSession) allow Emulation.setCPUThrottlingRate in Chromium.",
+    "source": "https://playwright.dev/docs/api/class-cdpsession ; GitHub releases API",
+    "verified": true
+   },
+   {
+    "claim": "The Long Animation Frames API (PerformanceObserver type 'long-animation-frame', Chrome 123+) attributes frames over 50 ms to script sourceURLs. That lets tests assert 'no long task >50 ms from OS code' (PROC-05).",
+    "source": "https://developer.chrome.com/docs/web-platform/long-animation-frames",
+    "verified": true
+   },
+   {
+    "claim": "fast-check 4.10.2 (2026-09-19) supports model-based testing with fc.commands and modelRun/asyncModelRun, for random VFS op sequences checked against a reference model and fsck.",
+    "source": "https://fast-check.dev/docs/advanced/model-based-testing/ ; npm registry",
+    "verified": true
+   },
+   {
+    "claim": "gitleaks v8.30.1 is MIT-licensed. gitleaks-action needs a free licence key for organisation-owned repos but not personal ones. Running the CLI directly avoids the action's licence terms.",
+    "source": "https://github.com/gitleaks/gitleaks-action ; https://raw.githubusercontent.com/gitleaks/gitleaks/master/LICENSE",
+    "verified": true
+   },
+   {
+    "claim": "@pollyjs/core (HTTP record/replay) last released 6.0.6 on 2023-07-20, so it is stale. msw 2.15.0 is active but intercepts at the HTTP layer. A gateway-level cassette is simpler because keys and calls are already server-side.",
+    "source": "npm view @pollyjs/core time ; npm view msw time",
+    "verified": true
+   },
+   {
+    "claim": "Licences: vitest, @vitest/*, fast-check, @simplewebauthn/*, @node-rs/argon2, better-auth, jose and mitata are MIT. @playwright/test is Apache-2.0, artillery MPL-2.0, next-auth ISC, k6 AGPL-3.0 (a standalone tool that is not bundled or distributed, so no copyleft obligation on our code), and gitleaks MIT.",
+    "source": "npm view <pkg> license ; https://raw.githubusercontent.com/grafana/k6/master/LICENSE.md",
+    "verified": true
+   }
+  ],
+  "recommendation": "(a) Auth and security: A1. Hand-rolled opaque server-side sessions adapted from the Lucia 2026 single-file reference (0BSD), stored in Postgres auth_sessions. The token is <id>.<secret> in a __Host-plt_sid cookie (Secure; HttpOnly; SameSite=Strict; Path=/). Only SHA-256(secret) is stored, compared in constant time, with a 10-day sliding expiry; guest sessions get a 2-hour absolute expiry. Passwords are hashed with Argon2id through built-in node:crypto.argon2 (m=19456 KiB, t=2, p=1, 16-byte salt, 32-byte tag, optional pepper from env, PHC-encoded). If the backend decision picks Bun, use Bun.password; for other runtimes use @node-rs/argon2 2.2.1. Offline login (OFF-03) uses a per-user salted WebCrypto PBKDF2-SHA256 verifier at 600,000 iterations, stored in IndexedDB and derived in the auth worker; the plaintext is never stored and an e2e storage-inspection test proves it. Passkeys through @simplewebauthn/server+browser 14 are a Phase-4 'should', not a dependency. su uses server-issued, time-boxed grants; the password is collected by a compositor-owned prompt so apps never see it. Guests get ephemeral uids in a 'guests' group, and a seeded 'demo' account is documented for examiners. The server re-derives the uid for every op. Rate limits use in-memory token buckets bounded by the team's own dsa/lru, plus a Postgres llm_usage budget table. Headers: COOP same-origin plus COEP require-corp, with every asset self-hosted, including model weights (switch to credentialless only if a cross-origin load is unavoidable). A strict CSP with 'wasm-unsafe-eval' is enforced by Phase 3 after a Report-Only period, with Trusted Types only if the UI framework is compatible. Secrets live only in the server env, gitleaks scans every PR and the built bundle, CI runs with no LLM key, and a leak runbook sits in SECURITY.md. (b) Toolchain: T1, which is Vitest 5.0.x as the single runner, with projects: unit (node); browser (Chromium via @vitest/browser-playwright, for IndexedDB/OPFS/Worker code); integration (node plus a Postgres service container: syscalls, locks and outbox replay, plus the fault-injection suite); bench (vitest bench, complexity curves plus budget assertions); and ai-eval (LLM_MODE=replay). Add @vitest/coverage-v8 with glob thresholds (70 global; 85 on dsa/**, vfs/**, kernel/**). Playwright Test 1.63 with channel 'chrome' handles e2e and performance (CDP CPU throttle calibrated to the lab machine, an in-OS rAF frame meter plus LoAF, two contexts for lock contention, and offline via setOffline plus a server-kill variant). fast-check 4 handles property and model-based tests (VFS op sequences keep fsck clean; heap invariants). k6 v2.3 handles WebSocket soak and lock-grant latency with thresholds. gitleaks handles secrets. The fault injector, LLM cassette, percentile sampler and budgets file are small team-written modules, not extra tools.",
+  "runner_up": "(a) Better Auth 1.7.5 (weighted 3.45 vs 4.55) is the runner-up. It is the right choice if the team can't pass the auth security test suite by the end of Week 5, or if OAuth or SSO becomes a requirement. We would keep our users table as the uid source of truth, map Better Auth's user.id to it with generateId: 'serial', and hand-write down-migrations for its tables. (b) For tooling, the runner-up is the same T1 stack on Vitest 4.1.11 (browser mode stable since 4.0, AST-aware V8 coverage) if Vitest 5.0.x shows a blocking bug; only the bench API changes. For load, Artillery 2.0.34 is the runner-up if an all-npm toolchain matters more than per-message latency.",
+  "chat_reason": "Login uses plain random session cookies that the server can cancel instantly. Passwords are hashed with Argon2id, which is built into Node 24, so there is no auth library whose tables and migrations we don't control, and the whole flow is about 250 lines every member can explain. Offline login checks a salted PBKDF2 hash in IndexedDB, never the password itself. For testing, one runner (Vitest 5) does unit, real-browser, benchmark and coverage checks. Playwright drives full-browser, offline and frame-time tests, fast-check generates random operation sequences, and k6 load-tests the WebSockets, so every performance target can fail the build.",
+  "gave_up": "Better Auth's ready-made endpoints, built-in endpoint rate limiter, email verification, password-reset flows and OAuth/social login. OAuth popups also conflict with COOP same-origin. We accept about 4-5 extra developer-days writing and testing sessions, CSRF, rate limiting and WS auth ourselves, and we own every security bug in that code. A memory-hard offline verifier: PBKDF2 is not memory-hard like Argon2id-WASM, which we give up for zero dependencies and native speed. Stateless horizontal scaling from JWTs, which a single-VPS deployment doesn't need. Jest's familiarity. An all-npm toolchain, since k6 is a separate Go binary under AGPL used as a tool only. mitata's richer benchmark statistics. Vitest 4's longer track record, because Vitest 5.0 is 3 weeks old. Native p95 from the bench fixture, replaced by our own sampler.",
+  "risks": [
+   {
+    "risk": "Bugs in hand-rolled session code (CSRF, session fixation, timing leaks, missing revocation on the WebSocket).",
+    "mitigation": "Port the Lucia reference line by line with attribution in THIRD_PARTY.md. Rotate the session id on login. Use SameSite=Strict plus a Sec-Fetch-Site check on non-GET requests plus an Origin check on WS upgrade. Write a dedicated tests/integration/auth suite (fixation, cross-site POST rejected, cross-origin WS rejected, logout closes sockets within 1 s, password change kills other sessions, no user enumeration, 429 after limits). A second member reviews every auth PR. Keep an OWASP ASVS session checklist in SECURITY.md."
+   },
+   {
+    "risk": "The offline verifier can be brute-forced from a stolen device's IndexedDB (PBKDF2 is not memory-hard), and the local VFS data is not encrypted.",
+    "mitigation": "Use 600,000 iterations (the OWASP level), a random 16-byte salt per user, a 30-day expiry without online contact, invalidation when password_version changes, and 'forget this device' in Settings. State honestly in SECURITY.md that offline login is an access gate, not disk encryption. The reversal trigger switches to Argon2id-WASM if the threat model changes."
+   },
+   {
+    "risk": "Operations queued during an offline su are replayed under a uid the server never authenticated.",
+    "mitigation": "The server accepts an op whose uid differs from session.uid only if a live server-issued su_grant exists. Otherwise the ops are held (not dropped) and the user is prompted to re-authenticate as that user to sync N pending ops. A refusal reverts the ops and notifies the user; nothing is applied silently."
+   },
+   {
+    "risk": "COEP require-corp breaks a cross-origin load (model weights, fonts, CDN scripts), or the Service Worker serves a response without COOP/COEP and offline boot loses isolation.",
+    "mitigation": "Self-host all assets, including model weights under /models/<sha256>/ with immutable caching. Cache the full network Response in the SW so headers are preserved; the prototype showed isolation survives offline reload. An e2e test asserts crossOriginIsolated === true online and after offline reboot. Fall back to COEP credentialless (Chrome 96+) if a cross-origin load is unavoidable."
+   },
+   {
+    "risk": "CSP or Trusted Types breaks the chosen UI framework or WASM runtimes.",
+    "mitigation": "Ship the CSP as Report-Only in Phase 2 and enforce it by Phase 3. Include 'wasm-unsafe-eval' from day one. Enforce Trusted Types only if the framework passes; otherwise document the gap in SECURITY.md and render all AI and file content as text nodes."
+   },
+   {
+    "risk": "Argon2 login storms saturate the libuv pool (measured: 16 concurrent hashes take 530 ms on 4 threads) or memory on a small VPS (about 19 MiB per in-flight hash).",
+    "mitigation": "Per-IP and per-username token buckets, a login-concurrency semaphore of 4 returning 429 with Retry-After, UV_THREADPOOL_SIZE matched to vCPUs, and measure the login p95 on the real VPS with k6 in Week 3."
+   },
+   {
+    "risk": "Vitest 5.0 is only 3 weeks old, and a regression could hit browser mode, bench or coverage near a gate.",
+    "mitigation": "Pin exact versions with a lockfile and disable major-version bot updates until after v1.0.0. The documented fallback is 4.1.11: config keys are the same apart from the bench API, and the bench files are isolated under dsa/*/bench/."
+   },
+   {
+    "risk": "Performance budgets flake on shared GitHub runners, whose speed differs from the lab reference machine.",
+    "mitigation": "Algorithmic budgets (trie, DB Q1-Q5, prediction, heap) gate every PR at the spec threshold. UI and boot budgets run nightly under a CDP CPU-throttle factor calibrated in Week 2 against the published lab spec. Each budget is the median of 3 runs. A quarantine label covers known-flaky tests. Before each gate the full perf suite runs on the lab machine and the numbers are committed."
+   },
+   {
+    "risk": "Playwright offline emulation does not close existing WebSockets (measured), so offline tests pass or fail for the wrong reason.",
+    "mitigation": "The sync client uses 25 s app-level ping/pong with a 2-miss timeout to detect offline, and the OFF-04 test asserts the taskbar shows offline within 2 heartbeat intervals. A second e2e variant kills the backend process, which is what an examiner pulling the network does."
+   },
+   {
+    "risk": "An LLM or DB key leaks into the repo or the client bundle.",
+    "mitigation": "Keys live only in the server env (a chmod-600 env file on the VPS, GitHub Actions secrets for deploy only). CI runs in LLM_MODE=replay with no key, and a test asserts the key is absent. gitleaks runs on every PR, on full history nightly, and on dist/ after build. A provider-side spend cap is set. A revoke-rotate-record runbook plus an incident log live in SECURITY.md."
+   },
+   {
+    "risk": "The fault-injection hook becomes an abuse vector in production.",
+    "mitigation": "It is active only when NODE_ENV=test, or when FAULT_INJECTION=1 and the caller is uid 0 and the call is audited. A test asserts it is inert when the env flag is unset. The client production bundle only forwards the root-only 'debug inject' syscall."
+   },
+   {
+    "risk": "LLM cassettes drift when prompts change, so CI replay misses.",
+    "mitigation": "A cassette miss fails loudly with the key and a prompt preview, and never falls through to the network. The AI owner re-records with 'npm run ai:record' under a budget cap, and cassette diffs are reviewed in the PR."
+   }
+  ],
+  "reversal_trigger": "Auth: switch to Better Auth if, by the end of Week 5, the hand-rolled auth module does not pass the full auth security suite (fixation, cross-site POST, cross-origin WS, logout closes WS in under 1 s, password-change revocation, rate limits), or if a reviewer finds a session vulnerability not fixable within one day, or if an OAuth/SSO requirement appears. Offline verifier: move to Argon2id-WASM (m=19 MiB) if the threat model requires a memory-hard KDF, or if PBKDF2-600k exceeds 500 ms p95 on the lab reference machine while Argon2id-WASM is faster there. Iterations are never lowered below the OWASP level. Isolation: move COEP from require-corp to credentialless if any required asset cannot be self-hosted. Tooling: move from Vitest 5.0.x to 4.1.11 if a blocking Vitest 5 bug in browser mode, bench or coverage stays unfixed for more than 7 days before a gate. Replace k6 with a Node 'ws' load script if k6 cannot hold 2,000 idle sockets from a 4-GB laptop at under 70% generator CPU. Add the server-kill harness as the primary offline method if setOffline plus reload fails in more than 1 of 20 CI runs.",
+  "team_prototype": "Weeks 2-3 (before the Week-4 defence). Owners: P5 QA/DevOps and P2 VFS/DB, reviewed by P1 Kernel; all numbers go into the STACK_DECISION.md evidence table, and scripts are committed under tests/performance/ and bench/.\n(1) Auth spike on Node 24 LTS: /api/auth/login, /logout, /su and a WS upgrade that checks the cookie and Origin. Measure on BOTH the published lab workstation and the target 1-2 vCPU VPS:\n- Argon2id (m=19456, t=2, p=1) p50/p95 over 100 hashes (our laptop: 52.8 / 77.4 ms).\n- Login p95 under k6 at 20 VUs.\n- Event-loop delay p99 during a 50-login burst (perf_hooks.monitorEventLoopDelay; target < 5 ms).\n- Revocation latency: logout in Playwright context A, then the WebSocket in context B closes (target < 1 s).\n(2) OFF-03: time Chrome PBKDF2-SHA256-600k on the lab machine (our laptop: 78 ms; target < 500 ms). Write the storage-inspection e2e: log in with a canary password, dump every IndexedDB database, localStorage, sessionStorage, CacheStorage and OPFS, and assert the canary (UTF-8 and UTF-16) is absent.\n(3) Isolation: serve the shell with COOP/COEP/CSP. Playwright asserts crossOriginIsolated and measureUserAgentSpecificMemory online AND after setOffline plus reload (our prototype passes on Chrome 153). Load the about 23 MB MiniLM ONNX weights from our own origin versus Hugging Face under COEP and record the time and any CSP violations.\n(4) Toolchain skeleton in CI by Registration (W2): Vitest projects unit, browser, bench and integration with a Postgres service container; coverage glob thresholds; one Playwright e2e (boot, login, terminal, reboot); a k6 smoke run. Record PR wall time (target < 8 min) and the flake rate over 20 reruns.\n(5) Load-tool justification: k6 with 2,000 idle sockets (50 VUs x 40 sockets) reporting server RSS per connection, and a 50-VU lock-contention run reporting lock_grant_ms p95. Run the same contention test once with Artillery to show it cannot report per-message latency, and record generator CPU for both.\n(6) DSA bench format demo on the team's first trie: Vitest bench mean/p99 at 10^3, 10^4 and 10^5 entries (flat curve), plus the per-op p95 assertion of 1 ms or less at 10^4 failing the build when violated. Deliberately break it once to screenshot the failing CI run for the defence.",
+  "requirement_ids_served": [
+   "OFF-01",
+   "OFF-02",
+   "OFF-03",
+   "OFF-04",
+   "OFF-05",
+   "BOOT-02",
+   "BOOT-09",
+   "BOOT-10",
+   "BOOT-12",
+   "BOOT-14",
+   "SYS-01",
+   "SYS-02",
+   "SYS-03",
+   "VFS-03",
+   "VFS-06",
+   "VFS-07",
+   "VFS-08",
+   "VFS-09",
+   "VFS-10",
+   "MEM-01",
+   "MEM-03",
+   "MEM-05",
+   "MEM-06",
+   "PROC-04",
+   "PROC-05",
+   "WM-03",
+   "DB-02",
+   "DB-03",
+   "DB-05",
+   "RAG-03",
+   "RAG-04",
+   "RAG-05",
+   "AGT-02",
+   "AGT-03",
+   "AGT-04",
+   "AGT-05",
+   "AGT-06",
+   "AGT-07",
+   "AGT-08",
+   "AGT-09",
+   "PRE-01",
+   "PRE-02",
+   "PRE-04",
+   "PRE-05",
+   "s12.6 keys-on-server, per-user rate limits, cost cap, reproducible tests",
+   "s15.3 testing levels + coverage 70/85",
+   "s17.1 clean bring-up + live fault-injection demo",
+   "s18 secrets never in repo/bundle"
+  ],
+  "packages": [
+   {
+    "name": "node (built-in node:crypto argon2, randomBytes, timingSafeEqual, webcrypto)",
+    "purpose": "Server-side Argon2id password hashing and session token generation with zero npm dependencies. Requires Node >= 24.7; use 24.x LTS now and 26.x LTS after 2026-10-28.",
+    "version": "24.21.0 LTS (Krypton); 26.10.0 current",
+    "licence": "MIT"
+   },
+   {
+    "name": "lucia code/auth_session.ts (vendored reference, not an npm package)",
+    "purpose": "Reference for opaque session create/validate/invalidate and the Sec-Fetch-Site CSRF check, adapted into server/auth/session.ts and listed in THIRD_PARTY.md.",
+    "version": "main branch as of 2026-07 site update",
+    "licence": "0BSD"
+   },
+   {
+    "name": "@simplewebauthn/server",
+    "purpose": "Optional ('should') passkey registration and authentication on the server, as the platform-authenticator path for login.",
+    "version": "14.0.2",
+    "licence": "MIT"
+   },
+   {
+    "name": "@simplewebauthn/browser",
+    "purpose": "Optional passkey ceremony in the login screen.",
+    "version": "14.0.0",
+    "licence": "MIT"
+   },
+   {
+    "name": "@node-rs/argon2",
+    "purpose": "Conditional: Argon2id only if the backend-runtime decision picks a runtime without node:crypto argon2, such as Deno. On Bun, use the built-in Bun.password instead.",
+    "version": "2.2.1",
+    "licence": "MIT"
+   },
+   {
+    "name": "vitest",
+    "purpose": "Single test runner: unit, browser, integration, bench (Tinybench-backed fixture with assertions), ai-eval (replayed LLM) projects.",
+    "version": "5.0.1 (fallback 4.1.11)",
+    "licence": "MIT"
+   },
+   {
+    "name": "@vitest/browser-playwright",
+    "purpose": "Runs the browser project in real Chromium or Chrome for IndexedDB, OPFS, Worker and WebCrypto tests.",
+    "version": "5.0.1",
+    "licence": "MIT"
+   },
+   {
+    "name": "@vitest/coverage-v8",
+    "purpose": "Coverage with AST-aware remapping; glob thresholds of 70 global and 85 on dsa/**, vfs/** and kernel/**; lcov and json-summary for the PR summary.",
+    "version": "5.0.1",
+    "licence": "MIT"
+   },
+   {
+    "name": "@playwright/test",
+    "purpose": "e2e and performance: boot, login, terminal, reboot, restore; offline boot; CDP CPU throttling; frame p95 and LoAF; two contexts for lock contention; channel 'chrome' for current stable Chrome.",
+    "version": "1.63.0",
+    "licence": "Apache-2.0"
+   },
+   {
+    "name": "fast-check",
+    "purpose": "Property and model-based tests: random VFS op sequences keep fsck clean; heap, trie and LRU invariants; fault-injection position N as a generated property.",
+    "version": "4.10.2",
+    "licence": "MIT"
+   },
+   {
+    "name": "k6 (Grafana, standalone binary; grafana/setup-k6-action in CI)",
+    "purpose": "WebSocket soak (idle sockets, memory per connection) and lock-grant latency with thresholds that exit 99 on breach; also HTTP load on login and the LLM gateway.",
+    "version": "v2.3.0",
+    "licence": "AGPL-3.0 (tool only, not distributed with our code)"
+   },
+   {
+    "name": "gitleaks (CLI binary)",
+    "purpose": "Secret scanning on every PR, nightly on full history, and on dist/ after build, to prove no key is in the client bundle.",
+    "version": "v8.30.1",
+    "licence": "MIT"
+   },
+   {
+    "name": "better-auth (runner-up, not installed)",
+    "purpose": "Fallback auth framework if the reversal trigger fires.",
+    "version": "1.7.5",
+    "licence": "MIT"
+   }
+  ],
+  "design_notes": "SCORING NOTE: this record contains two decision matrices. (a) Auth and security uses criteria a1-a7 and (b) the test toolchain uses b1-b6; each set was declared before scoring and each sums to 100. weighted_total = sum(weight x score) / 100, on a 1-5 scale.\n\n1. SESSION PROTOCOL (server/auth/session.ts, owner P2, reviewer P5)\n- Token: id = 20 random bytes in base32; secret = 32 random bytes in base64url; cookie value '<id>.<secret>'.\n- Cookie: __Host-plt_sid; Secure; HttpOnly; SameSite=Strict; Path=/; Max-Age=864000. The shell is an SPA served by the Service Worker, so Strict never breaks navigation. In dev, use https via Caddy, or a non-prefixed name if Chrome refuses __Host- on http://localhost.\n- validate(): split the token, look up by primary key, compare SHA-256(secret) with timingSafeEqual, reject if expired. If last_verified_at is more than 1 h old, extend expires_at by 10 days and write it back (bounded write amplification). Guests get a 2 h absolute expiry.\n- CSRF: every non-GET/HEAD request must carry Sec-Fetch-Site: same-origin (from the Lucia reference), on top of SameSite=Strict.\n- WebSocket upgrade: require Origin === APP_ORIGIN and a valid cookie, then attach {uid, gid, groups, sessionId} to the socket. The server keeps Map<sessionId, Set<WebSocket>>. Logout, password change or a disabled user deletes the rows and closes the sockets with code 4401. Each 25 s heartbeat revalidates the session (one PK lookup; the hash costs 1.42 us).\n- Schema (in the team's up/down migrations; P2 integrates it with the spec ERD):\n  - users (spec) gains password_version int NOT NULL DEFAULT 1, kind text CHECK (kind IN ('user','guest','system')), disabled_at timestamptz.\n  - auth_sessions(id text PK, uid int NOT NULL REFERENCES users ON DELETE CASCADE, secret_hash bytea NOT NULL CHECK (octet_length(secret_hash)=32), kind text CHECK (kind IN ('password','passkey','guest')), created_at, last_verified_at, expires_at timestamptz NOT NULL, user_agent text, ip inet); indexes on (uid) and (expires_at).\n  - su_grants(auth_session_id text REFERENCES auth_sessions ON DELETE CASCADE, target_uid int REFERENCES users, granted_at, expires_at, PRIMARY KEY (auth_session_id, target_uid)).\n  - passkeys(credential_id text PK, uid int FK, public_key bytea, counter bigint, transports text[], created_at, last_used_at). Optional.\n  - llm_usage(uid int FK, day date, requests int, tokens_in int, tokens_out int, cost_micro_usd bigint, PRIMARY KEY (uid, day)).\n  - The spec's sessions table (window_layout) stays the OS desktop session, independent of auth_sessions, because MEM-04 requires state to be paged in from a new browser session.\n\n2. PASSWORD HASHING (server/auth/password.ts)\n- const P = { memory: 19456, passes: 2, parallelism: 1, tagLength: 32 }. hash = argon2('argon2id', { message: pw, nonce: randomBytes(16), secret: PEPPER?, ...P }), stored as a PHC string '$argon2id$v=19$m=19456,t=2,p=1$<salt>$<hash>'. verify() re-derives and uses timingSafeEqual; on a parameter upgrade, rehash at the next login.\n- On Bun: Bun.password.hash(pw, { algorithm: 'argon2id', memoryCost: 19456, timeCost: 2 }). Elsewhere: @node-rs/argon2.\n- Login errors are always the same 'invalid username or password', with a dummy hash for unknown users so timing does not enumerate them.\n\n3. OFFLINE LOGIN VERIFIER (OFF-03; kernel/auth/offline-verifier.ts, runs in the auth worker; owner P5)\n- After a successful ONLINE login (the only moment the plaintext is in memory): salt = getRandomValues(16); dk = PBKDF2-SHA256(pw, salt, 600000, 256 bits). Store { username, uid, gid, groups, alg: 'PBKDF2-SHA256', iter, salt, dk, passwordVersion, createdAt, lastOnlineAt, failures, lockedUntil } in the IndexedDB store 'offline_verifiers', then zero the buffers.\n- Offline attempt: fetch the record, re-derive, compare in constant time (XOR accumulate). Back-off: after 5 failures, lock for 2^n x 30 s (a UX gate; devtools can bypass it, as SECURITY.md states).\n- Invalidation: a passwordVersion mismatch at the next online contact, 30 days without online contact, or 'forget this device'.\n- The local session is { uid, offline: true }. On reconnect the sync client presents the cookie. If the server session has expired, it shows a 'Sign in to sync' prompt and holds the outbox, bound to the uid.\n- Offline Guest: uid 65534, home /tmp/guest, local-only, wiped at logout.\n- Passkeys (optional): online through SimpleWebAuthn. Offline, keep the credential public key (SPKI) and verify an assertion over a locally generated challenge with WebCrypto ES256 (about 40 lines).\n\n4. MULTI-USER, SU, GUEST, ROOT\n- root is uid 0. Root login at the greeter is disabled; elevate with su.\n- The seeded 'demo' account has its password in README (section 17.2) and pre-seeded evaluation documents.\n- Guest: POST /api/auth/guest creates an ephemeral user guest-XXXX (uid 60000-60999, group 'guests', home /home/guest-XXXX, quota 20 MB / 500 inodes, AI agent 5 requests per hour, cannot su). A nightly job removes expired guests in one transaction (rm -r of the home, the user row, the quota).\n- su: the terminal calls sys.su({ user }). The kernel shows a compositor-owned secure prompt (the app never sees the password), then calls POST /api/auth/su { target, password }. That call is rate-limited per (session, target), verifies Argon2id, and inserts su_grants with a 15-min idle TTL renewed on use. The kernel then spawns a child shell whose PCB carries uid/gid = target, so whoami and id report the effective uid, and exit ends it.\n- Offline su: verify the target's cached verifier if one exists, otherwise fail with 'su: authentication unavailable offline'.\n- SERVER AUTHORISATION RULE for every syncing op and syscall that reaches the server:\n  - effectiveUid = op.uid only if op.uid === session.uid, or a live su_grant(session, op.uid) exists; otherwise EPERM and the op is held for re-authentication.\n  - The server re-runs the permission check using the SAME isomorphic TypeScript module (vfs/perm.ts) as the client kernel, so one permission-matrix test suite covers both.\n  - chown is root-only; AGT-04 means the agent runs as the invoking uid and never as root without explicit confirmation.\n\n5. RATE LIMITS (server/ratelimit.ts: token bucket with lazy refill in a Map, capped at 10k keys with the team's own dsa/lru; LLM budgets persist in Postgres)\n\n| Key | Limit |\n|---|---|\n| login:ip | 10/min |\n| login:user | 5 per 15 min, with exponential back-off |\n| su:session:target | 5 per 15 min |\n| llm:agent:uid | 10/min, burst 3 (guest 5/hour) |\n| embed:uid (if hosted) | 60/min |\n| ws message rate per connection | 50/s, burst 200 (spec: about 20/s during bulk ops); send an error frame, close with 1008 on repeat |\n| login concurrency | semaphore of 4, returning 429 with Retry-After |\n\n- LLM budget: SELECT ... FOR UPDATE on the llm_usage row before the call. Daily token cap per uid, plus a global LLM_BUDGET_USD monthly cap from env.\n- When the budget is exhausted the gateway returns AI_BUDGET_EXHAUSTED and the agent degrades to the plain terminal with an explanation (graceful absence).\n\n6. HEADERS (set by the reverse proxy in prod, by Vite server.headers in dev, and by Vitest browser-mode server.headers so tests match prod)\n- Cross-Origin-Opener-Policy: same-origin\n- Cross-Origin-Embedder-Policy: require-corp\n- Cross-Origin-Resource-Policy: same-origin\n- Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; connect-src 'self' wss://<host>; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'; manifest-src 'self'\n- Trusted Types (require-trusted-types-for 'script') starts Report-Only.\n- Referrer-Policy: no-referrer; X-Content-Type-Options: nosniff; Permissions-Policy: camera=(), microphone=(), geolocation=(), cross-origin-isolated=(self); Strict-Transport-Security: max-age=31536000.\n- Model weights and ORT/WASM files are self-hosted and loaded after the desktop is interactive (BOOT-10), then cached in Cache API or OPFS by the SW. If they are ever fetched from Hugging Face instead, add connect-src https://huggingface.co https://*.hf.co (measured redirect to us.aws.cdn.hf.co).\n- The SW must cache the original network Response so COOP/COEP survive offline. Never rebuild a navigation Response with new Response(body) without copying the headers.\n\n7. SECRETS (SECURITY.md)\n- .env is gitignored and .env.example is committed. On the VPS the env file is chmod 600 and passed with docker compose env_file.\n- GitHub secrets are used only by the deploy job. CI has no LLM key (LLM_MODE=replay, and a test asserts the key is absent).\n- gitleaks runs as `gitleaks git --redact` on every PR, on full history nightly, and as `gitleaks dir dist/` after the build.\n- Leak runbook: revoke at the provider, rotate, redeploy, then add an incident-log entry (what, when detected, time to revoke).\n\n8. TOOLCHAIN LAYOUT\n\n| Project | Scope | When |\n|---|---|---|\n| unit (node) | dsa/**, pure kernel/vfs/shell-parser/scheduler/permission-matrix logic, server pure logic | every PR |\n| browser (Chromium, @vitest/browser-playwright) | client VFS IndexedDB mirror, outbox durability, swap tier 1, workers, WebCrypto | every PR |\n| integration (node + Postgres service container) | syscalls against the DB, fault injection for every bulk op, lock leases, outbox replay exactly-once, two concurrent overlapping movers (DB-03), auth security suite | every PR |\n| bench (vitest bench -c vitest.bench.config.ts) | complexity curves 10^3..10^5 and budget asserts | nightly + release |\n| ai-eval (LLM_MODE=replay) | Recall@5 / MRR, 20-case agent benchmark, injection fixtures, PRE top-1/top-3 vs MFU/MRU | release + PRs touching ai/ |\n\n- Playwright projects: e2e (channel 'chrome'; boot, login, terminal, file ops, reboot, restore; offline boot) runs on main and on release. perf runs nightly and on release.\n- k6 scripts in tests/performance/k6/ run nightly and on release.\n- Coverage: provider v8; reporter text, json-summary, lcov; thresholds { lines: 70, 'dsa/**': { lines: 85 }, 'vfs/**': { lines: 85 }, 'kernel/**': { lines: 85 } }. The run merges the unit, browser and integration projects, and a 10-line script posts json-summary to $GITHUB_STEP_SUMMARY, so no extra action is needed.\n\n9. COMPONENT CHOICES INSIDE T1\n- Benchmarks: Vitest bench. It is Tinybench 6 underneath with interleaved compare, JSON output and assertions, so a separate tinybench install adds nothing. mitata has better statistics but would be a second harness with no release since February 2025. Vitest bench has no p95, so for absolute budgets use a percentile() helper over per-op samples: 1,000 runs, Float64Array, performance.now in a cross-origin-isolated page (5 us resolution) or process.hrtime in Node, applied only where one op is much longer than the timer resolution.\n- Load testing: k6. It gives per-message latency through a custom Trend and exits 99 on threshold breach. Artillery's WS engine has counters only, and autocannon is HTTP-only.\n- Coverage: v8 rather than istanbul. Since Vitest 4, v8 remapping is AST-aware with istanbul-level accuracy, it needs no instrumentation, and it works in Chromium browser mode.\n- LLM record/replay: a gateway cassette rather than Polly.js (stale since 2023) or msw (HTTP-level).\n\n10. FAULT-INJECTION HOOK (server/vfs/fault.ts plus the client twin kernel/vfs/fault.ts; owners P5 and P2)\n\n```ts\nclass InjectedFault extends Error {}\nclass FaultInjector {\n  private n = 0;\n  constructor(private plan?: { op: 'rm'|'mv'|'cp'|'rename'|'chmod'|'chown'; after: number }) {}\n  tick(op: string) {\n    if (this.plan?.op === op && ++this.n > this.plan.after) throw new InjectedFault(`${op}@${this.n}`);\n  }\n}\n```\n\n- Every bulk operation calls ctx.fault.tick(op) once per node operation INSIDE the database transaction on the server, and inside the single IndexedDB transaction on the client. The prototype showed abort after 500 of 1,000 deletes leaves the store unchanged.\n- Enabled only when NODE_ENV=test, or when FAULT_INJECTION=1 and uid 0 and the call is audited. The live demo uses the root-only terminal command 'debug inject rm 500'.\n- Oracle, run before and after:\n  - Subtree checksum = SHA-256 over rows of (ino, parent_ino, name, type, mode, uid, gid, size, version, blob_id) ordered by ino.\n  - Orphan inodes: SELECT count(*) FROM inodes i WHERE i.ino <> 1 AND NOT EXISTS (SELECT 1 FROM dentries d WHERE d.ino = i.ino).\n  - Dangling dentries: SELECT count(*) FROM dentries d WHERE NOT EXISTS (SELECT 1 FROM inodes p WHERE p.ino = d.parent_ino).\n  - Quota: users.used_bytes and used_inodes unchanged.\n- fast-check generates N in [1, M-1] for each of rm -r, cp -r, mv, batch rename (500) and chmod -R / chown -R on a seeded 1,000-node tree, with a fixed seed in CI and 10x runs nightly.\n- AGT-09 reuses the same tick point to kill the agent process mid-plan and assert rollback.\n\n11. LLM CASSETTE (server/llm/cassette.ts; owner P4)\n- Modes: live | record | replay.\n- key = sha256(canonicalJSON({ provider, model, messages, tools, temperature: 0, seed, max_tokens })).\n- Files are ai/eval/cassettes/<key>.json holding { request, response, usage, costMicroUsd, model, recordedAt }.\n- Before hashing, normalise volatile inputs: a frozen clock (e.g. 2026-11-14T10:00:00+05:00), sorted listings, stable inode numbers from the seed script.\n- In replay mode a miss throws CassetteMiss(key, preview) and never touches the network.\n- Recording runs only with a budget cap. Cassettes are committed and scanned by gitleaks.\n- The same cassettes give the demo a deterministic fallback for the recorded AI-eval set.\n\n12. PERFORMANCE BUDGETS THAT FAIL THE BUILD (tests/performance/budgets.json, read by the tests)\n\n| Budget | Measured by | Threshold |\n|---|---|---|\n| SYS-03 trie prefix lookup p95 | per-op sampler at 10^4 and 10^5 entries | <= 1 ms |\n| DB-05 Q1-Q5 p95 | integration perf, 1,000 runs on the seed script | <= 10 ms |\n| MEM-05 5 MB local page-in p95 | browser project | <= 300 ms |\n| RAG-05 retrieval p95 over >= 10,000 chunks | ai-eval | <= 500 ms |\n| PRE-01 one prediction | bench | <= 5 ms |\n| WM-03 / PROC-05 frame p95 | Playwright perf | <= 16.7 ms, and no LoAF entry > 50 ms whose scripts[].sourceURL is our origin |\n| BOOT-10 warm / cold boot | performance.mark from bootlog | <= 1.5 s / <= 3.0 s |\n| Lock-grant p95 at 50 clients | k6 | declared in the WS decision record, e.g. < 200 ms |\n\n- CPU throttle calibration: in Week 2, run a fixed CPU micro-benchmark on the GitHub runner and on the lab workstation. rate = runner score / lab score, applied with Emulation.setCPUThrottlingRate in perf jobs.\n\n13. PLAYWRIGHT RECIPES\n- Frame meter: the OS's own Task Manager meter (rAF deltas in a ring buffer plus a PerformanceObserver on 'long-animation-frame') is exposed read-only on window.__plt.perf in test builds. The test starts a CPU-bound process in the OS, drags 10 windows with page.mouse (60 steps each), then asserts p95 and the LoAF attribution.\n- Two users (VFS-09): browser.newContext() twice, which gives separate cookie jars. A takes an exclusive lease, B gets EBUSY or read-only, then A's context is closed without release (a crash), and B must acquire within the lease TTL.\n- Offline: setOffline(true) plus reload. It is proven to render from the SW with isolation intact, but existing WebSockets are NOT closed, so the test asserts the heartbeat-driven taskbar state, and a second variant kills the server process.\n- BOOT-02: Network.emulateNetworkConditions via CDP. Progress at t = 500 ms must be lower on the throttled network than on the normal one.\n\n14. OWNERSHIP (each member codes in at least two subsystems)\n- P2: server auth, sessions, su grants and schema.\n- P5: offline verifier, SW headers, toolchain, CI, fault-injection harness.\n- P3: login screen, secure prompt, frame meter UI.\n- P1: PCB credentials (uid/gid), the sys.su syscall, permission checks.\n- P4: LLM gateway rate limits, budget, cassettes, injection fixtures.\n- A named secondary reviewer is assigned for every auth PR.",
+  "open_questions": [
+   "Which backend runtime wins its own decision record (Node vs Bun vs Deno)? That picks the Argon2id provider: node:crypto.argon2 on Node >= 24.7, Bun.password on Bun, @node-rs/argon2 elsewhere. The session design is the same in every case.",
+   "The lab workstation spec is published in Week 2. It is needed to calibrate the CI CPU-throttle factor and to confirm that PBKDF2-600k offline login stays under 500 ms.",
+   "Will the examiners run the live fault-injection rm -r against the production URL or the local bring-up? That decides whether FAULT_INJECTION=1 (root-only, audited) is enabled in production.",
+   "Is the chosen UI framework compatible with enforced Trusted Types, or does it need a default policy?",
+   "Is the repository owned by a personal account or a GitHub organisation? This affects gitleaks-action licensing (we avoid it by running the CLI) and the runner size and free minutes for private repos.",
+   "One shared 'demo' account, or per-examiner demo accounts? This affects quota, AI budget and lock-contention demo setup."
+  ]
+ },
+ "examiner_review": {
+  "verdict": "upheld_with_changes",
+  "factual_errors": [
+   {
+    "claim": "Bun does not implement node:crypto argon2 (open request), so on Bun the equivalent is Bun.password.",
+    "correction": "This is out of date. oven-sh/bun#26585 was closed as COMPLETED by PR #37015 ('node:crypto: implement argon2 and argon2Sync'), merged on 2026-08-06, before Bun 1.4.0 (2026-08-20) and 1.4.2 (2026-09-05). node:crypto.argon2 is therefore very likely one code path for both Node and Bun. Confirm with `bun -e \"console.log(typeof require('crypto').argon2)\"` before the defence.",
+    "source": "https://github.com/oven-sh/bun/issues/26585 ; https://github.com/oven-sh/bun/pull/37015 ; npm view bun time"
+   },
+   {
+    "claim": "node:crypto.argon2 ships in Node 24 LTS (since 24.7.0), so Argon2id needs zero dependencies.",
+    "correction": "This holds only when Node is built against OpenSSL 3.2 or later. ncrypto defines OPENSSL_WITH_ARGON2 only if OPENSSL_VERSION_PREREQ(3,2), and Node otherwise throws ERR_CRYPTO_ARGON2_NOT_SUPPORTED ('Argon2 is not supported by the current version of OpenSSL being used'). Official binaries and images bundle OpenSSL 3.5.x (24.21.0 ships 3.5.8), but distro packages linked to a system OpenSSL 3.0 do not have argon2. The API itself is Stable, not experimental. The fix is to pin the official node image and add a start-up self-test.",
+    "source": "https://raw.githubusercontent.com/nodejs/node/main/deps/ncrypto/ncrypto.h (line 94) ; https://raw.githubusercontent.com/nodejs/node/main/doc/api/errors.md#ERR_CRYPTO_ARGON2_NOT_SUPPORTED ; https://nodejs.org/dist/index.json"
+   },
+   {
+    "claim": "Node 24 is LTS until 2028-04-30 (presented as the stable base for the whole project).",
+    "correction": "End-of-life is 2028-04-30, which is correct. But Node 24 moves from Active LTS to Maintenance LTS on 2026-10-20, in the middle of the project, and Node 26 becomes Active LTS on 2026-10-28. The record should either commit to 24 (maintenance) or declare a pre-approved move to 26 LTS now, because the stack freezes after Week 4.",
+    "source": "https://raw.githubusercontent.com/nodejs/Release/main/schedule.json"
+   },
+   {
+    "claim": "The prototype ran real IndexedDB/OPFS/Workers/PBKDF2 'in Chrome 153', treated as current Chrome.",
+    "correction": "Playwright 1.63 bundles Chrome for Testing 153.0.8010.12, a pre-stable build; the stable 153 builds were 153.0.8010.47 and .52. Chrome moved to a two-week stable cadence from M153 (153 on 2026-09-08, 154 on 2026-09-22, 155 on 2026-10-06). As of 2026-09-23 the current stable is 154.0.8037.57. The spec requires current stable Chrome at each gate, so the bundled browser will lag by one or more milestones.",
+    "source": "https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/packages/playwright-core/browsers.json ; https://chromiumdash.appspot.com/fetch_milestone_schedule ; https://versionhistory.googleapis.com/v1/chrome/platforms/linux/channels/stable/versions"
+   },
+   {
+    "claim": "Port the Lucia reference (code/auth_session.ts) line by line; it is 0BSD.",
+    "correction": "The reference calls Uint8Array.fromBase64() and Uint8Array.prototype.toBase64(), and its own header says these need Node.js 25 or later. On Node 24.13.1 (V8 13.6) both are undefined (tested), so a line-by-line port fails at runtime on the chosen LTS; use Buffer base64url instead. The reference also recommends SameSite=Lax (Strict is a deliberate deviation, which is fine but should be stated). The 0BSD licence is in code/LICENSE; the repository-root LICENSE is MIT, so THIRD_PARTY.md must cite the file-level licence.",
+    "source": "https://raw.githubusercontent.com/lucia-auth/lucia/refs/heads/main/code/auth_session.ts ; https://raw.githubusercontent.com/lucia-auth/lucia/refs/heads/main/code/LICENSE ; local `node -e` on v24.13.1"
+   },
+   {
+    "claim": "Better Auth docs say 'There are no rollback (down) migrations generated'; scored a5 = 2.",
+    "correction": "The cited database concepts page does not contain that sentence. It says `migrate` works only for the built-in Kysely adapter and that `generate` emits a SQL file (Kysely) or ORM schema. That output can go into the team's own versioned up migration with a hand-written down, which the runner-up text itself proposes. 'Forward-only' is true of the CLI, but a5 = 2 overstates the cost; 3 is more honest.",
+    "source": "https://better-auth.com/docs/concepts/database"
+   },
+   {
+    "claim": "Vitest bench reports p50/p75/p99/p995/p999 but not p95.",
+    "correction": "The Vitest 5 benchmarking guide's table shows hz, min, max, mean, p75, p99, p995, p999 and rme. p50 is only in Tinybench's raw JSON. 'No p95' is correct. This is minor, but the evidence table should cite exactly which fields it uses.",
+    "source": "https://vitest.dev/guide/benchmarking"
+   },
+   {
+    "claim": "The Better Auth passkey plugin is built on SimpleWebAuthn (implied to be the same 14.x the team would use).",
+    "correction": "@better-auth/passkey 1.7.5 depends on @simplewebauthn/server ^13.3.1 and @simplewebauthn/browser ^13.3.0, not 14.x. If the reversal trigger fires, the team's passkey code has to drop back to a major version.",
+    "source": "npm view @better-auth/passkey dependencies"
+   }
+  ],
+  "spec_gaps": [
+   "s12.6 asks to 'log tokens and cost per request'. The record's llm_usage(uid, day) table is only a daily aggregate. It needs a per-request table (request_id, uid, session_id, model, tokens_in, tokens_out, cost, latency, prompt_id linked to audit_log, status, ts) to support the cost report and 'total cost of development and demo'.",
+   "Session identity is ambiguous across the spec schema. locks.session_id (VFS-09), swap_pages.session_id (MEM-04) and op_log.session_id do not say whether they mean auth_sessions or the OS desktop sessions table. MEM-04 requires paging state back in from a NEW browser session, so swap pages must be keyed by the persistent OS session or uid, with owner_uid checked on every read. Leases must be bound to the revocable auth session, and revocation must release them through the lock manager (which broadcasts the release), not by FK cascade.",
+   "Coverage gates (s15.3): since Vitest 4, coverage.all was removed and only files loaded during tests are counted unless coverage.include is set. Vitest 5 also matches include/exclude relative to the project root. As drafted, the 70/85 thresholds can pass while untested files are simply missing from the denominator. Examiners read the tests, and this is the kind of inflation they look for.",
+   "SYS/architecture boundary 1 says no app, even a built-in one, touches storage directly. The security model does not say how this is enforced. Same-origin apps in the main thread or in workers can open IndexedDB, including the offline_verifiers store. The record needs at least a lint rule plus a check on the built bundle, and sandboxed srcdoc iframes for any untrusted app.",
+   "The reference syscall layer has 'permission AND capability checks, audit log', but only uid/rwx checks are designed. Per-app capabilities and auditing of auth events (failed logins, su grants, chown, debug inject) in audit_log are missing.",
+   "OFF-02 exactly-once outbox replay conflicts with the proposed WS limit (50/s, burst 200, then close with 1008). Replaying a long offline outbox would trip the limiter, and the resulting reconnect loop would livelock sync. Replay needs batched frames and credit-based backpressure instead of disconnection.",
+   "s17 final defence and s17.2 demo account: the demo password is public in the README, and the per-username lockout (5 per 15 min) plus the shared LLM budget let anyone lock the demo account or drain the AI budget before a gate. The hidden AI prompts would then fail live. Nothing ring-fences examiner access.",
+   "Secure context: WebCrypto subtle (the offline verifier), Service Workers (OFF-01), Secure/__Host- cookies and SharedArrayBuffer/cross-origin isolation all need https or http://localhost. The <=3-command bring-up on an examiner machine must say so, or serve https locally, or login and offline boot break when opened via a LAN IP.",
+   "The COEP/CSP design assumes a single origin, but the object-storage path is unspecified. If blobs or remote swap (MEM-04/05) are fetched through presigned URLs on another host, CSP connect-src 'self' blocks them, and COEP needs CORS on the bucket. The record should require /blobs and /swap to be same-origin through the reverse proxy, and pass that constraint to the deployment decision record.",
+   "Service Worker scope for a multi-user OS: the record does not forbid caching /api/* or per-user responses in the Cache API. Cache Storage is shared across all OS users on one browser profile, so it must hold only versioned shell and model assets. COOP/COEP headers must also be preserved on worker-script and WASM responses, not just navigations; a test should assert self.crossOriginIsolated inside a worker after an offline reboot.",
+   "Multi-tab: two tabs means two kernels over one IndexedDB. Offline logout or lock does not reach other tabs, because online revocation relies on server socket closes. Use BroadcastChannel or Web Locks for auth-state propagation and for updating the offline back-off counter.",
+   "OFF-04 in the live demo: 25 s heartbeats with a 2-miss timeout means the taskbar may take 50-75 s to show offline after the examiner pulls the cable. Add navigator.onLine / 'offline' events as a fast signal, plus send-failure detection.",
+   "The spec wants 'one decision record per major decision' (s14.1). This record bundles two unrelated decisions, auth/security and test tooling, which makes each harder to defend and to reverse independently.",
+   "The budget constraint names GitHub Actions free minutes, but no budget is computed. A private repo on GitHub Free gets 2,000 minutes a month (public repos are free). Three parallel PR jobs of about 5 min each, times 5 members pushing daily, plus about 25 min of nightly perf, comes to roughly 2,500-6,000 billed minutes a month. Artifact storage is 500 MB on Free, and Playwright traces and videos will fill it."
+  ],
+  "weaknesses": [
+   "Weights lean towards writing it yourself. a1 (identity fit, defined as 'no mapping layer'), a4 (viva defensibility) and a5 (owning migrations) are 50% of the auth weight, and each structurally favours hand-rolled code. The two criteria where Better Auth wins, effort (a6) and maintenance (a7), get only 15%. The winner still survives: A1 is 4.43 vs 3.57 under equal weights, and 3.90 vs 3.75 under an effort-heavy weighting after honest rescoring. The record should publish that sensitivity table rather than leave examiners to suspect reverse-engineering.",
+   "A1 scoring 4 on 'security correctness BY DEFAULT', level with Better Auth, is generous. Hand-rolled code has nothing by default; every control is team code that needs tests. 3 is honest, and so is a7 = 3 for vendored code with no upstream. Better Auth a5 = 2 should be 3, since `generate` emits SQL the team can wrap in up/down migrations.",
+   "A4 (JWT) is scored as a straw man. a3 = 2 assumes bearer tokens in JS-readable storage, but the strongest form is a JWT in an HttpOnly cookie. JWT loses on revocation (a2) anyway, so it should be scored on its best form.",
+   "Toolchain alternatives are weak. T2 (Jest) and T3 (bun test) both lack real-browser unit testing, so both are set up to lose the 30% b1 criterion. A genuine contender is missing: Web Test Runner 1.0 (@web/test-runner, real browsers) or Playwright-Test-only (node unit tests, browser tests, monocart V8 coverage), which is arguably fewer tools. Without one, examiners can say only one option was ever viable.",
+   "The requirement-IDs-served list (about 48 IDs, including RAG-04, PRE-02 and AGT-07) conflates 'this tooling can measure it' with 'this decision implements it'. That inflates the record's apparent reach.",
+   "The evidence mixes the team laptop (Ryzen 5 7530U) with claims about the lab machine and VPS. The Argon2 p95, PBKDF2 time and login-storm numbers need re-measuring on the published lab spec and the real 1-2 vCPU VPS before the defence (the prototype plan says so, but the scores already rely on them).",
+   "Single-process assumptions are implicit. In-memory token buckets and Map<sessionId, sockets> break silently if the backend decision uses a cluster or separate API and sync containers. The record should state the assumption and give a reversal path (Postgres LISTEN/NOTIFY, DB-backed buckets).",
+   "Offline su caches a verifier for any target user, including uid 0. Every device where someone ran su to root then holds a PBKDF2 hash of the root password (probably shared by the team), which is open to offline brute force.",
+   "The Vitest 4.1.11 fallback is described as 'config keys the same apart from bench'. Vitest 5 also changed project inheritance (extends: true by default) and coverage path matching, so the fallback needs its own tested config.",
+   "Vitest browser mode runs test files in parallel pages on one origin, so IndexedDB and OPFS are shared between concurrently running files. Without unique database names per file, or fileParallelism turned off, the fault-injection atomicity tests can fail, or pass, for the wrong reason.",
+   "setOffline is the main offline e2e method. Its effect on the Service Worker's own fetches in Chromium is not established, and the team already measured that it leaves WebSockets open. The server-kill / backend-route-abort variant should be the gate test, not a secondary one."
+  ],
+  "amended_recommendation": "Split this into two records in STACK_DECISION.md: D10 'Authentication & security model' and D11 'Test & benchmark toolchain'. Each gets its own ranked constraints, matrix, a published sensitivity table, evidence and reversal triggers.\n\n(a) D10 AUTH & SECURITY: choose A1, hand-rolled opaque server-side sessions.\nHonest rescoring: A1 a3 = 3 and a7 = 3; Better Auth a5 = 3; A4 re-evaluated as a JWT in an HttpOnly cookie. With these scores A1 is 4.30, Better Auth 3.55, JWT about 3.3 and Auth.js 2.3. A1 still wins under equal weights (4.14 vs 3.71) and under an effort-heavy weighting (3.90 vs 3.75). Better Auth 1.7.5 remains the runner-up and the fallback.\n\nRuntime and hashing:\n- Run the server on Node 24.x LTS from the official node:24-bookworm-slim image, which bundles OpenSSL 3.5.x. node:crypto.argon2 needs OpenSSL 3.2 or later and throws ERR_CRYPTO_ARGON2_NOT_SUPPORTED on distro builds linked to OpenSSL 3.0.\n- Declare now a pre-approved move to Node 26 LTS. Node 26 becomes LTS on 2026-10-28, and Node 24 enters maintenance on 2026-10-20, so declaring it now keeps the move from being a post-freeze stack change.\n- At start-up the server asserts that crypto.argon2 exists and passes a known-answer vector, and fails fast otherwise.\n- Bun 1.4.x also implements node:crypto.argon2 (bun#26585, closed by PR #37015 on 2026-08-06), so one code path covers both runtimes. @node-rs/argon2 2.2.1 is only a documented fallback.\n- Argon2id parameters: m=19456 KiB, t=2, p=1, 16-byte salt, 32-byte tag, optional pepper from env, stored as a PHC string.\n- Rehash when parameters change. Use a dummy hash for unknown users and always return one generic login error.\n\nSessions:\n- Adapt Lucia's code/auth_session.ts (0BSD, per code/LICENSE) and cite it in THIRD_PARTY.md. Replace Uint8Array.fromBase64/toBase64, which need Node 25, with Buffer base64url.\n- The token is <id>.<secret>. Store only SHA-256(secret) and compare in constant time.\n- Expiry is a 10-day sliding window, written at most once an hour, plus an absolute 30-day lifetime. Guest sessions get a 2-hour absolute expiry.\n- Cookie: __Host-plt_sid; Secure; HttpOnly; SameSite=Strict; Path=/. Strict is a deliberate choice over the reference's Lax.\n- Rotate the session id on login.\n- Require Sec-Fetch-Site: same-origin on every non-GET request, and require Origin === APP_ORIGIN plus a valid cookie on the WebSocket upgrade.\n\nCross-decision constraint:\n- The SPA, /api, /ws, /blobs and /swap are served from ONE host behind one reverse proxy. The __Host- cookie is host-only, and CSP connect-src 'self' and COEP both depend on a single origin.\n- Object storage is never exposed on another origin through presigned URLs. The deployment record must honour this.\n\nRevocation:\n- Keep Map<authSessionId, Set<WebSocket>>. This assumes one backend process; if the backend is clustered or split, broadcast revocation through Postgres LISTEN/NOTIFY and move the buckets to Postgres.\n- Logout, password change or a disabled user deletes the auth_sessions rows and closes that session's sockets with code 4401.\n- The same revocation releases the session's leases through the lock manager, which broadcasts the release. Never release them by FK cascade.\n- Each 25 s heartbeat revalidates the session.\n\nSchema (the team's own up/down migrations):\n- users gains password_version, kind and disabled_at.\n- New tables: auth_sessions; su_grants; passkeys (optional).\n- llm_requests: request_id, uid, session_id, model, tokens_in, tokens_out, cost_micro_usd, latency_ms, prompt_id referencing audit_log, status, ts. This covers s12.6 per-request logging and the cost report.\n- llm_usage(uid, day) is the budget-counter row, locked with SELECT ... FOR UPDATE before each call.\n- Session semantics: locks.session_id references auth_sessions.id. The spec's sessions table and swap_pages are keyed by the persistent OS desktop session owned by uid, so MEM-04 page-in from a new browser session works.\n- Every swap or blob read checks owner_uid against the session uid.\n- Log login failures, su grants, chown and debug inject to audit_log.\n\nOffline login (OFF-03):\n- Each user has a PBKDF2-SHA256 verifier at 600,000 iterations, stored in a uid-namespaced IndexedDB store.\n- The verifier is derived in the auth worker after the desktop is interactive, off the login critical path.\n- Never cache a verifier for uid 0, so there is no offline su to root.\n- Other rules: a 30-day expiry without online contact, invalidation on a password_version change, and 'forget this device' in Settings.\n- The back-off counter is updated in one IndexedDB transaction.\n- Logout and lock are propagated to other tabs with BroadcastChannel, which also works offline.\n- An e2e test logs in with a canary password and proves it appears in no browser storage.\n\nPasskeys:\n- SimpleWebAuthn 14 stays a 'should'.\n- Offline assertion checking converts the DER ECDSA signature to raw r||s, and verifies rpIdHash, the UP/UV flags, type, origin and challenge.\n\nsu, guest and root:\n- As drafted: a compositor-owned password prompt, 15-minute grants, the effectiveUid rule, and the same isomorphic vfs/perm.ts on client and server. Ops are held for re-authentication, never dropped.\n- Guest creation is rate-limited per IP and capped globally.\n- Guest cleanup also removes the guest's vectors, swap pages and blob refs.\n\nRate limits:\n- Take the client IP only from the X-Forwarded-For of the Caddy instance on the compose network. Never trust that header from the internet.\n- Key login limits by IP and by (username, IP). The per-username limit only adds delay; it never locks the account, so nobody can lock out the public demo account before a gate.\n- Keep the login-concurrency semaphore of 4.\n- For WebSocket replay, send the outbox as batched frames under credit-based backpressure. Close with 1008 only for non-replay abuse, so OFF-02 replay never trips the limiter.\n- LLM limits stay per uid. Guests and the public demo account share one budget pool; named examiner accounts get a separate one, and the budgets are reset before each gate. The global monthly cap stays.\n\nHeaders:\n- COOP: same-origin; COEP: require-corp; CORP: same-origin.\n- The CSP is as drafted, with 'wasm-unsafe-eval'. It runs Report-Only in dev and in Phase 2, is enforced from Phase 3, and is never applied to the Vitest orchestrator.\n- The Service Worker caches only versioned shell and model assets, as full Response objects so COOP/COEP/CORP survive on navigations, worker scripts and WASM. It never caches /api, /blobs, /swap or any per-user data.\n- An e2e test asserts window.crossOriginIsolated and self.crossOriginIsolated in a worker, both online and after an offline reboot.\n\nSecure context:\n- The local bring-up uses https (Caddy tls internal) or strictly http://localhost, and the README says so. WebCrypto subtle, Service Workers, Secure cookies and SharedArrayBuffer all fail on http://<LAN-IP>.\n\nApp boundary:\n- apps/ may not use indexedDB, OPFS, caches or localStorage. An ESLint no-restricted-globals rule enforces this, plus a CI check on the built app chunks.\n- Any untrusted app runs in a sandboxed srcdoc iframe without allow-same-origin.\n\nSecrets:\n- As drafted: keys only in the server env, CI in LLM_MODE=replay with no key, and the leak runbook in SECURITY.md.\n- gitleaks runs on every PR, nightly on full history, and on dist/, with an allowlist for hashed assets.\n\n(b) D11 TOOLCHAIN: choose T1.\nAdd a genuine third option, Web Test Runner 1.0 with Mocha, or Playwright-Test-only with monocart coverage, and score it.\n\nVitest:\n- Pin Vitest 5.0.x exactly. The fallback is 4.1.11, with its own tested config, because Vitest 5 changed project inheritance and coverage path matching.\n- unit project: node.\n- browser project: @vitest/browser-playwright with launch channel 'chrome', so it runs current stable Chrome (154 as of 2026-09-22, now on a two-week cadence) and not the bundled Chrome for Testing 153.0.8010.12. Each test file uses unique IndexedDB and OPFS names, or file parallelism is off.\n- integration project: node plus a Postgres service container. It holds the fault-injection suite and the auth security suite.\n- bench project: vitest bench, plus the team's own percentile sampler for p95 budgets.\n- ai-eval project: LLM_MODE=replay with the gateway cassettes.\n\nCoverage:\n- Provider v8, with coverage.include listing every source glob. Since Vitest 4, only loaded files are counted otherwise.\n- Thresholds: lines 70 globally and 85 on the dsa/, vfs/ and kernel/ globs, with paths relative to the project root.\n- Optionally, run StrykerJS nightly on dsa/ to report a mutation score.\n\nPlaywright 1.63:\n- Channel 'chrome' for e2e and perf, and every run logs the Chrome version.\n- Launch with --enable-blink-features=ForceEagerMeasureMemory for the MEM-01 cross-check.\n- The gate test for offline boot kills the server or route-aborts the backend; setOffline is secondary.\n- The OFF-04 taskbar test combines navigator.onLine events with heartbeats.\n- Two browser contexts cover VFS-09 lock contention.\n- Frame p95 plus Long Animation Frame attribution covers WM-03 and PROC-05.\n\nOther tools:\n- fast-check 4.10 for property and model-based tests.\n- k6 2.3 for WebSocket soak and lock-grant latency. The scripts send Origin and Sec-Fetch-Site, and rate limits are bypassed only through a test-only env flag.\n- gitleaks CLI 8.30.1.\n\nCI budget:\n- In Week 2, estimate billed minutes. GitHub Free gives a private repo 2,000 minutes a month.\n- Use concurrency cancel-in-progress and path filters.\n- Run nightly perf on a self-hosted runner on the lab-spec machine. It is free and doubles as the calibration machine. Otherwise, use the Student Pack's Pro allowance.\n- Keep Playwright traces only on failure, with short retention.\n\nREVERSAL TRIGGERS: as drafted, plus the following:\n- The WS limiter disconnects during any outbox-replay test.\n- The crypto.argon2 self-test fails in the production image.\n- The backend stops being a single process.\n- Billed CI minutes exceed 80% of the allowance by Week 6; then move nightly perf to the self-hosted runner.",
+  "amended_chat_reason": "The decision stands. We still hand-write login using Node's built-in Argon2id and a small, reviewed session module, and we still test with one runner, Vitest 5, alongside Playwright, fast-check and k6. Even with fairer scores and different weightings, the hand-written option wins.\n\nThe review found several fixes:\n- **Out-of-date or incomplete facts:** Bun now has argon2 too. Node's argon2 needs a Node build with OpenSSL 3.2 or later, so we pin the official image. Node 24 enters maintenance in October, so we pre-approve a move to Node 26. Chrome is now on 154, released every two weeks, so tests must run on real stable Chrome, not Playwright's bundled browser. The Lucia code needs Node 25 APIs, so we adapt it rather than copy it line by line.\n- **Missing requirements:** logging tokens and cost for each LLM request, which session each table row belongs to, and counting all source files in coverage.\n- **Live-demo risks:** outbox replay tripping the WebSocket rate limit, the public demo account being locked or its AI budget drained, http on a LAN address breaking WebCrypto, Service Workers and cross-origin isolation, and object storage on another origin breaking COEP and the CSP.",
+  "defence_qa": [
+   {
+    "question": "You wrote your own authentication. Isn't that 'rolling your own crypto', and why isn't Better Auth, which is actively maintained, the safer choice?",
+    "strong_answer": "We don't implement any cryptography. Argon2id comes from node:crypto (OpenSSL), PBKDF2 from WebCrypto, and randomness from the platform CSPRNG. The session module is about 250 lines adapted from Lucia's maintained single-file reference, the replacement its author recommends now that the Lucia package is deprecated. What we write ourselves is the OS-specific part: integer uid/gid, su grants, guest uid ranges, per-op uid re-derivation for outbox replay, and the offline verifier. Better Auth does not provide any of that; we would have written it on top of Better Auth anyway, and also mapped its user/account tables onto our users table. Better Auth's June 2026 advisories were in OAuth, SSO, organisation and device-flow code we don't need. We gate our own code with a dedicated suite: fixation, cross-site POST, cross-origin WS, logout closing sockets in under 1 s, password-change revocation, rate limits, and no user enumeration. If that suite is not green by Week 5, the reversal trigger moves us to Better Auth."
+   },
+   {
+    "question": "Half your auth weight sits on identity fit, viva defensibility and migration ownership, all of which favour writing it yourself. Weren't the weights reverse-engineered from the winner?",
+    "strong_answer": "We tested that directly. After correcting our own generous scores (hand-rolled 'security by default' down to 3, maintenance down to 3, Better Auth migrations up to 3), A1 scores 4.30 against Better Auth's 3.55 on the declared weights. With all seven criteria weighted equally it is 4.14 against 3.71. With an effort-heavy weighting (build effort 25%, maintenance 10%) it is still 3.90 against 3.75. The ranking holds under every weighting we tried; the margin only shrinks when effort dominates. The sensitivity table is in STACK_DECISION.md. Identity fit carries the most weight because uid/gid, su and per-op re-authorisation are what VFS permissions, quotas, locks and the agent's least-privilege rule are built on."
+   },
+   {
+    "question": "Someone steals a laptop that has used Plotinium offline. What can they get, and why PBKDF2 rather than Argon2 for the offline verifier?",
+    "strong_answer": "They can get a salted PBKDF2-SHA256 verifier at 600,000 iterations, the OWASP level, for each user who logged in online on that device. They also get the unencrypted local VFS mirror. SECURITY.md says plainly that offline login is an access gate, not disk encryption. We never store the plaintext; a canary-password e2e test dumps IndexedDB, OPFS, Cache Storage and local/session storage and asserts the password is absent. We never cache root's verifier, so root cannot be brute-forced from a device. Verifiers expire after 30 days offline and are invalidated when password_version changes. PBKDF2 is native WebCrypto in a worker and measured 78 ms in Chrome. Argon2id would need a WASM dependency. The reversal trigger switches to Argon2id-WASM if the threat model requires a memory-hard KDF, or if PBKDF2 goes over 500 ms p95 on the lab machine. None of it syncs: ops made offline are bound to a uid and are re-authorised by the server, so a stolen device cannot push changes without a valid server session."
+   },
+   {
+    "question": "During the demo I pull the network cable while you hold an exclusive lock and have queued edits. Walk me through what happens.",
+    "strong_answer": "Chrome fires the 'offline' event straight away, and the taskbar shows offline and degraded services (OFF-04). The WebSocket heartbeat, a ping every 25 s with a two-miss timeout, confirms it; we measured that the socket itself may never fire close. Edits keep committing to the local store in one IndexedDB transaction each and go into the durable outbox with idempotency keys. The server stops seeing heartbeats, so our lease expires within its TTL (VFS-09) and the other user can take the lock. When the cable goes back, the sync client re-presents the cookie. The server re-derives the uid from the session, not the payload. The outbox replays in order as batched frames under credit-based flow control, so the rate limiter never disconnects us. Each op is acked exactly once through op_log. An op that loses a version check becomes a conflicted copy, never a silent overwrite. Our CI gate for this kills the backend process rather than relying on Playwright's setOffline."
+   },
+   {
+    "question": "How do we know your 85% coverage on dsa/, vfs/ and kernel/ isn't inflated, and that performance budgets really fail the build?",
+    "strong_answer": "Since Vitest 4, coverage counts only files that tests load unless coverage.include is set. We set it to every source glob, so an untested file counts as 0%, and the glob thresholds are also included in the global 70%. The prototype showed a dsa/** branch threshold failing the run with exit code 1, and we will show a deliberately broken trie benchmark failing CI. Budgets live in one budgets.json. Algorithmic budgets (trie p95 at or under 1 ms, Q1-Q5 at or under 10 ms, prediction at or under 5 ms) gate every PR. Frame-time and boot budgets run nightly on a runner calibrated to the lab machine, and k6 threshold breaches exit 99. For test quality over quantity, we run fast-check model-based tests against fsck and an optional nightly mutation score on dsa/."
+   },
+   {
+    "question": "Your public demo password is in the README. What stops someone from locking the account or draining your LLM budget the night before the final defence?",
+    "strong_answer": "Login limits are keyed by IP and by (username, IP), and the per-username limit only adds delay, so a stranger cannot lock the demo account. Client IPs come only from our own reverse proxy's X-Forwarded-For, so the limits can't be spoofed, and one shared proxy address can't lock out every user either. The public demo account and guests share a small AI budget pool with per-uid hourly limits. Named examiner accounts have a separate pool with a global monthly cap, and we reset the budgets before each gate. When a budget runs out, the gateway returns AI_BUDGET_EXHAUSTED and the shell falls back to the plain terminal with an explanation. The rest of the OS keeps working, which is the spec's graceful-absence rule."
+   }
+  ],
+  "extra_risks": [
+   {
+    "risk": "The production or examiner environment runs a Node build linked to system OpenSSL 3.0, for example an apt-installed nodejs or a custom base image, so crypto.argon2 is missing and every login fails.",
+    "mitigation": "Pin the official node:24-bookworm-slim image, which bundles OpenSSL 3.5.x. At start-up, check for crypto.argon2 and run a known-answer vector, and fail fast if either is wrong. A CI job runs that check inside the production image. @node-rs/argon2 is the documented fallback."
+   },
+   {
+    "risk": "Chrome now ships a stable release every two weeks (153 on Sep 8, 154 on Sep 22, 155 on Oct 6), so Playwright's bundled Chrome for Testing lags. Tests can pass on the bundled build while a new stable breaks something at a gate.",
+    "mitigation": "Run both the Vitest browser project and the Playwright projects on channel 'chrome', and log the Chrome version in every CI run. Re-run the full e2e and perf suite on the current stable within 48 hours before each gate."
+   },
+   {
+    "risk": "Outbox replay after a long offline period trips the per-connection WS rate limit (burst 200, then close with 1008). The client then reconnects and replays in a loop, breaking OFF-02.",
+    "mitigation": "Send replay as batched frames under credit-based backpressure, with the server granting N ops at a time. Reserve 1008 for non-replay abuse. Add an integration test that replays 5,000 queued ops and asserts no disconnects and exactly-once application."
+   },
+   {
+    "risk": "Coverage looks green because untested modules never enter the report (Vitest 4+ default).",
+    "mitigation": "Set coverage.include to all source globs, relative to the project root as Vitest 5 requires. Add a CI assertion that the number of files in the coverage report equals the number of source files."
+   },
+   {
+    "risk": "Opening the local bring-up at http://<LAN-IP>, or from a VM, makes it a non-secure context. WebCrypto subtle, the Service Worker, the Secure/__Host- cookie and cross-origin isolation are then all unavailable, so login and offline boot fail at the clean bring-up stage.",
+    "mitigation": "Serve the local compose stack through Caddy with tls internal on a documented hostname, or document http://localhost only. The boot POST stage checks isSecureContext and shows a clear diagnostic instead of failing without explanation."
+   },
+   {
+    "risk": "Object storage (blobs, remote swap pages) is exposed on a separate origin through presigned URLs, and COEP/CSP block or complicate those fetches (MEM-04/05).",
+    "mitigation": "Proxy /blobs and /swap through the same origin behind the reverse proxy, with authorisation checked against owner_uid. Record this as a constraint passed to the deployment decision."
+   },
+   {
+    "risk": "Vitest browser-mode test files run in parallel pages on one origin and share IndexedDB and OPFS. The fault-injection and atomicity tests can then interfere with each other and flake, or pass falsely.",
+    "mitigation": "Give each test file a unique database and OPFS directory name, cleaned up in afterAll, or turn off fileParallelism for the browser project."
+   },
+   {
+    "risk": "GitHub Actions minutes run out mid-semester on a private repo (2,000 minutes a month on Free) and CI stops before a gate. Playwright trace artifacts also exceed the 500 MB storage limit.",
+    "mitigation": "Measure billed minutes per PR in Week 2. Use concurrency cancel-in-progress and path filters. Run nightly perf on a self-hosted runner on the lab-spec machine. Upload traces only on failure, with 3-day retention. Apply for the Student Pack's Pro allowance."
+   },
+   {
+    "risk": "measureUserAgentSpecificMemory() resolves only at the next GC, which can take up to 20 s, so MEM-01 cross-check tests are slow or time out.",
+    "mitigation": "Launch test Chrome with --enable-blink-features=ForceEagerMeasureMemory. In production, sample on a randomised schedule and never await the API on a hot path."
+   }
+  ]
+ }
+}

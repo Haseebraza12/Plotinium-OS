@@ -1,0 +1,22 @@
+# Memory leaks in C (lab 6)
+
+A leak = heap memory that is still allocated but no pointer refers to it any more, so it can never be freed.
+
+Common causes in our lab code:
+- returning early from a function after `malloc` without `free` on that path;
+- overwriting the only pointer: `buf = realloc(buf, n)` loses the block when realloc fails;
+- freeing a struct but not the strings it points to;
+- building a linked list and freeing only the head.
+
+## Tools
+
+- `valgrind --leak-check=full ./a.out` reports "definitely lost" and "indirectly lost" blocks with the allocation stack.
+- AddressSanitizer: compile with `-fsanitize=address -g`; LeakSanitizer runs at exit.
+
+## Habits
+
+- one owner per allocation; write down who frees it;
+- `goto cleanup` pattern for functions with several exits;
+- set pointers to NULL after free to catch double frees.
+
+My lab 6 submission had 3 leaks, all in the error paths of the tokenizer. Lost 5 marks. Fixed version is in the labs folder.

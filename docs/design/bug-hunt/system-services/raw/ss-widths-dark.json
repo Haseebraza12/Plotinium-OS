@@ -1,0 +1,84 @@
+{
+  "1280": {
+    "width": 1280,
+    "scrollW": 1280,
+    "overflow": false,
+    "overlaps": [],
+    "items": [
+      "Plotinium@8-41",
+      "Settings@41-110",
+      "View@110-156",
+      "Window@156-223",
+      "Help@223-268",
+      "4 degraded services@656-755",
+      "Sync: Syncing 4 ops@757-872",
+      "AI 100%, indexing@874-963",
+      "0/256 MB memory used@965-1069",
+      "Control Centre@1071-1095",
+      "Search@1097-1121",
+      "Sun 27 Sep 09:44, notifications, 4 unread@1123-1272"
+    ]
+  },
+  "1440": {
+    "width": 1440,
+    "scrollW": 1440,
+    "overflow": false,
+    "overlaps": [],
+    "items": [
+      "Plotinium@8-41",
+      "Settings@41-110",
+      "View@110-156",
+      "Window@156-223",
+      "Help@223-268",
+      "4 degraded services@816-915",
+      "Sync: Syncing 4 ops@917-1032",
+      "AI 100%, indexing@1034-1123",
+      "0/256 MB memory used@1125-1229",
+      "Control Centre@1231-1255",
+      "Search@1257-1281",
+      "Sun 27 Sep 09:44, notifications, 4 unread@1283-1432"
+    ]
+  },
+  "1920": {
+    "width": 1920,
+    "scrollW": 1920,
+    "overflow": false,
+    "overlaps": [],
+    "items": [
+      "Plotinium@8-41",
+      "Settings@41-110",
+      "View@110-156",
+      "Window@156-223",
+      "Help@223-268",
+      "4 degraded services@1296-1395",
+      "Sync: Syncing 4 ops@1397-1512",
+      "AI 100%, indexing@1514-1603",
+      "0/256 MB memory used@1605-1709",
+      "Control Centre@1711-1735",
+      "Search@1737-1761",
+      "Sun 27 Sep 09:44, notifications, 4 unread@1763-1912"
+    ]
+  },
+  "aiLabel": "AI 100%, indexing",
+  "aiAfterClick": [
+    "null: u1100@plotinium: ~\n~ — sh\nPlotinium 0.1.0-dev.0 shell — type 'man <command>'\nu1100@plotinium:~$ echo qa > w.txt\nu1100@plotinium:~$\nUTF-8 · sh · 84×17 · /home/alice",
+    "null: Settings\nCtrl\n+\nF\nU\nu1100\nPlotinium Account · uid 1100\nGeneral\nAppearance\nDesktop & Dock\nMemory\nScheduler\nNetwork & Sync\nPrivacy & AI\nUsers & Groups\nStorage\nUpdates\nAbout\n\nGeneral\nTHIS DEVICE\nName\nDevice name\nAbout\nPlotinium 0.1.0-dev.0\nStorage\n49 MB of 6.0 GB\nUpdates\nUp to date\nLANGUAGE & TIME\nLang"
+  ],
+  "popoverAnim": {
+    "animationName": "pl-popover-in",
+    "animationDuration": "1e-05s",
+    "transitionDuration": "0s",
+    "opacity": "1",
+    "transform": "matrix(1, 0, 0, 1, 0, 0)"
+  },
+  "popoverFocusOrder": [
+    "button:Task Manager",
+    "body:SettingsViewWindowHelp4 degradedSyncing ",
+    "button:Plotinium",
+    "button:4 degraded services",
+    "button:Sync: Syncing 4 ops",
+    "button:AI 100%, indexing",
+    "button:0/256 MB memory used",
+    "button:Control Centre"
+  ]
+}

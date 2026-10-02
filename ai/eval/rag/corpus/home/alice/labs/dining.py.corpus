@@ -1,0 +1,31 @@
+"""Dining philosophers with resource ordering: always pick up the lower-numbered fork first."""
+import random
+import threading
+import time
+
+N = 5
+forks = [threading.Lock() for _ in range(N)]
+meals = [0] * N
+
+
+def philosopher(i, stop):
+    left, right = i, (i + 1) % N
+    first, second = min(left, right), max(left, right)
+    while not stop.is_set():
+        time.sleep(random.uniform(0, 0.01))  # think
+        with forks[first]:
+            with forks[second]:
+                meals[i] += 1  # eat
+                time.sleep(random.uniform(0, 0.005))
+
+
+if __name__ == "__main__":
+    stop = threading.Event()
+    ts = [threading.Thread(target=philosopher, args=(i, stop)) for i in range(N)]
+    for t in ts:
+        t.start()
+    time.sleep(5)
+    stop.set()
+    for t in ts:
+        t.join()
+    print("meals:", meals)

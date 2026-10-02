@@ -1,0 +1,12 @@
+# LLM cost notes
+
+Pricing is per million tokens, input and output priced separately; output is several times more expensive.
+
+Rough per-request estimate for our agent: system prompt + tool definitions ≈ 3k tokens (cacheable), user request + observations ≈ 1–2k, output ≈ 300. With prompt caching the repeated prefix is billed at a fraction of the normal input price after the first call.
+
+Budget rules we agreed:
+- a monthly project cap, per-user daily caps, and a separate cap for examiners;
+- every call is logged with tokens and cost;
+- when a cap is reached the agent says so and runs nothing.
+
+Things that blow the budget: sending whole files into the prompt, retry loops without a limit, and forgetting that each observation turn resends the whole conversation.

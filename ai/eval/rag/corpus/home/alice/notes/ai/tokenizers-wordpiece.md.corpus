@@ -1,0 +1,13 @@
+# WordPiece tokenisation
+
+BERT's tokenizer. Steps:
+1. basic tokenisation: lower-case (uncased models), strip accents, split on whitespace and punctuation (each punctuation mark is its own token), split CJK characters;
+2. WordPiece: greedy longest-match-first against a 30,522-entry vocabulary; continuation pieces start with ##.
+
+"unhappiness" → un, ##hap, ##pi, ##ness. Unknown characters become [UNK].
+
+Every sequence gets [CLS] at the start and [SEP] at the end, so a 512-token model fits 510 real tokens.
+
+English prose averages about 1.3 tokens per word; code is worse because of symbols and identifiers.
+
+Our chunker counts tokens with an approximation until the real tokenizer is installed; the approximation overestimates, which keeps chunks safely under the limit.

@@ -1,0 +1,20 @@
+{
+  "me": {
+    "uid": 1100,
+    "username": "alice",
+    "kind": "user"
+  },
+  "frames": [
+    {
+      "t": "hello.ok",
+      "ms": 31,
+      "body": "{\"proto\":1,\"osSessionId\":\"01a0e134-9bba-7d34-b5b1-92078c93d603\",\"server\":{\"name\":\"Plotinium\",\"version\":\"0.1.0\",\"build\":\"0000000\",\"date\":\"1970-01-01\"},\"serverTime\":\"2026-09-27T04:51:56.489Z\",\"lamport\":0,\"auth\":{\"uid\":1100,\"username\":\"alice\",\"gids\":[100,200],\"kind\":\"user\",\"suGrants\":[]},\"limits\":{\"maxPayload\":65536,\"opEnvelopeMax\":61440,\"maxBatch\":32,\"creditWindow\":16,\"feedWindow\":256,\"maxLeases\":256,\"maxWatches\":256},\"timers\":{\"leaseTtlMs\":15000,\"hbMs\":5000,\"deadManMs\":25000},\"owners\":[{\"ownerUid\":1100,\"fromSeq\":0,\"headSeq\":0,\"horizonSeq\":1,\"mode\":\"stream\"}],\"keptLeases\":[],\"lostLeases\":[]}"
+    }
+  ],
+  "t0": 68.6499999994412,
+  "openMs": 12,
+  "close": {
+    "code": 1000,
+    "reason": "shutdown"
+  }
+}

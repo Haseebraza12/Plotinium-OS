@@ -1,0 +1,7 @@
+{"model":"Snowflake/snowflake-arctic-embed-xs","backend":"ort-web wasm","threads":1,"loadMs":2151,"doc":"prose50k.txt","tokens":11111,"chunks":33,"chunkP50":796,"chunkP95":1057,"index50kMs":25768,"queryP50":34.5,"queryP95":63.6,"rssMB":399}
+{"model":"Xenova/bge-small-en-v1.5","backend":"ort-web wasm","threads":1,"loadMs":2974,"doc":"prose50k.txt","tokens":11111,"chunks":33,"chunkP50":810,"chunkP95":1942,"index50kMs":33779,"queryP50":64.8,"queryP95":115.3,"rssMB":476}
+{"model":"MongoDB/mdbr-leaf-ir","backend":"ort-web wasm","threads":1,"loadMs":1530,"doc":"code50k.txt","tokens":15699,"chunks":46,"chunkP50":653,"chunkP95":970,"index50kMs":31494,"queryP50":32.8,"queryP95":69.7,"rssMB":422}
+{"model":"Xenova/bge-small-en-v1.5","backend":"ort-web wasm","threads":1,"loadMs":1949,"doc":"code50k.txt","tokens":15699,"chunks":46,"chunkP50":1345,"chunkP95":1881,"index50kMs":53925,"queryP50":73.2,"queryP95":130.2,"rssMB":389}
+{"model":"MongoDB/mdbr-leaf-ir","backend":"ort-web wasm","threads":4,"loadMs":1769,"doc":"prose50k.txt","tokens":11111,"chunks":33,"chunkP50":228,"chunkP95":477,"index50kMs":7793,"queryP50":6.6,"queryP95":7.4,"rssMB":439}
+{"model":"Xenova/bge-small-en-v1.5","backend":"ort-web wasm","threads":4,"loadMs":713,"doc":"prose50k.txt","tokens":11111,"chunks":33,"chunkP50":244,"chunkP95":303,"index50kMs":8124,"queryP50":13.5,"queryP95":15.8,"rssMB":447}
+done

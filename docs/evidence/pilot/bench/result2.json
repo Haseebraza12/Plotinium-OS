@@ -1,0 +1,129 @@
+{
+ "ok": true,
+ "out": {
+  "chrome": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.0.0 Safari/537.36",
+  "cores": 12,
+  "persistedBefore": false,
+  "idbSwap_relaxed": {
+   "pageOut": {
+    "n": 40,
+    "p50": 109.8,
+    "p95": 148.3,
+    "max": 157.7
+   },
+   "pageIn": {
+    "n": 40,
+    "p50": 33,
+    "p95": 47.2,
+    "max": 50.1
+   },
+   "payloadMB": 4.94
+  },
+  "idbSwap_strict": {
+   "pageOut": {
+    "n": 40,
+    "p50": 213.3,
+    "p95": 347.3,
+    "max": 364
+   },
+   "pageIn": {
+    "n": 40,
+    "p50": 69.9,
+    "p95": 163.5,
+    "max": 173.3
+   },
+   "payloadMB": 4.94
+  },
+  "opfsSwap": {
+   "pageOut": {
+    "n": 40,
+    "p50": 390.5,
+    "p95": 503.8,
+    "max": 511
+   },
+   "pageIn": {
+    "n": 40,
+    "p50": 110.7,
+    "p95": 200,
+    "max": 224.3
+   }
+  },
+  "rmR": {
+   "rmR1000_strict": {
+    "n": 15,
+    "p50": 462.8,
+    "p95": 715.7,
+    "max": 715.7
+   },
+   "bulkInsert1000": {
+    "n": 15,
+    "p50": 405.5,
+    "p95": 591.9,
+    "max": 591.9
+   },
+   "faultInjectionUnchanged": "15/15"
+  },
+  "lookupAndBoot": {
+   "dentryPlusInodeGet": {
+    "n": 1000,
+    "p50": 0.8,
+    "p95": 4.3,
+    "max": 11.7
+   },
+   "list500WithStat": {
+    "n": 200,
+    "p50": 21.3,
+    "p95": 80,
+    "max": 147.2
+   },
+   "bootLoadAllMetadata": {
+    "n": 10,
+    "p50": 283.6,
+    "p95": 351.7,
+    "max": 351.7,
+    "inodes": 10501
+   }
+  },
+  "outbox": {
+   "writePlusOutbox_relaxed": {
+    "n": 200,
+    "p50": 0.5,
+    "p95": 1.2,
+    "max": 6.8
+   },
+   "writePlusOutbox_strict": {
+    "n": 200,
+    "p50": 0.4,
+    "p95": 1.7,
+    "max": 3.5
+   }
+  },
+  "sqlite": {
+   "leftoverInodes": 0,
+   "initWasmMs": 153.2,
+   "installSahPoolAndOpenMs": 39.2,
+   "rmR1000": {
+    "n": 15,
+    "p50": 46.1,
+    "p95": 96.3,
+    "max": 96.3
+   }
+  },
+  "pbkdf2": {
+   "pbkdf2_600k": {
+    "n": 5,
+    "p50": 108.3,
+    "p95": 127,
+    "max": 127
+   }
+  },
+  "estimate": {
+   "quota": 5704839122,
+   "usage": 336130002,
+   "usageDetails": {
+    "fileSystem": 207171538,
+    "indexedDB": 128958464
+   }
+  }
+ }
+}

@@ -1,0 +1,17 @@
+# Reading notes: CRDTs
+
+Conflict-free replicated data types let replicas accept writes independently and still converge when they exchange state, with no coordination.
+
+Two families:
+- **State-based (CvRDT):** replicas send their whole state; merge is a join in a semilattice (commutative, associative, idempotent). Example: G-Counter keeps one counter per replica, merge takes the element-wise max, value is the sum.
+- **Operation-based (CmRDT):** replicas send operations; requires reliable causal delivery; ops must commute.
+
+Examples:
+- PN-Counter = two G-Counters (increments and decrements).
+- OR-Set: each add gets a unique tag; remove deletes the tags it has seen, so a concurrent add wins.
+- LWW-Register: last writer wins by timestamp; simple but silently drops a concurrent write.
+- Sequence CRDTs (RGA, Logoot, Yjs) for collaborative text.
+
+For our project we decided a full CRDT is overkill: files are mostly edited by one person at a time, so we replay an outbox of operations and, on a real conflict, keep both versions ("conflicted copy") instead of merging text.
+
+Paper: Shapiro et al., "Conflict-free Replicated Data Types", 2011.

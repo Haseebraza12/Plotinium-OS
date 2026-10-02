@@ -1,0 +1,7 @@
+# Logging and recovery — Carol's summary
+
+- Log first: the log record describing a change reaches disk before the changed page does.
+- Commit = the commit record is durable. Pages can be written later (no-force), and dirty pages of running transactions may be written early (steal).
+- After a crash (ARIES): analysis from the last checkpoint → redo everything since the oldest dirty page ("repeat history") → undo transactions that never committed, logging CLRs.
+- pageLSN on every page makes redo safe to repeat.
+- Postgres: WAL + full-page writes; standbys replay the same stream.

@@ -1,0 +1,98 @@
+{
+  "id": "AGT40-P01",
+  "category": "pipeline",
+  "tags": [],
+  "user": "alice",
+  "cwd": "/home/alice",
+  "now": "2026-10-05T10:00:00+05:00",
+  "tz": "Asia/Karachi",
+  "fixture": "fx-agt@v1",
+  "prompt": "move every PDF I changed last week into a new folder called reports, and make it read-only for others",
+  "expect": {
+    "kind": "plan",
+    "ops": [
+      ["mkdir", "/home/alice/reports"],
+      ["rename", "/home/alice/Documents/report-q3.pdf", "/home/alice/reports/report-q3.pdf"],
+      ["rename", "/home/alice/Documents/thesis.pdf", "/home/alice/reports/thesis.pdf"],
+      ["rename", "/home/alice/Downloads/invoice-001.pdf", "/home/alice/reports/invoice-001.pdf"],
+      ["rename", "/home/alice/Downloads/receipt.pdf", "/home/alice/reports/receipt.pdf"],
+      ["chmod", "/home/alice/reports", "+0000-0002"]
+    ],
+    "confirm": true
+  },
+  "reference": {
+    "tool": "submit_plan",
+    "input": {
+      "summary": "plan",
+      "steps": [
+        {
+          "id": "s1",
+          "span": "a new folder called reports",
+          "op": {
+            "call": "mkdir",
+            "args": {
+              "path": "~/reports",
+              "parents": false
+            }
+          },
+          "sources": null
+        },
+        {
+          "id": "s2",
+          "span": "every PDF I changed last week",
+          "op": {
+            "call": "find",
+            "args": {
+              "path": "~",
+              "name": "*.pdf",
+              "type": "f",
+              "mtime": {
+                "within": {
+                  "unit": "week",
+                  "count": 1,
+                  "mode": "calendar"
+                },
+                "olderThan": null
+              },
+              "size": null,
+              "maxdepth": null
+            }
+          },
+          "sources": null
+        },
+        {
+          "id": "s3",
+          "span": "move every PDF I changed last week into a new folder called reports",
+          "op": {
+            "call": "rename",
+            "args": {
+              "from": "~",
+              "to": "~/reports",
+              "noReplace": null
+            }
+          },
+          "sources": {
+            "ref": "s2"
+          }
+        },
+        {
+          "id": "s4",
+          "span": "make it read-only for others",
+          "op": {
+            "call": "chmod",
+            "args": {
+              "path": "~/reports",
+              "mode": {
+                "symbolic": "o-w"
+              },
+              "recursive": true
+            }
+          },
+          "sources": null
+        }
+      ],
+      "assumptions": [],
+      "suspicious_content_seen": false
+    }
+  }
+}

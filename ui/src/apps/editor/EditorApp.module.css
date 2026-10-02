@@ -1,0 +1,61 @@
+/* Editor window content. contain keeps typing and scrolling from invalidating the desktop. */
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  background: var(--pl-glass-window-bg);
+  color: var(--pl-text);
+  font: var(--pl-type-body);
+  contain: layout paint;
+}
+.body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+.code {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+/* The read-only hint sits just above the caret. */
+.hint {
+  position: absolute;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pl-space-1);
+  padding: var(--pl-space-half) var(--pl-space-2);
+  border-radius: var(--pl-radius-sm);
+  background: color-mix(in srgb, var(--pl-warning) 18%, var(--pl-surface));
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--pl-warning) 55%, transparent),
+    var(--pl-shadow-tooltip);
+  color: var(--pl-text);
+  font: var(--pl-type-caption);
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translateY(-120%);
+  animation: hint-in var(--pl-motion-slow) var(--pl-ease-spring) both;
+}
+@keyframes hint-in {
+  from {
+    opacity: 0;
+    transform: translateY(-80%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hint {
+    animation: none;
+  }
+}

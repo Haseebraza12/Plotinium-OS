@@ -1,0 +1,187 @@
+{
+ "files_changed": [
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/gateway/routes.ts (full /api/auth/*: login, logout, me, su, DELETE su, guest, password)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/gateway/tokens.ts (new)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/gateway/cookies.ts (new)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/gateway/sessions.ts (new)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/gateway/hooks.ts (new: session, CSRF, route auth, principal hooks)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/gateway/store.ts (new)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/gateway/kysely-store.ts (new, DB-backed users/sessions/audit/guest)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/gateway/homes.ts (new)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/gateway/schemas.ts (new)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/gateway/slots.ts (new)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/gateway/gateway.test.ts (new)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/gateway/auth.test.ts (new)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/gateway/auth.int.test.ts (new, DB-gated)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/gateway/README.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/http/validate.ts (new)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/http/context.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/seed.ts (new CLI)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/seed/demo.ts (new first-start seed)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/runtime.test.ts (new)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/deploy.test.ts (new)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/tests/memory-auth-store.ts (new, test-only double)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/docker-entrypoint.sh (new)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/app.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/app.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/errno.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/index.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/db/client.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/db/errors.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/db/db.int.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/db/README.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/ratelimit/store.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/ratelimit/bucket.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/ratelimit/limiter.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/ratelimit/ratelimit.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/obs/metrics.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/obs/health.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/admin/routes.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/vfs/tx.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/README.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/db/README.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/db/seed/seed.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/db/scripts/migrate-roundtrip.sh",
+  "/home/haseeb-raza/Desktop/Plotinium OS/compose.yaml",
+  "/home/haseeb-raza/Desktop/Plotinium OS/compose.prod.yaml (new)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/Caddyfile (new)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/Dockerfile",
+  "/home/haseeb-raza/Desktop/Plotinium OS/.env.example (new)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ops/backup.sh (new)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ops/restore.sh (new)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ops/restore-drill.sh (new)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ops/deploy.sh (new)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ops/caddy/csp-hash.ts (new)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ops/caddy/prod.d/hsts.caddy (new)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ops/web-placeholder/index.html (new)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ops/web-placeholder/assets/placeholder.css (new)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ops/README.md",
+  "Prettier formatting only (no behaviour change) on the other earlier files under server/, db/ and ops/",
+  "Checked against the database and left unchanged: db/migrations/*.sql (6 files, 17 tables), db/schema.sql, db/probes/integrity.sql, db/bench/*.sql, db/seed/lib/*"
+ ],
+ "verification": [
+  {
+   "command": "pnpm exec tsc -p server/tsconfig.json --noEmit && pnpm exec tsc -p db/tsconfig.json --noEmit",
+   "outcome": "both exit 0"
+  },
+  {
+   "command": "pnpm exec vitest run --project server ; pnpm exec vitest run --project db",
+   "outcome": "server: 14 files passed, 2 DB-gated files skipped, 154 tests passed, 27 skipped. db: 2 files, 14 tests passed"
+  },
+  {
+   "command": "DATABASE_URL=postgres://plotinium_owner:<pw>@127.0.0.1:55432/plotinium_test TEST_APP_DATABASE_URL=postgres://plotinium_app:<pw>@.../plotinium_test pnpm exec vitest run --project server --project db",
+   "outcome": "18 files, 195 tests passed, 0 skipped. This includes the DB-gated gateway tests running as plotinium_app and the seed test on a scratch database"
+  },
+  {
+   "command": "pnpm exec eslint server db ops --max-warnings 0",
+   "outcome": "exit 0, no warnings. Fixed 6 errors left by the earlier run"
+  },
+  {
+   "command": "pnpm exec prettier --check server db ops compose.yaml compose.prod.yaml",
+   "outcome": "All matched files use Prettier code style"
+  },
+  {
+   "command": "coverage (temporary standalone vitest config, because the root config reports 0 files)",
+   "outcome": "server+db with the DB: lines 90.64% (1551/1711), statements 89.18%, functions 90.96%; gateway 98.5% lines"
+  },
+  {
+   "command": "docker compose down -v; docker compose up -d --wait db",
+   "outcome": "plotinium-db-1 Healthy"
+  },
+  {
+   "command": "dbmate --wait up on plotinium (ghcr.io/amacneil/dbmate:2.36.0@sha256:520c740c...)",
+   "outcome": "all 6 migrations applied (20260924100000..20260924100500)"
+  },
+  {
+   "command": "bash db/scripts/migrate-roundtrip.sh",
+   "outcome": "up, rollback 6 times, '0 relations, 0 functions, 0 extensions', up again, dbmate dump matches db/schema.sql after normalisation, newest down/up. 'OK: round trip passed in 4 s'"
+  },
+  {
+   "command": "docker compose exec -T db psql -U plotinium_owner -d plotinium < db/probes/integrity.sql",
+   "outcome": "(0 rows). plt_tree_checksum(ROOT)=eb339d8b9477d93a08c04eef7578d2b6f5c13628df4b11feace7462e1f7829cb"
+  },
+  {
+   "command": "psql as plotinium_app: UPDATE audit_log / DELETE FROM op_log / TRUNCATE inodes / CREATE TABLE",
+   "outcome": "all four fail with permission denied (42501)"
+  },
+  {
+   "command": "docker build --target app -t ghcr.io/plotinium-org/plotinium-app:0.1.0 --build-arg BUILD_SHA=5f3a9c1d2e4b --build-arg BUILD_DATE=2026-09-25 .",
+   "outcome": "built in 53 s (a cold build took 3m43s)"
+  },
+  {
+   "command": "docker compose up -d --wait --no-build app",
+   "outcome": "Healthy in 6.8 s. The entrypoint ran dbmate up, then the demo seed (bench10k plus accounts in 2.3 s, FIRST-START CREDENTIALS printed once), the Argon2id/SHA-256 KATs and DB checks passed, then 'ready'"
+  },
+  {
+   "command": "docker compose exec -T app node -e fetch('http://127.0.0.1:3000/api/healthz' and '/api/readyz')",
+   "outcome": "/api/healthz 200 {\"status\":\"ok\"}; /api/readyz 200 {\"status\":\"ready\",...,\"migrations\":{\"version\":\"20260924100500\",\"expected\":\"20260924100500\"},\"checks\":{\"db\":\"ok\",\"migrations\":\"ok\",\"blobStore\":\"ok\",\"disk\":\"ok\"},\"ai\":{\"enabled\":true,\"llm\":\"no-key\"}}"
+  },
+  {
+   "command": "probes after the seed plus a live login/guest/logout/CSRF flow inside the container",
+   "outcome": "probes 0 rows at 10006 inodes. Login 200 with plt_sid; Path=/; Secure; HttpOnly; SameSite=Strict; Max-Age. Wrong password 401 EACCES. Guest 201 with /home/guest-xxxx and 20 MiB/500. Logout 204. Cross-origin POST 403 csrf. audit_log rows were written as plotinium_app"
+  },
+  {
+   "command": "docker build --target web; docker compose up -d --wait --no-build; curl http://127.0.0.1:4717/{,api/healthz,api/readyz}",
+   "outcome": "All 3 services healthy; web publishes only 127.0.0.1:4717. GET / 200 (placeholder shell). healthz and readyz 200 through Caddy, with COOP, COEP, CORP, CSP, CSP-Report-Only, nosniff, Referrer-Policy and Permissions-Policy set and no Server header"
+  },
+  {
+   "command": "second start of app",
+   "outcome": "'demo seed: already applied, nothing to do'. The credentials were not printed again"
+  },
+  {
+   "command": "docker compose stop app",
+   "outcome": "SIGTERM, then 'shutdown: draining' and 'shutdown: complete', exit code 0"
+  },
+  {
+   "command": "ops/backup.sh --label verify --no-upload; ops/restore-drill.sh",
+   "outcome": "The snapshot dump and manifest were written (8139 blobs, checksum recorded). The drill restored into plotinium_drill: checksum equal, probes empty, result passed, rtoSeconds 1. An injected orphan was reported as P1/P3/P5"
+  },
+  {
+   "command": "bench: node db/seed/seed.ts --profile bench100k | psql plotinium_bench; perf-indexes down/up; q1..q5+qb+explain.sql",
+   "outcome": "The seed took 8.2 s with 0 probe rows. After-index times: Q1 0.26, Q2 0.67, Q3 0.28, Q4 0.58, Q5 2.0 ms. Qb uses blobs_sha256_hash. In the before state Q5 is a Seq Scan at 38 ms. The toggle round trip gives a dump identical to db/schema.sql, and the toggle refuses other databases"
+  },
+  {
+   "command": "kysely-codegen --verify --exclude-pattern '(schema_migrations|pg_stat_statements*)'",
+   "outcome": "Generated types are up-to-date"
+  },
+  {
+   "command": "koalaman/shellcheck -S warning ops/*.sh ops/db/*.sh ops/db/initdb.d/*.sh server/docker-entrypoint.sh db/scripts/migrate-roundtrip.sh",
+   "outcome": "clean"
+  },
+  {
+   "command": "docker compose -f compose.yaml -f compose.prod.yaml config (dummy digests)",
+   "outcome": "FAULT_INJECTION \"0\", PLOTINIUM_ENV production, APP_ORIGIN https://..., only 80/443/443udp published, secrets mounted"
+  },
+  {
+   "command": "docker compose down -v",
+   "outcome": "all containers, volumes (including dbsecrets) and networks removed"
+  }
+ ],
+ "problems": [
+  "Vitest coverage is broken repo-wide: `vitest run --coverage` with the root vitest.config.ts reports 0 files, even with an --coverage.include override (it is likely the projects root or the space in the path 'Plotinium OS'). I measured with a temporary standalone config instead. Root config is not mine to fix.",
+  "Bug fixed in server/src/db/client.ts: pg lets fields parsed from connectionString override the explicit `password` option. DATABASE_PASSWORD_FILE was therefore silently ignored, so the containerised server could not have authenticated. The password now goes inside the URL, in memory only.",
+  "Anti-DSA violation left by the earlier run, fixed: server/src/ratelimit/store.ts had a hand-written LRU in production code. It is now a KeyStore interface (subset of dsa LRU<K,V>) backed by an insertion-order bounded Map, which is not an LRU. TODO(R1) marks where to switch to dsa/lru LruCache.",
+  "DB-05 plan at bench10k: Q2 is planned as Hash Join + Seq Scan on inodes + Sort (1.5 ms). The spec's CI assertion 'Q2 and Q3 plans contain no Sort node' would fail at 10k. At bench100k Q2 is a Nested Loop with no Sort (0.67 ms).",
+  "database.md \u00a74.10's kysely-codegen command only excludes schema_migrations. The pg_stat_statements views in public show up as drift, so the exclude pattern must be '(schema_migrations|pg_stat_statements*)'. This is documented in server/src/db/README.md.",
+  "protocol/src/http/auth.ts does not exist. LoginReq/SuReq/PasswordReq/AuthMe are declared locally in server/src/gateway/schemas.ts (using the protocol's Username and BuildIdentity), with TODO(R1).",
+  "The web image ships ops/web-placeholder because web/ has no index.html yet (WEB_BUILD=auto, loud warning). Releases must pass --build-arg WEB_BUILD=required.",
+  "Dockerfile bases are upstream docker.io images pinned by verified digest (node 8ec5d755\u2026, caddy 6aeddd44\u2026, pgvector 78bf48b8\u2026), not yet GHCR mirrors, because mirror-images.yml does not exist.",
+  "Cosmetic: in `docker compose logs app` the seed's stderr JSON line can land between the lines of the stdout credential block.",
+  "Prettier --write reformatted earlier files in server/, db/ and ops/ (formatting only). Typecheck, lint and tests are green after it."
+ ],
+ "todos_for_team": [
+  "R1 (protocol): add protocol/src/http/auth.ts with LoginReq, SuReq, PasswordReq and AuthMe, then switch server/src/gateway/schemas.ts to import them.",
+  "R1 (dsa): when dsa/lru has IMPLEMENTED = true, construct LruCache in server/src/ratelimit/store.ts createKeyStore.",
+  "R2 (sync plugin): subscribe to SessionService.onRevoke (PlotiniumApp.sessions) to send 'bye revoked' and close 4401. Schedule the su-expiry and su-revoked SIGHUP signals (TODOs in gateway/routes.ts). Add the /ws upgrade Origin and session checks.",
+  "R2 (locks plugin): release the leases of the revoked sessions' OS sessions from the same onRevoke listener.",
+  "R2: server-created homes (guest and seed) write no op_log or feed row yet. Define server-originated ops (TODO in gateway/homes.ts).",
+  "R2/R5: decide where DB-05 plan assertions run: at bench100k, or tune for bench10k, where Q2 hash-joins and sorts.",
+  "R2 (demo seed): add /home/shared/plan.md, fixtures/tree1000 for demo, the RAG corpus with precomputed vectors and the telemetry trace (TODO in server/src/seed/demo.ts). User quotas are provisional (1 GiB / 100k inodes; demo 256 MiB / 20k).",
+  "R5: nightly guest cleanup, revoked-session cleanup job and the cli.ts reset-password/revoke-sessions commands (spec \u00a73.18.3) are not written.",
+  "R5: write compose.staging.yaml, ops/cloud-init.yaml, rotate-db-passwords.sh, health-report.sh and the remote blob prune. deploy.sh already refuses staging until compose.staging.yaml exists.",
+  "R5: wire db/scripts/migrate-roundtrip.sh, the kysely-codegen --verify command and the DB-gated vitest run (DATABASE_URL, TEST_APP_DATABASE_URL) into the CI integration job.",
+  "R5: fix root vitest.config.ts coverage (0 files collected), then add server and db to GATED_PACKAGES.",
+  "Syscall-ABI owner: register the detail.reason values the gateway uses: csrf, principal, guest, disabled (EPERM when guests are disabled) and root-only."
+ ],
+ "deps_requested": []
+}

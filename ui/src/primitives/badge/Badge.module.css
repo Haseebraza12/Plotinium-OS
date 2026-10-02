@@ -1,0 +1,101 @@
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pl-space-1);
+  height: var(--pl-badge-h);
+  padding: 0 var(--pl-space-2);
+  border-radius: var(--pl-radius-pill);
+  font: var(--pl-type-caption);
+  font-weight: var(--pl-weight-medium);
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--pl-pill-fg);
+  background: var(--pl-pill-bg);
+}
+.md {
+  height: var(--pl-control-h-sm);
+  padding: 0 var(--pl-space-2);
+}
+.caps {
+  text-transform: uppercase;
+  letter-spacing: var(--pl-tracking-caps);
+  font-weight: var(--pl-weight-bold);
+}
+.mono {
+  font-family: var(--pl-font-mono);
+}
+.outline {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--pl-pill-fg);
+}
+.solid {
+  --pl-pill-bg: var(--pl-pill-fg);
+  color: var(--pl-on-accent);
+}
+.neutral {
+  --pl-pill-fg: var(--pl-text-muted);
+  --pl-pill-bg: var(--pl-neutral-subtle);
+}
+.accent {
+  --pl-pill-fg: var(--pl-accent-text);
+  --pl-pill-bg: var(--pl-accent-subtle);
+}
+.success {
+  --pl-pill-fg: var(--pl-success);
+  --pl-pill-bg: var(--pl-success-subtle);
+}
+.warning {
+  --pl-pill-fg: var(--pl-warning);
+  --pl-pill-bg: var(--pl-warning-subtle);
+}
+.danger {
+  --pl-pill-fg: var(--pl-danger);
+  --pl-pill-bg: var(--pl-danger-subtle);
+}
+.info {
+  --pl-pill-fg: var(--pl-info);
+  --pl-pill-bg: var(--pl-info-subtle);
+}
+.solid.accent {
+  --pl-pill-fg: var(--pl-accent);
+}
+.dot {
+  width: var(--pl-status-dot);
+  height: var(--pl-status-dot);
+  border-radius: var(--pl-radius-pill);
+  background: currentColor;
+  flex: none;
+}
+.icon {
+  display: inline-flex;
+}
+
+/* Count badge (dock, sidebar, tabs): a small red capsule with a number. */
+.count {
+  display: inline-grid;
+  place-items: center;
+  min-width: var(--pl-badge-h);
+  height: var(--pl-badge-h);
+  padding: 0 var(--pl-space-1);
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-danger-fill);
+  color: var(--pl-on-accent);
+  font: var(--pl-type-caption);
+  font-weight: var(--pl-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  box-shadow: var(--pl-shadow-1);
+}
+.countAccent {
+  background: var(--pl-accent);
+}
+.countNeutral {
+  background: var(--pl-control-pressed);
+  color: var(--pl-text);
+}
+@media (forced-colors: active) {
+  .pill,
+  .count {
+    border: 1px solid CanvasText;
+  }
+}

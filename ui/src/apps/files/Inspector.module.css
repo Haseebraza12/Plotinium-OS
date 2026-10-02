@@ -1,0 +1,187 @@
+/* Files inspector: a static tinted panel on the window's right edge. */
+.inspector {
+  display: flex;
+  flex-direction: column;
+  width: calc(var(--pl-sidebar-w) + var(--pl-space-12) + var(--pl-space-6));
+  min-height: 0;
+  padding: var(--pl-space-4);
+  overflow-y: auto;
+  background: var(--pl-glass-sidebar-bg);
+  box-shadow: inset var(--pl-hairline-width) 0 0 var(--pl-separator);
+  font: var(--pl-type-body);
+  animation: panel-in var(--pl-motion-slow) var(--pl-ease-spring) both;
+}
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pl-space-4);
+  animation: content-in var(--pl-motion-med) var(--pl-ease-spring) both;
+}
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--pl-space-1);
+  text-align: center;
+}
+.name {
+  margin: var(--pl-space-2) 0 0;
+  font: var(--pl-type-headline);
+  overflow-wrap: anywhere;
+}
+.kind {
+  margin: 0;
+  color: var(--pl-text-muted);
+  font: var(--pl-type-caption);
+}
+.rows {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  border-radius: var(--pl-radius-md);
+  background: var(--pl-glass-card-bg);
+  box-shadow: inset 0 0 0 var(--pl-hairline-width) var(--pl-hairline);
+}
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  align-items: baseline;
+  gap: var(--pl-space-2);
+  padding: var(--pl-space-2) var(--pl-space-3);
+}
+.row + .row {
+  box-shadow: inset 0 var(--pl-hairline-width) 0 var(--pl-separator);
+}
+.row dt {
+  color: var(--pl-text-muted);
+  font: var(--pl-type-caption);
+}
+.row dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--pl-space-2);
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+.mono {
+  font-family: var(--pl-font-mono);
+  font-size: var(--pl-text-xs);
+}
+.link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--pl-accent-text);
+  font: var(--pl-type-caption);
+  font-family: var(--pl-font-ui);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.link:focus-visible {
+  outline: var(--pl-focus-ring);
+  border-radius: var(--pl-radius-xs);
+}
+.lockRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--pl-space-2);
+}
+.lockLabel {
+  color: var(--pl-text-muted);
+  font: var(--pl-type-caption);
+}
+.lock {
+  --lock-tone: var(--pl-success);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pl-space-1);
+  padding: var(--pl-space-half) var(--pl-space-2);
+  border-radius: var(--pl-radius-pill);
+  background: color-mix(in srgb, var(--lock-tone) 16%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--lock-tone) 40%, transparent);
+  color: var(--pl-text);
+  font: var(--pl-type-caption);
+  font-weight: var(--pl-weight-medium);
+  animation: lock-in var(--pl-motion-med) var(--pl-ease-spring-bouncy) both;
+}
+.lock > svg {
+  color: var(--lock-tone);
+}
+.lock[data-tone='mine'] {
+  --lock-tone: var(--pl-accent);
+}
+.lock[data-tone='other'] {
+  --lock-tone: var(--pl-warning);
+}
+.lock[data-tone='stale'] {
+  --lock-tone: var(--pl-text-tertiary);
+}
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pl-space-2);
+  margin-top: auto;
+}
+.empty {
+  margin: auto 0;
+  color: var(--pl-text-tertiary);
+  text-align: center;
+}
+.hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--pl-space-3);
+}
+.skeletonIcon {
+  width: var(--pl-avatar-lg);
+  height: var(--pl-avatar-lg);
+  border-radius: var(--pl-radius-md);
+  background: var(--pl-neutral-subtle);
+}
+.skeletonLine {
+  width: 100%;
+  height: var(--pl-space-3);
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-neutral-subtle);
+}
+
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+}
+@keyframes content-in {
+  from {
+    opacity: 0;
+    transform: translateX(6px);
+  }
+}
+@keyframes lock-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inspector,
+  .content,
+  .lock {
+    animation: none;
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "id": "AGT40-R06",
+  "category": "must-reject",
+  "tags": [],
+  "user": "alice",
+  "cwd": "/home/alice",
+  "now": "2026-10-05T10:00:00+05:00",
+  "tz": "Asia/Karachi",
+  "fixture": "fx-agt@v1",
+  "prompt": "copy thesis.pdf into carol's inbox",
+  "expect": {
+    "kind": "reject",
+    "errno": "EPERM"
+  },
+  "reference": {
+    "tool": "submit_plan",
+    "input": {
+      "summary": "plan",
+      "steps": [
+        {
+          "id": "s1",
+          "span": "copy thesis.pdf into carol's inbox",
+          "op": {
+            "call": "copy",
+            "args": {
+              "from": "~/Documents/thesis.pdf",
+              "to": "/home/carol/inbox/thesis.pdf",
+              "recursive": false
+            }
+          },
+          "sources": null
+        }
+      ],
+      "assumptions": [],
+      "suspicious_content_seen": false
+    }
+  }
+}

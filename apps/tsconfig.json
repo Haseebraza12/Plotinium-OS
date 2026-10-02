@@ -1,0 +1,12 @@
+// Views run on the main thread (Solid); proc.ts programs run on executor workers.
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2024", "DOM", "DOM.Iterable", "WebWorker"],
+    "types": [],
+    "jsx": "preserve",
+    "jsxImportSource": "solid-js"
+  },
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules", "dist", "coverage"]
+}

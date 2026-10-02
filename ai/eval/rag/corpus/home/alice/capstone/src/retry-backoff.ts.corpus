@@ -1,0 +1,32 @@
+/**
+ * Retry an async operation with exponential back-off and full jitter.
+ * Used for outbox uploads after reconnecting. Stops early for errors that retrying can't fix.
+ */
+export interface RetryOptions {
+  attempts: number; // total tries, including the first
+  baseMs: number; // first delay upper bound
+  maxMs: number; // cap for any single delay
+  retryable?: (err: unknown) => boolean;
+  sleep?: (ms: number) => Promise<void>;
+  random?: () => number;
+}
+
+export async function retry<T>(op: () => Promise<T>, o: RetryOptions): Promise<T> {
+  const sleep = o.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
+  const random = o.random ?? Math.random;
+  let lastError: unknown;
+  for (let i = 0; i < o.attempts; i++) {
+    try {
+      return await op();
+    } catch (err) {
+      lastError = err;
+      if (o.retryable !== undefined && !o.retryable(err)) break;
+      if (i === o.attempts - 1) break;
+      const cap = Math.min(o.maxMs, o.baseMs * 2 ** i);
+      await sleep(Math.floor(random() * cap));
+    }
+  }
+  throw lastError;
+}
+
+// 403/409/422 are final; 429, 5xx and network errors are worth retrying.

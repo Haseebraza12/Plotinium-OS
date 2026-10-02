@@ -1,0 +1,120 @@
+/*
+ * A native range input restyled. The filled part of the track is painted from --pl-slider-pct
+ * (set by the component); nothing animates except the thumb's press scale (transform).
+ */
+.root {
+  display: flex;
+  align-items: center;
+  gap: var(--pl-space-2);
+  min-width: 0;
+  color: var(--pl-text-muted);
+}
+.edge {
+  display: inline-flex;
+  flex: none;
+}
+.input {
+  flex: 1;
+  min-width: 0;
+  height: var(--pl-target-min);
+  margin: 0;
+  background: transparent;
+  appearance: none;
+  cursor: default;
+}
+.input:focus-visible {
+  outline: var(--pl-focus-ring);
+  outline-offset: var(--pl-focus-offset);
+  border-radius: var(--pl-radius-pill);
+}
+.input::-webkit-slider-runnable-track {
+  height: var(--pl-slider-track-h);
+  border-radius: var(--pl-radius-pill);
+  background: linear-gradient(
+    to right,
+    var(--pl-accent) var(--pl-slider-pct),
+    var(--pl-slider-track) var(--pl-slider-pct)
+  );
+}
+.input::-moz-range-track {
+  height: var(--pl-slider-track-h);
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-slider-track);
+}
+.input::-moz-range-progress {
+  height: var(--pl-slider-track-h);
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-accent);
+}
+.input::-webkit-slider-thumb {
+  width: var(--pl-slider-thumb);
+  height: var(--pl-slider-thumb);
+  margin-top: calc((var(--pl-slider-track-h) - var(--pl-slider-thumb)) / 2);
+  border: 0;
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-toggle-knob);
+  box-shadow: var(--pl-toggle-knob-shadow);
+  appearance: none;
+  transition: transform var(--pl-motion-med) var(--pl-ease-spring-soft);
+}
+.input::-moz-range-thumb {
+  width: var(--pl-slider-thumb);
+  height: var(--pl-slider-thumb);
+  border: 0;
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-toggle-knob);
+  box-shadow: var(--pl-toggle-knob-shadow);
+}
+.input:active::-webkit-slider-thumb {
+  transform: scale(1.12);
+}
+
+/* Control Centre: a thick glass capsule whose bright fill is the value; the thumb caps the fill. */
+.large .input {
+  height: var(--pl-slider-large-h);
+}
+.large .input::-webkit-slider-runnable-track {
+  height: var(--pl-slider-large-h);
+  background: linear-gradient(
+    to right,
+    var(--pl-slider-large-fill) calc(var(--pl-slider-pct) * 0.9 + var(--pl-slider-large-h) / 2),
+    var(--pl-slider-large-track) calc(var(--pl-slider-pct) * 0.9 + var(--pl-slider-large-h) / 2)
+  );
+  box-shadow: inset 0 0 0 var(--pl-hairline-width) var(--pl-hairline);
+}
+.large .input::-webkit-slider-thumb {
+  width: var(--pl-slider-large-h);
+  height: var(--pl-slider-large-h);
+  margin-top: 0;
+  background: var(--pl-slider-large-fill);
+  box-shadow: var(--pl-toggle-knob-shadow);
+}
+.large .input::-moz-range-track {
+  height: var(--pl-slider-large-h);
+  background: var(--pl-slider-large-track);
+}
+.large .input::-moz-range-progress {
+  height: var(--pl-slider-large-h);
+  background: var(--pl-slider-large-fill);
+}
+.large .edge {
+  color: var(--pl-text);
+}
+.value {
+  min-width: 4ch;
+  font: var(--pl-type-caption);
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+  color: var(--pl-text-muted);
+}
+.disabled {
+  opacity: 0.5;
+}
+@media (prefers-reduced-motion: reduce) {
+  .input::-webkit-slider-thumb {
+    transition: none;
+  }
+  .input:active::-webkit-slider-thumb {
+    transform: none;
+  }
+}

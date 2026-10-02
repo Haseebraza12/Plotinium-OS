@@ -1,0 +1,19 @@
+{
+  "name": "@plotinium/dsa",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Team-written data structures (C16): tree, trie, heap, dag, lru, hashtable, ringbuffer, bloom, zorder. Environment-agnostic.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run --root .. --project dsa"
+  },
+  "dependencies": {
+    "@plotinium/protocol": "workspace:*"
+  }
+}

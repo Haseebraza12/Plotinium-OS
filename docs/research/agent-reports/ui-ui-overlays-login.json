@@ -1,0 +1,95 @@
+{
+ "files_changed": [
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/overlays/index.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/overlays/internal/behaviour.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/overlays/internal/text.tsx",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/overlays/internal/shared.module.css",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/overlays/search/SearchPalette.tsx",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/overlays/search/SearchPalette.module.css",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/overlays/search/SearchPalette.test.tsx",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/overlays/search/fixtures.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/overlays/overview/Overview.tsx",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/overlays/overview/Overview.module.css",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/overlays/overview/Overview.test.tsx",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/overlays/switcher/AppSwitcher.tsx",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/overlays/switcher/AppSwitcher.module.css",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/overlays/switcher/AppSwitcher.test.tsx",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/overlays/agent-confirm/AgentConfirmSheet.tsx",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/overlays/agent-confirm/AgentConfirmSheet.module.css",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/overlays/agent-confirm/AgentConfirmSheet.test.tsx",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/overlays/agent-confirm/fixtures.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/overlays/update/RestartToUpdateDialog.tsx",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/overlays/update/ShutdownProgress.tsx",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/overlays/update/Update.module.css",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/overlays/update/Update.test.tsx",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/overlays/update/fixtures.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/overlays/offline/OfflinePopover.tsx",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/overlays/offline/LockBanner.tsx",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/overlays/offline/Offline.module.css",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/overlays/offline/Offline.test.tsx",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/overlays/offline/fixtures.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/overlays/frame-meter/FrameMeterHUD.tsx",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/overlays/frame-meter/FrameMeterHUD.module.css",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/overlays/frame-meter/FrameMeterHUD.test.tsx",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/login/index.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/login/LoginScreen.tsx",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/login/LoginScreen.module.css",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/login/LoginScreen.test.tsx",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/login/fixtures.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/gallery/pages/overlays.tsx",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/gallery/pages/overlays.module.css"
+ ],
+ "verification": [
+  {
+   "command": "pnpm exec tsc -p ui/tsconfig.json --noEmit",
+   "outcome": "PASS, exit 0, for the whole ui package. The interrupted run left nothing in my paths: overlays/, login/ and the gallery page did not exist. I built all of them in this run. The earlier TS errors came from other agents' in-progress files (ui/src/boot/log.ts, ui/src/shell/*.test.tsx), and those files are now clean."
+  },
+  {
+   "command": "pnpm exec vitest run --config ui/vitest.config.ts",
+   "outcome": "PASS: 57 files and 408 tests across the whole ui package. 66 of these tests are new: SearchPalette 13, AgentConfirmSheet 11, Update 8, Offline/LockBanner 8, Overview 6, AppSwitcher 4, FrameMeterHUD 3 and LoginScreen 13. The token and motion guard tests (DSN-02/24/29/30/31, WM-03) also pass on all my CSS modules."
+  },
+  {
+   "command": "pnpm exec vitest run --project ui (the root config the task names)",
+   "outcome": "FAIL for every ui file, including the foundation's own tests. This is the known root-config blocker: the root vitest.config.ts declares the ui project without vite-plugin-solid, so Solid JSX does not compile. It is not caused by my code, and the package config above passes."
+  },
+  {
+   "command": "pnpm exec eslint ui --max-warnings 0",
+   "outcome": "PASS, exit 0. Every eslint-plugin-solid rule is on as an error, the SYS-01 boundary rules apply, and there is no storage, worker or network access. The ui code imports no protocol, not even types."
+  },
+  {
+   "command": "pnpm --filter @plotinium/ui gallery:build",
+   "outcome": "PASS: built in about 3-5 s. The new page is #/overlays (group System), titled 'Overlays and login'."
+  },
+  {
+   "command": "pnpm exec prettier --check ui/src/overlays ui/src/login ui/gallery/pages/overlays.*",
+   "outcome": "PASS"
+  },
+  {
+   "command": "axe-core via Playwright (tags wcag2a/aa, wcag21a/aa, wcag22aa) on the built #/overlays page, light and dark, with the connectivity popover open",
+   "outcome": "PASS: 0 violations in both themes. The one issue found, a scrollable results region with no keyboard access, was fixed first: it is now a labelled region with tabindex 0 and a focus ring."
+  },
+  {
+   "command": "Playwright screenshots of every scene in both themes, compared with docs/design/stitch/*/reference.png",
+   "outcome": "Visually close to the references for search-palette, overview-switcher, agent-confirm-sheet, update-restart, offline-lock-states, login-dark and login-light. Fixes made during review: the switcher HUD blur was broken because a filling opacity animation on its wrapper made it a backdrop root, so all entrance animations now use fill-mode backwards; the Search preview did not load for the initial selection; the plan-table columns truncated; the shutdown inset was mis-sized inside a shrink-to-fit parent; the frame meter's budget line was hidden and its layout wrapped; the login avatar colours now match the design."
+  }
+ ],
+ "problems": [
+  "BLOCKER (root config, not mine to fix): `pnpm exec vitest run --project ui` fails for every ui test file, because the root vitest.config.ts declares the ui project without vite-plugin-solid, setupFiles, the lucide-solid inline and the css ?raw include. Everything passes with `pnpm exec vitest run --config ui/vitest.config.ts`.",
+  "Spec conflict carried over from docs/design/stitch/agent-confirm-sheet/notes.md issue 2: ui-design-system.md \u00a73.8.15 says the kernel confirmation is answered only from kernel-owned TTY input. AgentConfirmSheet is built as designed (Cancel is the default, only Ctrl+Enter or a click runs the plan, and the band is the DSN-16 treatment). Shipping it as a second way to answer needs a decision record: the compositor renders it on --pl-z-secure, its buttons call the kernel confirm path directly, and the TTY prompt stays live with the first answer winning.",
+  "There is still no Stitch screen.html or screenshot.png for these slugs. I matched against the hand-built reference.png and reference.html and the notes, as the foundation did.",
+  "Deliberate deviations from the notes, all for spec rules: (a) no ambient wallpaper drift, breathing halo or pulsing dot on the login screen, because P9 allows only one-shot animations; (b) no spinner while verifying or shutting down (DSN-07), so the pill shows the real stage text plus the bounded pl-anim-progress-sweep; (c) the default login error is the spec's 'Invalid username or password' (no user enumeration), and it can be overridden through errorText; (d) the lock screen and Overview use static tints over a pre-blurred wallpaper and a scrim, not a live backdrop-filter, because they are not on the DSN-24 list; (e) the frame meter defaults to top-right (WMD-19) and takes a corner prop (the offline mock uses bottom-right); (f) the window switcher is centred on screen, like the macOS switcher, not at the bottom edge as in the Overview mock.",
+  "ui/src/index.ts and ui/package.json are outside my paths, so the new areas are not yet re-exported from the package root. I renamed my frame-meter stats type to FrameMeterStats to avoid a clash with the Task Manager's FrameStats in ui/src/apps/taskmgr/models.ts.",
+  "Test titles that start with 'UI-<Component>' are not ID-shaped for tools/traceability.ts (the same issue the foundation reported). I used AGT-03, DSN-15, DSN-16, RAG-05, RAG-06, WM-07, WM-03, BOOT-12, BOOT-14, OFF-01/02/03/04/05, VFS-09 and WMD-19 prefixes wherever a requirement applies."
+ ],
+ "todos_for_team": [
+  "Owner of ui/src/index.ts: add `export * from './overlays/index.ts';` and `export * from './login/index.ts';`. Optionally, the package.json owner can add the subpath exports './overlays' and './login'.",
+  "R5: point the root vitest `ui` project at ui/vitest.config.ts. Without that, the task's `--project ui` command cannot pass.",
+  "WM compositor: Overview reports slot rectangles through onLayout. FLIP the real window elements into those slots (set will-change only during the move), and pass each window's rect so the tiles zoom from it. Own the Alt-hold and 120 ms threshold for AppSwitcher and call onCommit when Alt is released. Mount AgentConfirmSheet inside the Terminal window's content box on --pl-z-secure and make that window's content inert. Feed FrameMeterHUD with FrameMeterStats at 1 Hz.",
+  "Shell (menu bar owner): the connectivity chip is the anchor for OfflinePopover. The gallery uses a stand-in chip; the real chip with the states Online, Reconnecting\u2026, Offline \u00b7 n queued and Sign in to sync belongs to the menu bar.",
+  "R3/R4: write the decision record for the clickable agent confirmation sheet versus TTY-only answering (C12, \u00a73.8.15), then update the spec.",
+  "R3 (window-manager.md \u00a73.9): register Alt+O for Overview (it is proposed in the design notes) and decide whether the desktops strip ships (it is behind a prop here).",
+  "boot/login service owner: LoginScreen takes offline, sessions, state (idle, verifying, error, rate-limited, unlocking, busy), stage, errorKey and retryInS. The password leaves the component only through onSubmit(userId, password). Call onUnlocked to mount the desktop.",
+  "R5 traceability: decide how UI-<Component> test titles are counted (the same TODO the foundation filed)."
+ ],
+ "deps_requested": []
+}

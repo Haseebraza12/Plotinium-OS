@@ -1,0 +1,13 @@
+{
+  "note": "No Stitch screen for boot-menu. mcp__stitch__generate_screen_from_text returned 'The operation timed out.' at about 2026-09-24T15:22Z (no screen id or session id). It was NOT retried, per the run's instructions. list_screens for the project returned {} on every poll (about 20) from 15:23Z to 15:48Z, so get_screen could not be called and no Stitch HTML or screenshot exists.",
+  "request": {
+    "projectId": "12849137298552292712",
+    "deviceType": "DESKTOP",
+    "designSystem": "assets/10121591451242352758",
+    "modelId": "GEMINI_3_8_FLASH",
+    "prompt": "see notes.md, section 'Final prompt'"
+  },
+  "response": { "error": "The operation timed out." },
+  "list_screens_last": {},
+  "fallback": "reference.html + reference.png (default menu) and reference-safe-preselected.png (reference.html?failed=2) are a hand-built render of the same prompt (not a Stitch export). reference.html is interactive: arrow keys, Home/End, 1-4, Enter, Esc, live countdown."
+}

@@ -1,0 +1,153 @@
+[
+  {
+    "id": "UI-023 menu-bar titles stay mounted and focus stays on the atom for 5 s",
+    "ok": true,
+    "detail": {
+      "same": true,
+      "focus": true,
+      "removed": 0
+    }
+  },
+  {
+    "id": "UI-085 CC trigger aria-expanded while open",
+    "ok": true,
+    "detail": "true"
+  },
+  {
+    "id": "UI-024 nothing covers CC (hit test on the theme radio) and no banners on screen",
+    "ok": true,
+    "detail": {
+      "hit": {
+        "inCC": true,
+        "html": "<span>Light</span>"
+      },
+      "visibleToasts": 0
+    }
+  },
+  {
+    "id": "UI-024 click on CC theme radio changes theme",
+    "ok": true,
+    "detail": "light"
+  },
+  {
+    "id": "UI-073 second click on CC trigger closes (stays closed)",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "id": "UI-073 clock second click closes; UI-085 clock aria-expanded when open",
+    "ok": true,
+    "detail": {
+      "clockExp": "true"
+    }
+  },
+  {
+    "id": "UI-081 Alt+C moves focus into Control Centre",
+    "ok": true,
+    "detail": {
+      "inCC": true,
+      "label": "Connectivity: Online, All changes synced"
+    }
+  },
+  {
+    "id": "UI-081 Esc returns focus to where it was (terminal content)",
+    "ok": true,
+    "detail": {
+      "tag": "TEXTAREA",
+      "label": "Terminal input",
+      "cls": "xterm-helper-textarea",
+      "inView": true,
+      "win": "terminal"
+    }
+  },
+  {
+    "id": "UI-025 popover does not claim offline while online",
+    "ok": true,
+    "detail": {
+      "chipTxt": "Sync: Online, all changes synced | ",
+      "netTxt": [
+        "examiner1@plotinium: ~sh 1 — ~$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.xterm-dom-renderer-owner-1 .xterm-rows span { display: inline-block; height: 100%; vertical-align: top;}.xterm-dom-renderer-owner-1 .xterm-rows { pointer-events: none; color: #ededee; font-family: 'JetBrai",
+        "Online · syncedAll changes are on the server.Queued operations · 0outbox · durableNothing queued · all changes are on the serverDegraded services · 0sinceNo degraded servicesRetry nowTask Manager"
+      ]
+    }
+  },
+  {
+    "id": "UI-046 search copy matches providers (record)",
+    "ok": true,
+    "detail": {
+      "ph": "Search files, apps and commands",
+      "stext": "SemanticKeywordescAppsFilesApplicationTerminalrunningApplicationEditorApplicationTask ManagerApplicationSettingsApplicationAbout PlotiniumApplicationFilesApplicationOpen starts Files.OpenEnter↵open",
+      "stext2": "SemanticKeywordescAppsTerminalrunningApplicationTerminalApplicationTerminal is running. Open brings its window to the front or opens a new one.OpenEnter↵open0 results · 52 ms · file names0 results"
+    }
+  },
+  {
+    "id": "UI-029 overview shows each whole window scaled (< 0.8 of size)",
+    "ok": false,
+    "detail": [
+      {
+        "app": "terminal",
+        "w": 760,
+        "h": 624,
+        "t": "matrix(1, 0, 0, 1, 40, 68)"
+      },
+      {
+        "app": "files",
+        "w": 960,
+        "h": 600,
+        "t": "matrix(1, 0, 0, 1, 64, 92)"
+      },
+      {
+        "app": "editor",
+        "w": 900,
+        "h": 640,
+        "t": "matrix(1, 0, 0, 1, 88, 116)"
+      }
+    ]
+  },
+  {
+    "id": "UI-083 bars hidden in Overview",
+    "ok": true,
+    "detail": {
+      "mb": "0",
+      "dock": "0"
+    }
+  },
+  {
+    "id": "UI-083 empty click leaves Overview",
+    "ok": true,
+    "detail": [760, 960, 900]
+  },
+  {
+    "id": "UI-083 wallpaper press unfocuses windows, desktop menus shown",
+    "ok": true,
+    "detail": {
+      "foc": ["false", "false", "false"],
+      "appMenu": ["Plotinium desktop", "File"]
+    }
+  },
+  {
+    "id": "UI-152 menu-bar mark 16 px on whole pixels",
+    "ok": true,
+    "detail": {
+      "x": 16,
+      "y": 6,
+      "w": 16,
+      "h": 16,
+      "filter": "drop-shadow(rgba(94, 92, 230, 0.45) 0px 0px 1px)"
+    }
+  },
+  {
+    "id": "UI-085 nav landmarks \"Menu bar\" and \"Dock\"; atom and app menu names differ",
+    "ok": true,
+    "detail": {
+      "nav": ["Menu bar", "Places", "Path", "Dock"],
+      "atomName": "Plotinium",
+      "appMenus": ["Plotinium", "Plotinium desktop", "File"]
+    }
+  },
+  {
+    "id": "UI-091 0 CSP violations across CC, NC, Search, Overview, switcher",
+    "ok": true,
+    "detail": {}
+  }
+]

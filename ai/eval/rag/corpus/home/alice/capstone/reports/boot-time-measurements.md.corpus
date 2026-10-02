@@ -1,0 +1,13 @@
+# Boot time measurements
+
+Lab machine (i5, 16 GB, Chrome 141), 10 runs each, median / p95.
+
+| Scenario | Before (14 Oct) | After (22 Oct) |
+|---|---|---|
+| cold boot, empty cache | 9.1 s / 9.8 s | 2.6 s / 2.9 s |
+| cold boot, SW installed | 3.4 s / 3.9 s | 1.9 s / 2.2 s |
+| warm boot | 1.6 s / 1.9 s | 1.1 s / 1.3 s |
+
+Changes: terminal (xterm) and CodeMirror moved to lazy chunks; the model and ONNX runtime are no longer requested before the desktop is interactive; fonts subset to Latin; the wallpaper is a 180 KB AVIF instead of a 2.4 MB PNG.
+
+Both targets (warm ≤ 1.5 s, cold ≤ 3 s) now met.

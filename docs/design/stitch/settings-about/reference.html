@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Settings About</title>
+<!-- Hand-built reference render (NOT a Stitch export). Stitch generation timed out for the whole project; see notes.md and screen.json. -->
+<!-- Team member names are PLACEHOLDERS until TEAM_CONTRACT.md section 1 is filled in. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#0B0B1A; --wall2:#2A1F5C;
+  --label:rgba(255,255,255,.92); --label2:rgba(255,255,255,.62); --label3:rgba(255,255,255,.40);
+  --hair:rgba(255,255,255,.10); --hair2:rgba(255,255,255,.06);
+  --glass-win:rgba(30,30,36,.82); --glass-side:rgba(255,255,255,.04); --glass-bar:rgba(30,30,36,.55); --glass-dock:rgba(40,40,48,.50);
+  --accent:#5E5CE6; --accent-h:#7472FF; --accent-glow:rgba(94,92,230,.45);
+  --ok:#30D158; --warn:#FF9F0A; --danger:#FF453A; --info:#64D2FF;
+  --font:"Inter",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,monospace;
+  --ease-spring:linear(0,.009,.035 2.1%,.141 4.4%,.723 12.9%,.938 16.7%,1.017 20.1%,1.043 23.5%,1.035 28.2%,1.007 36.2%,.998 45.4%,1);
+  --ease-out:cubic-bezier(.16,1,.3,1);
+  --ease-snap:cubic-bezier(.34,1.56,.64,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--label);font:13px/1.4 var(--font);-webkit-font-smoothing:antialiased;overflow:hidden;min-width:1440px;min-height:900px;position:relative}
+svg.i{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.num{font-variant-numeric:tabular-nums}
+.wall{position:absolute;inset:0;background:
+  radial-gradient(700px 500px at 16% 80%,rgba(94,92,230,.40),transparent 70%),
+  radial-gradient(640px 480px at 84% 16%,rgba(140,90,255,.30),transparent 70%),
+  radial-gradient(420px 320px at 60% 95%,rgba(100,210,255,.14),transparent 70%),
+  linear-gradient(160deg,#0B0B1A 0%,#16123A 45%,var(--wall2) 100%)}
+.wall::after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.45))}
+
+/* menu bar */
+.menubar{position:absolute;top:0;left:0;right:0;height:28px;display:flex;align-items:center;gap:2px;padding:0 10px;background:var(--glass-bar);backdrop-filter:blur(30px) saturate(180%);
+  box-shadow:inset 0 -1px 0 rgba(255,255,255,.06),inset 0 1px 0 rgba(255,255,255,.08);z-index:5;animation:drop .5s var(--ease-out) both}
+.menubar .mi{padding:3px 9px;border-radius:6px;font-weight:500;cursor:default;transition:background .15s}
+.menubar .mi:hover{background:rgba(255,255,255,.12)}
+.menubar .mi.app{font-weight:700}
+.menubar .logo{display:grid;place-items:center;width:30px;height:22px}
+.menubar .right{margin-left:auto;display:flex;align-items:center;gap:4px}
+.menubar .st{display:grid;place-items:center;height:22px;min-width:28px;padding:0 6px;border-radius:6px}
+.menubar .st:hover{background:rgba(255,255,255,.12)}
+.clock{font-weight:500;padding:0 8px}
+
+/* dock */
+.dock{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);display:flex;align-items:flex-end;gap:10px;padding:8px 10px 10px;border-radius:22px;
+  background:var(--glass-dock);backdrop-filter:blur(40px) saturate(180%);box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 0 0 1px rgba(255,255,255,.08),0 20px 50px rgba(0,0,0,.45);z-index:4;
+  animation:rise .6s var(--ease-spring) .1s both}
+.dock .app{position:relative;width:52px;height:52px;border-radius:13px;display:grid;place-items:center;color:#fff;transition:transform .25s var(--ease-snap);transform-origin:50% 100%;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 6px 14px rgba(0,0,0,.35)}
+.dock .app svg.i{width:26px;height:26px;stroke-width:1.6}
+.dock .app:hover{transform:scale(1.28) translateY(-6px)}
+.dock .app.run::after{content:"";position:absolute;bottom:-7px;left:50%;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:rgba(255,255,255,.85)}
+.dock .sep{width:1px;height:44px;background:rgba(255,255,255,.16);margin:0 2px 4px}
+.a-files{background:linear-gradient(160deg,#5AC8FA,#2F6BDB)}.a-term{background:linear-gradient(160deg,#3A3A44,#15151B)}.a-edit{background:linear-gradient(160deg,#FFB547,#F2762E)}
+.a-task{background:linear-gradient(160deg,#4CD97B,#1E9E55)}.a-set{background:linear-gradient(160deg,#9A9AA8,#55555F)}.a-search{background:linear-gradient(160deg,#7472FF,#4A3FC8)}
+.a-trash{background:linear-gradient(160deg,rgba(255,255,255,.22),rgba(255,255,255,.06))}
+
+/* window */
+.win{position:absolute;left:210px;top:48px;width:1020px;height:752px;border-radius:14px;overflow:hidden;display:grid;grid-template-columns:252px 1fr;
+  background:var(--glass-win);backdrop-filter:blur(40px) saturate(170%);
+  box-shadow:0 0 0 1px rgba(255,255,255,.10),inset 0 1px 0 rgba(255,255,255,.10),0 22px 70px rgba(0,0,0,.55),0 4px 14px rgba(0,0,0,.3);z-index:3;
+  animation:winOpen .42s var(--ease-spring) .15s both;transform-origin:50% 40%}
+
+/* sidebar */
+.side{position:relative;background:var(--glass-side);border-right:1px solid var(--hair);display:flex;flex-direction:column;padding:0 10px 12px;min-height:0}
+.lights{display:flex;gap:8px;height:52px;align-items:center;padding-left:8px}
+.lights button{width:12px;height:12px;border-radius:50%;border:0;display:grid;place-items:center;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.25)}
+.lights svg{width:8px;height:8px;stroke:rgba(0,0,0,.6);stroke-width:2.6;fill:none;opacity:0;transition:opacity .12s}
+.lights:hover svg{opacity:1}
+.l-close{background:#FF5F57}.l-min{background:#FEBC2E}.l-max{background:#4A4A4E}
+.sfield{display:flex;align-items:center;gap:7px;height:30px;padding:0 10px;border-radius:9px;background:rgba(255,255,255,.07);box-shadow:inset 0 0 0 1px var(--hair2);color:var(--label3);margin:0 2px 12px;
+  animation:fadeUp .35s var(--ease-out) .3s both}
+.sfield input{all:unset;flex:1;min-width:0;color:var(--label);font-size:13px}
+.sfield input::placeholder{color:var(--label3)}
+.sfield:focus-within{box-shadow:0 0 0 3px rgba(94,92,230,.55)}
+.sfield kbd{flex:none;white-space:nowrap;font:500 10.5px var(--font);color:var(--label3);padding:1px 5px;border-radius:4px;box-shadow:inset 0 0 0 1px var(--hair)}
+.user{display:flex;align-items:center;gap:11px;padding:9px 10px;border-radius:11px;cursor:default;transition:background .15s;margin-bottom:10px;animation:fadeUp .35s var(--ease-out) .34s both;border:0;background:none;color:inherit;font:inherit;text-align:left;width:100%}
+.user:hover{background:rgba(255,255,255,.06)}
+.avatar{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:17px;color:#fff;flex:none;
+  background:radial-gradient(circle at 30% 25%,#9C9AFF,#5E5CE6 55%,#3A2FA8);box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 0 0 2px rgba(255,255,255,.08),0 4px 12px rgba(94,92,230,.45)}
+.user .n{font-weight:600;font-size:13.5px}
+.user .s{font-size:11.5px;color:var(--label2)}
+.list{position:relative;list-style:none;display:flex;flex-direction:column;overflow:hidden}
+.list .gap{height:9px;margin:0 10px 9px;border-bottom:1px solid var(--hair2)}
+.list li.item{position:relative;z-index:1}
+.list a{display:flex;align-items:center;gap:10px;height:30px;padding:0 8px;border-radius:8px;color:var(--label);text-decoration:none;font-weight:500;transition:background .12s;outline:none}
+.list li.item:not(.cur) a:hover{background:rgba(255,255,255,.06)}
+.list a:focus-visible{box-shadow:0 0 0 3px rgba(94,92,230,.55)}
+.list .cur a{color:#fff}
+.ic{width:22px;height:22px;border-radius:6px;display:grid;place-items:center;color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.3),0 1px 2px rgba(0,0,0,.3);flex:none}
+.ic svg.i{width:13px;height:13px;stroke-width:2}
+.badge{margin-left:auto;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--danger);color:#fff;font-size:11px;font-weight:700;display:grid;place-items:center;animation:pop .36s var(--ease-snap) 1.1s both}
+.pill{position:absolute;left:0;right:0;height:30px;border-radius:8px;background:rgba(94,92,230,.88);box-shadow:0 0 16px var(--accent-glow),inset 0 1px 0 rgba(255,255,255,.2);z-index:0;
+  transition:transform .28s var(--ease-snap);top:0}
+.list li.item{animation:fadeUp .3s var(--ease-out) both}
+
+/* content */
+.main{display:flex;flex-direction:column;min-width:0;min-height:0}
+.ctool{height:52px;flex:none;display:flex;align-items:center;gap:6px;padding:0 18px;border-bottom:1px solid var(--hair2)}
+.nav{width:28px;height:26px;border-radius:7px;display:grid;place-items:center;color:var(--label2);border:0;background:none;transition:background .12s}
+.nav:hover{background:rgba(255,255,255,.08)}
+.nav[aria-disabled=true]{color:var(--label3)}
+.ctool h1{font-size:15px;font-weight:600;margin-left:6px;animation:fadeRight .3s var(--ease-out) .4s both}
+.scroll{flex:1;min-height:0;overflow:hidden;padding:26px 36px 20px;display:flex;flex-direction:column;align-items:center}
+
+.hero{display:flex;flex-direction:column;align-items:center;text-align:center}
+.atom{position:relative;width:132px;height:132px;animation:atomIn .7s var(--ease-spring) .35s both}
+.atom svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.atom .glow{position:absolute;inset:18px;border-radius:50%;background:radial-gradient(circle,rgba(160,158,255,.55),rgba(94,92,230,.18) 45%,transparent 70%);filter:blur(6px);animation:breathe 3.2s cubic-bezier(.45,0,.55,1) infinite}
+.orbit{transform-origin:66px 66px;transform-box:view-box}
+.o1{animation:spin 18s linear infinite}
+.o2{animation:spin 26s linear infinite reverse}
+.o3{animation:spin 34s linear infinite}
+.wm{font-size:34px;font-weight:700;letter-spacing:-.03em;margin-top:10px;background:linear-gradient(180deg,#fff,#CFCEFF);-webkit-background-clip:text;background-clip:text;color:transparent;animation:fadeUp .4s var(--ease-out) .45s both}
+.tagline{color:var(--label2);font-size:13.5px;margin-top:3px;animation:fadeUp .4s var(--ease-out) .5s both}
+.vpill{display:inline-flex;align-items:center;gap:7px;margin-top:10px;height:24px;padding:0 11px;border-radius:999px;font-size:12px;font-weight:500;color:#C9C8FF;background:rgba(94,92,230,.18);box-shadow:inset 0 0 0 1px rgba(116,114,255,.4);animation:fadeUp .4s var(--ease-out) .55s both}
+.vpill i{width:6px;height:6px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px rgba(48,209,88,.8)}
+
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:18px;width:100%;margin-top:22px}
+.group h2{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--label3);font-weight:600;margin:0 0 7px 12px}
+.card{border-radius:12px;background:rgba(255,255,255,.05);box-shadow:inset 0 0 0 1px var(--hair2),inset 0 1px 0 rgba(255,255,255,.05);overflow:hidden}
+dl.card{display:grid;grid-template-columns:auto 1fr}
+dl .row{display:contents}
+dl dt,dl dd{height:36px;display:flex;align-items:center;border-bottom:1px solid var(--hair2);animation:fadeUp .3s var(--ease-out) both}
+dl dt{padding-left:14px;font-weight:500}
+dl dd{justify-content:flex-end;padding-right:12px;color:var(--label2);gap:8px;text-align:right}
+dl .row:last-child dt,dl .row:last-child dd{border-bottom:0}
+dl .row.hover dt,dl .row.hover dd{background:rgba(255,255,255,.045)}
+dd .copy{width:22px;height:22px;border-radius:6px;display:grid;place-items:center;color:var(--label3);opacity:0;transform:scale(.8);transition:opacity .15s,transform .18s var(--ease-snap)}
+dl .row.hover .copy,dl .row:hover .copy{opacity:1;transform:none}
+dd .copy svg.i{width:13px;height:13px}
+.mono{font-family:var(--mono);font-size:12px}
+ul.team{list-style:none}
+ul.team li{display:flex;align-items:center;gap:11px;height:43px;padding:0 12px 0 12px;border-bottom:1px solid var(--hair2);transition:background .12s;animation:fadeUp .3s var(--ease-out) both}
+ul.team li:last-child{border-bottom:0}
+ul.team li:hover{background:rgba(255,255,255,.045)}
+.ini{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:700;color:#fff;flex:none;box-shadow:inset 0 1px 0 rgba(255,255,255,.3)}
+.who{display:flex;flex-direction:column;line-height:1.25;min-width:0}
+.who b{font-weight:500}
+.who span{font-size:11px;color:var(--label3)}
+.role{margin-left:auto;display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 9px;border-radius:999px;font-size:11.5px;font-weight:600;white-space:nowrap}
+.role svg.i{width:12px;height:12px}
+
+.actions{display:flex;gap:10px;margin-top:22px;animation:fadeUp .35s var(--ease-out) .95s both}
+.btn{display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 15px;border-radius:9px;border:0;font:500 13px var(--font);color:var(--label);
+  background:rgba(255,255,255,.10);box-shadow:inset 0 0 0 1px var(--hair),inset 0 1px 0 rgba(255,255,255,.08);transition:transform .14s var(--ease-snap),background .15s;cursor:default}
+.btn:hover{background:rgba(255,255,255,.16)}
+.btn:active{transform:scale(.97)}
+.btn:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(94,92,230,.55)}
+.btn svg.i{width:14px;height:14px}
+.fine{margin-top:14px;text-align:center;font-size:11.5px;color:var(--label3);line-height:1.6;animation:fadeUp .35s var(--ease-out) 1s both}
+
+@keyframes winOpen{from{opacity:0;transform:scale(.94) translateY(10px)}to{opacity:1;transform:none}}
+@keyframes drop{from{opacity:0;transform:translateY(-100%)}to{opacity:1;transform:none}}
+@keyframes rise{from{opacity:0;transform:translate(-50%,24px)}to{opacity:1;transform:translate(-50%,0)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+@keyframes fadeRight{from{opacity:0;transform:translateX(6px)}to{opacity:1;transform:none}}
+@keyframes pop{0%{opacity:0;transform:scale(0)}70%{opacity:1;transform:scale(1.15)}100%{transform:scale(1)}}
+@keyframes atomIn{from{opacity:0;transform:scale(.8) rotate(-30deg)}to{opacity:1;transform:none}}
+@keyframes breathe{0%,100%{opacity:.7;transform:scale(1)}50%{opacity:1;transform:scale(1.06)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.12s!important;animation-delay:0s!important;animation-iteration-count:1!important;transition-duration:0s!important}
+  .o1,.o2,.o3,.atom .glow{animation:none!important}
+  .atom .glow{opacity:.85}
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <radialGradient id="nuc" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#fff"/><stop offset=".45" stop-color="#C9C8FF"/><stop offset="1" stop-color="#5E5CE6" stop-opacity="0"/></radialGradient>
+    <linearGradient id="orb" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#B7B5FF"/><stop offset=".5" stop-color="#5E5CE6"/><stop offset="1" stop-color="#8F8DFF" stop-opacity=".5"/></linearGradient>
+  </defs>
+  <symbol id="atom" viewBox="0 0 24 24"><g fill="none" stroke="#8F8DFF" stroke-width="1.3"><ellipse cx="12" cy="12" rx="10" ry="3.6"/><ellipse cx="12" cy="12" rx="10" ry="3.6" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="3.6" transform="rotate(120 12 12)"/></g><circle cx="12" cy="12" r="4" fill="url(#nuc)"/><circle cx="12" cy="12" r="1.7" fill="#fff"/></symbol>
+  <symbol id="search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7.5"/><path d="m20.5 20.5-4.2-4.2"/></symbol>
+  <symbol id="wifi" viewBox="0 0 24 24"><path d="M12 20h.01"/><path d="M2 8.82a15 15 0 0 1 20 0"/><path d="M5 12.86a10 10 0 0 1 14 0"/><path d="M8.5 16.43a5 5 0 0 1 7 0"/></symbol>
+  <symbol id="battery" viewBox="0 0 24 24"><rect x="2" y="7" width="17" height="10" rx="2.5"/><path d="M22 11v2"/><rect x="4" y="9" width="10" height="6" rx="1" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="cc" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="7" rx="3.5"/><circle cx="16.5" cy="7.5" r="1.8" fill="currentColor"/><rect x="2" y="13" width="20" height="7" rx="3.5"/><circle cx="7.5" cy="16.5" r="1.8"/></symbol>
+  <symbol id="folder" viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></symbol>
+  <symbol id="term" viewBox="0 0 24 24"><path d="m4 17 6-6-6-6"/><path d="M12 19h8"/></symbol>
+  <symbol id="edit" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M8 13h8M8 17h5"/></symbol>
+  <symbol id="activity" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></symbol>
+  <symbol id="gear" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="trash" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></symbol>
+  <symbol id="contrast" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 18a6 6 0 0 0 0-12v12z" fill="currentColor"/></symbol>
+  <symbol id="dock" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 15h18M8 18h.01M12 18h.01M16 18h.01"/></symbol>
+  <symbol id="mem" viewBox="0 0 24 24"><path d="M6 19v-3M10 19v-3M14 19v-3M18 19v-3M8 11V9M16 11V9M12 11V9M2 15h20"/><path d="M2 7a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v1.1a2 2 0 0 0 0 3.84V17a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-5.1a2 2 0 0 0 0-3.84Z"/></symbol>
+  <symbol id="gauge" viewBox="0 0 24 24"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></symbol>
+  <symbol id="sync" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></symbol>
+  <symbol id="shield" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="drive" viewBox="0 0 24 24"><path d="M22 12H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/><path d="M6 16h.01M10 16h.01"/></symbol>
+  <symbol id="download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5M12 15V3"/></symbol>
+  <symbol id="info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></symbol>
+  <symbol id="copy" viewBox="0 0 24 24"><rect x="8" y="8" width="14" height="14" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></symbol>
+  <symbol id="left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+  <symbol id="right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="report" viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4M12 16h4M8 11h.01M8 16h.01"/></symbol>
+  <symbol id="scroll" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4M9 13h6M9 17h3"/></symbol>
+  <symbol id="cpu" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6" rx="1"/><path d="M15 2v2M15 20v2M2 15h2M2 9h2M20 15h2M20 9h2M9 2v2M9 20v2"/></symbol>
+  <symbol id="db" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></symbol>
+  <symbol id="layout" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></symbol>
+  <symbol id="spark" viewBox="0 0 24 24"><path d="M9.94 15.5A2 2 0 0 0 8.5 14.06l-6.14-1.58a.5.5 0 0 1 0-.96L8.5 9.94A2 2 0 0 0 9.94 8.5l1.58-6.14a.5.5 0 0 1 .96 0l1.58 6.14a2 2 0 0 0 1.44 1.44l6.14 1.58a.5.5 0 0 1 0 .96l-6.14 1.58a2 2 0 0 0-1.44 1.44l-1.58 6.14a.5.5 0 0 1-.96 0z"/></symbol>
+  <symbol id="check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+</svg>
+
+<div class="wall" aria-hidden="true"></div>
+
+<nav class="menubar" role="menubar" aria-label="Menu bar">
+  <span class="mi logo" role="menuitem" aria-label="Plotinium menu"><svg width="18" height="18"><use href="#atom"/></svg></span>
+  <span class="mi app" role="menuitem">Settings</span>
+  <span class="mi" role="menuitem">Edit</span><span class="mi" role="menuitem">View</span><span class="mi" role="menuitem">Window</span><span class="mi" role="menuitem">Help</span>
+  <div class="right" role="group" aria-label="Status">
+    <span class="st"><svg class="i"><use href="#wifi"/></svg></span>
+    <span class="st"><svg class="i" style="width:20px"><use href="#battery"/></svg></span>
+    <span class="st"><svg class="i"><use href="#cc"/></svg></span>
+    <span class="st"><svg class="i"><use href="#search"/></svg></span>
+    <span class="clock num">Thu 24 Sep&nbsp; 14:32</span>
+  </div>
+</nav>
+
+<section class="win" aria-labelledby="wt">
+  <nav class="side" aria-label="Settings sections">
+    <div class="lights">
+      <button class="l-close" aria-label="Close"><svg viewBox="0 0 24 24"><use href="#x"/></svg></button>
+      <button class="l-min" aria-label="Minimise"><svg viewBox="0 0 24 24"><use href="#minus"/></svg></button>
+      <button class="l-max" aria-label="Zoom" aria-disabled="true"></button>
+    </div>
+    <label class="sfield"><svg class="i" style="width:14px;height:14px"><use href="#search"/></svg><input type="search" placeholder="Search" aria-label="Search settings"><kbd>Ctrl F</kbd></label>
+    <button class="user" aria-label="student, Plotinium Account, uid 1001">
+      <span class="avatar">S</span>
+      <span><div class="n">student</div><div class="s">Plotinium Account · uid 1001</div></span>
+    </button>
+    <ul class="list" id="list">
+      <span class="pill" id="pill" aria-hidden="true"></span>
+      <li class="item" style="animation-delay:.38s"><a href="#"><span class="ic" style="background:linear-gradient(160deg,#9A9AA8,#636370)"><svg class="i"><use href="#gear"/></svg></span>General</a></li>
+      <li class="item" style="animation-delay:.40s"><a href="#"><span class="ic" style="background:linear-gradient(160deg,#4AA3FF,#1E6FE0)"><svg class="i"><use href="#contrast"/></svg></span>Appearance</a></li>
+      <li class="item" style="animation-delay:.42s"><a href="#"><span class="ic" style="background:linear-gradient(160deg,#7472FF,#4A3FC8)"><svg class="i"><use href="#dock"/></svg></span>Desktop &amp; Dock</a></li>
+      <li class="gap" aria-hidden="true"></li>
+      <li class="item" style="animation-delay:.44s"><a href="#"><span class="ic" style="background:linear-gradient(160deg,#3FD9C4,#1A9D8A)"><svg class="i"><use href="#mem"/></svg></span>Memory</a></li>
+      <li class="item" style="animation-delay:.46s"><a href="#"><span class="ic" style="background:linear-gradient(160deg,#FFB547,#F2762E)"><svg class="i"><use href="#gauge"/></svg></span>Scheduler</a></li>
+      <li class="item" style="animation-delay:.48s"><a href="#"><span class="ic" style="background:linear-gradient(160deg,#4CD97B,#1E9E55)"><svg class="i"><use href="#sync"/></svg></span>Network &amp; Sync</a></li>
+      <li class="gap" aria-hidden="true"></li>
+      <li class="item" style="animation-delay:.50s"><a href="#"><span class="ic" style="background:linear-gradient(160deg,#B07BFF,#7A3FE0)"><svg class="i"><use href="#shield"/></svg></span>Privacy &amp; AI</a></li>
+      <li class="item" style="animation-delay:.52s"><a href="#"><span class="ic" style="background:linear-gradient(160deg,#5AC8FA,#2F6BDB)"><svg class="i"><use href="#users"/></svg></span>Users &amp; Groups</a></li>
+      <li class="gap" aria-hidden="true"></li>
+      <li class="item" style="animation-delay:.54s"><a href="#"><span class="ic" style="background:linear-gradient(160deg,#8E8E98,#55555F)"><svg class="i"><use href="#drive"/></svg></span>Storage</a></li>
+      <li class="item" style="animation-delay:.56s"><a href="#"><span class="ic" style="background:linear-gradient(160deg,#FF6B61,#D8342B)"><svg class="i"><use href="#download"/></svg></span>Updates<span class="badge" aria-label="1 update available">1</span></a></li>
+      <li class="item cur" style="animation-delay:.58s"><a href="#" aria-current="page"><span class="ic" style="background:linear-gradient(160deg,#9C9AFF,#5E5CE6);box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 0 0 1px rgba(255,255,255,.35)"><svg class="i"><use href="#info"/></svg></span>About</a></li>
+    </ul>
+  </nav>
+
+  <main class="main" aria-labelledby="wt">
+    <div class="ctool">
+      <button class="nav" aria-label="Back"><svg class="i"><use href="#left"/></svg></button>
+      <button class="nav" aria-label="Forward" aria-disabled="true"><svg class="i"><use href="#right"/></svg></button>
+      <h1 id="wt">About</h1>
+    </div>
+    <div class="scroll">
+      <div class="hero">
+        <div class="atom" aria-hidden="true">
+          <div class="glow"></div>
+          <svg viewBox="0 0 132 132">
+            <g class="orbit o1"><ellipse cx="66" cy="66" rx="58" ry="20" fill="none" stroke="url(#orb)" stroke-width="1.6"/><circle cx="124" cy="66" r="3.4" fill="#E4E3FF"/></g>
+            <g class="orbit o2"><g transform="rotate(60 66 66)"><ellipse cx="66" cy="66" rx="58" ry="20" fill="none" stroke="url(#orb)" stroke-width="1.6"/><circle cx="8" cy="66" r="3" fill="#C9C8FF"/></g></g>
+            <g class="orbit o3"><g transform="rotate(120 66 66)"><ellipse cx="66" cy="66" rx="58" ry="20" fill="none" stroke="url(#orb)" stroke-width="1.6"/><circle cx="124" cy="66" r="2.6" fill="#B7B5FF"/></g></g>
+            <circle cx="66" cy="66" r="22" fill="url(#nuc)"/>
+            <circle cx="66" cy="66" r="9" fill="#fff"/>
+          </svg>
+        </div>
+        <div class="wm">Plotinium</div>
+        <div class="tagline">An AI-native operating system for the web</div>
+        <div class="vpill"><i></i>Version 0.3.0 (build a1f93c2) · up to date on this channel</div>
+      </div>
+
+      <div class="cols">
+        <section class="group" aria-labelledby="sys">
+          <h2 id="sys">System</h2>
+          <dl class="card">
+            <div class="row hover"><dt style="animation-delay:.62s">Version</dt><dd style="animation-delay:.62s"><span class="num">0.3.0 (build a1f93c2)</span><span class="copy" title="Copy"><svg class="i"><use href="#copy"/></svg></span></dd></div>
+            <div class="row"><dt style="animation-delay:.65s">Built</dt><dd style="animation-delay:.65s"><span class="num">2026-09-24</span><span class="copy"><svg class="i"><use href="#copy"/></svg></span></dd></div>
+            <div class="row"><dt style="animation-delay:.68s">Kernel</dt><dd style="animation-delay:.68s"><span class="mono">plotinium 0.3.0-a1f93c2</span><span class="copy"><svg class="i"><use href="#copy"/></svg></span></dd></div>
+            <div class="row"><dt style="animation-delay:.71s">Host</dt><dd style="animation-delay:.71s"><span>Chrome 154 · 8 cores</span><span class="copy"><svg class="i"><use href="#copy"/></svg></span></dd></div>
+            <div class="row"><dt style="animation-delay:.74s">Memory budget</dt><dd style="animation-delay:.74s"><span class="num">256 MB</span><span class="copy"><svg class="i"><use href="#copy"/></svg></span></dd></div>
+            <div class="row"><dt style="animation-delay:.77s">Storage</dt><dd style="animation-delay:.77s"><span class="num">OPFS 1.2 GB · Cloud 340 MB</span><span class="copy"><svg class="i"><use href="#copy"/></svg></span></dd></div>
+            <div class="row"><dt style="animation-delay:.80s">Signed in</dt><dd style="animation-delay:.80s"><span>student · uid 1001</span><span class="copy"><svg class="i"><use href="#copy"/></svg></span></dd></div>
+          </dl>
+        </section>
+
+        <section class="group" aria-labelledby="team">
+          <h2 id="team">Team</h2>
+          <ul class="card team">
+            <li style="animation-delay:.64s"><span class="ini" style="background:linear-gradient(160deg,#9C9AFF,#5E5CE6)">AK</span><span class="who"><b>Ayesha Khan</b><span>R1 · Systems Architect</span></span><span class="role" style="color:#C9C8FF;background:rgba(94,92,230,.2)"><svg class="i"><use href="#cpu"/></svg>Kernel</span></li>
+            <li style="animation-delay:.68s"><span class="ini" style="background:linear-gradient(160deg,#5AC8FA,#2F6BDB)">BA</span><span class="who"><b>Bilal Ahmed</b><span>R2 · Database Engineer</span></span><span class="role" style="color:#9FD8FF;background:rgba(100,210,255,.14)"><svg class="i"><use href="#db"/></svg>VFS / Database</span></li>
+            <li style="animation-delay:.72s"><span class="ini" style="background:linear-gradient(160deg,#FFB547,#F2762E)">HI</span><span class="who"><b>Hamza Iqbal</b><span>R3 · UI Subsystem Lead</span></span><span class="role" style="color:#FFC680;background:rgba(255,159,10,.14)"><svg class="i"><use href="#layout"/></svg>WM / UI</span></li>
+            <li style="animation-delay:.76s"><span class="ini" style="background:linear-gradient(160deg,#B07BFF,#7A3FE0)">SM</span><span class="who"><b>Sara Malik</b><span>R4 · Pipeline Specialist</span></span><span class="role" style="color:#D6B8FF;background:rgba(176,123,255,.16)"><svg class="i"><use href="#spark"/></svg>AI Pipeline</span></li>
+            <li style="animation-delay:.80s"><span class="ini" style="background:linear-gradient(160deg,#4CD97B,#1E9E55)">UT</span><span class="who"><b>Usman Tariq</b><span>R5 · Integration Engineer</span></span><span class="role" style="color:#8EF0AE;background:rgba(48,209,88,.14)"><svg class="i"><use href="#check"/></svg>QA / DevOps</span></li>
+          </ul>
+        </section>
+      </div>
+
+      <div class="actions">
+        <button class="btn" aria-haspopup="dialog"><svg class="i"><use href="#report"/></svg>System Report…</button>
+        <button class="btn" aria-haspopup="dialog"><svg class="i"><use href="#scroll"/></svg>Licences</button>
+      </div>
+      <p class="fine">Lahore Garrison University · Capstone, Fall 2026<br>© 2026 Plotinium Team</p>
+    </div>
+  </main>
+</section>
+
+<nav class="dock" aria-label="Dock">
+  <span class="app a-files run" title="Files"><svg class="i"><use href="#folder"/></svg></span>
+  <span class="app a-term run" title="Terminal"><svg class="i"><use href="#term"/></svg></span>
+  <span class="app a-edit" title="Editor"><svg class="i"><use href="#edit"/></svg></span>
+  <span class="app a-task" title="Task Manager"><svg class="i"><use href="#activity"/></svg></span>
+  <span class="app a-set run" title="Settings"><svg class="i"><use href="#gear"/></svg></span>
+  <span class="app a-search" title="Search"><svg class="i"><use href="#search"/></svg></span>
+  <span class="sep"></span>
+  <span class="app a-trash" title="Trash"><svg class="i"><use href="#trash"/></svg></span>
+</nav>
+
+<script>
+// one shared selection pill that springs between rows (transform only)
+const list=document.getElementById('list'),pill=document.getElementById('pill');
+const items=[...list.querySelectorAll('li.item')];
+function movePill(li){pill.style.transform='translateY('+li.offsetTop+'px)';}
+movePill(list.querySelector('li.cur'));
+items.forEach(li=>li.querySelector('a').addEventListener('click',e=>{e.preventDefault();
+  items.forEach(x=>{x.classList.toggle('cur',x===li);const a=x.querySelector('a');x===li?a.setAttribute('aria-current','page'):a.removeAttribute('aria-current');});movePill(li);}));
+// copy value
+document.querySelectorAll('dl .row').forEach(r=>r.addEventListener('click',()=>{const v=r.querySelector('dd span').textContent;try{navigator.clipboard.writeText(v)}catch(e){}
+  const c=r.querySelector('.copy');c.innerHTML='<svg class="i"><use href="#check"/></svg>';c.style.color='#30D158';setTimeout(()=>{c.innerHTML='<svg class="i"><use href="#copy"/></svg>';c.style.color='';},1200);}));
+</script>
+</body>
+</html>

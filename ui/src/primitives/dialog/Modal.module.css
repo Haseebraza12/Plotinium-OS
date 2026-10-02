@@ -1,0 +1,126 @@
+/*
+ * Modal surfaces. Dialog: centred over a scrim, portalled to <body>. Sheet: drops from the top
+ * edge of its window (the positioned parent) over a light window scrim. Both use the sheet
+ * material (glass with a live backdrop-filter: sheets are on the allowed list).
+ */
+.layer {
+  position: fixed;
+  inset: 0;
+  z-index: var(--pl-z-dialog);
+  display: grid;
+  place-items: center;
+  padding: var(--pl-space-6);
+}
+.scrim {
+  position: absolute;
+  inset: 0;
+  background: var(--pl-scrim);
+}
+.panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--pl-space-4);
+  width: min(var(--pl-dialog-w), 100%);
+  max-height: calc(100vh - 2 * var(--pl-space-6));
+  overflow: auto;
+  padding: var(--pl-space-5);
+  border-radius: var(--pl-radius-sheet);
+  background: var(--pl-glass-sheet-bg);
+  -webkit-backdrop-filter: var(--pl-glass-sheet-filter);
+  backdrop-filter: var(--pl-glass-sheet-filter);
+  box-shadow:
+    var(--pl-shadow-dialog),
+    var(--pl-glass-specular),
+    inset 0 0 0 var(--pl-hairline-width) var(--pl-hairline);
+  color: var(--pl-text);
+  outline: none;
+}
+.sm {
+  width: min(calc(var(--pl-dialog-w) * 0.75), 100%);
+}
+.lg {
+  width: min(var(--pl-sheet-w), 100%);
+}
+.header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--pl-space-3);
+}
+.centered .header {
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+.headings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pl-space-1);
+  min-width: 0;
+}
+.title {
+  margin: 0;
+  font: var(--pl-type-headline);
+  font-size: var(--pl-text-lg);
+}
+.description {
+  margin: 0;
+  font: var(--pl-type-body);
+  color: var(--pl-text-muted);
+}
+.body {
+  min-height: 0;
+  font: var(--pl-type-body);
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--pl-space-2);
+}
+.centered .actions {
+  justify-content: stretch;
+}
+.centered .actions > * {
+  flex: 1;
+}
+
+/* ---------- sheet ---------- */
+.sheetLayer {
+  position: absolute;
+  inset: 0;
+  z-index: var(--pl-z-hud);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 0 var(--pl-space-4) var(--pl-space-4);
+  overflow: hidden;
+  border-radius: inherit;
+}
+.sheetScrim {
+  position: absolute;
+  inset: 0;
+  background: var(--pl-scrim-sheet);
+}
+.sheet {
+  width: min(var(--pl-sheet-w), 100%);
+  max-height: calc(100% - var(--pl-space-4));
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  border-bottom-left-radius: var(--pl-radius-sheet);
+  border-bottom-right-radius: var(--pl-radius-sheet);
+}
+.floatingSheet {
+  margin-top: var(--pl-space-3);
+  border-radius: var(--pl-radius-sheet);
+}
+@media (forced-colors: active) {
+  .panel {
+    border: 1px solid CanvasText;
+  }
+}

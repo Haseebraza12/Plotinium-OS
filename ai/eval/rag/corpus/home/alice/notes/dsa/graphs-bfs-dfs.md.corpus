@@ -1,0 +1,21 @@
+# Graph traversal: BFS and DFS
+
+Representations: adjacency list (O(V + E) space, good for sparse graphs) vs adjacency matrix (O(V²), O(1) edge test).
+
+## BFS
+
+Queue. Visits nodes in order of distance (edge count) from the source, so it gives shortest paths in unweighted graphs. O(V + E).
+
+## DFS
+
+Stack or recursion. Classifies edges into tree, back, forward and cross edges. A back edge means a cycle (directed graph). Uses:
+- topological sort: reverse post-order of DFS on a DAG;
+- strongly connected components (Tarjan or Kosaraju);
+- articulation points and bridges.
+
+## Pitfalls
+
+- Recursion depth on a long chain blows the stack; use an explicit stack for big inputs.
+- Mark nodes visited when you push them in BFS, not when you pop, or you'll enqueue duplicates.
+
+The kernel's path resolution is a walk down one path of the directory tree; `find` is a DFS of it.

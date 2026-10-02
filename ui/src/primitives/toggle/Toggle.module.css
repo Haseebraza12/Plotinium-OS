@@ -1,0 +1,121 @@
+/*
+ * The switch: a pill track and a knob that springs across (transform only). The "on" fill is
+ * a ::before layer whose opacity crossfades, so the track colour never transitions. While
+ * pressed, the knob stretches toward its destination like the macOS switch.
+ */
+.root {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--pl-space-3);
+  min-height: var(--pl-target-min);
+  font: var(--pl-type-body);
+  color: var(--pl-text);
+}
+.text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.label {
+  font-weight: var(--pl-weight-medium);
+}
+.description {
+  font: var(--pl-type-caption);
+  color: var(--pl-text-muted);
+}
+.hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.track {
+  --pl-knob-x: 0px;
+  --pl-knob-sx: 1;
+  position: relative;
+  isolation: isolate;
+  flex: none;
+  width: var(--pl-toggle-w);
+  height: var(--pl-toggle-h);
+  padding: 0;
+  border: 0;
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-toggle-off);
+  cursor: default;
+}
+.track::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--pl-toggle-on);
+  opacity: 0;
+  transition: opacity var(--pl-motion-med) var(--pl-ease);
+}
+.track[aria-checked='true'] {
+  --pl-knob-x: var(--pl-toggle-travel);
+}
+.track[aria-checked='true']::before {
+  opacity: 1;
+}
+.track:focus-visible {
+  outline: var(--pl-focus-ring);
+  outline-offset: var(--pl-focus-offset);
+}
+.knob {
+  position: absolute;
+  top: calc((var(--pl-toggle-h) - var(--pl-toggle-knob-size)) / 2);
+  left: calc((var(--pl-toggle-h) - var(--pl-toggle-knob-size)) / 2);
+  width: var(--pl-toggle-knob-size);
+  height: var(--pl-toggle-knob-size);
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-toggle-knob);
+  box-shadow: var(--pl-toggle-knob-shadow);
+  transform-origin: left center;
+  transform: translateX(var(--pl-knob-x)) scaleX(var(--pl-knob-sx));
+  transition: transform var(--pl-motion-slow) var(--pl-ease-spring-bouncy);
+}
+.track[aria-checked='true'] .knob {
+  transform-origin: right center;
+}
+.track:active:not([aria-disabled='true']) {
+  --pl-knob-sx: 1.22;
+}
+.track:active:not([aria-disabled='true']) .knob {
+  transition-duration: var(--pl-motion-fast);
+}
+.track[aria-disabled='true'] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.sm {
+  --pl-toggle-w: calc(var(--pl-toggle-h) * 1.45);
+}
+.sm .knob {
+  transform: translateX(calc(var(--pl-knob-x) * 0.55)) scaleX(var(--pl-knob-sx));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .track::before,
+  .knob {
+    transition: none;
+  }
+  .track:active:not([aria-disabled='true']) {
+    --pl-knob-sx: 1;
+  }
+}
+@media (forced-colors: active) {
+  .track {
+    border: var(--pl-hairline-width) solid ButtonText;
+  }
+  .knob {
+    background: ButtonText;
+  }
+  .track[aria-checked='true'] .knob {
+    background: Highlight;
+  }
+}

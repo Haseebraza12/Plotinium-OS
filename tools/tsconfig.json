@@ -1,0 +1,16 @@
+// Repository tooling: run with Node 24 type stripping (`node tools/<script>.ts`).
+// The ESLint rules are plain JavaScript with JSDoc types so eslint.config.js can load them
+// without a TypeScript loader; checkJs type-checks them here.
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2024"],
+    "types": ["node"],
+    "allowJs": true,
+    "checkJs": true
+  },
+  "include": ["**/*.ts", "eslint-rules/**/*.js"],
+  "exclude": ["node_modules", "eslint-rules/fixtures"]
+}

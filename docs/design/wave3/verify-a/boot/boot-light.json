@@ -1,0 +1,32 @@
+[
+  {
+    "name": "UI-067 chip on, V off, V on",
+    "ok": true,
+    "detail": "true,false,true"
+  },
+  {
+    "name": "UI-003 orbit stays within ±60°",
+    "ok": true,
+    "detail": "values 12,36,48,24,-12,-36,60, max tick 26"
+  },
+  {
+    "name": "UI-061 mark does not jump (non-verbose frames)",
+    "ok": false,
+    "detail": "mark y values 301,300,299,120,167,207,239,263,281,293"
+  },
+  {
+    "name": "UI-061 splash uses one system font stack",
+    "ok": true,
+    "detail": "system-ui, \"Segoe UI\", Roboto, Ubuntu, \"Noto Sans\", sans-serif"
+  },
+  {
+    "name": "CSP violations during boot",
+    "ok": true,
+    "detail": "[]"
+  },
+  {
+    "name": "console/page errors",
+    "ok": true,
+    "detail": ""
+  }
+]

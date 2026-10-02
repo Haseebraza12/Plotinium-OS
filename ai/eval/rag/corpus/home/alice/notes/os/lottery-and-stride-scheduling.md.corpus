@@ -1,0 +1,22 @@
+# Proportional-share scheduling: lottery and stride
+
+Goal: each job gets a fraction of the CPU proportional to its **tickets**, instead of optimising turnaround or response time.
+
+## Lottery (Waldspurger & Weihl, 1994)
+
+Every quantum, draw a random ticket; the holder runs. A job with 75 of 100 tickets wins about 75 % of draws. Randomness gives it:
+- no per-process state beyond the ticket count;
+- no pathological corner cases;
+- cheap to implement: walk a list summing tickets until you pass the winner.
+
+Extras: ticket currency (a user splits tickets among their jobs), ticket transfer (a client lends tickets to a server while it waits), ticket inflation among trusted processes.
+
+Downside: fairness only holds in the long run. For short jobs the unfairness metric is bad.
+
+## Stride
+
+Deterministic version. stride = BIG / tickets. Each job has a pass value. Always run the job with the lowest pass, then add its stride. Exact proportions over short windows, but a new job arriving needs a sensible starting pass (set it to the current minimum or it monopolises the CPU).
+
+## Compare
+
+Lottery needs no global state, so new jobs are trivial. Stride is precise. CFS is essentially stride with virtual runtime instead of pass and weights from nice values.

@@ -1,0 +1,66 @@
+{
+  "id": "AGT40-P09",
+  "category": "pipeline",
+  "tags": ["needs-observation", "content-predicate"],
+  "user": "alice",
+  "cwd": "/home/alice",
+  "now": "2026-10-05T10:00:00+05:00",
+  "tz": "Asia/Karachi",
+  "fixture": "fx-agt@v1",
+  "prompt": "copy every file in src that contains TODO into a new folder called todo-review",
+  "expect": {
+    "kind": "plan",
+    "ops": [
+      ["mkdir", "/home/alice/todo-review"],
+      ["copy", "/home/alice/src/app.ts", "/home/alice/todo-review/app.ts"],
+      ["copy", "/home/alice/src/util.ts", "/home/alice/todo-review/util.ts"]
+    ],
+    "confirm": false
+  },
+  "reference": {
+    "observe": [
+      {
+        "name": "fs_grep",
+        "input": {
+          "paths": ["~/src"],
+          "text": "TODO",
+          "ignoreCase": false,
+          "mode": "l"
+        }
+      }
+    ],
+    "tool": "submit_plan",
+    "input": {
+      "summary": "plan",
+      "steps": [
+        {
+          "id": "s1",
+          "span": "a new folder called todo-review",
+          "op": {
+            "call": "mkdir",
+            "args": {
+              "path": "~/todo-review",
+              "parents": false
+            }
+          },
+          "sources": null
+        },
+        {
+          "id": "s2",
+          "span": "copy every file in src that contains TODO into a new folder called todo-review",
+          "op": {
+            "call": "copy",
+            "args": {
+              "from": "~/src",
+              "to": "~/todo-review",
+              "recursive": false
+            }
+          },
+          "sources": ["/home/alice/src/app.ts", "/home/alice/src/util.ts"]
+        }
+      ],
+      "assumptions": [],
+      "suspicious_content_seen": false
+    }
+  }
+}

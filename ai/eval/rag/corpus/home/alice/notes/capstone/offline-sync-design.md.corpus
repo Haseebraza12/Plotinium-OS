@@ -1,0 +1,25 @@
+# Local-first files and reconnection
+
+## Principle
+
+The browser copy is the working copy. Reading and writing files never waits for the network. The server is a backup and the way devices share state.
+
+## While disconnected
+
+- every mutation (create, write, rename, unlink, chmod) is applied locally and appended to an **outbox** with the inode version it was based on;
+- the taskbar shows a cloud icon with a slash and the number of queued operations;
+- things that truly need the server (shared folders owned by others, the AI agent) say so instead of failing silently.
+
+## Coming back
+
+The client replays the outbox in order. The server checks each operation's base version:
+- base version matches → apply, return the new version;
+- mismatch → someone else changed that inode meanwhile. We don't try to combine the two texts. The local version is saved as `name (conflicted copy, alice, 2026-10-12).ext` next to the server version, and the user decides.
+
+Directory operations are replayed before content operations so paths exist.
+
+## Why not a CRDT
+
+Most files have one editor at a time; a text CRDT would add a lot of code and metadata for a rare case. Keeping both copies is easy to explain in the demo.
+
+Open question for R2: what happens to an outbox entry for a file whose parent directory was deleted on the server?

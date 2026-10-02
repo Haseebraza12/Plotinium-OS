@@ -1,0 +1,54 @@
+{
+ "files": [
+  {
+   "path": "/home/haseeb-raza/Desktop/Plotinium OS/specs/09-database/database.md",
+   "approx_lines": 2570,
+   "summary": "The complete database spec (DB-01 to DB-05), owned by R2 with R5 as reviewer. It covers:\n- an ERD in Mermaid, normalisation reasoning, and deviations from the \u00a711.1 reference schema;\n- the adjacency-list tree decision, with pilot numbers;\n- the full DDL for all 17 canonical tables as five dbmate migrations, with constraints, indexes, grants, the acyclicity trigger (SQLSTATE PTC01), the P0001 fault hook, may_r/may_x and the canonical checksum function;\n- the READ COMMITTED justification with pilot evidence, the L0\u2013L4 lock order, lockPlan() and a Kysely sketch of vfsTxn() with retries, timeouts, cancellation and the SQLSTATE\u2192errno mapper;\n- set-based SQL for rm -r, cp -r, mv, batch rename (two-phase for swaps), chmod -R, chown -R, create and write/CAS, all with quota updates;\n- the fault-injection harness rules and what counts as a node op;\n- op_log and the per-owner feed, retention and tombstones; auth_sessions vs os_sessions; S/X leases with fencing; swap_pages, blobs and GC, file_chunks and pgvector, the LLM budget tables, audit_log and telemetry;\n- Q1\u2013Q5 SQL with expected plans, the full index list and the perf-index toggle scripts;\n- the seed and benchmark protocol, integrity probes P1\u2013P9, and backup/restore using an exported snapshot plus a drill;\n- PostgreSQL settings, initdb args and Kysely/codegen conventions;\n- invariants with proof sketches, performance budgets and about 100 test titles that start with requirement IDs.\n\nThe DDL and SQL were run for real on PostgreSQL 18.6 + pgvector 0.8.6 (image 0.8.6-pg18) in a throwaway container:\n- the migration up/down/up round trip gives an identical schema;\n- 40 DB-04 constraint probes behave as intended;\n- fault matrices for every bulk op roll back cleanly;\n- the concurrent-move race is stopped by the trigger;\n- Q1\u2013Q5 plans were checked at 100k inodes, before and after indexes;\n- backup and restore reproduce the checksum;\n- all 48 statements compile with PREPARE, and both Mermaid diagrams parse.\n\nEvery number from that run is labelled as a pilot figure to re-measure on the lab machine."
+  }
+ ],
+ "cross_spec_requests": [
+  "04-vfs/virtual-file-system.md: count a directory's nlink as 2 plus its child directories (DBD-17); a file's nlink is its number of names.",
+  "04-vfs/virtual-file-system.md: implement the canonical tree checksum on the client with the same line format (parent|nameHex|ino|type|modeOctal|uid|gid|size|nlink|version|blobShaHex|targetHex) and the same order, sorting names by UTF-8 bytes rather than JavaScript string order.",
+  "04-vfs/virtual-file-system.md: apply the server's name rules on the client too: NFC, 1\u2013255 bytes, no '/', not '.' or '..'.",
+  "04-vfs/virtual-file-system.md: define the well-known UUID values for the ten C5 paths in protocol/.",
+  "04-vfs/virtual-file-system.md: specify cp -r as one copy per name (GNU default), the rename-over rules (ENOTEMPTY, ENOTDIR, EISDIR), batch renames in two phases when names swap, and the client fault hook (abort at request N).",
+  "04-vfs/virtual-file-system.md: take ownership of the IndexedDB stores ai_files, ai_chunks, ai_vecseg and ai_lex. The RAG spec asked the database spec for them, but they are client stores.",
+  "06-sync/offline-and-sync.md: define the JSON of op_log.effects (the vfs.changed payload).",
+  "06-sync/offline-and-sync.md: make resume a list of {ownerUid, fromSeq}, answered from the feed table with a per-event permission filter, and refused below users.feed_purged_seq so the client falls back to GET /api/sync/snapshot.",
+  "06-sync/offline-and-sync.md: say how the client applies a rejection that the server recorded after rollback, and adopt the EAGAIN reasons 'stale-base', 'blob-missing' and 'lockset'.",
+  "06-sync/offline-and-sync.md: treat a stale-fence write as op status 'conflict' with errno EBUSY plus keptAs, and number conflicted copies that collide as 2 to 9 inside the parentheses.",
+  "01-architecture/syscall-abi.md: add the detail.reason values stale-base, stale-plan, blob-missing, lockset, lock_timeout, contention, connection, budget and stale.",
+  "01-architecture/syscall-abi.md: map SQLSTATE 57014 to ECANCELED when the op was killed and ETIMEDOUT when statement_timeout fired, map a hard link to a directory to EPERM, and confirm there is no ESTALE.",
+  "11-server/backend-api.md: mount POST /api/debug/fault (a new route beyond C6's list) only when FAULT_INJECTION=1, require a root su grant, and refuse to start with FAULT_INJECTION=1 in the production profile.",
+  "11-server/backend-api.md: place vfsTxn, lockPlan, the cancel registry (pg_cancel_backend when proc.signal arrives), the retention job and the errno mapper as in \u00a74.7\u2013\u00a74.12, and connect the app role through APP_DATABASE_URL.",
+  "11-server/backend-api.md: use the pg type parsers (int8 to a safe-integer Number, date left as a string), always JSON.stringify jsonb array parameters, take plt_index_put_lock_key() in index.put, and enforce the per-owner swap cap in /api/swap.",
+  "14-devops/deployment-and-ci.md: set POSTGRES_INITDB_ARGS='--locale-provider=builtin --builtin-locale=C.UTF-8', mount the volume at /var/lib/postgresql, pass the \u00a73.24 -c flags, and pin the -pg18-trixie image by digest (the verification run used the -pg18 bookworm build, sha256:2ba9ca5f\u2026).",
+  "14-devops/deployment-and-ci.md: create the plotinium_app role (LOGIN, password generated at first start) in the db init hook, because migrations only GRANT; give dbmate and backups DATABASE_URL (owner) and the server APP_DATABASE_URL.",
+  "14-devops/deployment-and-ci.md: build the migration round-trip CI job (roll back N times, run dbmate dump through the dbmate image, delete the random \\restrict lines pg_dump 18 writes before diffing) and run kysely-codegen --verify.",
+  "14-devops/deployment-and-ci.md: write ops/backup.sh (exported snapshot, checksum manifest) and ops/restore.sh, copy blobs with rclone copy and never sync, and run the restore drill weekly.",
+  "14-devops/deployment-and-ci.md: set FAULT_INJECTION=1 only in compose.yaml (local and examiner) and in CI, never in compose.prod.yaml.",
+  "10-ai/rag-semantic-search.md: file_chunks is unique on (ino, model_key, seq), not (ino, seq), so index.put must delete WHERE ino = $1 AND model_key = $2.",
+  "10-ai/rag-semantic-search.md: file_chunks has an ino_type column pinned to 'f'; the pull cursor stays in commit order through the index.put advisory lock; HNSW must use vector_ip_ops to match <#>; may_r/may_x take (inodes, int, int[]); seed vectors come from db/seed/vectors/<modelKey>/.",
+  "10-ai/agentic-shell.md: adopt the audit_log rows and outcome values of \u00a73.22, including the plan and outcome rows written after a rollback.",
+  "10-ai/agentic-shell.md: adopt the dry-run fingerprint re-check (EAGAIN 'stale-plan') and the delayMs debug delay for the AGT-09 kill demo; llm_requests.turn is capped at 6.",
+  "10-ai/predictive-prefetch.md: define the telemetry_events.context shape. The opt-in flag is users.telemetry_opt_in, and clearing or opting out deletes the server rows.",
+  "12-security/security-model.md: record the two database roles and their grants, append-only audit_log, why there is no row-level security, and the server's permission re-check inside the transaction.",
+  "12-security/security-model.md: confirm the auth_sessions columns su_uid and su_expires_at and users.account_kind; guests are the only accounts allowed without a password hash.",
+  "03-kernel/memory-and-paging.md: confirm the swap_pages columns (checksum over the uncompressed bytes, stored_size), the 64 MiB page-size bound, the per-owner cap (PLOTINIUM_SWAP_MAX_BYTES), and window_layout entries of (os_session_id, pid, page_ids) for MEM-04.",
+  "05-wm/window-manager.md: define the os_sessions.window_layout JSON and when layout_rev increases (last writer wins per session).",
+  "13-quality/testing-and-performance.md: add the \u00a77 database budgets to budgets.json and the CI jobs: migration round trip, codegen verify, plan assertions on a freshly seeded database, weekly restore drill, nightly bench100k.",
+  "00-product/requirements-traceability.md: register the Plotinium design prefixes DBD- and INV-DB so test titles such as 'DBD-16 \u2026' are accepted.",
+  "15-decisions/stack-decisions.md: record that the ORM record's SERIALIZABLE reversal trigger is superseded by the READ COMMITTED decision, and record the examiner's database corrections: pin by digest, volume path, pg_c_utf8, VACUUM after seeding, EXCLUDE for S/X."
+ ],
+ "open_questions": [
+  "A chmod or chown bumps inodes.version, so a content write based on the old version becomes a conflicted copy. That is safe but may create unnecessary copies. Should content writes compare a separate content version? This needs agreement with the sync spec before W9.",
+  "Should the examiner's clean bring-up seed 10k inodes (enough for DB-05) or 100k (the rubric's exemplary level)? Decide after S8 measures seed time on the lab machine, against a 60-second target.",
+  "The \u00a711.4 hash index on blobs(sha256) is kept alongside the required unique B-tree. Does the instructor accept 'kept and measured' if the hash index turns out no faster?",
+  "The Week-2 lab machine spec decides shared_buffers and work_mem. Every pilot figure, including this spec's verification run on a developer laptop, must be re-measured on it.",
+  "Bulk operations are atomic: one unreadable entry fails a whole cp -r, where GNU would copy the rest. Do the examiners accept this difference?",
+  "Fault injection is armed only on the local/examiner compose profile, never on production (C7). Does the instructor agree that the examiner's clean clone of the tagged release counts as 'the tagged release' for the live demo?",
+  "Is a 24-hour recovery point (nightly pg_dump) acceptable for the production database this semester, or should WAL archiving be added?",
+  "The verification ran on the bookworm -pg18 image. The trixie-variant digest still has to be recorded in THIRD_PARTY.md and the verification repeated on it in Week 5.",
+  "The team must disclose in AI_USAGE.md that the schema was validated by an AI-assisted run, and must re-create the harness scripts themselves in db/ and tests/."
+ ]
+}

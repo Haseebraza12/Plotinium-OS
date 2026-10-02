@@ -1,0 +1,21 @@
+[
+  {
+    "id": "UI-096 plain (no max round-trip) control",
+    "ok": true,
+    "detail": {
+      "e0": [900, 640],
+      "at1024": [900, 588],
+      "afterZoomTwice": [900, 588, "normal"]
+    }
+  },
+  {
+    "id": "UI-096 zoom round-trip at 1024x700 then grow: size comes back",
+    "ok": true,
+    "detail": [900, 640]
+  },
+  {
+    "id": "UI-096 compact snap round-trip then grow: size comes back",
+    "ok": true,
+    "detail": [900, 640, "normal"]
+  }
+]

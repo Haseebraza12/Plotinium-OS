@@ -1,0 +1,29 @@
+import { describe, expect, it } from 'vitest';
+
+import { LruCache } from './lru-cache.ts';
+
+describe('LruCache', () => {
+  it('evicts the stalest key when over capacity', () => {
+    const evicted: string[] = [];
+    const c = new LruCache<string, number>(2, (k) => evicted.push(k));
+    c.set('a', 1);
+    c.set('b', 2);
+    c.get('a'); // a is now fresher than b
+    c.set('c', 3);
+    expect(evicted).toEqual(['b']);
+    expect(c.get('b')).toBeUndefined();
+    expect(c.get('a')).toBe(1);
+  });
+
+  it('overwriting a key refreshes it without growing', () => {
+    const c = new LruCache<string, number>(2);
+    c.set('a', 1);
+    c.set('a', 5);
+    expect(c.size).toBe(1);
+    expect(c.get('a')).toBe(5);
+  });
+
+  it('rejects a capacity of zero', () => {
+    expect(() => new LruCache(0)).toThrow(RangeError);
+  });
+});

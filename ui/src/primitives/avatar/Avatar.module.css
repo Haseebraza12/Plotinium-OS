@@ -1,0 +1,74 @@
+.avatar {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: var(--pl-avatar-size);
+  height: var(--pl-avatar-size);
+  border-radius: var(--pl-radius-pill);
+  color: var(--pl-on-tint);
+  font-family: var(--pl-font-ui);
+  font-weight: var(--pl-weight-semibold);
+  font-size: calc(var(--pl-avatar-size) * 0.42);
+  line-height: 1;
+  user-select: none;
+  box-shadow: var(--pl-glass-specular);
+}
+.sm {
+  --pl-avatar-size: var(--pl-avatar-sm);
+}
+.md {
+  --pl-avatar-size: var(--pl-avatar-md);
+}
+.lg {
+  --pl-avatar-size: var(--pl-avatar-lg);
+}
+.xl {
+  --pl-avatar-size: var(--pl-avatar-xl);
+}
+/* Each gradient carries a shade layer sized so the white initials reach 4.5:1 over the whole
+   glyph area (UI-145; the bright teal, orange and green were near 2:1 without it). */
+.c1 {
+  background: linear-gradient(rgb(0 0 0 / 0.16), rgb(0 0 0 / 0.16)), var(--pl-avatar-1);
+}
+.c2 {
+  background: linear-gradient(rgb(0 0 0 / 0.37), rgb(0 0 0 / 0.37)), var(--pl-avatar-2);
+}
+.c3 {
+  background: linear-gradient(rgb(0 0 0 / 0.36), rgb(0 0 0 / 0.36)), var(--pl-avatar-3);
+}
+.c4 {
+  background: linear-gradient(rgb(0 0 0 / 0.25), rgb(0 0 0 / 0.25)), var(--pl-avatar-4);
+}
+.c5 {
+  background: linear-gradient(rgb(0 0 0 / 0.38), rgb(0 0 0 / 0.38)), var(--pl-avatar-5);
+}
+.c6 {
+  background: linear-gradient(rgb(0 0 0 / 0.13), rgb(0 0 0 / 0.13)), var(--pl-avatar-6);
+}
+.image {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}
+.status {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: calc(var(--pl-avatar-size) * 0.28);
+  height: calc(var(--pl-avatar-size) * 0.28);
+  min-width: var(--pl-status-dot);
+  min-height: var(--pl-status-dot);
+  border-radius: var(--pl-radius-pill);
+  box-shadow: 0 0 0 2px var(--pl-surface);
+}
+.online {
+  background: var(--pl-status-online);
+}
+.away {
+  background: var(--pl-status-away);
+}
+.offline {
+  background: var(--pl-status-offline);
+}

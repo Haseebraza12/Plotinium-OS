@@ -1,0 +1,920 @@
+                 LAHORE GARRISON UNIVERSITY
+                           Department of Computer Science
+                             BS Computer Science — Fall 2026
+
+
+
+
+                         Semester Capstone Project Specification
+
+
+              AI-Native Web-Based
+            Operating System (WebOS)
+            An operating system that boots, schedules, pages, persists and
+                       reasons entirely inside a web browser
+
+
+
+
+Disciplines integrated         Operating Systems; Data Structures & Algorithms; Database
+                               Systems; Artificial Intelligence
+
+Team size                      Exactly five students per team
+
+Duration                       18 weeks, delivered in five phases
+
+Programme                      BS Computer Science
+
+Issued by                      Mr. Haseeb Ur Rehman, Course Coordinator
+
+Document version               Version 1.0 — September 2026
+AI-Native Web-Based Operating System — Capstone Project Specification                                        Fall 2026
+
+
+About This Document
+This is the complete and authoritative specification for the Fall 2026 semester capstone project. It
+explains why the project exists and what your team must build. It gives the measurable acceptance
+criteria your system will be tested against, the phases in which it will be delivered, and how it will be
+graded.
+
+If this document disagrees with an informal message, a slide or a conversation, this document
+prevails. It changes only through a numbered written amendment posted on Google Classroom. Read
+Part I together as a team before you choose a stack, a name or a role.
+
+
+The project at a glance
+
+ What you build                    A named, bootable, AI-native operating system that runs inside a modern
+                                   browser and is backed by a multi-user server.
+
+ Team                              Exactly five students per team, each owning a defined engineering role (Section
+                                   4).
+
+ Disciplines integrated            Operating Systems, Data Structures & Algorithms, Database Systems and
+                                   Artificial Intelligence. Each has mandatory, testable requirements.
+
+ Identity                          Your team names its operating system and builds its own boot screen, boot
+                                   sequence and login screen (Sections 5 and 6).
+
+ Technology                        Open stack: any language, framework, runtime or database. Every choice must
+                                   be defended in writing (Section 14).
+
+ AI mandate                        At least two of three system-level AI subsystems. AI must be part of the OS, not
+                                   a chatbot bolted on top of it (Section 12).
+
+ Delivery                          Five phases, from the architecture defence (Week 4) to the final defence (Weeks
+                                   17–18), each closed by a live gate review (Section 13).
+
+ Assessment                        100 marks across six criteria. Team marks are moderated for each member
+                                   using the viva and contribution evidence (Section 16).
+
+
+How to read this document
+
+ Part                        Contents                                               Who must read it closely
+
+ I — Why                     Why web operating systems matter now, what             Everyone, before the first
+                             separates a real OS from an imitation, and why AI      team meeting.
+                             must be a foundation of the system.
+
+ II — The Brief              Team structure, naming your OS, the mandatory          Everyone.
+                             boot screen and boot sequence, and the industry
+                             benchmarks you must surpass.
+
+ III — Specification         Reference architecture, then one section per           Each owner reads their
+                             subsystem: OS primitives, DSA, database, AI.           section closely; everyone
+                                                                                    reads Section 8.
+
+ IV — Delivery               Milestones, the architecture defence, repository       Everyone, and again before
+                             and testing standards, the rubric, the final defence   every gate.
+                             and integrity rules.
+
+
+
+
+Lahore Garrison University — Department of Computer Science                                               Page 2 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                          Fall 2026
+
+
+ Part                        Contents                                                Who must read it closely
+
+ Appendices                  Acceptance checklist, glossary, references and the      QA/DevOps lead, before every
+                             team registration form.                                 gate.
+
+
+Conventions
+Requirement keywords. The words must, should and may follow their usual meaning in engineering
+specifications (RFC 2119). Must is mandatory for passing a gate and for full marks. Should is expected
+unless you justify a different choice in writing. May is optional and earns credit when done well.
+
+Requirement identifiers. Every testable requirement has an identifier. Use these identifiers in your
+test names, pull-request titles and report, for example a test named VFS-06 rejects a write that
+exceeds the quota without partial data.
+
+ Prefix      Area                                 Section       Prefix   Area                            Section
+
+ BOOT        Boot screen & sequence               6             SYS      System calls & terminal         9.6
+
+ PROC        Processes & scheduling               9.1           DSA      Data structures                 10
+
+ MEM         Virtual memory & paging              9.2           DB       Database & integrity            11
+
+ VFS         Virtual file system                  9.3           RAG      Semantic VFS search             12.2
+
+ WM          Window management                    9.4           AGT      Agentic system execution        12.3
+
+ OFF         Offline execution & sync             9.5           PRE      Predictive pre-fetching         12.4
+
+
+Measurement. Numerical targets are measured on a standard laboratory workstation in the Department,
+whose specification is published in Week 2, using the current stable Google Chrome at the time of each gate.
+Your OS name. This document suggests no names. Wherever it shows YourOS, your team's own registered
+name goes.
+
+
+
+
+Lahore Garrison University — Department of Computer Science                                              Page 3 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification      Fall 2026
+
+
+Contents
+Part I: Why This Project Exists
+1     Executive Summary                                                           6
+      1.1    What your team will deliver                                          6
+      1.2    What success looks like                                              7
+2     The Case for a Web Operating System                                         7
+      2.1    The browser has quietly become the computer                          7
+      2.2    What a Web Operating System is, and what it is not                   8
+      2.3    Why WebOS matters now                                                8
+      2.4    Why it is hard: the browser is a hostile host                        9
+      2.5    A short history                                                      9
+3     Artificial Intelligence as an Operating-System Foundation                  10
+      3.1    From application to primitive                                       10
+      3.2    What “AI-native” means in this project                              10
+      3.3    The AI building blocks you will use                                 11
+      3.4    The AI trust boundary                                               11
+
+Part II: The Brief
+4     Project Logistics and Team Organisation                                    13
+      4.1    Team composition and engineering roles                              13
+      4.2    Shared-ownership rules                                              13
+      4.3    Open technology stack, mandatory defence                            14
+      4.4    Team contract                                                       14
+5     Name Your Operating System                                                 14
+      5.1    Naming rules                                                        14
+      5.2    The identity kit                                                    15
+      5.3    Where your name must appear                                         15
+6     The Boot Screen and Boot Sequence                                          16
+      6.1    Why your OS must boot                                               16
+      6.2    What the boot screen looks like                                     16
+      6.3    The boot stages                                                     17
+      6.4    The service dependency graph                                        18
+      6.5    Boot requirements                                                   18
+      6.6    Reference boot log                                                  19
+7     Industry Benchmarks and the Limitations to Overcome                        20
+      7.1    Benchmark 1: Puter                                                  20
+      7.2    Benchmark 2: daedalOS                                               21
+      7.3    Summary and verification                                            21
+
+Part III: Technical Specification
+8     Reference Architecture                                                     22
+      8.1    Walk-through: one command, every layer                              23
+9     Operating-System Primitives                                                24
+      9.1    Process management and scheduling                                   24
+      9.2    Virtual memory and paging                                           26
+      9.3    The virtual file system                                             27
+      9.4    The window management subsystem                                     30
+      9.5    Offline edge execution and synchronisation                          31
+      9.6    The system-call interface and the terminal                          31
+
+
+
+Lahore Garrison University — Department of Computer Science             Page 4 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification      Fall 2026
+
+
+10    Data Structures and Algorithms Blueprint                                   32
+      10.1 Mandatory structures and where they live                              32
+      10.2 Implementation policy                                                 33
+      10.3 Interface sketches                                                    33
+11    Database Architecture and Integrity                                        34
+      11.1   Reference schema                                                    34
+      11.2   Storing a tree in a database                                        35
+      11.3   ACID guarantees for bulk operations                                 35
+      11.4   Index optimisation                                                  36
+      11.5   Database requirements                                               37
+12    Foundational AI Integration                                                37
+      12.1   Choosing your subsystems                                            37
+      12.2   Subsystem A: semantic VFS search (RAG pipeline)                     37
+      12.3   Subsystem B: agentic system execution                               39
+      12.4   Subsystem C: predictive process pre-fetching                        40
+      12.5   The coupling map                                                    41
+      12.6   Models, cost and offline behaviour                                  41
+
+Part IV: Delivery and Assessment
+13    Milestones and Deliverables                                                42
+      13.1 Phase deliverables and gate criteria                                  42
+      13.2 Gate rules                                                            43
+14    The Architecture Defence                                                   44
+      14.1   Structure of STACK_DECISION.md                                      44
+      14.2   Decisions that must be defended                                     44
+      14.3   What a strong justification looks like                              45
+      14.4   The defence session                                                 45
+15    Repository, Documentation and Testing Standards                            45
+      15.1   Repository layout                                                   45
+      15.2   Required documents                                                  46
+      15.3   Testing strategy                                                    46
+      15.4   Commits and collaboration                                           47
+16    Evaluation Rubric                                                          47
+      16.1   Grading criteria and weights                                        47
+      16.2   Performance levels                                                  48
+      16.3   Where the boot screen and identity are assessed                     49
+      16.4   Individual moderation                                               49
+17    The Final Defence                                                          50
+      17.1 Demo Day protocol                                                     50
+      17.2 Final deliverables                                                    50
+18    Academic Integrity and the Use of AI Tools                                 51
+
+Appendices
+A     Consolidated Acceptance Checklist                                          51
+B     Glossary                                                                   52
+C     References and Further Reading                                             54
+D     Team and OS Registration Form                                              55
+
+
+
+
+Lahore Garrison University — Department of Computer Science             Page 5 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                       Fall 2026
+
+
+Part I
+
+Why This Project Exists
+Before writing any code, a team must understand what it is building and why. This part explains why web
+operating systems matter now and what separates a real operating system from an imitation of one. It also
+explains why artificial intelligence must be a foundation of the system rather than a feature placed on top of it.
+
+
+Section 1
+
+Executive Summary
+Your team will design and build a complete Web-Based Operating System (WebOS) that runs natively
+inside a modern browser. It must boot through a genuine initialisation sequence and present a
+multitasking desktop. It must manage a hierarchical UNIX-like file system, schedule background
+processes on Web Workers, page idle application state out of memory, and persist everything with
+ACID guarantees. Most importantly, it must treat artificial intelligence as a subsystem of the operating
+system, not an application running on top of it.
+
+The project is deliberately cross-disciplinary. Operating Systems, Data Structures & Algorithms,
+Database Systems and Artificial Intelligence stop being separate courses and become parts of one
+working system. Each concept you have studied has a mandatory place in this codebase:
+
+   the process control block is a hash map;
+   the scheduler is a heap;
+   the directory hierarchy is a tree;
+   the startup order is a topological sort of a dependency graph;
+   a recursive delete is a database transaction;
+   semantic search is cosine similarity between embeddings of your own files.
+
+The project reproduces real systems-engineering constraints. The browser gives you one main thread
+and a storage quota that it is allowed to evict. It limits memory and will kill your tab if you exceed it,
+and the network can disappear at any moment. Your OS must stay fast within these limits, recover
+from failure and remain useful offline. Those are exactly the areas where the industry systems you
+will study, Puter and daedalOS, fall short.
+
+
+  The brief in one sentence
+  Build an operating system, not a website that looks like one, in which intelligence is a system
+  service.
+
+
+1.1 What your team will deliver
+
+  1. A named, bootable OS                                        2. A real desktop
+  Its own name, logo and version, a truthful boot                A multi-window compositor with focus, z-
+  sequence driven by a service dependency graph, a               ordering, dragging, resizing, minimising and a
+  boot menu with safe and recovery modes, and a                  taskbar, holding 60 frames per second under load.
+  multi-user login screen.
+
+
+
+
+Lahore Garrison University — Department of Computer Science                                              Page 6 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                         Fall 2026
+
+
+
+  3. A UNIX-like file system                                     4. Processes and a scheduler
+  An inode tree with /root, /home, /system and /bin,             A process table and a priority scheduler that runs
+  full path resolution, read/write/execute                       work on a pool of Web Workers, so the interface
+  permissions, soft links, hard quotas and                       never freezes.
+  distributed locking.
+
+
+  5. Virtual memory                                              6. An ACID persistence layer
+  An LRU pager that serialises idle application state            Atomic bulk operations that roll back cleanly
+  and swaps it to local and then cloud storage,                  when they fail midway, indexed metadata
+  restoring it transparently when needed.                        answering in under 10 ms, and a multi-tenant
+                                                                 backend.
+
+
+  7. Foundational AI                                             8. Engineering evidence
+  At least two of: semantic search over the file                 A written architecture defence, a test suite with
+  system, an agent in the shell that runs verified OS            fault injection and performance budgets, a
+  commands, and predictive pre-fetching driven by                production deployment, a technical report and a
+  a local model.                                                 live final defence.
+
+
+1.2 What success looks like
+On Demo Day, an examiner who has never seen your system clones your repository and starts it. They
+boot it with the network disconnected, run a CPU-heavy job while dragging windows, and open more
+applications than memory can hold. They then pull the plug on a recursive delete halfway through
+and ask your OS, in plain language, to reorganise their files. A successful system keeps its frame rate,
+pages memory out and back in without losing a byte, and rolls back the failed delete with no
+orphaned directories. It also shows a plan and asks for confirmation before it touches anything. Each
+of those behaviours is specified precisely in Part III and listed as a checklist in Appendix A.
+
+
+Section 2
+The Case for a Web Operating System
+
+2.1 The browser has quietly become the computer
+For many people, most of the time, the operating system is now simply the thing that starts a browser.
+Email, documents, spreadsheets, design tools, code editors, video calls and a large share of enterprise
+software run as web applications. ChromeOS turned this into a product: a thin operating system
+whose main application is the browser.
+
+Meanwhile, the browser has grown into a genuine runtime platform. It now offers:
+
+   background threads (Web Workers);
+   near-native computation (WebAssembly);
+   GPU computation (WebGPU);
+   a transactional database (IndexedDB) and a fast private file system (the Origin Private File System);
+   offline execution (Service Workers);
+   two-way networking (WebSockets and WebRTC).
+
+
+
+
+Lahore Garrison University — Department of Computer Science                                                Page 7 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                           Fall 2026
+
+
+A platform with threads, storage, a file system, networking and a security sandbox has the raw
+materials of an operating system. What it lacks is organisation: a process model, a scheduler, a
+memory manager, a file hierarchy with permissions, a window manager and a coherent notion of
+users. Providing that organisation is exactly what an operating system does, and it is what your team
+will build.
+
+
+2.2 What a Web Operating System is, and what it is not
+A Web Operating System is a software layer that implements classic operating-system abstractions on
+top of the browser runtime: processes, files, users, permissions, windows and services. Applications
+reach these abstractions through one uniform interface. A WebOS is not a website styled to look like a
+desktop. The difference is the same as the difference between an operating system and a screenshot
+of one:
+
+ Looks like an OS (not acceptable)                   Behaves like an OS (required)
+
+ ✕ Windows are divs whose position lives in          ✓ Windows are entries in a compositor registry, and one
+ scattered component state.                          authority manages their focus, z-order and lifecycle.
+
+ ✕ Files are an array of objects saved to            ✓ Files are inodes in a tree with paths, permissions, links,
+ localStorage.                                       quotas and transactional persistence.
+
+ ✕ “Apps” are UI components rendered                 ✓ Applications are processes with IDs, priorities and memory
+ directly by the page.                               budgets, and a lifecycle the kernel controls.
+
+ ✕ Long tasks run on the main thread and             ✓ Long tasks run on Web Workers under a scheduler, and the
+ freeze the interface.                               interface never blocks.
+
+ ✕ The boot screen is a CSS animation                ✓ The boot screen shows real services starting in dependency
+ driven by a timer.                                  order.
+
+ ✕ AI is a chat panel in a corner of the             ✓ AI is a system service that indexes the file system, issues
+ screen.                                             verified system calls and advises the scheduler.
+
+
+2.3 Why WebOS matters now
+
+  Zero-install, device-independent computing                     Low-cost and shared hardware
+  The whole environment is a URL. Any device with                University labs, schools, offices and homes often
+  a modern browser becomes a workstation, and a                  share modest machines. A WebOS gives every user
+  user's files, windows and settings follow them                 a centrally managed, always-updated personal
+  from machine to machine.                                       desktop on inexpensive hardware, with nothing
+                                                                 installed locally.
+
+
+  Security by construction                                       Collaboration as a default
+  The browser isolates origins in a sandbox, and                 Multi-user state, real-time synchronisation and
+  updates are atomic deployments. Users need no                  shared file systems come naturally on the web but
+  administrator rights. A WebOS inherits these                   are awkward to build into a single-machine OS.
+  guarantees and adds its own permission model on
+  top.
+
+
+
+
+Lahore Garrison University — Department of Computer Science                                                  Page 8 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                          Fall 2026
+
+
+
+  Offline-first edge computing                                   A natural home for AI
+  Service Workers and local storage let a web                    Models, data and users already meet on the web.
+  system keep working without a connection. That                 An OS that can see a user's files (with permission)
+  discipline matters wherever connectivity is                    and act on them is the right place to host an
+  intermittent or expensive.                                     assistant that does real work.
+
+
+2.4 Why it is hard: the browser is a hostile host
+A browser was designed to display documents safely, not to host an operating system. Every classic
+OS responsibility runs into a browser limitation. This project exists to make you engineer around
+those limitations rather than ignore them.
+
+ Browser constraint                Consequence if ignored                 What your OS must do
+
+ One main thread renders           Any task over about 50 ms drops        Run work on Web Workers under a
+ the interface and runs your       frames, and heavy work freezes         scheduler and keep the kernel's main-
+ JavaScript.                       the whole desktop.                     thread share small (§9.1).
+
+ Tab memory is finite. The         Running several heavy                  Active memory paging: LRU eviction of
+ browser may discard or            applications at once crashes the       inactive application state to swap (§9.2).
+ crash a tab under memory          session. This is the daedalOS
+ pressure.                         problem.
+
+ Storage is quota-managed,         Local data is not durable by           Request persistent storage, monitor the
+ and best-effort storage may       default.                               quota, and page out to the backend (§9.2,
+ be evicted by the browser.                                               §11).
+
+ There is no native file           Without real files, the “OS” is only   A virtual file system with inodes, paths,
+ hierarchy, ownership or           a demo.                                permissions and quotas (§9.3).
+ permission model.
+
+ The network is unreliable.        A cloud-dependent system stops         Offline edge execution with a replayable
+                                   working. This is the Puter             operation log (§9.5).
+                                   problem.
+
+ A running JavaScript              Classic pre-emptive scheduling         Time-sliced cooperative yielding, plus
+ function cannot be                cannot be copied literally.            forced termination of runaway processes
+ interrupted from outside.                                                (§9.1).
+
+ Several tabs, devices and         Lost updates and corrupted             Transactions, leases, locks and version
+ users can change the same         directory trees.                       numbers (§9.3, §11).
+ data at the same time.
+
+
+2.5 A short history
+The idea of a network-delivered computer is older than the web. Each generation below solved one
+part of the problem this project asks you to solve as a whole.
+
+ Era                  System or idea                          What it contributed
+
+ 1960s–1970s          Time-sharing systems and                Many users sharing one central computer through
+                      terminals                               thin terminals; the original “cloud”.
+
+ 1990s                Network computers and thin              Diskless machines that load their software and data
+                      clients                                 from a server.
+
+ 2000s                Early web desktops (e.g. eyeOS)         Showed that a desktop, with windows and files, can be
+                      and rich web applications               drawn inside a browser.
+
+
+
+
+Lahore Garrison University — Department of Computer Science                                                 Page 9 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                        Fall 2026
+
+
+ Era                  System or idea                          What it contributed
+
+ 2009–2011            ChromeOS and the first                  Commercial proof that the browser can be the main
+                      Chromebooks                             computing environment.
+
+ 2017                 WebAssembly in all major                Near-native speed in the page, so compilers, emulators
+                      browsers                                and databases can run client-side.
+
+ Late 2010s–          OPFS, WebGPU, in-browser                Real file-system APIs, GPU computation and complete
+ 2020s                runtimes; web desktops such as          open-source web desktops.
+                      Puter and daedalOS
+
+ Today                On-device and cloud language            Intelligence becomes an operating-system service.
+                      models                                  That is the step this project asks you to take.
+
+
+
+Section 3
+Artificial Intelligence as an Operating-System
+Foundation
+
+3.1 From application to primitive
+Operating systems have a long history of absorbing capabilities that started as applications.
+Networking was once an add-on, and TCP/IP now ships in every kernel. Full-text search was once a
+separate program, and file indexing is now an OS service that any application can query. Each time,
+the capability moved into the OS for two reasons. It needed privileged, system-wide access to every
+file, process and event. And every application benefited from sharing one trustworthy
+implementation.
+
+Artificial intelligence is making the same move. Major desktop and mobile platforms now ship
+language models as system services rather than stand-alone apps, and browsers have begun to offer
+on-device models to web pages. The reason is structural: a model is only as useful as the context it can
+see and the actions it can take, and the operating system is where both live.
+
+That is why this specification forbids a cosmetic chatbot. A chat panel that sees only the text you
+paste into it, and replies only with text, is an application. An AI subsystem that is part of the
+operating system does five things:
+
+   it is notified when files change;
+   it indexes them as a background process;
+   it answers questions by searching the file system by meaning;
+   it turns intent into verified system calls;
+   it tells the scheduler what the user is about to need.
+
+
+3.2 What “AI-native” means in this project
+In this project, an AI-native operating system has four properties. Your design must show all four for
+every AI subsystem you build.
+
+
+
+
+Lahore Garrison University — Department of Computer Science                                              Page 10 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                            Fall 2026
+
+
+
+  1. AI sees the system through the kernel                        2. AI acts through system calls, not strings
+  AI services read files through the same system                  An agent produces a structured plan of typed
+  calls as any other process and pass the same                    operations, and the kernel validates the plan
+  permission checks. They never read storage                      before anything runs. Model output is parsed as
+  directly. System events (file writes, process exits,            data. It is never passed to eval or concatenated
+  application launches) reach them on the kernel's                into a shell string.
+  event bus.
+
+
+  3. AI is scheduled by the system                                4. AI informs the system
+  Embedding, indexing, training and inference run                 Predictions feed back into OS decisions: which
+  as processes with IDs, priorities and memory                    applications to pre-load, which memory pages to
+  budgets. They appear in ps and can be killed, and               keep resident, and which background jobs to run
+  the scheduler throttles them while the user is                  first.
+  active.
+
+
+3.3 The AI building blocks you will use
+
+ Building block               What it is                                       Where it lives in your OS
+
+ Embeddings                   A model maps a piece of text to a vector of      The VFS indexer embeds each file chunk
+                              numbers so that texts with similar meaning       when the file is written.
+                              produce nearby vectors.
+
+ Vector similarity            Cosine similarity measures the angle             Semantic search ranks file chunks
+                              between two vectors: cos θ = (a·b) / (‖a‖‖b‖).   against a query (§12.2).
+
+ Retrieval-augmented          Relevant documents are retrieved first and       Answers about the user's own files, with
+ generation (RAG)             given to a language model, so its answer is      citations to paths.
+                              grounded in real sources and can cite them.
+
+ Tool (function) calling      A language model emits structured calls to       Each agent tool is one OS system call
+                              functions described by JSON schemas              with a typed schema (§12.3).
+                              instead of free text.
+
+ Agents                       A loop in which a model plans, a runtime         The shell's natural-language command
+                              validates and executes, and the result is        mode, with confirmation and rollback.
+                              observed before the next step.
+
+ Small predictive             Markov chains, naive Bayes, decision trees       Predicting the next application launch
+ models                       or small neural networks trained on usage        and pre-fetching it (§12.4).
+                              telemetry.
+
+ On-device inference          Running models inside the browser                Embedding and prediction inside Web
+                              through WebAssembly or WebGPU                    Workers, which also keeps AI working
+                              runtimes, with no server round trip.             offline.
+
+
+
+3.4 The AI trust boundary
+An AI that can act on a file system can also destroy one. The rigour that protects the kernel from
+applications must also protect the system from the model. The model is an untrusted user-space
+process: it proposes, and the kernel decides. Every AI subsystem you build must respect these
+principles:
+
+   Least privilege. The agent runs with the invoking user's identity, never as root, and cannot raise its
+   own privileges.
+   Plan before acting. Every multi-step action first produces a plan the user can inspect, and a dry
+   run that lists exactly which files it will affect.
+
+Lahore Garrison University — Department of Computer Science                                                  Page 11 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                              Fall 2026
+
+
+   Confirmation. Destructive or irreversible operations need explicit user confirmation.
+   Atomicity. A confirmed plan runs as one transaction or not at all. A failure rolls everything back.
+   Content is data, never instruction. File contents and file names in the model's context may
+   contain prompt-injection attacks. They must never be able to trigger a tool call on their own
+   authority.
+   Auditability. Every AI-initiated system call is logged with its prompt, plan, user and outcome.
+   Graceful absence. When the model is unavailable (offline, rate-limited or failing), the OS keeps
+   working and AI features degrade with a clear message.
+
+
+  The litmus test
+  Remove your AI module and rebuild. If only a sidebar disappears, your AI is cosmetic and will be
+  graded as such.
+
+  If the scheduler loses its pre-fetch hints, the shell loses natural-language execution and the file
+  system loses semantic search, while everything else keeps working, then your AI is foundational and
+  correctly isolated. That is the target.
+
+
+
+
+Lahore Garrison University — Department of Computer Science                                  Page 12 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                            Fall 2026
+
+
+Part II
+
+The Brief
+Who builds the system and what it is called. How it comes to life when a user opens it, and which existing
+systems it must outperform. This part defines the team, the operating system's identity, the mandatory boot
+screen and boot sequence, and the industry benchmarks your design must answer.
+
+
+Section 4
+
+Project Logistics and Team Organisation
+
+4.1 Team composition and engineering roles
+Each team has exactly five students. Teams of any other size are not accepted without written
+approval from the instructor. Each member holds one of the five engineering roles below as their
+primary ownership. The roles are designed so that every member owns production code in a real
+subsystem; no role is limited to documentation or testing.
+
+                                                                        DSA / DB                 Key evidence
+ Role                    Primary ownership                              responsibility           produced
+
+ 1. Kernel /             Process table and control blocks, the          Binary heap; PCB and     ARCHITECTURE.md;
+ Systems                 scheduler, the Web Worker pool, the            page-table hash          scheduler and paging
+ Architect               system-call and IPC bridge, the                maps; LRU list.          benchmarks.
+                         memory manager and LRU pager.
+
+ 2. VFS / Database       The VFS tree, path resolution,                 N-ary tree; B-tree and   DATABASE.md; fault-
+ Engineer                permissions, links and quotas; the             hash indexes; file-      injection and query
+                         database schema, transactions and              handle table.            benchmarks.
+                         indexing; the sync and distributed-
+                         lock backend.
+
+ 3. Window               Boot, login and desktop screens; the           Window registry; z-      Frame-time
+ Manager / UI            compositor and taskbar; the terminal           order structure; trie.   evidence; UI and
+ Subsystem Lead          interface with autocomplete; built-in                                   accessibility audit.
+                         application interfaces; accessibility
+                         and frame rate.
+
+ 4. AI Pipeline          The embedding pipeline and vector              Vector index;            AI.md; evaluation
+ Specialist              search, the agentic shell (planner,            telemetry model (e.g.    reports; safety test
+                         validator, executor), the pre-fetch            a Markov chain).         results.
+                         model, evaluation sets and AI safety.
+
+ 5. QA / DevOps &        The service manager and boot                   DAG and topological      BOOT.md;
+ Integration             orchestration, offline execution               sort; ring buffer for    TESTING.md; CI
+ Engineer                (Service Worker and operation log),            logs.                    pipeline;
+                         CI/CD, the test and performance                                         deployment.
+                         harness, fault injection, deployment
+                         and observability.
+
+
+4.2 Shared-ownership rules
+   Every subsystem has a primary owner and a named secondary reviewer, so no subsystem
+   depends on a single person.
+
+
+
+
+Lahore Garrison University — Department of Computer Science                                                  Page 13 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                    Fall 2026
+
+
+   Every pull request is reviewed and approved by at least one other member before it is merged.
+   Direct pushes to the main branch are disabled.
+   Every member must author meaningful code in at least two subsystems: their own and one other.
+   Every member is examined on the whole system at each gate and at the final viva, not only on the
+   part they wrote.
+
+
+4.3 Open technology stack, mandatory defence
+You may use any language, framework, runtime or database. That includes React, Next.js, Svelte, Vue,
+plain Web Components, TypeScript, Rust or Go compiled to WebAssembly, Node.js, Deno, Bun, Go,
+Python, PostgreSQL, SQLite, MongoDB, Neo4j, Redis and any vector store.
+
+That freedom comes with a price. Arbitrary technology choices are penalised. Each major choice
+must be defended in writing against the performance and integrity constraints of a WebOS, following
+the procedure in Section 14. “We already knew it” is a legitimate factor in a decision matrix, but it is
+never a justification on its own.
+
+
+4.4 Team contract
+Each team signs a team contract in Week 2 and commits it to the repository as TEAM_CONTRACT.md. It
+must state:
+
+   the role and secondary-review assignments;
+   the team's definition of “done” for a task;
+   the meeting and communication schedule, and how quickly each member commits to reply;
+   how the team makes decisions when members disagree;
+   what the team does, and by when, if a member stops contributing, so the problem is handled early
+   rather than in Week 16;
+   a signed acknowledgement that marks are moderated individually using the viva, commit history
+   and peer assessment (Section 16.4).
+
+
+Section 5
+Name Your Operating System
+Every operating system has an identity: a name, a version, a logo, a boot screen and an About dialog.
+Naming your system is not decoration. It makes the team agree on what the product is, and it gives
+every artefact (the repository, deployment, report and demo) one consistent identity.
+
+Each team must choose a decent, original name for its WebOS and register it using the form in
+Appendix D by the end of Week 2. The name then appears everywhere the system identifies itself.
+
+
+5.1 Naming rules
+
+ Original                          The name must not belong to an existing operating system or major software
+                                   product (for example Windows, macOS, ChromeOS, Linux, Ubuntu, Android,
+                                   Puter or daedalOS). It must not be confusingly similar to a registered
+                                   trademark. The generic term “WebOS” used in this document is not a valid
+                                   name, because webOS is also an existing commercial product.
+
+
+
+
+Lahore Garrison University — Department of Computer Science                                          Page 14 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                            Fall 2026
+
+
+ Decent and professional           The name must be suitable to print on a university report and present to
+                                   industry judges. It must not contain profanity, slurs, innuendo, political,
+                                   sectarian or religious references, or the names of real people.
+
+ Short and pronounceable           3 to 16 characters in the Latin alphabet. It may end in “OS” (for example
+                                   <Name>OS or <Name> OS). Test it by saying it aloud: “Boot into ___ and open the
+                                   terminal.”
+
+ Unique in the cohort              Names are registered first come, first served, and a name already taken by
+                                   another team is rejected. This document deliberately suggests no names:
+                                   choosing one is your team's task.
+
+ Stable                            After Phase 1 the name can be changed only with the instructor's written
+                                   approval.
+
+
+
+  Where good names come from
+  Strong names often come from nature and astronomy (a star, a mountain, a bird), from local heritage
+  and geography (a river, a landmark, a historic city), or from a coined word that hints at what makes
+  your system different. The best names are short, easy to spell after hearing them once, and fit your
+  logo.
+
+
+5.2 The identity kit
+By the Phase 2 gate, your repository must contain an identity kit in /system/branding and in docs/:
+
+ Item                          Requirement
+
+ Name and wordmark             The registered name, written the same way everywhere, with capitalisation and
+                               spacing fixed.
+
+ Logo                          An SVG logo that is legible at 16 px (favicon and taskbar) and at 256 px (boot
+                               screen).
+
+ Version scheme                Semantic versioning (MAJOR.MINOR.PATCH), starting at 0.1.0. Each phase ends with a
+                               tagged release: v0.2.0 at Phase 2, v0.3.0 at Phase 3, v0.4.0 at Phase 4 and v1.0.0 at
+                               the final defence. Release codenames are optional.
+
+ Tagline                       One line that states your system's distinctive idea, for example what it does that
+                               Puter and daedalOS do not.
+
+ Design tokens                 Colours, typography, spacing and motion values in one tokens file, used by every
+                               system screen. Light and dark themes.
+
+ Kernel identifier             The string printed by uname, including the name, version, short build hash and
+                               build date.
+
+
+5.3 Where your name must appear
+
+  Boot and login                            System surfaces                        Artefacts
+  Boot screen, boot menu,                   Settings → About dialog (name,         Repository name, README
+  recovery console and login                version, build hash, build date        header, technical report cover,
+  screen.                                   and team members), browser             slides and demo video title.
+                                            tab title and favicon, installable
+                                            app manifest.
+
+
+
+
+Lahore Garrison University — Department of Computer Science                                               Page 15 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                             Fall 2026
+
+
+  student@your-os:~$ uname -a
+  YourOS 0.3.0 (kernel 0.3.0-a1f93c2, built 2026-11-02) · Chrome 153 · 8 cores ·
+  uid=1001(student)
+  student@your-os:~$ cat /system/release
+  NAME="YourOS"   VERSION="0.3.0"   BUILD="a1f93c2"
+  TEAM="Section D · Team 04"
+
+
+
+
+Section 6
+The Boot Screen and Boot Sequence
+
+6.1 Why your OS must boot
+When a physical computer is switched on, several stages run in order:
+
+1. firmware performs a power-on self-test (POST);
+2. a bootloader selects and loads a kernel;
+3. the kernel initialises its core data structures;
+4. an init system such as systemd starts services in dependency order until the login screen appears.
+
+Each stage exists because something must be ready before something else can run.
+
+Your WebOS needs a boot sequence for the same reason. Before the desktop can appear, several things
+must happen in order:
+
+   the kernel creates the process table and starts the scheduler;
+   storage is opened, and the file system is mounted and checked;
+   the user is authenticated;
+   background services (synchronisation, locking, AI indexing and prediction) start in an order that
+   respects their dependencies.
+
+The boot screen is the visible face of this process. It is mandatory, and it must tell the truth: every
+movement of the progress indicator must correspond to real work finishing.
+
+
+  Not acceptable
+  A progress bar driven by setTimeout or setInterval, a fixed-length animation, or a splash screen that
+  hides a desktop that has already loaded. A boot screen that pretends to load is graded as absent.
+
+
+6.2 What the boot screen looks like
+The visual design of your boot screen is yours to choose: minimal, retro BIOS, cinematic, or
+something new. What is fixed is the information it shows and the honesty of its progress.
+
+
+
+
+Lahore Garrison University — Department of Computer Science                                   Page 16 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                                                          Fall 2026
+
+
+
+                                                                                   YourOS Boot Manager
+
+
+                                                                                       Normal boot
+
+
+                              YourOS                                                   Safe mode: no AI services, no autostart
+
+                         version 0.3.0 · build a1f93c2                                 Recovery: fsck · clear cache · reset session
+
+                                                                                       Verbose boot
+                       vfs: mounting / (12,408 inodes)
+                        Service start · 7 of 13 services
+
+
+                       Esc boot menu      V verbose log                            ↑↓ select   Enter boot    auto-boot in 3 s
+
+
+
+Figure 6.1 — Illustrative boot splash (left) and boot menu (right). The splash must show the name, version,
+truthful progress, the current service and how to reach the boot menu and verbose log. “YourOS” stands for your
+team's registered name.
+
+
+6.3 The boot stages
+
+  1                          2                             3                   4                            5                        6
+
+  Power-on (POST)            Bootloader                    Kernel init         Service start                Login                    Session restore
+  Detect Workers,            Boot menu:                    Process table,      Service DAG in               Choose user;             Desktop, windows,
+  IndexedDB, OPFS,           normal · safe mode            scheduler, memory   topological order;           authenticate; cached     pre-fetched apps;
+  crypto; read quota         · recovery                    manager, IPC bus    levels in parallel           verifier if offline      boot time logged
+
+
+
+
+Boot progress = completed weighted work ÷ total work. It is computed from real events, never from a timer.
+
+Figure 6.2 — The six boot stages. Stages 3 and 4 are driven by the service dependency graph in Figure 6.3. Stage 5
+must still work when the device is offline (BOOT-09).
+
+
+  Stage                   What happens                                         Shown on screen                         If it fails
+
+  1. POST                 Detect required browser capabilities;                Logo; “checking                         “Unsupported browser”
+                          check the Service Worker cach

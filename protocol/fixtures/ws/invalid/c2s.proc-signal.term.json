@@ -1,0 +1,15 @@
+{
+  "frame": {
+    "v": 1,
+    "t": "proc.signal",
+    "id": 1,
+    "body": {
+      "target": {
+        "kind": "op",
+        "opId": "0192f0c1-8a3b-7c4d-8e5f-0123456789ab"
+      },
+      "sig": "TERM"
+    }
+  },
+  "issue": "body.sig"
+}

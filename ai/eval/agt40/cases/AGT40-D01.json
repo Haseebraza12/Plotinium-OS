@@ -1,0 +1,67 @@
+{
+  "id": "AGT40-D01",
+  "category": "relative-date",
+  "tags": [],
+  "user": "alice",
+  "cwd": "/home/alice",
+  "now": "2026-10-05T10:00:00+05:00",
+  "tz": "Asia/Karachi",
+  "fixture": "fx-agt@v1",
+  "prompt": "move the files in Downloads I changed yesterday into Documents",
+  "expect": {
+    "kind": "plan",
+    "ops": [
+      ["rename", "/home/alice/Downloads/map.png", "/home/alice/Documents/map.png"],
+      ["rename", "/home/alice/Downloads/receipt.pdf", "/home/alice/Documents/receipt.pdf"]
+    ],
+    "confirm": false
+  },
+  "reference": {
+    "tool": "submit_plan",
+    "input": {
+      "summary": "plan",
+      "steps": [
+        {
+          "id": "s1",
+          "span": "the files in Downloads I changed yesterday",
+          "op": {
+            "call": "find",
+            "args": {
+              "path": "~/Downloads",
+              "name": null,
+              "type": "f",
+              "mtime": {
+                "within": {
+                  "unit": "day",
+                  "count": 1,
+                  "mode": "calendar"
+                },
+                "olderThan": null
+              },
+              "size": null,
+              "maxdepth": null
+            }
+          },
+          "sources": null
+        },
+        {
+          "id": "s2",
+          "span": "move the files in Downloads I changed yesterday into Documents",
+          "op": {
+            "call": "rename",
+            "args": {
+              "from": "~/Downloads",
+              "to": "~/Documents",
+              "noReplace": null
+            }
+          },
+          "sources": {
+            "ref": "s1"
+          }
+        }
+      ],
+      "assumptions": [],
+      "suspicious_content_seen": false
+    }
+  }
+}

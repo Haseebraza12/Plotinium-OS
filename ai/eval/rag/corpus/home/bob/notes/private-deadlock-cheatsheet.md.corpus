@@ -1,0 +1,6 @@
+# Deadlock cheat sheet (mine, for the exam formula sheet)
+
+Coffman: mutual exclusion, hold & wait, no preemption, circular wait. ALL four needed.
+Prevention: break one. Avoidance: Banker's (safe state). Detection: cycle in wait-for graph. Recovery: kill/rollback.
+RAG with single instances: cycle ⇔ deadlock. Multiple instances: cycle is necessary, not sufficient.
+Banker's safety: Work = Avail; find i with Need_i ≤ Work; Work += Alloc_i; repeat.

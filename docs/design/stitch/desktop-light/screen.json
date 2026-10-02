@@ -1,0 +1,15 @@
+{
+  "note": "Record of the Stitch generation for desktop-light. generate_screen_from_text timed out and returned no response body; list_screens returned {} on every poll from about 15:18 to 15:52 UTC and get_project.updateTime stayed at 2026-09-24T15:22:02Z, so there was no screen id for get_screen. reference.html and reference.png in this folder are a hand-built stand-in.",
+  "request": {
+    "projectId": "12849137298552292712",
+    "deviceType": "DESKTOP",
+    "designSystem": "assets/3690503530025860907",
+    "modelId": "GEMINI_3_8_FLASH",
+    "title": "Plotinium Desktop — Light"
+  },
+  "response": null,
+  "polls": {
+    "list_screens": "18 calls, all {}",
+    "last_poll_utc": "2026-09-24T15:52Z"
+  }
+}

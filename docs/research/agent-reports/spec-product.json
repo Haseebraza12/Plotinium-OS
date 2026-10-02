@@ -1,0 +1,59 @@
+{
+ "files": [
+  {
+   "path": "/home/haseeb-raza/Desktop/Plotinium OS/specs/README.md",
+   "summary": "Entry point for the spec set. It contains an index of all 28 planned spec files (path, title, owner, reviewer, phase, status), checked against the existing headers, with 6 files still marked Planned. It also covers: a reading guide; source precedence (spec PDF > C1\u2013C18 > the spec that owns the topic > other specs > research inputs in critic > coherence > examiner > strategy order); a status legend (Planned/Draft/Review/Accepted/Frozen/Superseded); conventions (spec IDs vs registered Plotinium IDs, RFC 2119 marking, test naming, pilot-figure labels, errnos, Mermaid); and the change process. Before the stack freeze a change is a PR. After it, a normative change needs a docs/adr record plus the instructor's written approval (\u00a714.4); editorial changes need only a labelled PR; after the W16 feature freeze only fix: PRs are merged. The README maps specs to code paths and to the 13 root documents of \u00a715.1/\u00a715.2, gives one-line summaries of C1\u2013C18, and defines tests SPX-01..09.",
+   "approx_lines": 329
+  },
+  {
+   "path": "/home/haseeb-raza/Desktop/Plotinium OS/specs/00-product/identity-and-branding.md",
+   "summary": "Resumed and corrected, not restarted. Kept: plutonium origin framed as the element (density, energy, six allotropes), pronunciation, the weapons and hazard wording ban, the Plotinus risk and the viva answer, wordmark rules, the SVG logo brief (geometry re-checked), semver and gate tags, lattice-based codenames with isotope numbering rejected, exact uname -a format and /system/release format (spec p16), the \u00a75.3 checklist, the token pointer, and the Appendix D form. Fixed: the header now has a Title row and the 2026-09-24 date. The alternative name Kernium was replaced by Tabium, because a web search found Kernium S.A. is an existing company; Orbitium, Lattium, Tessium, Ravium and Nimbium were also rejected, with cited sources. All 5 taglines now name all three differentiators, with computed character counts (74\u201389). The identity lint no longer flags 'atomic' in the ACID sense. Wording rules were added for the form's origin line. The ABNF now defines UTF8-nonascii. The cross-spec section records the requests other specs have accepted (PVFS-09, PVFS-02, UnameInfo, DSN-11, build identity in /api/readyz, shell uname) and those still open.",
+   "approx_lines": 546
+  },
+  {
+   "path": "/home/haseeb-raza/Desktop/Plotinium OS/specs/00-product/requirements-traceability.md",
+   "summary": "The master checklist. All 84 spec IDs are covered (77 Must, 5 Should, 2 May), each with keyword, summary, spec \u00a7 and page, our spec, owner/reviewer, first gate, test titles and evidence. Test titles are copied verbatim from the owning specs where they exist; 23 are marked (proposed) where no spec has one yet. Evidence CI codes are derived from the test levels. Further sections: per-gate lists (G0..P5); the \u00a710.1 structures mapped to 08-dsa's S1\u2013S12 and DSA-* IDs; \u00a715.2 documents (PLT-DOC-01..14); \u00a713.1 phase deliverables; all 31 Appendix A lines with the live command, gate, owner and evidence; SYS-02 command owners aligned with the shell spec; \u00a717.1 Demo Day and \u00a717.2 deliverables (PLT-DEL-01..16); the team contract (PLT-TEAM-01..14); the 12 AI-native cells using the AI safety spec's titles; the trust boundary; the \u00a712.6 rules mapped to AIS-*; a registry of every Plotinium ID prefix now in use; 39 prose obligations traced under the nearest ID; the ID grammar; the requirements.csv schema; the evidence path grammar (using the testing spec's project names); the gate-check algorithm; an errno coverage map; consolidated budgets; and TRC-01..08 tests.",
+   "approx_lines": 862
+  },
+  {
+   "path": "/home/haseeb-raza/Desktop/Plotinium OS/specs/00-product/glossary.md",
+   "summary": "All 24 Appendix B terms, each with the spec's meaning and how Plotinium realises it. About 150 Plotinium terms are grouped by subsystem: threads and kernel (executor, run token, special workers, blkio, kernel fencing epoch, kernel-link router, control block, watchdog, declared bound W with symbols matching the kernel spec, 5450 ms), memory (reservation-based admission, 85% watermark, speculative page, write-behind swap, codec), VFS, sync (op and control lanes, cseq, Lamport, credit window, owner feed, fencing token, os_session vs auth_session), server and database (vfsTxn, lockPlan, L0\u2013L4, fault harness), boot (desktop-interactive, warm vs cold), WM, shell, AI (readable set, datamarking, intent binding, plan fingerprint with EAGAIN stale-plan, confirmation token with ENOTTY, cassette, time-bucketed MFU cold start), security, and delivery. It adds a disambiguation table for overloaded words (session, epoch/fence/version, lock, transaction, freeze, and others), a retired-terms table (HLC, ESTALE, per-uid IndexedDB, refresh+1 ms, Kernium, and others), and GLO-01..05. GLO-05 only warns on retired terms in docs and fails only on retired code identifiers, because negated mentions such as 'Lamport, not HLC' are legitimate.",
+   "approx_lines": 425
+  }
+ ],
+ "cross_spec_requests": [
+  "All spec authors: take your owner, reviewer and gate from requirements-traceability \u00a73.3 or send a change. Adopt or replace the 23 '(proposed)' titles, keeping the same ID. Make section references exact once your spec is Accepted (TRC-07). Register any new ID prefix in traceability \u00a73.13. Keep the exact header field names of README \u00a74.1, including 'Must be demonstrable at'.",
+  "07-shell and 02-boot: `reboot` is scheduled for P3, but WM-06 (layout restored after a reboot) is due at P2 and the phase plan's P2 script runs `reboot`. Either move `reboot` to P2 or state that P2 shows WM-06 with a page reload.",
+  "04-vfs: add tests for EISDIR and ENOTEMPTY, and for lock grants and releases being pushed on the control lane (traceability O14).",
+  "01-architecture/syscall-abi: add tests for EBADF and EMFILE, and make sure every C3 errno appears in at least one owning-spec test title. Also decide on the ENOMEM request from memory-and-paging.",
+  "10-ai/agentic-shell: add a test for a model refusal returning EAIREFUSED.",
+  "02-boot: adopt the proposed titles for the Unsupported-browser POST failure (O24) and for a service start that exceeds timeoutMs and returns ETIMEDOUT.",
+  "05-wm/window-manager: adopt `WM-07 help lists every keyboard shortcut` or name the test that covers documented shortcuts.",
+  "06-sync: adopt the proposed O21 title (every outbox op carries opId, cseq and a Lamport timestamp and replays in cseq order).",
+  "10-ai/rag-semantic-search and 10-ai/predictive-prefetch: adopt the proposed O30 title (chunker formats and paragraph boundaries) and O33 title (telemetry event fields).",
+  "09-database: add a test plan section with DB-01 to DB-05 titles (none exists yet; the proposed DB-01 and DB-02 titles are in traceability \u00a73.3), publish the constraint-to-errno mapping, and list the server indexes behind O29.",
+  "12-security (not yet written): own the OFF-03 canary storage scan and the root-has-no-offline-verifier titles, and the rule that examiner credentials are handed over on paper. Confirm the planned owner (R2) and reviewer (R4) in the README index.",
+  "03-kernel/processes-and-scheduling: adopt or name tests for O1 (PCB carries every \u00a79.1 field) and O3 (watchdog terminates a slice over its hard limit). Confirm that `sched bound` plus the starvation test is the Appendix A line A9 demonstration. Confirm whether PRI in ps equals priority + nice.",
+  "03-kernel/memory-and-paging: confirm the A11 and A12 live demonstrations (page-in time printed on restore; MEM-03 byte-identity report).",
+  "08-dsa: confirm the structure-to-ID mapping and first gates in traceability \u00a73.5, and explain in DSA.md why the radix trie keeps the \u00a710.1 bounds.",
+  "10-ai/ai-safety-and-evaluation: traceability uses your AIN, AIS and CPL IDs and titles and does not number \u00a712.6 separately. Own the REPORT formats (rag-eval, agent-eval, agent-safety, pre-eval).",
+  "13-quality: confirm the evidence grammar in traceability \u00a74.3 (it uses your project names and your PERF path). Add every traceability \u00a77 row to budgets.json. Run the README SPX docs checks in the CI lint job next to `pnpm traceability`.",
+  "14-devops (not yet written): attach every project's JUnit XML and the coverage summary to each GitHub Release. Run `tools/traceability.ts --gate <g>` on gate tags and fail the release if it does not pass. Implement the identity release checks (tag equals package.json, clean tree, SOURCE_DATE_EPOCH) and the chore(release) bump.",
+  "15-decisions (not yet written): record the full text of C1\u2013C18 alongside their decision records. Provide docs/adr/0000-template.md with the six \u00a714.1 parts and an 'Instructor approval' line, which SPX-07 checks.",
+  "16-delivery (not yet written): seed issues from docs/requirements.csv with milestones G0, P1, P2, P3, P4, FRZ and P5. Write TEAM_CONTRACT.md to PLT-TEAM-07..12: majority vote with the primary owner breaking ties, escalation to the instructor after 48 h, replies within 24 h, the non-contribution ladder, and a signed moderation acknowledgement. Confirm the secondary-review 'Reviews' column of the Appendix D form, and record the stack-freeze date.",
+  "07-shell: add the `help` banner and `man` footer identity strings (identity \u00a73.10 row 15), and confirm the command-owner table in traceability \u00a73.9."
+ ],
+ "open_questions": [
+  "Exact gate dates on Google Classroom, and the Week-2 lab-spec machine (CPU threads, RAM, Chrome version). All PERF evidence and the run-token count depend on the machine.",
+  "Instructor: will written sign-off be given that recorded cassettes, fixed seeds and 3 live runs satisfy the \u00a712.6 temperature-0 rule? The provisional Claude models reject the temperature parameter (AIS-07, C12).",
+  "Instructor: is Plotinium acceptable despite its resemblance to 'Plotinus', a real historical figure? Registering Tabium as the alternative covers a refusal. A WIPO check for both names (Nice classes 9 and 42) is still to be done; a web search is not a trademark search.",
+  "Instructor: is a fault-injected rm -r shown on the examiner's local compose stack acceptable for the Demo Day line? Fault injection is never enabled on production (C7).",
+  "Instructor: do the hidden AI prompts run on the production URL? The local stack has no model key.",
+  "Instructor: are two browser profiles on one machine acceptable as a fallback for \u00a77.3 'two users on two machines'?",
+  "Instructor: may a hash-only patch tag be deployed on Demo Day to show OFF-05 after the feature freeze?",
+  "Does the instructor want the specs/ folder submitted with the Phase 1 dossier, or only the \u00a715.2 root documents?",
+  "Should the generated traceability matrix go into the technical report as an appendix, given the 30-page ceiling?",
+  "Team, W2: tagline vote. Candidate 1 is recommended ('A local-first web OS that pages its own memory and lets AI act only through the kernel.', 87 characters).",
+  "Scheduling reply to the user's 'how long does it take?': the spec's plan is fixed at 18 weeks in five gated phases (registration W2, architecture defence W4, v0.2.0 W7, v0.3.0 W11, v0.4.0 W14, feature freeze W16, final defence and deployment W17\u201318). Production deployment is itself a Phase 2 deliverable (public URL at W7) and a final deliverable (\u00a717.2), so deployment starts early rather than at the end."
+ ]
+}

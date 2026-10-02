@@ -1,0 +1,1 @@
+onconnect = (e) => { const p = e.ports[0]; p.postMessage({ crossOriginIsolated: self.crossOriginIsolated, hasWorkerCtor: typeof Worker !== 'undefined', hasSyncHandle: typeof FileSystemFileHandle !== 'undefined' && 'createSyncAccessHandle' in FileSystemFileHandle.prototype, hasSAB: typeof SharedArrayBuffer !== 'undefined', hasLocks: !!(self.navigator && navigator.locks) }); };

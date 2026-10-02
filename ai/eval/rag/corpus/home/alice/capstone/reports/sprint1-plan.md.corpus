@@ -1,0 +1,15 @@
+# Sprint 1 plan (4 Sep – 18 Sep)
+
+Goal: every role has something that runs end to end, however small.
+
+| Owner | Deliverable | Done when |
+|---|---|---|
+| Dan | kernel worker, process table, RR scheduler | two dummy processes alternate, visible in a debug `ps` |
+| Carol | inode/dentry stores | `mkdir`, `ls`, `cat` work on a test page |
+| Bob | desktop mock | dock + one draggable window at 60 fps |
+| Alice | embedding pilot | Recall@5 and MRR for two models on 60 docs |
+| Esha | CI | lint, typecheck, unit tests on every PR |
+
+Out of scope for this sprint: login, networking, persistence across reloads.
+
+Demo at the 18 Sep sync.

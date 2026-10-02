@@ -1,0 +1,97 @@
+{
+ "files_changed": [
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/mm/params.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/mm/types.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/mm/errors.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/mm/codec.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/mm/codec.vectors.json",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/mm/calibration.json",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/mm/accounting.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/mm/reserve.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/mm/lru.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/mm/reclaim.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/mm/swap.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/mm/remote.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/mm/writebehind.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/mm/thrash.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/mm/stats.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/mm/mm.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/mm/index.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/mm/README.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/mm/fixtures/doubles.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/mm/codec.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/mm/reserve.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/mm/lru.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/mm/thrash.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/mm/accounting.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/mm/swap.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/mm/remote.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/mm/mm.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/blkio/protocol.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/blkio/opfs.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/blkio/idb.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/blkio/server.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/blkio/client.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/blkio/compress.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/blkio/blkio.worker.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/blkio/index.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/blkio/README.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/blkio/devices.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/blkio/fixtures/fakes.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/blkio/fixtures/contract.ts"
+ ],
+ "verification": [
+  {
+   "command": "pnpm exec tsc -p kernel/tsconfig.json --noEmit",
+   "outcome": "0 errors in the whole kernel package (my paths and the other agents' kernel files)"
+  },
+  {
+   "command": "pnpm exec vitest run --project kernel src/core/mm/ src/blkio/",
+   "outcome": "9 files, 139 tests passed (MEM-01, MEM-02, MEM-03, MEM-04, MEM-05 wire, MEM-06, MEM-07, WM-05, KMM-08, KMM-12, KMM-13, thrashing guard). Stable across 3 repeated runs."
+  },
+  {
+   "command": "pnpm exec vitest run --project kernel",
+   "outcome": "33 files, 392 tests passed (includes other agents' kernel suites)"
+  },
+  {
+   "command": "pnpm exec vitest run --project kernel src/core/mm/ src/blkio/ --coverage --coverage.include='src/core/mm/**/*.ts' --coverage.include='src/blkio/**/*.ts'",
+   "outcome": "96.84% lines, 94.47% statements, 87.05% branches, 95.41% functions (mm.ts 94.5% lines; blkio.worker.ts 68% because browserEnv() needs a real browser). The fixtures folders are excluded by the repo config."
+  },
+  {
+   "command": "MEM-06 2x-budget simulation (mm.test.ts, 8 procs x 2 MiB against an 8 MiB budget, focused and pinned-service procs)",
+   "outcome": "Logged 'max over budget 0 ms, peak committed 6.1 MiB of 8.0 MiB'. overBudgetEpisodes = 0: committed never exceeded the budget at any change, not only at sample points. The focused and pinned processes were never evicted, and data bytes were verified after paging."
+  },
+  {
+   "command": "pnpm exec eslint kernel/src/core/mm kernel/src/blkio --max-warnings 0",
+   "outcome": "clean"
+  },
+  {
+   "command": "pnpm exec prettier --check kernel/src/core/mm kernel/src/blkio",
+   "outcome": "clean, after running prettier --write on my paths only"
+  }
+ ],
+ "problems": [
+  "WATERMARK CONFLICT: the assignment text said high 95% / low 85%, but the normative spec says 85% / 75% in three places: memory-and-paging.md \u00a73.1 and KMM-05 (test title 'MEM-06 background reclaim starts above 85% and stops at 75%'), syscall-abi.md \u00a74.4.5, and kernel/src/core/README.md. I implemented the spec values; they live in params.ts as highWm/lowWm and can be overridden.",
+  "WIRE-CONTRACT CONFLICT for /api/swap: memory-and-paging.md \u00a74.5 specifies headers Plt-Sha256 (over the uncompressed BODY) and Plt-Size, plus a reply of 201 {sha256,size,gen}. backend-api.md \u00a73.11, which owns the server side, specifies X-Plotinium-Checksum (over the uncompressed bytes uploaded), X-Plotinium-Raw-Size and X-Plotinium-Encoding, plus a reply of 200 {stored,checksum}. I followed backend-api.md: the checksum covers the uncompressed page file (header + body), because that is what a streaming server tee can verify. I also send ?gen= and X-Plotinium-Gen. The client accepts 200 or 201 and either `checksum` or `sha256` in the reply. Header names are one constant, SWAP_HEADERS in remote.ts. The page body is still verified against the PTE hash on every page-in.",
+  "PROTOCOL SHAPE MISMATCH: protocol/src/sys/mem.ts has MemAllocArgs {bytes, key?, kind?: 'state'|'buffer'} \u2192 {segId, bytes}. The memory spec has {kind: 'logical'|'chunk'|'segment', size, label} \u2192 {pageIds}. The kernel API (MemoryManager.alloc) follows the memory spec, so the dispatcher handler must map between the two. Details are in integration_notes.",
+  "dsa/lru and dsa/heap are IMPLEMENTED=false (C16). MemoryManager's default factories use LruCache and BinaryHeap, which throw NotImplementedError, so the memory manager cannot run in production until R1 implements them. All tests inject test-only doubles from kernel/src/core/mm/fixtures/doubles.ts. lru.test.ts also runs against the real LruCache automatically once the flag flips.",
+  "The dsa/lru interface has no sentinel segments, although memory-and-paging.md \u00a73.5.1 describes them. The pager therefore uses three LRU instances (HOT, COLD, SPEC); every operation is still a constant number of O(1) dsa/lru calls. Speculative pages use putAtLru, as DSA-LRU-02 requires.",
+  "Real bugs found and fixed while testing: (1) a lost wake-up in the reclaim loop: a synchronous drop of a kernel-held page freed memory before it was counted as 'freeing', and the restart request arrived while the loop was still marked running; (2) charge leaks when a process exited during a page-in, prefetch or fault await; (3) the IndexedDB back end left an unverified record behind after a failed write. For (3), note that an IndexedDB put replaces the previous generation, so no older copy survives a failed write. That is safe because only dirty pages are rewritten, and their old local copy is already marked 'stale'.",
+  "Design decision beyond the spec: reclaim does not suspend a process whose own mem reservation is currently blocked. Its state page is deferred to the end of the reclaim pass, because re-issuing a pending mem.alloc after a page-in is not modelled. An explicit mem.pageOut of such a process answers EBUSY.",
+  "Browser APIs (OPFS sync access handles, IndexedDB, CompressionStream in a real worker) were exercised only through in-memory fakes that implement the same structural interfaces. The real-browser MEM-03/MEM-05 tests, the MEM-04 new-profile end-to-end test and the calibration job still need Playwright on the lab machine.",
+  "mm.ts is large (about 2,070 lines after formatting), because the page-I/O orchestration shares a lot of private state. It could later be split into a pager module and a reclaim module.",
+  "The user asked for multiple agents. This subagent has no tool to spawn agents, so this assignment was done by one agent inside the parallel 'core' workflow."
+ ],
+ "integration_notes": "HOST WIRING (kernel/src/host, not my path):\n(1) Spawn blkio as a nested module worker: new Worker(new URL('../blkio/blkio.worker.ts', import.meta.url), {type:'module'}). Then `const dev = await BlkioClient.connect(worker)`; the Worker satisfies BlkioEndpoint. Log dev.fallback to bootlog when it is set.\n(2) Build the remote tier: `const remote = new HttpRemoteSwap({ fetch: (u, i) => fetch(u, i), gzip: streamGzip, digestHex: subtleSha256Hex })`, importing from '@plotinium/kernel' blkio and core/mm.\n(3) `const mm = new MemoryManager({ clock: {now: () => performance.now(), schedule: (ms, fn) => { const t = setTimeout(fn, ms); return () => clearTimeout(t); }}, executor: <MemExecutorPort adapter over the \u00a74.3 frames>, device: dev, remote, backing: <ai_vecseg reader>, hooks: {setWaiting \u2192 PCB.waitingOn, suspended/resumed \u2192 PROC-06 transitions, restoring/restored \u2192 compositor 'restoring {wid,doneBytes,totalBytes}' messages (map pid\u2192wids), event \u2192 event bus mem.fault/mem.evict/mem.pressure, klog \u2192 klog ring, notice \u2192 desktop notification}, kernelStructures: () => [{name:'tree',entries,bytesPerEntry}, ...], localCap: dev.capBytes, calibration: loadCalibration(calibrationJson).constants })`.\n(4) Call mm.tick() every 1 s.\n(5) At the mm service start (boot stage 4), run mm.sweep(keep) with the (uid, osSession) pairs referenced by os_sessions layouts.\n\nKERNEL LIFECYCLE CALLS:\n- spawn: mm.register(pid, {uid, app, label, osSession, checkpointable, special, window, softLimit, pinnedService: manifest.pinned}) and then await mm.admit(pid, {initialStateBytes, heavy: manifest.heavy, prio: effPrio}). admit rejects EAGAIN 'thrashing' for heavy spawns while the thrashing guard is on.\n- reap or kill: mm.exit(pid).\n- Every slice-end frame: mm.onSlice(pid, touched, dirtied).\n- At yield points: `const w = mm.measureState(pid, encodedBytes); if (w) block on it`.\n- Compositor events: minimised \u2192 mm.setMinimised(pid, true); restored \u2192 await mm.restoreWindow(pid) BEFORE focus is delivered; focused \u2192 mm.setFocus([pid, ...foreground TTY group]).\n- Non-pre-emptive kernel sections: mm.setNpSection(pid, on).\n- Non-restartable call in flight: mm.setNonRestartable(pid, on).\n- ai.search focus: mm.setSearchPin(pid, pageIds, on).\n- ai.embed: register with special:true and checkpointable:false, `await mm.declareWorkerPage(pid, measuredBytes)` BEFORE spawning the worker, and implement terminateWorker/respawnWorker on the executor port.\n- syncd LIVE state: mm.setOnline(live, uidsTheAuthSessionCanActAs).\n- Checkpoints: mm.checkpoint(pid) for visibilitychange\u2192hidden, for BOOT-12 before SIGTERM, and for idle checkpoints. After each window-process checkpoint, write mm.pageMap(pid) into os_sessions.window_layout[].proc.\n- Restore in a new session: mm.register(newPid, ...), then mm.adoptPageMap(newPid, entry.proc), then `await mm.pageIn(newPid, {from:'session'})`.\n\nSYSCALL DISPATCHER (mem.* handlers):\n- mem.alloc \u2192 mm.alloc(pid, {kind, size, label, prio}). Map protocol kind 'buffer' \u2192 'chunk', and the default/'state' \u2192 'logical'. The protocol returns {segId, bytes} but the kernel returns {pageIds}: either change the protocol (below) or keep a segId \u2192 pageIds map in the handler.\n- mem.declare \u2192 mm.declare(pid, key, bytes). mem.free {key} \u2192 mm.undeclare(pid, key); mem.free {segId} \u2192 mm.free(pid, pageIds).\n- mem.stat \u2192 mm.memStat({pid, callerUid}), which returns the protocol MemStat shape.\n- mem.prefetch {pid, pages} \u2192 mm.prefetch(pid, pages). mem.hint \u2192 mm.setHint(app, ttlMs).\n- Errors are MmError {errno, reason}; the reasons used are 'exceeds-budget', 'mem-pressure', 'thrashing', 'no-free-memory', 'checksum', 'storage', 'killed', 'unknown-segment' and 'codec'.\n- Sysctl keys: mm.budget \u2192 mm.setBudget(bytes) (range 64 MiB\u20262 GiB); mm.softLimit \u2192 mm.setSoftLimit(bytes); mm.swap.tier \u2192 mm.setTier('auto'|'local'|'remote').\n\nREQUESTED PROTOCOL CHANGES (TODO(protocol), not made by me):\n(a) Register the calls mem.fault, mem.setBacking, mem.undeclare, mem.pageOut, mem.pageIn and mem.swapctl (memory-and-paging \u00a74.2).\n(b) Align MemAllocArgs/Ret with the page model: kind 'logical'|'chunk'|'segment', size, label \u2192 pageIds.\n(c) Add protocol/src/host/executor-mem.ts with MemKernelToExec and MemExecToKernel (\u00a74.3); the kernel side is MemExecutorPort, ExecPage and CheckpointResult in mm.ts.\n(d) Add protocol/src/session/layout.ts WindowLayoutEntry.proc (\u00a73.12.2), mirrored by ProcPageMap and PageMapEntry in mm.ts.\n(e) Move the KlogMem record type from core/mm/types.ts to the protocol or klog types.\n(f) Register the EAGAIN reason 'mem-pressure' and the EINVAL reason 'codec' in REGISTERED_REASONS, and ENOMEM if it is approved.\n(g) Add result shapes so apps/coreutils can format free, vmstat -p and pmap: FreeReport, VmCounters, VmstatProcRow and PmapReport in core/mm/stats.ts. The current MemStat has no page rows and no cumulative paging counters.\n\nKERNEL PACKAGE ENTRY (kernel/src/index.ts, owned by another agent): please add `export * from './core/mm/index.ts'` and `export * from './blkio/index.ts'`, or a './mm' subpath export in kernel/package.json.\n\nSERVER (/api/swap): the client sends PUT /api/swap/{osSession}/{pid}/{pageId}?gen=g with a gzip body and the headers X-Plotinium-Checksum (hex SHA-256 of the UNCOMPRESSED page file, header + body), X-Plotinium-Raw-Size, X-Plotinium-Encoding: gzip and X-Plotinium-Gen. It expects 200 or 201 with {checksum} (or {sha256}) equal to what it sent, 429 with {retryAfterMs} or a Retry-After header, and 401 to pause. GET on the same path must return the gzip stream with X-Plotinium-Raw-Size and X-Plotinium-Encoding; 403 maps to EACCES and 404 to ENOENT. DELETE applies to a page or a session. The header names are one constant, SWAP_HEADERS in core/mm/remote.ts, if the server chooses differently.\n\nVITEST: kernel/src/core/mm/fixtures and kernel/src/blkio/fixtures are test support; the repo coverage config already excludes **/fixtures/**. The 2x stress test has a 60 s timeout and the thrashing test a 30 s timeout. Every other test runs in under 1 s. No config change is needed.",
+ "todos_for_team": [
+  "R1: implement dsa/lru (S5) and dsa/heap (S3) and flip IMPLEMENTED. The memory manager's default LRU and wait queue depend on them; kernel/src/core/mm/lru.test.ts then also runs against the real LruCache.",
+  "R1/R5: Playwright browser tests on the lab machine: MEM-03 byte-identity on real OPFS and IndexedDB (both IndexedDB backends), MEM-05 5 MB incompressible page-in p95 (local \u2264 300 ms, remote \u2264 2 s with swapctl tier remote), MEM-04 new-profile restore, MEM-06 memhog 2x with the Playwright crash event, and the nightly calibration job that writes kernel/src/core/mm/calibration.json (tests/performance/mem/calibrate.spec.ts).",
+  "Kernel host owner: implement the MemExecutorPort adapter in the executor runtime (the \u00a74.3 pageOut/checkpoint/pageIn/release frames). Executors should use encodeStateAsync, and encodeRaw with a crypto.subtle hash, so each buffer is hashed once. Then wire the MemoryManager as described in integration_notes.",
+  "apps/coreutils owner: free, vmstat, pmap, swapctl and memhog, once the protocol carries FreeReport, VmCounters (vmstatLine), VmstatProcRow and PmapReport. Column definitions follow memory-and-paging.md \u00a73.17.",
+  "Server owner (R1's second subsystem): implement /api/swap routes and GC to the contract in integration_notes, then resolve the header-name and checksum-scope conflict between memory-and-paging.md \u00a74.5 and backend-api.md \u00a73.11 in the specs.",
+  "Spec owners: reconcile the reclaim watermarks. The assignment said 95/85; the specs say 85/75, and that is what is implemented.",
+  "MEM-08 mmap/msync/munmap (MAY) is not built; per \u00a73.18 it is built only if the P3 gate is green by Week 10.",
+  "Consider splitting kernel/src/core/mm/mm.ts (about 2,070 lines) into pager and reclaim modules before code review."
+ ],
+ "deps_requested": []
+}

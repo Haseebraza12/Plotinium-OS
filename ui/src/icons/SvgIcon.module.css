@@ -1,0 +1,17 @@
+/*
+ * Theme colours for the stored icon trees. The trees carry hex presentation attributes (so a
+ * standalone SVG file still renders) plus these global classes; an author rule beats a
+ * presentation attribute, so inline icons follow the --pl-logo-* tokens in both themes without
+ * any `style` attribute (the production CSP has no 'unsafe-inline'). The mark is drawn with
+ * fills only: stem and shell take the orbit colour, then the nucleus and the electron.
+ */
+.icon :global(.pl-logo-stem),
+.icon :global(.pl-logo-shell) {
+  fill: var(--pl-logo-orbit-a);
+}
+.icon :global(.pl-logo-core) {
+  fill: var(--pl-logo-core);
+}
+.icon :global(.pl-logo-electron) {
+  fill: var(--pl-logo-electron);
+}

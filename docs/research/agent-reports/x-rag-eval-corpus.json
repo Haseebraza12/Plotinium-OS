@@ -1,0 +1,62 @@
+{
+ "files_changed": [
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/eval/rag/README.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/eval/rag/REPORT.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/eval/rag/baseline-bm25.json",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/eval/rag/queries.json",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/eval/rag/permissions.json",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/eval/rag/corpus/MANIFEST.jsonl",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/eval/rag/corpus/home/** (223 documents stored as <vfs path>.corpus: alice 207, bob 9, carol 7)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/eval/rag/schema.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/eval/rag/host.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/eval/rag/corpus.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/eval/rag/embedders.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/eval/rag/pipeline.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/eval/rag/metrics.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/eval/rag/evaluate.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/eval/rag/report.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/eval/rag/run.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/eval/rag/metrics.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/eval/rag/corpus.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ai/eval/rag/pipeline.test.ts"
+ ],
+ "verification": [
+  {
+   "command": "node_modules/.bin/tsc -p ai/tsconfig.json --noEmit",
+   "outcome": "exit 0, no errors"
+  },
+  {
+   "command": "node_modules/.bin/tsc -p tsconfig.json --noEmit (root program, Node types in scope)",
+   "outcome": "0 errors in ai/eval/rag. The 2 errors in the program are in web/src/main.ts (lines 34 and 289), which belongs to another agent."
+  },
+  {
+   "command": "node_modules/.bin/eslint ai/eval/rag --max-warnings 0",
+   "outcome": "clean after fixing one switch-exhaustiveness error in run.ts"
+  },
+  {
+   "command": "node_modules/.bin/prettier --check ai/eval/rag",
+   "outcome": "All matched files use Prettier code style. The generated REPORT.md tables are padded the way Prettier pads them; .corpus and .jsonl files are skipped because Prettier has no parser for them."
+  },
+  {
+   "command": "node_modules/.bin/vitest run --project ai ai/eval/rag/",
+   "outcome": "3 files, 29 passed, 1 todo (the AIS-04 non-author rule)"
+  },
+  {
+   "command": "node_modules/.bin/vitest run --project ai",
+   "outcome": "14 files, 220 passed, 1 todo. The .corpus suffix keeps the corpus copy of lru-cache.test.ts out of the test run."
+  },
+  {
+   "command": "node ai/eval/rag/run.ts --report ai/eval/rag/REPORT.md --json ai/eval/rag/baseline-bm25.json --version 0.1.0-dev --machine dev-workstation --date 2026-09-26",
+   "outcome": "BM25-only baseline: 223 docs, 357 chunks, 40 queries run as alice. Recall@5 0.525 (95% CI 0.375-0.675), MRR 0.354, nDCG@10 0.412. By kind: keyword 1.00, code 1.00, question 0.467, paraphrase 0.353. 15 of 40 queries have no relevant file in the top 10. RAG-04 fails at the baseline, as expected. RAG-03 PASS: 0 leaks for alice, bob and carol (53 searches each). Runtime 0.4 s."
+  }
+ ],
+ "integration_notes": "1. Root package.json (not my path): add \"eval:rag\": \"node ai/eval/rag/run.ts\" (spec section 4.4). Once recorded vectors exist, CI should run it with --embedder recorded --model-key K --vectors ai/eval/embeddings/<modelKey>/vectors.jsonl --gate --json docs/evidence/ai-eval/<version>/rag.json --report docs/evidence/ai-eval/<version>/rag.md. Exit codes: 1 on any leak (always) or on a failed gate with --gate; 2 on bad input.\n2. The tests currently run in the existing 'ai' Vitest project (about 3 s). When the C14 'ai-eval' project lands, it can pick up ai/eval/rag/*.test.ts.\n3. ai/eval/README.md (outside my path): add a row for rag/ to its contents table, pointing at ai/eval/rag/README.md.\n4. Spec wording in ai-safety-and-evaluation.md section 3.6 differs from what was built:\n   - The assignment named queries.json; the spec says queries.jsonl.\n   - Each query record adds 'partial' (grade 1) next to 'relevant' (grade 2).\n   - permissions.json holds users, groups, directory modes and 13 leak probes.\n   - Corpus files are stored as '<vfs path>.corpus'. Without the suffix, tsc, ESLint and Vitest would treat corpus .ts files as project code, and Prettier would reformat the notes, changing their bytes and line numbers.\n   - The manifest is corpus/MANIFEST.jsonl, as the spec says, with size and SHA-256 per document, checked on every load.\n5. Optional: add ai/eval/rag/corpus/ to .prettierignore. It is not required, because the suffix already keeps Prettier away.\n6. Phase 4 recorder: the recorded-vector format is defined in README.md.\n   - One line per model input in ai/eval/embeddings/<modelKey>/vectors.jsonl: {sha256: hex SHA-256 of the exact UTF-8 model input, vector: 384 floats, unit length}.\n   - The model input must come from embedInput('doc', header, text) for chunks and embedInput('query', '', q) for queries (ai/src/embed/embedder.ts), with chunker-v1.\n   - When the real WordPiece tokenizer replaces approxWordPiece, chunk boundaries move and the vectors must be re-recorded.\n7. The harness injects BoundedTopKHeap from '@plotinium/dsa/heap' (IMPLEMENTED = true) as the scan's top-K. The dsa agents must keep that export stable.\n8. host.ts reaches Node's fs, path and url through process.getBuiltinModule, so ai/tsconfig.json can keep types: [] and needs no change or exclude.\n9. AI.md: the evaluation section can cite REPORT.md or baseline-bm25.json as the dated keyword baseline, and must say the semantic run is pending.\n10. Traceability will see an it.todo titled 'AIS-04 each query is written by a member who did not write its target documents (needs the human query pass before the Week-11 claim)'. This is an open obligation, not coverage.",
+ "problems": [
+  "The AIS-04 rule is not met yet. The spec requires queries written by members who did not write the target documents, but the same author (this agent) drafted the corpus, the queries and the grades, and nobody has reviewed the grades. The manifest and queries.json record this honestly (author: agent:rag-eval-corpus), and corpus.test.ts carries an it.todo. A team member must review or rewrite the queries, without reading the targets first, before the Week-11 claim.",
+  "Methodology disclosure: the queries were revised after seeing a baseline. The first run scored Recall@5 0.775 because many 'paraphrase' and 'question' queries reused words from their target or its file name (BM25 also scores file names). I rewrote 15 of them, choosing the new wording by lexical overlap against file name plus body with stop words removed, not by BM25 rank. After that the baseline is 0.525. The tests now keep average paraphrase overlap below 0.30.",
+  "There are no semantic numbers yet. The model is not installed and no recorded vectors exist, so the RAG-04 gate fails at the BM25 baseline by design. Nobody knows yet whether leaf-ir reaches 0.80 on this set. Some paraphrases are deliberately hard and may be hard for small models too: RQ17 'pots \u2026 a fortnight without a drink', RQ06 'grandmother \u2026 lentil soup' against a note titled \"Nani's masoor daal\", RQ38 'short test \u2026 silly errors'. Recheck them after the Phase 4 run.",
+  "Chunking uses the approximate WordPiece counter from ai/src. The Phase 4 chunk boundaries, and so the per-query line citations, may shift slightly once the real tokenizer is injected.",
+  "The negative control for the vector paths uses the lexical hashing stand-in and checks up to the semsearch maximum of -k 50, not only the top 10. On the hybrid path, 2 of the 23 forbidden (probe, user) pairs rank 13 and 20 for alice without the filter, because her own notes crowd them out. The keyword path meets the stricter top-10 check for every pair.",
+  "The root typecheck (tsc -p tsconfig.json) currently fails with 2 errors in web/src/main.ts, another agent's work in progress. It is unrelated to ai/eval/rag."
+ ]
+}

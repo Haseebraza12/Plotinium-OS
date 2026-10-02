@@ -1,0 +1,18 @@
+# Scheduling practice problems
+
+| Job | Arrival | Burst |
+|---|---|---|
+| P1 | 0 | 8 |
+| P2 | 1 | 4 |
+| P3 | 2 | 9 |
+| P4 | 3 | 5 |
+
+**FCFS:** P1 0–8, P2 8–12, P3 12–21, P4 21–26. Waiting: 0, 7, 10, 18 → average 8.75.
+
+**SRTF:** P1 0–1, P2 1–5, P4 5–10, P1 10–17, P3 17–26. Waiting: 9, 0, 15, 2 → average 6.5.
+
+**RR q = 4:** P1 0–4, P2 4–8, P3 8–12, P4 12–16, P1 16–20, P3 20–24, P4 24–25, P3 25–26. Average waiting 11.75 (I got 11.5 at first because I forgot P4's last unit).
+
+Takeaways: SRTF minimises average waiting time but needs to know bursts; RR has worse average waiting but much better response time.
+
+Convergence check: turnaround = completion − arrival; waiting = turnaround − burst. Always verify the sums.

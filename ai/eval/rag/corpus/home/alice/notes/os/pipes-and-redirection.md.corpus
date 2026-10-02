@@ -1,0 +1,25 @@
+# Pipes and redirection
+
+## How `ls | wc -l` actually works
+
+1. The shell calls `pipe(fd)`; it gets a read end `fd[0]` and a write end `fd[1]`, a small kernel buffer (64 KiB on Linux).
+2. It forks twice.
+3. In the first child: `dup2(fd[1], STDOUT_FILENO)`, close both originals, `execvp("ls", ...)`.
+4. In the second child: `dup2(fd[0], STDIN_FILENO)`, close both originals, `execvp("wc", ...)`.
+5. The parent closes both ends and waits for both children.
+
+`ls` has no idea it is writing into another program; it just writes to descriptor 1. That uniformity is the whole trick.
+
+## Things that go wrong
+
+- Forgetting to close the write end in the parent: `wc` never sees end-of-file and hangs forever.
+- A writer to a pipe with no readers gets SIGPIPE.
+- A full buffer blocks the writer, which is how backpressure happens for free.
+
+## Redirection
+
+`cmd > out.txt` is `open("out.txt", O_WRONLY|O_CREAT|O_TRUNC)` then `dup2(fd, 1)` in the child before exec. `2>&1` is `dup2(1, 2)`. Order matters: `cmd > f 2>&1` sends both to f, `cmd 2>&1 > f` does not.
+
+## Named pipes
+
+`mkfifo` creates a FIFO that unrelated processes can open by path.

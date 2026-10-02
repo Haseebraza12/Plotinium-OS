@@ -1,0 +1,121 @@
+# Plotinium pnpm workspace (C14). pnpm 12 reads its settings from THIS file, not from .npmrc.
+#
+# Rules (docs/research/strategy/engineering_process.md §10):
+# - Every version is pinned exactly and lives in the catalog below; packages depend on "catalog:".
+# - Workspace packages depend on each other with "workspace:*".
+# - A new runtime dependency needs a PR note (problem, alternatives, size, licence), a
+#   THIRD_PARTY.md row and approval from R5. After the W4 freeze it also needs a decision record.
+# - No package may stand in for a mandatory DSA structure (spec §10.2, C16).
+# - docs/evidence/pilot is NOT a workspace package: it is never installed, built or imported.
+
+packages:
+  - protocol
+  - dsa
+  - kernel
+  - vfs
+  - services
+  - wm
+  - apps
+  - ui
+  - ai
+  - server
+  - db
+  - web
+
+# Exact pins, verified with `npm view <pkg> version` on 2026-09-24.
+# Versions named in the frozen stack (docs/research/coherence.json final_stack) are used as recorded.
+catalog:
+  # Shared schemas (protocol/, server/)
+  valibot: 1.5.0
+  '@valibot/to-json-schema': 1.8.0
+
+  # Client storage (vfs/)
+  idb: 8.0.3
+
+  # UI (wm/, apps/, web/)
+  solid-js: 1.9.15
+  lucide-solid: 1.47.0
+  '@xterm/xterm': 6.0.0
+  '@xterm/addon-fit': 0.11.0
+  '@codemirror/view': 6.43.13
+  '@codemirror/state': 6.7.6
+  '@codemirror/commands': 6.11.1
+  '@codemirror/language': 6.12.4
+  '@codemirror/lang-markdown': 6.5.2
+  '@codemirror/lang-javascript': 6.2.5
+  '@codemirror/search': 6.7.2
+  # Self-hosted fonts (OFL-1.1) for the macOS-inspired UI (specs/05-wm/visual-language-macos.md)
+  '@fontsource-variable/inter': 5.3.0
+  '@fontsource/jetbrains-mono': 5.3.0
+  # Font candidates under evaluation (specs/05-wm/visual-language-macos.md; unused ones are removed after the decision)
+  '@fontsource-variable/google-sans-flex': 5.3.1
+  '@fontsource-variable/geist': 5.3.0
+  '@fontsource-variable/geist-mono': 5.3.0
+  '@fontsource-variable/google-sans-code': 5.3.1
+  '@fontsource-variable/jetbrains-mono': 5.3.0
+  '@fontsource-variable/inter-tight': 5.3.0
+
+  # In-browser embeddings for semantic search (ai/, RAG subsystem; Apache-2.0)
+  '@huggingface/transformers': 4.3.0
+
+  # Build and Service Worker (web/)
+  vite: 8.3.0
+  vite-plugin-solid: 2.11.14
+  vite-plugin-pwa: 1.3.0
+  workbox-precaching: 7.4.1
+  workbox-routing: 7.4.1
+  workbox-window: 7.4.1
+
+  # Server (server/)
+  fastify: 5.12.5
+  '@fastify/websocket': 11.3.1
+  '@fastify/cookie': 11.1.2
+  ws: 8.21.3
+  pg: 8.23.0
+  kysely: 0.29.6
+  pgvector: 0.3.0
+  pino: 10.3.1
+  prom-client: 15.1.3
+  '@anthropic-ai/sdk': 0.128.0
+  dbmate: 2.36.0
+  kysely-codegen: 0.20.0
+  '@types/pg': 8.23.1
+  '@types/ws': 8.18.1
+
+  # Tooling (root)
+  # 'typescript' is the TS 6 API used by typescript-eslint and editors (tsc6 binary);
+  # '@typescript/native' is TypeScript 7 (tsc binary), the type-check gate (C14).
+  typescript: npm:@typescript/typescript6@6.0.2
+  '@typescript/native': npm:typescript@7.0.2
+  '@types/node': 24.13.6
+  '@types/estree': 1.0.9
+  eslint: 10.11.0
+  '@eslint/js': 10.0.1
+  typescript-eslint: 8.70.1
+  eslint-plugin-solid: 0.18.0
+  globals: 17.12.0
+  prettier: 3.9.9
+  vitest: 5.0.1
+  '@vitest/coverage-v8': 5.0.1
+  '@playwright/test': 1.63.0
+  fast-check: 4.10.2
+  # Component tests (ui/) and accessibility checks (tests/a11y)
+  '@solidjs/testing-library': 0.8.10
+  happy-dom: 20.14.5
+  '@axe-core/playwright': 4.13.0
+
+# Install behaviour
+saveExact: true
+savePrefix: ''
+engineStrict: true
+strictPeerDependencies: true
+# No hoisting of transitive dependencies: a package can only import what it declares.
+hoist: false
+
+# Dependency build scripts (pnpm 12 blocks them unless approved here). Both are explicitly NOT
+# approved: the browser embeds with onnxruntime-web, onnxruntime-node (a transitive dep of
+# @huggingface/transformers) is only for optional Node-side evaluation, and protobufjs's script is
+# a version notice.
+allowBuilds:
+  onnxruntime-node: false
+  protobufjs: false

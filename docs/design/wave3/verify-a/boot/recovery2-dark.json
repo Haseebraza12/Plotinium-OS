@@ -1,0 +1,17 @@
+[
+  {
+    "name": "UI-060 fsck: no false \"report follows\"; answer or explicit no-answer",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "CSP violations (recovery2)",
+    "ok": true,
+    "detail": "[]"
+  },
+  {
+    "name": "console/page errors",
+    "ok": true,
+    "detail": ""
+  }
+]

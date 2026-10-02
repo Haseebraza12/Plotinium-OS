@@ -1,0 +1,11 @@
+# Stack decision (one-page summary for the W4 defence)
+
+- **Language:** TypeScript everywhere (strict), Node 24 on the server with type stripping.
+- **UI:** SolidJS for app views; the compositor and boot screen are framework-free.
+- **Storage:** IndexedDB in the browser, PostgreSQL 18 with pgvector on the server.
+- **Build:** Vite, pnpm workspaces.
+- **Tests:** Vitest (unit, browser), Playwright (e2e), fast-check (properties).
+- **AI:** a small embedding model running in a worker with ONNX Runtime Web; an LLM through our own server gateway, never with a key in the browser.
+- **Deployment:** Docker Compose; Caddy for TLS; one small VPS.
+
+Why not React: we wanted fine-grained reactivity without a virtual DOM for the window manager hot paths, and the bundle budget is tight.

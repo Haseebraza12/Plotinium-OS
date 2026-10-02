@@ -1,0 +1,29 @@
+// Whole-repository type check (`pnpm typecheck`, first step). One program over every package,
+// tools/, tests/ and the root config files, with the union of all environments.
+// The next steps re-check tools/ and tests/ and then (`pnpm -r run typecheck`) each package
+// against its OWN tsconfig.json, which is where the per-package lib and types limits
+// (for example, no Node types in the browser packages, no DOM in server/) bite.
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2024", "DOM", "DOM.Iterable", "WebWorker"],
+    "types": ["node"],
+    "jsx": "preserve",
+    "jsxImportSource": "solid-js",
+    // The ESLint rules are JavaScript; type-check them in tools/tsconfig.json (checkJs), and let
+    // this program read their JSDoc types when TypeScript code imports them.
+    "allowJs": true,
+    "checkJs": false
+  },
+  "include": ["*.ts", "**/*.ts", "**/*.tsx"],
+  "exclude": [
+    "**/node_modules",
+    "**/dist",
+    "**/coverage",
+    "docs",
+    "specs",
+    "test-results",
+    "playwright-report",
+    "tools/eslint-rules/fixtures"
+  ]
+}

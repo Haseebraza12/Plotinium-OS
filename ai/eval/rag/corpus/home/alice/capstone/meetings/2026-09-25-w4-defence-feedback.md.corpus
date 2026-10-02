@@ -1,0 +1,14 @@
+# Week-4 defence — what the panel said
+
+We presented the stack and the module diagram for 15 minutes, then questions for 20.
+
+Comments we need to act on:
+1. "Show me where the permission check happens for search, and prove it happens before ranking." → add a sequence diagram and a leak test suite with many users and modes.
+2. "Your memory accounting ignores WebAssembly." → declare the model's memory explicitly.
+3. "What if the LLM provider is down during the demo?" → a standby provider configured on the server, and the agent must say "unavailable" rather than guess.
+4. The panel liked the litmus idea (build with AI compiled out) and wants to see it run side by side.
+5. Temperature 0: some newer models reject the temperature parameter. We must get a written ruling on whether recorded responses + fixed seeds are acceptable.
+
+Overall: approved with changes. Resubmit the updated architecture document by 2 Oct.
+
+Mood afterwards: relieved. Pizza.

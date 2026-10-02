@@ -1,0 +1,11 @@
+# Window resize flicker
+
+**Owner:** Bob. **Status:** fixed 21 Oct.
+
+When resizing from the bottom-right corner, the window contents flashed white for a frame on every size change, especially in the Files app.
+
+Cause: the app view re-created its virtual list on every `ResizeObserver` callback, briefly rendering an empty container.
+
+Fix: the view keeps its list and only updates the viewport height; ResizeObserver callbacks are batched to one per frame. Also set the window background to the theme surface colour so any gap is not white.
+
+Checked in both light and dark themes and with reduce-transparency on.

@@ -1,0 +1,64 @@
+{
+  "id": "AGT40-G07",
+  "category": "glob",
+  "tags": ["needs-observation"],
+  "user": "alice",
+  "cwd": "/home/alice",
+  "now": "2026-10-05T10:00:00+05:00",
+  "tz": "Asia/Karachi",
+  "fixture": "fx-agt@v1",
+  "prompt": "move every .md file under projects/alpha into Documents",
+  "expect": {
+    "kind": "plan",
+    "ops": [
+      ["rename", "/home/alice/projects/alpha/plan.md", "/home/alice/Documents/plan.md"],
+      ["rename", "/home/alice/projects/alpha/spec.md", "/home/alice/Documents/spec.md"]
+    ],
+    "confirm": false
+  },
+  "reference": {
+    "observe": [
+      {
+        "name": "fs_readdir",
+        "input": {
+          "path": "~/projects/alpha"
+        }
+      }
+    ],
+    "tool": "submit_plan",
+    "input": {
+      "summary": "plan",
+      "steps": [
+        {
+          "id": "s1",
+          "span": "every .md file under projects/alpha",
+          "op": {
+            "call": "glob",
+            "args": {
+              "path": "~/projects/alpha",
+              "name": "*.md"
+            }
+          },
+          "sources": null
+        },
+        {
+          "id": "s2",
+          "span": "move every .md file under projects/alpha into Documents",
+          "op": {
+            "call": "rename",
+            "args": {
+              "from": "~/projects/alpha",
+              "to": "~/Documents",
+              "noReplace": null
+            }
+          },
+          "sources": {
+            "ref": "s1"
+          }
+        }
+      ],
+      "assumptions": [],
+      "suspicious_content_seen": false
+    }
+  }
+}

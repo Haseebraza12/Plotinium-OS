@@ -1,0 +1,28 @@
+# Mutual exclusion: from Peterson to hardware
+
+Requirements for a critical-section solution: mutual exclusion, progress, bounded waiting.
+
+## Peterson's algorithm (two threads)
+
+```
+flag[i] = true; turn = j;
+while (flag[j] && turn == j) ;   // spin
+/* critical section */
+flag[i] = false;
+```
+
+Correct on a sequentially consistent machine. On modern CPUs with store buffers it breaks unless you add memory fences, which is why nobody uses it in practice.
+
+## Hardware help
+
+- **Test-and-set:** atomically set a word to 1 and return the old value. Spin while it returned 1.
+- **Compare-and-swap:** set to new only if the current value equals expected. Basis for lock-free structures.
+- **Fetch-and-add:** ticket locks give FIFO fairness.
+
+## Spinning vs blocking
+
+Spin if the critical section is shorter than two context switches and you're on a multicore. Otherwise block (futex: spin briefly in user space, then sleep in the kernel).
+
+## Disabling interrupts
+
+Works on a uniprocessor kernel only, and never allowed in user mode.

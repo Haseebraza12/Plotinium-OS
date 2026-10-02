@@ -1,0 +1,11 @@
+# Permission model summary
+
+- Users have a uid, a primary gid and supplementary groups. root is uid 0.
+- Every inode has an owner, a group and nine mode bits (rwx for owner, group, others), plus setgid on directories.
+- The check order is owner, then group, then others: the first class that matches decides, even if a later class would allow more.
+- Directories: r = list names, w = create/delete entries (needs x too), x = traverse.
+- root bypasses r and w checks; x on a file still needs at least one x bit.
+
+All checks go through a single `may(cred, inode, bit)` function used by syscalls, the search filter and the agent's plan validator. There is no second implementation.
+
+For search: a result is shown only if the user can read the file **now** and can traverse every directory on at least one path to it. Results from files owned by someone else are double-checked with the server when online and hidden when offline.

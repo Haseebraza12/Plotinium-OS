@@ -1,0 +1,6 @@
+# notes to self (not for the team yet)
+
+- I'm fairly sure the stale-results bug in search last week was mine: the readable-set cache key didn't include the permission epoch, so after a chmod the old bitset was reused for up to a minute. Carol spent a day on it thinking it was the server verify path. I fixed it quietly in the refactor PR. I should tell her on Friday and apologise properly.
+- Ask Dan to review my scheduler hooks slowly; I rushed them.
+- Stop volunteering for everything. Two subsystems is enough.
+- Interview with the internship company on the 28th — prepare the RAG demo on my own laptop, not the lab one.

@@ -1,0 +1,123 @@
+{
+ "ok": true,
+ "out": {
+  "chrome": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.0.0 Safari/537.36",
+  "cores": 12,
+  "persistedBefore": false,
+  "idbSwap_relaxed": {
+   "pageOut": {
+    "n": 40,
+    "p50": 280.4,
+    "p95": 509.6,
+    "max": 528.9
+   },
+   "pageIn": {
+    "n": 40,
+    "p50": 91.6,
+    "p95": 202.4,
+    "max": 205.5
+   },
+   "payloadMB": 4.94
+  },
+  "idbSwap_strict": {
+   "pageOut": {
+    "n": 40,
+    "p50": 277.1,
+    "p95": 371.9,
+    "max": 389.6
+   },
+   "pageIn": {
+    "n": 40,
+    "p50": 82.3,
+    "p95": 183.7,
+    "max": 201.4
+   },
+   "payloadMB": 4.94
+  },
+  "opfsSwap": {
+   "pageOut": {
+    "n": 40,
+    "p50": 87,
+    "p95": 119,
+    "max": 133.9
+   },
+   "pageIn": {
+    "n": 40,
+    "p50": 29.4,
+    "p95": 36.5,
+    "max": 38.9
+   }
+  },
+  "rmR": {
+   "rmR1000_strict": {
+    "n": 15,
+    "p50": 0.4,
+    "p95": 2.4,
+    "max": 2.4
+   },
+   "bulkInsert1000": {
+    "n": 15,
+    "p50": 70.2,
+    "p95": 124.5,
+    "max": 124.5
+   },
+   "faultInjectionUnchanged": "15/15"
+  },
+  "lookupAndBoot": {
+   "dentryPlusInodeGet": {
+    "n": 1000,
+    "p50": 0.2,
+    "p95": 0.3,
+    "max": 37.2
+   },
+   "bootLoadAllMetadata": {
+    "n": 10,
+    "p50": 410.7,
+    "p95": 1252.3,
+    "max": 1252.3,
+    "inodes": 25000
+   }
+  },
+  "outbox": {
+   "writePlusOutbox_relaxed": {
+    "n": 200,
+    "p50": 1.2,
+    "p95": 3.2,
+    "max": 86.4
+   },
+   "writePlusOutbox_strict": {
+    "n": 200,
+    "p50": 1.1,
+    "p95": 3.2,
+    "max": 5
+   }
+  },
+  "sqlite": {
+   "leftoverInodes": 0,
+   "initWasmMs": 253.8,
+   "installSahPoolAndOpenMs": 132.9,
+   "rmR1000": {
+    "n": 15,
+    "p50": 227.3,
+    "p95": 363,
+    "max": 363
+   }
+  },
+  "pbkdf2": {
+   "pbkdf2_600k": {
+    "n": 5,
+    "p50": 155.1,
+    "p95": 172.2,
+    "max": 172.2
+   }
+  },
+  "estimate": {
+   "quota": 6785277108,
+   "usage": 342826164,
+   "usageDetails": {
+    "fileSystem": 207146164,
+    "indexedDB": 135680000
+   }
+  }
+ }
+}

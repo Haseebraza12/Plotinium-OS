@@ -1,0 +1,2 @@
+# Production only (mounted by compose.prod.yaml at /etc/caddy/prod.d): HSTS, security-model.md §3.9.
+header Strict-Transport-Security "max-age=31536000"

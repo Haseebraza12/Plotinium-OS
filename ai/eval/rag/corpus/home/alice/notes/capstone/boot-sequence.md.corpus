@@ -1,0 +1,13 @@
+# Boot sequence (what the user sees vs what happens)
+
+1. **Firmware stage (index.html):** a black screen with the atom logo; the service worker checks the cached shell.
+2. **Kernel worker starts:** mounts the IndexedDB file system, replays the journal if the last shutdown was unclean.
+3. **init:** reads the service manifests, starts services in dependency order (sched and mm first, then vfs, session, the window manager). Non-critical services that fail are marked degraded; boot continues.
+4. **Login screen:** frosted glass over the wallpaper; user picks an account.
+5. **Desktop:** dock, menu bar, restored windows.
+
+Targets: warm boot ≤ 1.5 s, cold ≤ 3 s on the lab machine. The embedding model is not loaded until the desktop is interactive and the machine has been idle for 2 s.
+
+Safe mode (hold Shift during boot): starts no AI services and no restored windows.
+
+`bootlog` prints timestamps for each stage.

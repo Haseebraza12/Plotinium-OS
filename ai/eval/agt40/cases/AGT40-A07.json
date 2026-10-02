@@ -1,0 +1,23 @@
+{
+  "id": "AGT40-A07",
+  "category": "ambiguous",
+  "tags": [],
+  "user": "alice",
+  "cwd": "/home/alice",
+  "now": "2026-10-05T10:00:00+05:00",
+  "tz": "Asia/Karachi",
+  "fixture": "fx-agt@v1",
+  "prompt": "archive the logs from recently",
+  "clarificationAnswer": "last 7 days into an archive folder",
+  "expect": {
+    "kind": "clarify"
+  },
+  "reference": {
+    "tool": "ask_clarification",
+    "input": {
+      "question": "What time range is recent, and where should they go?",
+      "options": ["last 7 days", "last month"],
+      "reason": "ambiguous_time"
+    }
+  }
+}

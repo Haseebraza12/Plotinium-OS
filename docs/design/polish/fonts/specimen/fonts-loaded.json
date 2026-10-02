@@ -1,0 +1,66 @@
+{
+  "light@1x": {
+    "problems": [],
+    "loaded": [
+      "S-Inter",
+      "S-InterW",
+      "S-InterTight",
+      "S-Geist",
+      "S-GSF",
+      "S-JBM",
+      "S-GeistMono",
+      "S-GeistMono",
+      "S-GSC",
+      "S-GSC",
+      "S-GSC"
+    ]
+  },
+  "light@2x": {
+    "problems": [],
+    "loaded": [
+      "S-Inter",
+      "S-InterW",
+      "S-InterTight",
+      "S-Geist",
+      "S-GSF",
+      "S-JBM",
+      "S-GeistMono",
+      "S-GeistMono",
+      "S-GSC",
+      "S-GSC",
+      "S-GSC"
+    ]
+  },
+  "dark@1x": {
+    "problems": [],
+    "loaded": [
+      "S-Inter",
+      "S-InterW",
+      "S-InterTight",
+      "S-Geist",
+      "S-GSF",
+      "S-JBM",
+      "S-GeistMono",
+      "S-GeistMono",
+      "S-GSC",
+      "S-GSC",
+      "S-GSC"
+    ]
+  },
+  "dark@2x": {
+    "problems": [],
+    "loaded": [
+      "S-Inter",
+      "S-InterW",
+      "S-InterTight",
+      "S-Geist",
+      "S-GSF",
+      "S-JBM",
+      "S-GeistMono",
+      "S-GeistMono",
+      "S-GSC",
+      "S-GSC",
+      "S-GSC"
+    ]
+  }
+}

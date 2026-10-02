@@ -1,0 +1,15 @@
+{
+  "frame": {
+    "v": 1,
+    "t": "op.result",
+    "id": 1,
+    "body": {
+      "opId": "0192f0c1-8a3b-7c4d-8e5f-0123456789ab",
+      "status": "rejected",
+      "duplicate": false,
+      "errno": "ENOMEM",
+      "lamport": 1
+    }
+  },
+  "issue": "body.errno"
+}

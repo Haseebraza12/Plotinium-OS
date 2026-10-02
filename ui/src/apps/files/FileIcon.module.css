@@ -1,0 +1,36 @@
+/* File kind glyphs. Decorative (the Kind column and the name say what a file is). */
+.icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--pl-text-muted);
+}
+.icon[data-kind='folder'] {
+  color: var(--pl-accent);
+}
+.icon[data-kind='folder'] > svg {
+  fill: color-mix(in srgb, var(--pl-accent) 30%, transparent);
+}
+.icon[data-kind='text'] {
+  color: var(--pl-tint-blue);
+}
+.icon[data-kind='code'] {
+  color: var(--pl-tint-teal);
+}
+.icon[data-kind='image'] {
+  color: var(--pl-tint-pink);
+}
+.icon[data-kind='pdf'] {
+  color: var(--pl-tint-red);
+}
+.icon[data-kind='archive'] {
+  color: var(--pl-tint-yellow);
+}
+.icon[data-kind='script'] {
+  color: var(--pl-tint-green);
+}
+.icon[data-kind='json'] {
+  color: var(--pl-tint-orange);
+}
+.icon[data-kind='link'] {
+  color: var(--pl-tint-gray);
+}

@@ -1,0 +1,33 @@
+{
+  "openerIsolated": true,
+  "popupUrl": "http://localhost:4718/version.json?code=fake-code&state=fake-state",
+  "popupIsolated": true,
+  "popupHasOpener": false,
+  "me": 200,
+  "csrfPost": {
+    "status": 400,
+    "errno": "EINVAL",
+    "reason": null
+  },
+  "bcReceived": [
+    {
+      "type": "drive-connected"
+    }
+  ],
+  "openerHandleClosed": true,
+  "openerStillIsolated": true,
+  "landingNavigation": [
+    {
+      "isNavigation": true,
+      "cookieHeaderPresent": false,
+      "secFetchSite": null
+    }
+  ],
+  "missingCallbackPath": {
+    "status": 200,
+    "isOsShell": true,
+    "coop": "same-origin",
+    "csp": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-8HkV/gpT8gBeg1f"
+  },
+  "popupClosedByScript": true
+}

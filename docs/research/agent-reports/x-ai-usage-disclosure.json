@@ -1,0 +1,42 @@
+{
+ "files_changed": [
+  "/home/haseeb-raza/Desktop/Plotinium OS/AI_USAGE.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/THIRD_PARTY.md"
+ ],
+ "verification": [
+  {
+   "command": "node_modules/.bin/prettier --check AI_USAGE.md THIRD_PARTY.md",
+   "outcome": "All matched files use Prettier code style! (root .md files are covered by `pnpm format:check`)"
+  },
+  {
+   "command": "node <scratchpad>/check-third-party.mjs \"/home/haseeb-raza/Desktop/Plotinium OS\" (parses the pnpm-workspace.yaml catalog and all 13 package.json files, then checks every package against its THIRD_PARTY.md row and the installed node_modules/.pnpm/<pkg>/package.json)",
+   "outcome": "PASS: all 52 declared packages and 52 catalog entries are listed with the matching version and licence. The npm: aliases for typescript and @typescript/native resolve correctly. Every required item is mentioned: fontsource (OFL-1.1), @solidjs/testing-library, happy-dom, @axe-core/playwright, the Caddy, pgvector and Node images, the dbmate binary, Lucia 0BSD and Google Stitch."
+  },
+  {
+   "command": "node <scratchpad>/lic.mjs (groups every installed store package by its license field)",
+   "outcome": "648 versions (620 names) in total: MIT 551, Apache-2.0 29, ISC 26, BSD-2-Clause 14, BSD-3-Clause 10, BlueOak 8, MPL-2.0 4, OFL-1.1 2, Python-2.0 1, CC-BY-4.0 1, Unlicense 1, MIT OR CC0 1. No GPL, AGPL or unknown licence. These figures are recorded in THIRD_PARTY.md \u00a79."
+  },
+  {
+   "command": "relative-link check: grep every ](path) link in both files and test that the path exists",
+   "outcome": "Every relative link resolves: 12 in AI_USAGE.md and 4 in THIRD_PARTY.md."
+  },
+  {
+   "command": "grep -n \"IMPLEMENTED = \" dsa/src/*/index.ts",
+   "outcome": "All 9 structures showed `true` at 23:32 PKT, and AI_USAGE.md \u00a75.3 records that snapshot. The dsa agents were still running at that point."
+  },
+  {
+   "command": "tsc / vitest / eslint",
+   "outcome": "Not applicable. My paths contain only Markdown, which the ESLint config does not lint, and there is no TypeScript in them."
+  }
+ ],
+ "integration_notes": "These notes are for other owners and agents. I did not edit any of these files.\n\n(1) Several documents now contradict the disclosed dsa/ decision and should be corrected so the repository contains no false authorship statement:\n- dsa/README.md: the intro says \"written by the team from first principles\", and the Status row says \"No structure is implemented yet\".\n- DSA.md: the \"Written by\" rows ask for a first-principles statement. They should name Claude Code (AI_USAGE.md \u00a75) and the reviewing owner.\n- specs/08-dsa/data-structures.md: \u00a73.1 items 1 and 5 (DSA-GEN-01), and \u00a79.1 question 2, which should be reworded as in AI_USAGE.md \u00a75.2.\n- specs/16-delivery/implementation-plan.md: the dsa row in \u00a73.15.1 (\"Write every implementation yourself\"), the first bullet of \u00a73.15.2, and Q15 in \u00a73.18.\n- .github/pull_request_template.md line 49 (\"Mandatory dsa/ structures in this PR are my own work, written from first principles\").\n- Optionally, the dsa/src/*/index.ts headers: \"Written from first principles: no package and no pilot code\" is true about packages, but they should add \"AI-written, see AI_USAGE.md \u00a75\".\n\n(2) The import commit message fixed in the specs, `chore(import): \u2026 (see AI_USAGE.md #1)`, should now cite rows #1\u2013#10, because the import contains all the AI-written code.\n\n(3) web/: ship the OFL-1.1 LICENSE files of @fontsource-variable/inter and @fontsource/jetbrains-mono, and the Lucide ISC notice, with the built assets (for example under /licenses/). This is listed as a planned item in THIRD_PARTY.md \u00a78.\n\n(4) ai/eval (R4 and the rag-eval-corpus agent): the AGT-40, INJ-20 and RAG queries are AI-drafted. AIS-04 expects a non-author, human query writer. The manifest should record the writer as \"Claude Code (AI)\", not a team member, until people replace them.\n\n(5) docs/evidence/pilot/embbench/code50k.txt contains protobufjs source (BSD-3-Clause) from unrecorded packages. R4 should record the sources or delete the file.\n\n(6) R5 could turn my scratch checker into a tools/ licence check for the security-model licence scan. THIRD_PARTY rows use a parseable `| \\`name\\` | version | licence |` format.\n\n(7) Stale package READMEs still say \"placeholder src/index.ts only\": protocol, kernel, services, wm and apps.\n\n(8) After the dsa agents finish, re-check that all nine flags are still `true`, and update AI_USAGE.md \u00a75.3 if not.",
+ "problems": [
+  "INTEGRITY RISK, disclosed rather than hidden: spec \u00a710.2 requires that the tree, trie, heap, DAG and LRU be 'written by your team from first principles'. The session transcript shows that on 2026-09-25 at 18:08Z Claude Code asked the operator how to handle dsa/. It recommended 'Temporary stand-ins' as the option that 'keeps your DSA marks safe'. At 18:15Z the operator chose 'I write the real DSA now'. AI_USAGE.md \u00a75 records this verbatim. It also records the risk that those items score zero, a written question to the instructor, a rewrite contingency if the answer is no, and a confirmation table in which every member signs. The computed task framed this as a team decision. The transcript shows only the operator's choice, so the file asks every member to confirm it.",
+  "The task text grouped '@solidjs/testing-library, happy-dom and @axe-core/playwright (MPL-2.0)'. The installed packages show that only @axe-core/playwright and its dependency axe-core are MPL-2.0. @solidjs/testing-library and happy-dom are MIT, and THIRD_PARTY.md lists them as MIT.",
+  "The task text listed a 'dbmate' image. None exists: dbmate comes from the npm package's platform binary (@dbmate/linux-x64 and linux-arm64, MIT), is installed inside the app image and is run by server/docker-entrypoint.sh. THIRD_PARTY.md documents it that way.",
+  "The 'Stitch-generated designs' are only the two Stitch design systems. Every Stitch screen request timed out or returned only a session id, so the reference.html and reference.png files are hand-built by Claude Code. Both files say so instead of implying that Stitch screens exist.",
+  "Evaluation data that the team's own plan (\u00a73.15.2) and AIS-04 reserve for humans was drafted by AI: ai/eval/agt40, ai/eval/inj20, and the ai/eval/rag corpus and queries, which were in progress. AI_USAGE.md flags this as limitation L10.",
+  "Sizes, file lists and flag states are a snapshot taken on 2026-09-25 around 23:30 PKT, while about 25 agents were still writing. The web/, wm/src, kernel/src/core/fs, apps/demo, docs/identity and ai/eval/rag entries describe work that was still in progress.",
+  "To quote the operator's prompts verbatim and confirm the dsa/ decision, I read the operator's local Claude Code session transcript and workflow scripts under ~/.claude/projects. Nothing from them was copied except the prompt texts and the question and answer. AI_USAGE.md warns that the transcript may contain secrets, such as Docker output and first-start credentials, and must be scanned with gitleaks before it is shared."
+ ]
+}

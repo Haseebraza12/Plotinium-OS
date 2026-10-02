@@ -1,0 +1,10 @@
+file descriptors - quick notes
+
+- small integers indexing the per-process fd table -> open file description (offset, flags) -> inode
+- 0 stdin, 1 stdout, 2 stderr by convention
+- open() returns the lowest free number; that's why close(1) then open() redirects stdout (old trick)
+- dup/dup2 make two fds share ONE open file description, so they share the offset
+- fork copies the fd table: parent and child share offsets too
+- O_CLOEXEC closes the fd automatically on exec; use it by default to avoid leaking fds into children
+- ulimit -n: max open fds per process (1024 default on many distros)
+- /proc/self/fd lists them

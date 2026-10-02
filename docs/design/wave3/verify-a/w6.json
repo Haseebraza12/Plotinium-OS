@@ -1,0 +1,20 @@
+[
+  {
+    "id": "UI-034 layout after reload equals layout before (rect, state, snap)",
+    "ok": true,
+    "detail": {
+      "before": [
+        "terminal 40,68 760x624 normal null",
+        "editor 0,28 1440x788 maximised null",
+        "files 720,28 720x788 normal right",
+        "settings 64,92 880x620 minimised null"
+      ],
+      "after": [
+        "terminal 40,68 760x624 normal null",
+        "settings 64,92 880x620 minimised null",
+        "files 720,28 720x788 normal right",
+        "editor 0,28 1440x788 maximised null"
+      ]
+    }
+  }
+]

@@ -1,0 +1,8 @@
+# Advisor meeting — 13 Oct 2026 (Tuesday office hours)
+
+Asked about:
+1. Whether hiding other users' search results while offline is acceptable. Advisor: yes, if the notice is honest and the user can retry online.
+2. How deep the AI part needs to be. Advisor: two subsystems done well beat three half-done. Coupling with the OS (scheduling, memory, permissions) is what gets marks.
+3. The report format: follow the template, but put the evaluation tables in the main text, not the appendix.
+
+Advisor suggested reading the original Pathfinder account for the priority-inheritance slide.

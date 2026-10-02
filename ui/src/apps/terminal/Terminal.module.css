@@ -1,0 +1,166 @@
+/*
+ * Terminal window content: tab strip, xterm viewport and status strip. The window frame is
+ * static tinted glass (no backdrop-filter); the viewport is the opaque --pl-surface that the
+ * xterm theme also uses, so text contrast is measured against what is drawn (DSN-13).
+ */
+.app {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  background: var(--pl-surface);
+  color: var(--pl-text);
+  font: var(--pl-type-body);
+  contain: layout paint;
+}
+.panels {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+.panel {
+  position: absolute;
+  inset: 0;
+}
+.panel[hidden] {
+  display: none;
+}
+.host {
+  width: 100%;
+  height: 100%;
+  padding: var(--pl-space-2) var(--pl-space-4);
+  background: var(--pl-surface);
+  overflow: hidden;
+}
+.host:focus-within {
+  box-shadow: inset 0 0 0 var(--pl-space-half) var(--pl-focus-color);
+}
+/* xterm's parent: no padding, so the fit addon's measure is the host's content box (UI-128). */
+.mount {
+  width: 100%;
+  height: 100%;
+}
+.host :global(.xterm) {
+  height: 100%;
+}
+.host :global(.xterm-viewport) {
+  scrollbar-width: thin;
+  scrollbar-color: var(--pl-border-subtle) transparent;
+}
+/* xterm.css paints the viewport #000. The fitted rows leave a few pixels of it below the last
+   row (a black bar in both themes); the host's --pl-surface, which the xterm theme's background
+   is built from, shows through instead. */
+.host :global(.xterm .xterm-viewport) {
+  background-color: transparent;
+}
+
+/* ---------- status strip ---------- */
+.strip {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--pl-space-3);
+  flex: none;
+  height: calc(var(--pl-control-h-sm) + var(--pl-space-1));
+  padding: 0 var(--pl-space-3);
+  background: var(--pl-glass-window-bg);
+  box-shadow: inset 0 var(--pl-hairline-width) 0 var(--pl-separator);
+  color: var(--pl-text-tertiary);
+  font: var(--pl-type-caption);
+  font-size: calc(var(--pl-text-xs) - 1px);
+  white-space: nowrap;
+}
+.stripStart,
+.stripMiddle {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  overflow: hidden;
+}
+.stripMiddle {
+  justify-content: center;
+}
+.stripEnd {
+  min-width: 0;
+  text-align: end;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--pl-font-mono);
+}
+.stripItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pl-space-2);
+  min-width: 0;
+  max-width: 100%;
+  padding: var(--pl-space-half) var(--pl-space-1);
+  border: 0;
+  border-radius: var(--pl-radius-xs);
+  background: transparent;
+  color: var(--pl-text-muted);
+  font: inherit;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.stripItem:not([aria-disabled='true']):hover {
+  background: var(--pl-control-bg);
+  color: var(--pl-text);
+}
+.stripItem:focus-visible {
+  outline: var(--pl-focus-ring);
+}
+.stripDanger {
+  color: var(--pl-danger);
+}
+.okIcon {
+  color: var(--pl-success);
+  flex: none;
+}
+.liveDot {
+  position: relative;
+  flex: none;
+  width: var(--pl-status-dot);
+  height: var(--pl-status-dot);
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-status-online);
+}
+.liveDot[data-state='waiting'] {
+  background: var(--pl-status-away);
+}
+.liveDot[data-state='idle'] {
+  background: var(--pl-status-offline);
+}
+.liveDot[data-state='unavailable'] {
+  background: var(--pl-danger);
+}
+/* One halo per state change (the dot remounts), never a loop. */
+.halo {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: inherit;
+  opacity: 0;
+  animation: halo var(--pl-motion-slow) var(--pl-ease-out) 1;
+}
+@keyframes halo {
+  from {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(2.2);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .halo {
+    animation: none;
+  }
+}
+@media (forced-colors: active) {
+  .liveDot {
+    background: CanvasText;
+  }
+}

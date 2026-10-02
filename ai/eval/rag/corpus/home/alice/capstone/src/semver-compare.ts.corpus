@@ -1,0 +1,21 @@
+/** Compare two semantic versions (MAJOR.MINOR.PATCH[-pre]); returns -1, 0 or 1. */
+export function compareSemver(a: string, b: string): -1 | 0 | 1 {
+  const parse = (v: string) => {
+    const [core = '', pre] = v.replace(/^v/, '').split('-', 2);
+    const nums = core.split('.').map((n) => Number.parseInt(n, 10) || 0);
+    return { nums: [nums[0] ?? 0, nums[1] ?? 0, nums[2] ?? 0], pre };
+  };
+  const pa = parse(a);
+  const pb = parse(b);
+  for (let i = 0; i < 3; i++) {
+    const d = (pa.nums[i] ?? 0) - (pb.nums[i] ?? 0);
+    if (d !== 0) return d < 0 ? -1 : 1;
+  }
+  // a release is newer than any pre-release of the same version
+  if (pa.pre === undefined && pb.pre !== undefined) return 1;
+  if (pa.pre !== undefined && pb.pre === undefined) return -1;
+  if (pa.pre === pb.pre) return 0;
+  return (pa.pre ?? '') < (pb.pre ?? '') ? -1 : 1;
+}
+
+// used by the update banner: show "Plotinium 0.4.0 is available" when the server's version is newer

@@ -1,0 +1,210 @@
+/*
+ * The floating dock (visual-language-macos.md §3.4 "Dock" material). The glass capsule is its
+ * own layer behind the icons so magnification can stretch it with scaleX; icons scale from their
+ * bottom centre. While the pointer tracks, the dock writes transforms each frame with no
+ * transition; on leave, the transitions below spring everything back. will-change is written
+ * inline only while magnifying (DSN-31).
+ */
+.wrap {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.dock {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: var(--pl-space-2);
+  padding: var(--pl-space-2) var(--pl-space-2) var(--pl-space-2);
+  isolation: isolate;
+  pointer-events: auto;
+}
+
+.glass {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: var(--pl-radius-dock);
+  background: var(--pl-glass-dock-bg);
+  -webkit-backdrop-filter: var(--pl-glass-dock-filter);
+  backdrop-filter: var(--pl-glass-dock-filter);
+  box-shadow: var(--pl-shadow-dock), var(--pl-glass-dock-edge);
+  transform-origin: 50% 100%;
+  transition: transform var(--pl-motion-med) var(--pl-ease-spring-soft);
+}
+
+.slot {
+  position: relative;
+  flex: none;
+  transition: transform var(--pl-motion-med) var(--pl-ease-spring-soft);
+}
+
+.scaler {
+  width: var(--pl-dock-icon);
+  height: var(--pl-dock-icon);
+  transform-origin: 50% 100%;
+  transition: transform var(--pl-motion-med) var(--pl-ease-spring-soft);
+}
+
+.magnifying .glass,
+.magnifying .slot,
+.magnifying .scaler {
+  transition: none;
+}
+
+.hop {
+  width: 100%;
+  height: 100%;
+}
+
+.button {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: var(--pl-radius-lg);
+  background: none;
+  color: inherit;
+  cursor: default;
+}
+.button:focus-visible {
+  outline: var(--pl-focus-ring);
+  outline-offset: 3px;
+}
+
+.icon {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--pl-radius-lg);
+  box-shadow: var(--pl-shadow-tooltip);
+}
+/* Pressed: the tint carries the state even when the press scale is off (reduced motion). */
+.button:active .icon {
+  filter: brightness(0.82);
+}
+
+.badge {
+  position: absolute;
+  top: calc(-1 * var(--pl-space-1));
+  right: calc(-1 * var(--pl-space-1));
+  display: grid;
+  place-items: center;
+  min-width: var(--pl-badge-h);
+  height: var(--pl-badge-h);
+  padding: 0 var(--pl-space-1);
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-danger-fill);
+  box-shadow: var(--pl-shadow-1);
+  color: var(--pl-on-accent);
+  font-size: var(--pl-text-xs);
+  font-weight: var(--pl-weight-bold);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.dot {
+  position: absolute;
+  bottom: calc(-1 * (var(--pl-space-1) + var(--pl-space-half)));
+  left: 50%;
+  width: var(--pl-space-1);
+  height: var(--pl-space-1);
+  margin-left: calc(-1 * var(--pl-space-half));
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-text);
+  opacity: 0;
+  transform: scale(0);
+  transition:
+    transform var(--pl-motion-med) var(--pl-ease-spring-soft),
+    opacity var(--pl-motion-med) var(--pl-ease);
+}
+.slot[data-running='true'] .dot {
+  opacity: 0.85;
+  transform: none;
+}
+
+/*
+ * Minimised marker (UIG §3.5.3): a small minimise-light disc with its bar at the icon's lower
+ * right, shown while any window of the app is minimised; the spoken name says "1 minimised".
+ */
+.minMark {
+  position: absolute;
+  right: calc(-1 * var(--pl-space-half));
+  bottom: calc(-1 * var(--pl-space-half));
+  width: 16px;
+  height: 16px;
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-traffic-minimise);
+  box-shadow:
+    0 0 0 1.5px var(--pl-glass-dock-bg),
+    var(--pl-shadow-1);
+}
+.minMark::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 4px;
+  right: 4px;
+  height: 2px;
+  margin-top: -1px;
+  border-radius: 1px;
+  background: rgb(0 0 0 / 0.62);
+}
+
+/* ---------- auto-hide (transform and opacity only; keyboard focus reveals it) ---------- */
+.hotZone {
+  position: absolute;
+  right: 0;
+  bottom: calc(-1 * var(--pl-space-2));
+  left: 0;
+  height: var(--pl-space-2);
+  pointer-events: auto;
+}
+.wrap[data-autohide='true'] .dock {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(calc(100% + var(--pl-space-2) + 2px));
+  transition:
+    transform var(--pl-motion-med) var(--pl-ease-spring-soft),
+    opacity var(--pl-motion-fast) var(--pl-ease);
+}
+.wrap[data-autohide='true'][data-revealed='true'] .dock,
+.wrap[data-autohide='true'] .dock:focus-within {
+  opacity: 1;
+  pointer-events: auto;
+  transform: none;
+}
+
+/* Settings › Show indicators for open apps: off hides the running dots and minimised markers. */
+.wrap[data-indicators='false'] .dot,
+.wrap[data-indicators='false'] .minMark {
+  display: none;
+}
+
+.separator {
+  flex: none;
+  align-self: center;
+  width: 1px;
+  height: calc(var(--pl-dock-icon) - var(--pl-space-2));
+  margin: 0 var(--pl-space-1);
+  background: var(--pl-border-subtle);
+}
+
+@media (forced-colors: active) {
+  .glass {
+    border: 1px solid CanvasText;
+  }
+  .dot {
+    background: CanvasText;
+  }
+  .separator {
+    background: CanvasText;
+  }
+  .minMark {
+    border: 1px solid CanvasText;
+  }
+}

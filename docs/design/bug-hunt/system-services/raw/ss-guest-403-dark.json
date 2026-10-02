@@ -1,0 +1,18 @@
+{
+  "interceptedMeBeforeClick": 1,
+  "buttonBefore": {
+    "disabled": false
+  },
+  "guestCalls": 1,
+  "afterClick": {
+    "alerts": ["|off|Sunday, 27 September09:30"],
+    "text": "Sunday, 27 September\n\n0\n9\n:\n3\n0\nD\ndemo\nA\nalice\nB\nbob\nGuest\nContinue as Guest\n\nGuest files are deleted when you log out.\n\nSleep\nRestart\nShut Down\nPlotinium 0.1.0-dev.0\nbuild 0000000"
+  },
+  "buttonAfter": {
+    "disabled": false,
+    "ariaDisabled": null
+  },
+  "guestCallsAfterSecondClick": 2,
+  "userTileText": "Sunday, 27 September\n\n0\n9\n:\n3\n0\nD\ndemo\nA\nalice\nB\nbob\nGuest\n\nPress Enter to sign in\n\nSleep\nRestart\nShut Down\nPlotinium 0.1.0-dev.0\nbuild 0000000",
+  "consoleErr": []
+}

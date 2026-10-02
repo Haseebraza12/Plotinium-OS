@@ -1,0 +1,9 @@
+{
+  "v": 1,
+  "t": "bye",
+  "id": 19,
+  "body": {
+    "reason": "upgrade-required",
+    "retryAfterMs": 0
+  }
+}

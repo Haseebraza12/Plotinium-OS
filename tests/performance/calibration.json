@@ -1,0 +1,8 @@
+{
+  "rate": 1,
+  "measuredAt": null,
+  "runnerImage": null,
+  "labMs": [],
+  "runnerMs": [],
+  "note": "Not measured yet: the W2 run of tools/cpu-score.ts on the lab machine and a hosted runner fills labMs and runnerMs (5 median wall times each) and sets rate = max(1, median(labMs) / median(runnerMs)) (testing-and-performance.md §3.13)."
+}

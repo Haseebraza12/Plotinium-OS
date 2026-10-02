@@ -1,0 +1,24 @@
+# Windows lag behind the cursor and then snap into place
+
+**Reported by:** Carol, 22 Sep. **Owner:** Bob. **Status:** fixed (PR #148).
+
+## Steps
+
+1. Open any two windows.
+2. Grab one by its title bar and move the mouse fast in a circle.
+
+**Expected:** the window follows the cursor smoothly.
+**Actual:** the window trails behind, stops when the cursor leaves the title bar, and then teleports several hundred pixels when the cursor comes back over it. Sometimes it stays glued to the cursor after releasing the button.
+
+## Cause
+
+- Moving was done by setting `style.left/top` inside every `mousemove` handler, which forced layout on each event (up to 250 events/s on a gaming mouse).
+- The handlers were on the title bar element, so when a fast movement put the cursor outside the element, events stopped arriving; the `mouseup` outside the element was never seen, hence the "glued" window.
+
+## Fix
+
+- Use pointer events with `setPointerCapture` on `pointerdown`, so the element keeps receiving events wherever the pointer goes, including the release.
+- Coalesce movement: store the latest position and apply it once per animation frame with `transform: translate3d(x, y, 0)`.
+- Write `left/top` once on `pointerup`.
+
+Frame time while dragging with 10 windows: p95 9.8 ms (was 31 ms).

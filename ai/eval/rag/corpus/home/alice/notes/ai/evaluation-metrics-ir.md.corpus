@@ -1,0 +1,12 @@
+# IR evaluation metrics
+
+- **Precision@k:** fraction of the top k results that are relevant.
+- **Recall@k:** fraction of all relevant items that appear in the top k. Our course project gate is Recall@5 ≥ 0.80.
+- **MRR:** mean over queries of 1/rank of the first relevant result (0 if none in the cutoff). Rewards putting one good answer at the top.
+- **nDCG@k:** uses graded relevance; gain (2^rel − 1) discounted by log2(rank + 1), divided by the ideal ordering's DCG.
+- **MAP:** mean of average precision; sensitive to every relevant item's rank.
+
+Practical notes:
+- Evaluate over **distinct documents** if the system returns several chunks of one file.
+- Report confidence intervals: with 30 queries, one query moves Recall by 0.033.
+- Write queries without looking at the documents' wording, or keyword search looks artificially good.

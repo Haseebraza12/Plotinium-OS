@@ -1,0 +1,231 @@
+[
+  {
+    "id": "UI-011 files",
+    "ok": true,
+    "detail": "960x600 at 40,68"
+  },
+  {
+    "id": "UI-011 editor",
+    "ok": true,
+    "detail": "900x640 at 64,92"
+  },
+  {
+    "id": "UI-011 terminal",
+    "ok": true,
+    "detail": "760x624 at 88,116"
+  },
+  {
+    "id": "UI-011 task-manager",
+    "ok": true,
+    "detail": "1160x700 at 112,68"
+  },
+  {
+    "id": "UI-011 settings",
+    "ok": true,
+    "detail": "880x620 at 112,140"
+  },
+  {
+    "id": "UI-011 cascade distinct origins",
+    "ok": true,
+    "detail": "40,68 64,92 88,116 112,68 112,140"
+  },
+  {
+    "id": "UI-011 about",
+    "ok": true,
+    "detail": "780x700"
+  },
+  {
+    "id": "UI-153 About has no dock tile",
+    "ok": true,
+    "detail": "0"
+  },
+  {
+    "id": "UI-018b terminal launch focus in view",
+    "ok": true,
+    "detail": {
+      "tag": "TEXTAREA",
+      "label": "Terminal input",
+      "cls": "xterm-helper-textarea",
+      "inView": true,
+      "win": "terminal"
+    }
+  },
+  {
+    "id": "UI-018b editor launch focus in view",
+    "ok": true,
+    "detail": {
+      "tag": "DIV",
+      "label": "Untitled",
+      "cls": "cm-content",
+      "inView": true,
+      "win": "editor"
+    }
+  },
+  {
+    "id": "UI-018b dock click on running terminal focuses content",
+    "ok": true,
+    "detail": {
+      "tag": "TEXTAREA",
+      "label": "Terminal input",
+      "cls": "xterm-helper-textarea",
+      "inView": true,
+      "win": "terminal"
+    }
+  },
+  {
+    "id": "UI-018a click in Terminal, then the Editor title bar: focus moves into the Editor",
+    "ok": true,
+    "detail": {
+      "pre": "terminal",
+      "a": {
+        "tag": "DIV",
+        "label": "Untitled",
+        "cls": "cm-content",
+        "inView": true,
+        "win": "editor"
+      }
+    }
+  },
+  {
+    "id": "UI-018a typed key lands in the Editor",
+    "ok": true,
+    "detail": "x"
+  },
+  {
+    "id": "UI-018a Terminal title bar click focuses Terminal content",
+    "ok": true,
+    "detail": {
+      "tag": "TEXTAREA",
+      "label": "Terminal input",
+      "cls": "xterm-helper-textarea",
+      "inView": true,
+      "win": "terminal"
+    }
+  },
+  {
+    "id": "UI-018c minimise hands focus to next window content",
+    "ok": true,
+    "detail": {
+      "tag": "DIV",
+      "label": "Untitled",
+      "cls": "cm-content",
+      "inView": true,
+      "win": "editor"
+    }
+  },
+  {
+    "id": "UI-017 restore focus in content (not a light)",
+    "ok": true,
+    "detail": {
+      "tag": "TEXTAREA",
+      "label": "Terminal input",
+      "cls": "xterm-helper-textarea",
+      "inView": true,
+      "win": "terminal"
+    }
+  },
+  {
+    "id": "UI-017 Enter after restore does not re-minimise",
+    "ok": true,
+    "detail": "normal"
+  },
+  {
+    "id": "UI-018c Alt+M hand-off",
+    "ok": true,
+    "detail": {
+      "tag": "DIV",
+      "label": "Untitled",
+      "cls": "cm-content",
+      "inView": true,
+      "win": "editor"
+    }
+  },
+  {
+    "id": "UI-019 content box follows shrink",
+    "ok": true,
+    "detail": {
+      "t": {
+        "app": "terminal",
+        "wid": "7",
+        "x": 40,
+        "y": 68,
+        "w": 560,
+        "h": 524,
+        "vw": 560,
+        "vh": 486,
+        "snap": null,
+        "state": "normal",
+        "focused": "true"
+      },
+      "bar": {
+        "vb": 592,
+        "fb": 592,
+        "vr": 600,
+        "fr": 600
+      }
+    }
+  },
+  {
+    "id": "UI-038 snap preview visible while holding at left edge",
+    "ok": true,
+    "detail": {
+      "vis": "true",
+      "op": "1",
+      "x": 0,
+      "y": 28,
+      "w": 720,
+      "h": 788
+    }
+  },
+  {
+    "id": "UI-038 leaving zone cancels preview",
+    "ok": true,
+    "detail": "false"
+  },
+  {
+    "id": "UI-154 snapped-left window square on screen edge",
+    "ok": true,
+    "detail": {
+      "sn": {
+        "app": "terminal",
+        "wid": "7",
+        "x": 0,
+        "y": 28,
+        "w": 720,
+        "h": 788,
+        "vw": 720,
+        "vh": 750,
+        "snap": "left",
+        "state": "normal",
+        "focused": "true"
+      },
+      "rad": ["0px", "0px", "14px", "0px"]
+    }
+  },
+  {
+    "id": "UI-095 restore after drag-snap returns to pre-drag rect",
+    "ok": true,
+    "detail": {
+      "before": [40, 68, 560, 524],
+      "after": [40, 68, 560, 524, "normal", null]
+    }
+  },
+  {
+    "id": "UI-033 Files toolbar dblclick zooms",
+    "ok": true,
+    "detail": {
+      "before": [960, 600, "normal"],
+      "after": [1440, 788, "maximised"]
+    }
+  },
+  {
+    "id": "UI-033 second dblclick restores",
+    "ok": true,
+    "detail": [960, 600, "normal"]
+  },
+  {
+    "id": "UI-041 dblclick title with minimise pref minimises",
+    "ok": true,
+    "detail": "minimised"
+  }
+]

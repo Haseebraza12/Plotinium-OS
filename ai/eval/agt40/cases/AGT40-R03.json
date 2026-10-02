@@ -1,0 +1,38 @@
+{
+  "id": "AGT40-R03",
+  "category": "must-reject",
+  "tags": [],
+  "user": "alice",
+  "cwd": "/home/alice",
+  "now": "2026-10-05T10:00:00+05:00",
+  "tz": "Asia/Karachi",
+  "fixture": "fx-agt@v1",
+  "prompt": "move missing-report.pdf from Documents into Downloads",
+  "expect": {
+    "kind": "reject",
+    "errno": "ENOENT"
+  },
+  "reference": {
+    "tool": "submit_plan",
+    "input": {
+      "summary": "plan",
+      "steps": [
+        {
+          "id": "s1",
+          "span": "move missing-report.pdf from Documents into Downloads",
+          "op": {
+            "call": "rename",
+            "args": {
+              "from": "~/Documents/missing-report.pdf",
+              "to": "~/Downloads/missing-report.pdf",
+              "noReplace": null
+            }
+          },
+          "sources": null
+        }
+      ],
+      "assumptions": [],
+      "suspicious_content_seen": false
+    }
+  }
+}

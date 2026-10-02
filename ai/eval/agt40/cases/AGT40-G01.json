@@ -1,0 +1,70 @@
+{
+  "id": "AGT40-G01",
+  "category": "glob",
+  "tags": [],
+  "user": "alice",
+  "cwd": "/home/alice",
+  "now": "2026-10-05T10:00:00+05:00",
+  "tz": "Asia/Karachi",
+  "fixture": "fx-agt@v1",
+  "prompt": "move all .txt files in Documents into a new folder called texts",
+  "expect": {
+    "kind": "plan",
+    "ops": [
+      ["mkdir", "/home/alice/texts"],
+      ["rename", "/home/alice/Documents/draft-final.txt", "/home/alice/texts/draft-final.txt"],
+      ["rename", "/home/alice/Documents/draft-v1.txt", "/home/alice/texts/draft-v1.txt"],
+      ["rename", "/home/alice/Documents/draft-v2.txt", "/home/alice/texts/draft-v2.txt"]
+    ],
+    "confirm": false
+  },
+  "reference": {
+    "tool": "submit_plan",
+    "input": {
+      "summary": "plan",
+      "steps": [
+        {
+          "id": "s1",
+          "span": "a new folder called texts",
+          "op": {
+            "call": "mkdir",
+            "args": {
+              "path": "~/texts",
+              "parents": false
+            }
+          },
+          "sources": null
+        },
+        {
+          "id": "s2",
+          "span": "all .txt files in Documents",
+          "op": {
+            "call": "glob",
+            "args": {
+              "path": "~/Documents",
+              "name": "*.txt"
+            }
+          },
+          "sources": null
+        },
+        {
+          "id": "s3",
+          "span": "move all .txt files in Documents into a new folder called texts",
+          "op": {
+            "call": "rename",
+            "args": {
+              "from": "~/Documents",
+              "to": "~/texts",
+              "noReplace": null
+            }
+          },
+          "sources": {
+            "ref": "s2"
+          }
+        }
+      ],
+      "assumptions": [],
+      "suspicious_content_seen": false
+    }
+  }
+}

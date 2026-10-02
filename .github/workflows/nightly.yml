@@ -1,0 +1,46 @@
+# Nightly performance suite (spec §15.3: performance runs nightly and at each release).
+# Owner: R5 QA/DevOps. Reviewer: R1 Kernel.
+#
+# PLACEHOLDER. Authoritative performance numbers come only from the lab-spec machine
+# (C13; engineering_process.md §4-§5). When that machine is registered as a self-hosted runner
+# with the label `lab-spec`, change `runs-on` below to `[self-hosted, lab-spec]`.
+#
+# Security: this workflow runs only on schedule and on manual dispatch from main, never on
+# pull_request, because a self-hosted runner on a public repository must not execute code from
+# forks.
+
+name: nightly
+
+on:
+  schedule:
+    # 21:30 UTC = 02:30 PKT
+    - cron: '30 21 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly
+  cancel-in-progress: false
+
+jobs:
+  performance:
+    name: performance suite (placeholder)
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Placeholder
+        run: |
+          {
+            echo "## Nightly performance suite"
+            echo ""
+            echo "Not implemented yet. Planned jobs (specs/13-quality/testing-and-performance.md):"
+            echo "boot time (BOOT-10), frame time under load (PROC-05, WM-03), Q1-Q5 (DB-05),"
+            echo "autocomplete (SYS-03), page-in (MEM-05), retrieval (RAG-05), k6 lock soak (VFS-09),"
+            echo "full-history gitleaks, weekly restore drill and timed clean bring-up."
+          } >> "$GITHUB_STEP_SUMMARY"

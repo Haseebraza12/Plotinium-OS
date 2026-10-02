@@ -1,0 +1,37 @@
+{
+  "tag": "v1",
+  "sw": [
+    {
+      "scope": "http://localhost:4718/",
+      "active": "activated",
+      "waiting": null
+    }
+  ],
+  "wsHello": [
+    "< {\"v\":1,\"t\":\"hello.ok\",\"id\":1,\"body\":{\"proto\":1,\"osSessionId\":\"01a0f2b3-905f-724b-ae87-fec882c0835a\",\"server\":{\"name\":\"Plotinium\",\"version\":\"0.1.0-dev.0\",\"build\":\"d88d9ff\",\"date\":\"2026-09-30\"},\"serverT"
+  ],
+  "term1": "update            -  no    running         0  -            20\nlockd             -  no    running         0  -            17\nai.agent          -  no    running         0  -            18\nexaminer3@plotinium:~$ whoami; id\nexaminer3\nuid=1202(examiner3) gid=100(users) groups=100(users),300(300)\nexaminer3@plotinium:~$ bootlog --list\nbootlog: --list: Function not implemented\nexaminer3@plotinium:~$ ls -l /system/branding\n-rw-r--r-- 1 root root  4948 2026-09-30 05:00 app-icon.svg\n-rw-r--r-- 1 root root   832 2026-09-30 05:00 favicon.svg\n-rw-r--r-- 1 root root   582 2026-09-30 05:00 glyph-mono.svg\n-rw-r--r-- 1 root root  1303 2026-09-30 05:00 glyph.svg\n-rw-r--r-- 1 root root   406 2026-09-30 05:00 identity.json\n-rw-r--r-- 1 root root  4171 2026-09-30 05:00 lockup.svg\n-rw-r--r-- 1 root root   582 2026-09-30 05:00 logo-mono.svg\n-rw-r--r-- 1 root root  1973 2026-09-30 05:00 logo.svg\n-rw-r--r-- 1 root root  1180 2026-09-30 05:00 manifest.webmanifest\n-rw-r--r-- 1 root root  3191 2026-09-30 05:00 maskable-icon.svg\n-rw-r--r-- 1 root root 17806 2026-09-30 05:00 usage.md\n-rw-r--r-- 1 root root  3304 2026-09-30 05:00 wallpaper-dark.svg\n-rw-r--r-- 1 root root  3244 2026-09-30 05:00 wallpaper-light.svg\n-rw-r--r-- 1 root root  3300 2026-09-30 05:00 wordmark.svg\nexaminer3@plotinium:~$  ",
+  "term2": "    1 ?     BLK  0:00.00 init\n    2 ?     BLK  0:00.00 [sched]\n    3 ?     BLK  0:00.00 [storage]\n    4 ?     BLK  0:00.00 [wm]\n    5 ?     BLK  0:00.00 [vfs]\n    6 ?     BLK  0:00.00 [login]\n    7 ?     BLK  0:00.00 [mm]\n    8 ?     BLK  0:00.00 [ai.runtime]\n    9 ?     BLK  0:00.00 [session]\n   10 ?     BLK  0:00.00 [auth]\n   11 ?     BLK  0:00.00 [ai.predictor]\n   12 ?     BLKN 0:00.00 ai.predictor\n   13 ?     BLK  0:00.00 [desktop]\n   14 ?     BLK  0:00.00 [ai.indexer]\n   15 ?     BLKN 0:00.01 ai.indexer\n   16 ?     BLK  0:00.00 [sync]\n   17 ?     BLK  0:00.00 [lockd]\n   18 ?     BLK  0:00.00 [ai.agent]\n   19 ?     BLK  0:00.00 [complete]\n   20 ?     BLK  0:00.00 [update]\n   21 ?     BLK  0:00.01 terminal\n  300 tty1  BLKs 0:00.01 -sh\n  309 tty1  RUN+ 0:00.00 ps\nexaminer3@plotinium:~$  ",
+  "sw2": [
+    {
+      "scope": "http://localhost:4718/",
+      "active": "activated"
+    }
+  ],
+  "csp": [],
+  "errors": [],
+  "failed": [],
+  "ws": [
+    {
+      "url": "ws://localhost:4718/ws",
+      "closed": null,
+      "n": 80,
+      "last": [
+        "< {\"v\":1,\"t\":\"op.result\",\"id\":42,\"body\":{\"opId\":\"01a0f2b4-9e6a-7518-aaa1-bf2edea72c1a\",\"status\":\"applied\",\"duplicate\":false,\"lamport\":48,\"versions\":[{\"ino\":\"01a0f29a-b38c-71bd-bbf9-74f040731176\",\"versio",
+        "> {\"v\":1,\"t\":\"ack\",\"id\":36,\"body\":{\"cursors\":[{\"ownerUid\":1202,\"seq\":26}]}}",
+        "> {\"v\":1,\"t\":\"hb\",\"id\":37,\"body\":{\"t\":70373,\"leases\":[],\"lamport\":48}}",
+        "< {\"v\":1,\"t\":\"hb.ack\",\"id\":43,\"body\":{\"t\":70373,\"serverTime\":\"2026-09-30T14:25:19.457Z\",\"renewed\":[],\"lost\":[]}}"
+      ]
+    }
+  ]
+}

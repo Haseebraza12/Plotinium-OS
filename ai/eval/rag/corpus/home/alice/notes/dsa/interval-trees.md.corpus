@@ -1,0 +1,11 @@
+# Interval trees
+
+Store intervals [lo, hi] and answer "which stored intervals overlap [a, b]?" in O(log n + k).
+
+Augmented BST version: key = lo, and each node stores `maxHi` of its subtree. Search: if the left child's maxHi ≥ a, overlapping intervals may be on the left; go left, otherwise go right.
+
+Uses: calendar conflicts, genome ranges, finding windows under the cursor, and the text editor's decoration ranges.
+
+Segment trees answer range queries over an array (sum, min) with point or range updates in O(log n); different problem, often confused.
+
+Exercise: merge overlapping meeting slots. Sort by start and sweep; no tree needed for the offline version.

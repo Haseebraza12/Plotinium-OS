@@ -1,0 +1,160 @@
+/*
+ * Frame meter HUD (WMD-19; docs/design/stitch/offline-lock-states). A small HUD-glass capsule
+ * (HUDs may use a live backdrop-filter, DSN-24) on --pl-z-meter. Bars are scaleY'd spans against
+ * a dashed budget line at half height (the bar scale is 0 .. 2 × budget); a bar over budget
+ * turns amber, and the state is always also written ("OK", "over budget").
+ */
+.hud {
+  /* Fits "p95 21.4 ms · 60 Hz ● over budget" on one line at 11 px mono. */
+  width: 256px;
+  border-radius: var(--pl-radius-lg);
+  background: var(--pl-glass-hud-bg);
+  -webkit-backdrop-filter: var(--pl-glass-hud-filter);
+  backdrop-filter: var(--pl-glass-hud-filter);
+  box-shadow:
+    var(--pl-shadow-pop),
+    var(--pl-glass-specular),
+    inset 0 0 0 var(--pl-hairline-width) var(--pl-hairline);
+  color: var(--pl-text);
+  contain: layout paint;
+  animation: hudIn var(--pl-motion-slow) var(--pl-ease-spring) backwards;
+}
+@keyframes hudIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+}
+.expanded {
+  width: 320px;
+}
+/* Left of the Control Centre column and the banners (D-22): they share the right edge. */
+.fixed[data-shifted='true'] {
+  transform: translateX(calc(-1 * (var(--pl-popover-max-w) + var(--pl-space-2))));
+}
+.fixed {
+  position: fixed;
+  z-index: var(--pl-z-meter);
+  transition: transform var(--pl-motion-med) var(--pl-ease-spring-soft);
+}
+.top-right {
+  top: calc(var(--pl-menubar-h) + var(--pl-space-3));
+  right: var(--pl-space-3);
+}
+.bottom-right {
+  right: var(--pl-space-3);
+  bottom: var(--pl-space-3);
+}
+.bottom-left {
+  left: var(--pl-space-3);
+  bottom: var(--pl-space-3);
+}
+.top-left {
+  top: calc(var(--pl-menubar-h) + var(--pl-space-3));
+  left: var(--pl-space-3);
+}
+.inner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pl-space-2);
+  width: 100%;
+  padding: var(--pl-space-2) var(--pl-space-3);
+  font-family: var(--pl-font-mono);
+  font-size: calc(var(--pl-text-xs) - 1px);
+  color: inherit;
+  text-align: left;
+}
+.button {
+  border: 0;
+  border-radius: inherit;
+  background: none;
+  cursor: default;
+}
+.top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--pl-space-2);
+}
+.headline {
+  font-weight: var(--pl-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.state {
+  display: inline-flex;
+  flex: none;
+  white-space: nowrap;
+  align-items: center;
+  gap: var(--pl-space-1);
+  font-weight: var(--pl-weight-semibold);
+  color: var(--pl-success);
+}
+.stateDot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--pl-radius-pill);
+  background: currentColor;
+}
+.state[data-over='true'] {
+  color: var(--pl-warning);
+}
+.graph {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 22px;
+}
+.budgetLine {
+  position: absolute;
+  z-index: 1;
+  left: 0;
+  right: 0;
+  bottom: 50%;
+  border-top: 1px dashed color-mix(in srgb, var(--pl-text) 35%, transparent);
+  pointer-events: none;
+}
+.bar {
+  --pl-bar: 0;
+  flex: 1;
+  height: 100%;
+  border-radius: 1.5px 1.5px 0 0;
+  background: var(--pl-tint-green);
+  transform-origin: bottom center;
+  transform: scaleY(var(--pl-bar));
+  transition: transform var(--pl-motion-med) var(--pl-ease);
+}
+.bar[data-over='true'] {
+  background: var(--pl-tint-orange);
+}
+.foot {
+  overflow: hidden;
+  font-family: var(--pl-font-ui);
+  font-size: calc(var(--pl-text-xs) - 1px);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--pl-text-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hud {
+    animation: none;
+  }
+  .bar,
+  .fixed {
+    transition: none;
+  }
+}
+@media (forced-colors: active) {
+  .hud {
+    border: 1px solid CanvasText;
+  }
+  .bar {
+    background: CanvasText;
+  }
+  .bar[data-over='true'] {
+    background: Highlight;
+  }
+}

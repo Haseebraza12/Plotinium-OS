@@ -1,0 +1,101 @@
+{
+  "id": "AGT40-P07",
+  "category": "pipeline",
+  "tags": ["over-20-inodes", "needs-observation"],
+  "user": "alice",
+  "cwd": "/home/alice",
+  "now": "2026-10-05T10:00:00+05:00",
+  "tz": "Asia/Karachi",
+  "fixture": "fx-agt@v1",
+  "prompt": "move all the photos in the photos folder into a new folder called photos/2026",
+  "expect": {
+    "kind": "plan",
+    "ops": [
+      ["mkdir", "/home/alice/photos/2026"],
+      ["rename", "/home/alice/photos/img-01.jpg", "/home/alice/photos/2026/img-01.jpg"],
+      ["rename", "/home/alice/photos/img-02.jpg", "/home/alice/photos/2026/img-02.jpg"],
+      ["rename", "/home/alice/photos/img-03.jpg", "/home/alice/photos/2026/img-03.jpg"],
+      ["rename", "/home/alice/photos/img-04.jpg", "/home/alice/photos/2026/img-04.jpg"],
+      ["rename", "/home/alice/photos/img-05.jpg", "/home/alice/photos/2026/img-05.jpg"],
+      ["rename", "/home/alice/photos/img-06.jpg", "/home/alice/photos/2026/img-06.jpg"],
+      ["rename", "/home/alice/photos/img-07.jpg", "/home/alice/photos/2026/img-07.jpg"],
+      ["rename", "/home/alice/photos/img-08.jpg", "/home/alice/photos/2026/img-08.jpg"],
+      ["rename", "/home/alice/photos/img-09.jpg", "/home/alice/photos/2026/img-09.jpg"],
+      ["rename", "/home/alice/photos/img-10.jpg", "/home/alice/photos/2026/img-10.jpg"],
+      ["rename", "/home/alice/photos/img-11.jpg", "/home/alice/photos/2026/img-11.jpg"],
+      ["rename", "/home/alice/photos/img-12.jpg", "/home/alice/photos/2026/img-12.jpg"],
+      ["rename", "/home/alice/photos/img-13.jpg", "/home/alice/photos/2026/img-13.jpg"],
+      ["rename", "/home/alice/photos/img-14.jpg", "/home/alice/photos/2026/img-14.jpg"],
+      ["rename", "/home/alice/photos/img-15.jpg", "/home/alice/photos/2026/img-15.jpg"],
+      ["rename", "/home/alice/photos/img-16.jpg", "/home/alice/photos/2026/img-16.jpg"],
+      ["rename", "/home/alice/photos/img-17.jpg", "/home/alice/photos/2026/img-17.jpg"],
+      ["rename", "/home/alice/photos/img-18.jpg", "/home/alice/photos/2026/img-18.jpg"],
+      ["rename", "/home/alice/photos/img-19.jpg", "/home/alice/photos/2026/img-19.jpg"],
+      ["rename", "/home/alice/photos/img-20.jpg", "/home/alice/photos/2026/img-20.jpg"],
+      ["rename", "/home/alice/photos/img-21.jpg", "/home/alice/photos/2026/img-21.jpg"],
+      ["rename", "/home/alice/photos/img-22.jpg", "/home/alice/photos/2026/img-22.jpg"]
+    ],
+    "confirm": true
+  },
+  "reference": {
+    "observe": [
+      {
+        "name": "fs_readdir",
+        "input": {
+          "path": "~/photos"
+        }
+      }
+    ],
+    "tool": "submit_plan",
+    "input": {
+      "summary": "plan",
+      "steps": [
+        {
+          "id": "s1",
+          "span": "a new folder called photos/2026",
+          "op": {
+            "call": "mkdir",
+            "args": {
+              "path": "~/photos/2026",
+              "parents": false
+            }
+          },
+          "sources": null
+        },
+        {
+          "id": "s2",
+          "span": "all the photos in the photos folder",
+          "op": {
+            "call": "find",
+            "args": {
+              "path": "~/photos",
+              "name": "*.jpg",
+              "type": "f",
+              "mtime": null,
+              "size": null,
+              "maxdepth": 1
+            }
+          },
+          "sources": null
+        },
+        {
+          "id": "s3",
+          "span": "move all the photos in the photos folder into a new folder called photos/2026",
+          "op": {
+            "call": "rename",
+            "args": {
+              "from": "~/photos",
+              "to": "~/photos/2026",
+              "noReplace": null
+            }
+          },
+          "sources": {
+            "ref": "s2"
+          }
+        }
+      ],
+      "assumptions": [],
+      "suspicious_content_seen": false
+    }
+  }
+}

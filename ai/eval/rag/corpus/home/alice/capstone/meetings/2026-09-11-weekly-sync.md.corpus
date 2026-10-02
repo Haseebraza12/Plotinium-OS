@@ -1,0 +1,13 @@
+# Weekly sync — 11 Sep 2026
+
+**Dan:** kernel worker boots and runs two dummy processes. Context switch is a message round trip; about 50 µs. Next: sleep queue with a timer heap.
+
+**Carol:** inode store works; hard links not yet. Question: do we store file bodies in the same object store as inodes? Decided: separate `blobs` store keyed by content hash, so renames never copy data.
+
+**Bob:** desktop mock up. The blur looks great but drops to 40 fps on the lab PCs with 5 windows. Will try fewer blurred layers.
+
+**Alice:** downloaded two small embedding models. Tokenizer mismatch cost me a day. First numbers on 20 queries next week.
+
+**Esha:** CI runs lint + typecheck. Tests next. Asked everyone to start test titles with the requirement ID.
+
+Actions: Bob to measure blur cost per layer; Alice to share the pilot corpus so others can write queries.

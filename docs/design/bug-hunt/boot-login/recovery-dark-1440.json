@@ -1,0 +1,68 @@
+{
+  "nav": [
+    "http://localhost:4718/?boot=recovery",
+    "http://localhost:4718/",
+    "http://localhost:4718/?boot=safe",
+    "http://localhost:4718/"
+  ],
+  "console": [],
+  "pageErrors": [],
+  "failed": ["401 GET /api/auth/me"],
+  "open": {
+    "active": "DIV.plb-lb",
+    "sel": "Check file systemRun fsck read-only and ",
+    "title": "Actions",
+    "dialog": "Cancel",
+    "out": "[    0.378] recovery: recovery console ready · services: kernel, wm, storage, vfs · ro, sched",
+    "overflowX": false,
+    "header": "Plotinium Recovery Console· 0.1.0-dev.0 (0000000)Recovery mode — read-only file systemOnline · storage 0 MB used"
+  },
+  "fsck": {
+    "active": "DIV.plb-lb",
+    "sel": "Check file systemRun fsck read-only and ",
+    "title": "Actions",
+    "dialog": "Cancel",
+    "out": "[    0.378] recovery: recovery console ready · services: kernel, wm, storage, vfs · ro, sched\n[    2.052] recovery: fsck: sent to the kernel; its report follows",
+    "overflowX": false,
+    "header": "Plotinium Recovery Console· 0.1.0-dev.0 (0000000)Recovery mode — read-only file systemOnline · storage 0 MB used"
+  },
+  "bootlog": {
+    "active": "DIV.plb-lb",
+    "sel": "Boot logShow the last 20 boot records an",
+    "title": "Actions",
+    "dialog": "Cancel",
+    "out": "ery console ready · services: kernel, wm, storage, vfs · ro, sched\n[    2.052] recovery: fsck: sent to the kernel; its report follows\n[    4.679] recovery: bootlog: sent to the kernel; its report follows\n[    4.679] recovery: this boot: profile recovery · cold · flags url:recovery · outcome recovery",
+    "overflowX": false,
+    "header": "Plotinium Recovery Console· 0.1.0-dev.0 (0000000)Recovery mode — read-only file systemOnline · storage 0 MB used"
+  },
+  "arrows": {
+    "active": "DIV.plb-lb",
+    "sel": "RebootBoot again normally with the same ",
+    "title": "Actions",
+    "dialog": "Cancel",
+    "out": "ery console ready · services: kernel, wm, storage, vfs · ro, sched\n[    2.052] recovery: fsck: sent to the kernel; its report follows\n[    4.679] recovery: bootlog: sent to the kernel; its report follows\n[    4.679] recovery: this boot: profile recovery · cold · flags url:recovery · outcome recovery",
+    "overflowX": false,
+    "header": "Plotinium Recovery Console· 0.1.0-dev.0 (0000000)Recovery mode — read-only file systemOnline · storage 0 MB used"
+  },
+  "repairConfirm": {
+    "active": "BUTTON.plb-btn",
+    "sel": "Repair file systemRun fsck and fix probl",
+    "title": "Actions",
+    "dialog": "Repair file system? Repairs apply to this device only; the next online login re-converges from the server.CancelYes, repair file system",
+    "out": "ery console ready · services: kernel, wm, storage, vfs · ro, sched\n[    2.052] recovery: fsck: sent to the kernel; its report follows\n[    4.679] recovery: bootlog: sent to the kernel; its report follows\n[    4.679] recovery: this boot: profile recovery · cold · flags url:recovery · outcome recovery",
+    "overflowX": false,
+    "header": "Plotinium Recovery Console· 0.1.0-dev.0 (0000000)Recovery mode — read-only file systemOnline · storage 0 MB used"
+  },
+  "afterEsc": {
+    "active": "DIV.plb-lb",
+    "sel": "Repair file systemRun fsck and fix probl",
+    "title": "Actions",
+    "dialog": "Repair file system? Repairs apply to this device only; the next online login re-converges from the server.CancelYes, repair file system",
+    "out": "ery console ready · services: kernel, wm, storage, vfs · ro, sched\n[    2.052] recovery: fsck: sent to the kernel; its report follows\n[    4.679] recovery: bootlog: sent to the kernel; its report follows\n[    4.679] recovery: this boot: profile recovery · cold · flags url:recovery · outcome recovery",
+    "overflowX": false,
+    "header": "Plotinium Recovery Console· 0.1.0-dev.0 (0000000)Recovery mode — read-only file systemOnline · storage 0 MB used"
+  },
+  "diagDownload": "plotinium-boot-t0-1790484191226.json",
+  "afterB": "login",
+  "url": "http://localhost:4718/"
+}

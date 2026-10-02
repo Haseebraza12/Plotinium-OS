@@ -1,0 +1,25 @@
+# Page replacement
+
+When a page fault happens and there is no free frame, the kernel must pick a **victim** frame, write it back if it is dirty, and reuse it.
+
+## Algorithms
+
+| Algorithm | Idea | Notes |
+|---|---|---|
+| OPT (Belady) | evict the page used farthest in the future | impossible online; used as the yardstick |
+| FIFO | evict the page that arrived first | simple; suffers Belady's anomaly |
+| LRU | evict the page unused for the longest time | good, but exact LRU needs a timestamp or list update on every reference |
+| Clock (second chance) | circular list + reference bit; skip and clear pages with bit 1 | cheap LRU approximation |
+| Enhanced clock | uses (referenced, dirty) pairs; prefers clean, unreferenced pages | avoids a write-back |
+
+## Belady's anomaly
+
+With FIFO, giving a process **more** frames can cause **more** faults. The classic string 1 2 3 4 1 2 5 1 2 3 4 5 gives 9 faults with 3 frames and 10 faults with 4 frames. Stack algorithms (LRU, OPT) never show the anomaly because the set of pages in memory with n frames is always a subset of the set with n+1 frames.
+
+## Worked example (LRU, 3 frames)
+
+Reference string 7 0 1 2 0 3 0 4 2 3 0 3 2: 9 faults. I got 10 the first time because I forgot that the second reference to 0 refreshes its recency.
+
+## Practical
+
+Real kernels approximate: Linux keeps active and inactive lists and moves pages between them based on the accessed bit. Dirty victims cost a disk write, so the kernel prefers clean ones.

@@ -1,0 +1,21 @@
+{
+  "name": "@plotinium/services",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Service manifests and the service manager (boot DAG, degraded state, back-off, bootlog, critical path).",
+  "license": "UNLICENSED",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run --root .. --project services"
+  },
+  "dependencies": {
+    "@plotinium/dsa": "workspace:*",
+    "@plotinium/protocol": "workspace:*",
+    "valibot": "catalog:"
+  },
+  "sideEffects": false
+}

@@ -1,0 +1,130 @@
+/*
+ * Editor banners: tinted, static (no backdrop-filter: the window already sits on glass).
+ * Tone colours tint the fill, border and icon; the words carry the meaning (DSN-08).
+ */
+.banner {
+  --banner-tone: var(--pl-warning);
+  --banner-fill: var(--pl-warning-subtle);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--pl-space-2) var(--pl-space-3);
+  margin: var(--pl-space-3) var(--pl-space-3) var(--pl-space-1);
+  padding: var(--pl-space-2) var(--pl-space-2) var(--pl-space-2) var(--pl-space-3);
+  border-radius: var(--pl-radius-md);
+  background: var(--banner-fill);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--banner-tone) 45%, transparent),
+    var(--pl-glass-specular);
+  color: var(--pl-text);
+  font: var(--pl-type-body);
+}
+.banner[data-tone='danger'] {
+  --banner-tone: var(--pl-danger);
+  --banner-fill: var(--pl-danger-subtle);
+}
+.banner[data-tone='success'] {
+  --banner-tone: var(--pl-success);
+  --banner-fill: var(--pl-success-subtle);
+}
+.banner[data-tone='info'] {
+  --banner-tone: var(--pl-info);
+  --banner-fill: var(--pl-info-subtle);
+}
+.icon {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: var(--pl-control-h);
+  height: var(--pl-control-h);
+  border-radius: var(--pl-radius-ctl);
+  background: color-mix(in srgb, var(--banner-tone) 18%, transparent);
+  color: var(--banner-tone);
+}
+.banner[data-tone='warning'] .icon > svg {
+  animation: nudge var(--pl-motion-slow) var(--pl-ease-spring) 1;
+}
+.text {
+  flex: 1 1 18em;
+  min-width: 0;
+}
+.title {
+  margin: 0;
+  font-weight: var(--pl-weight-semibold);
+}
+.detail {
+  margin: 0;
+  color: var(--pl-text-muted);
+  overflow-wrap: anywhere;
+}
+.code {
+  font-family: var(--pl-font-mono);
+  font-size: var(--pl-text-xs);
+  color: var(--pl-text);
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--pl-space-2);
+  flex: none;
+}
+.dismiss {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: var(--pl-control-h-sm);
+  height: var(--pl-control-h-sm);
+  padding: 0;
+  border: 0;
+  border-radius: var(--pl-radius-sm);
+  background: transparent;
+  color: var(--pl-text-muted);
+}
+.dismiss:hover {
+  background: var(--pl-control-hover);
+  color: var(--pl-text);
+}
+.dismiss:focus-visible {
+  outline: var(--pl-focus-ring);
+}
+.enter {
+  animation: banner-in var(--pl-motion-slow) var(--pl-ease-spring) both;
+}
+.leave {
+  animation: banner-out var(--pl-motion-med) var(--pl-ease-in) forwards;
+}
+
+@keyframes banner-in {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+}
+@keyframes banner-out {
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+@keyframes nudge {
+  30% {
+    transform: rotate(-8deg);
+  }
+  65% {
+    transform: rotate(6deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .enter,
+  .leave,
+  .banner[data-tone='warning'] .icon > svg {
+    animation: none;
+  }
+}
+@media (forced-colors: active) {
+  .banner {
+    border: 1px solid CanvasText;
+  }
+}

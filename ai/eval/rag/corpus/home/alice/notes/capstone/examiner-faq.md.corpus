@@ -1,0 +1,11 @@
+# Likely examiner questions (prep)
+
+**Why is the kernel in a worker and not the main thread?** So a long computation never freezes rendering, and apps can't touch kernel state directly.
+
+**Is it a real OS?** It's an OS in the architectural sense: processes, scheduling, memory accounting, a file system with permissions, syscalls as the only entry point. It runs on top of the browser instead of hardware.
+
+**What happens if IndexedDB is full?** Writes fail with a quota error that surfaces as a normal errno; the UI tells the user.
+
+**How is the AI part more than a chatbot?** The indexer is a scheduled background process, searches go through the permission filter, and the agent can only act through the same syscalls as a user.
+
+**What did you cut?** The optional LLM answer for search is first on the cut list.

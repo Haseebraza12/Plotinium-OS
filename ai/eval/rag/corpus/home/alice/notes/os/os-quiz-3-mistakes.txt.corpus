@@ -1,0 +1,7 @@
+quiz 3 - what I got wrong (7/10)
+
+q2: I said semaphores have owners. no - mutexes have owners, semaphores don't. any thread can post.
+q5: RR with quantum 4, arrival times 0,1,2: I put P2 before P1 at time 4. new arrivals go to the tail BEFORE the preempted job re-enters (convention in our course). lost 1 mark.
+q8: asked what happens if the parent never calls wait(). I wrote "child is killed". wrong: the child stays a zombie until the parent exits, then init reaps it.
+
+note to self: read the question twice. q5 was a careless one.

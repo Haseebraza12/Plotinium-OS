@@ -1,0 +1,67 @@
+[
+  {
+    "id": "UI-040 24-hour time off shows a 12-hour clock, on restores 24-hour",
+    "ok": true,
+    "detail": {
+      "c12": "Wed 30 Sep9:28 PM",
+      "c24": "Wed 30 Sep21:28"
+    }
+  },
+  {
+    "id": "UI-040 Dock size slider changes the icons (40..80)",
+    "ok": true,
+    "detail": {
+      "max": 80,
+      "min": 40
+    }
+  },
+  {
+    "id": "UI-040 indicators off hides running dots",
+    "ok": true,
+    "detail": 0
+  },
+  {
+    "id": "UI-040 auto-hide hides the Dock (transform/opacity) and Alt+N reveals it with focus",
+    "ok": true,
+    "detail": {
+      "dHide": {
+        "top": 902,
+        "t": "matrix(1, 0, 0, 1, 0, 78)",
+        "op": "0",
+        "reserve": "8px"
+      },
+      "altN": {
+        "focus": "settings",
+        "top": 824
+      }
+    }
+  },
+  {
+    "id": "UI-040/041 Settings writes the C3 attributes on <html>",
+    "ok": true,
+    "detail": {
+      "dbl": "minimise",
+      "eff": "scale"
+    }
+  },
+  {
+    "id": "UI-041 via Settings: title double-click minimises",
+    "ok": true,
+    "detail": ["minimised"]
+  },
+  {
+    "id": "UI-072 HUD sits left of the open CC and reports Hz, not fps",
+    "ok": true,
+    "detail": {
+      "x": 804,
+      "right": 1060,
+      "ccX": 1068,
+      "text": "p95 16.7 ms · 60 HzOKbudget 16.7 ms · dropped 0.0% · LoAF 0"
+    }
+  },
+  {
+    "id": "CSP 0 during settings/prefs/HUD",
+    "ok": true,
+    "detail": {}
+  }
+]

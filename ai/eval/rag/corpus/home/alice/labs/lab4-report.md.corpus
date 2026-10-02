@@ -1,0 +1,14 @@
+# Lab 4 report: threads and matrix multiplication
+
+| Threads | 1024×1024 time (s) | Speed-up |
+|---|---|---|
+| 1 | 3.92 | 1.00 |
+| 2 | 2.01 | 1.95 |
+| 4 | 1.07 | 3.66 |
+| 8 | 0.98 | 4.00 |
+
+The lab PCs have 4 physical cores with hyper-threading, so 8 threads barely helps: the inner loop is memory-bound and the extra hardware threads share the same FPUs and caches.
+
+Loop order mattered more than threads: i-j-k took 11.3 s single-threaded, i-k-j 3.9 s, because i-k-j walks B and C row-wise (stride 1).
+
+No locks were needed: each thread writes a disjoint band of rows of C.

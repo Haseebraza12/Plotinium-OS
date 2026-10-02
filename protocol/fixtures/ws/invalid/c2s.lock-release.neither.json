@@ -1,0 +1,9 @@
+{
+  "frame": {
+    "v": 1,
+    "t": "lock.release",
+    "id": 1,
+    "body": {}
+  },
+  "issue": "body"
+}

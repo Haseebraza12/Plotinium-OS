@@ -1,0 +1,24 @@
+"""Same as word_freq.py but shorter, using collections.Counter and a regex tokenizer.
+Also takes --top N and handles several files at once."""
+import argparse
+import re
+from collections import Counter
+
+WORD = re.compile(r"[a-z']+")
+
+
+def tally(paths):
+    c = Counter()
+    for p in paths:
+        with open(p, encoding="utf-8") as f:
+            c.update(WORD.findall(f.read().lower()))
+    return c
+
+
+if __name__ == "__main__":
+    ap = argparse.ArgumentParser()
+    ap.add_argument("files", nargs="+")
+    ap.add_argument("--top", type=int, default=20)
+    a = ap.parse_args()
+    for word, n in tally(a.files).most_common(a.top):
+        print(f"{n:6d}  {word}")

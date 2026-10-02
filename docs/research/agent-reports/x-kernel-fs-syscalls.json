@@ -1,0 +1,58 @@
+{
+ "files_changed": [
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/fs/index.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/fs/kfs.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/fs/handlers.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/fs/authorize.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/fs/syscalls.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/fs/store.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/fs/mem-store.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/fs/keys.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/fs/errno.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/fs/content.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/fs/events.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/fs/fds.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/fs/users.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/fs/tests/harness.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/fs/tests/tree-double.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/fs/tests/vfs.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/fs/tests/sys01.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/fs/tests/fd.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/fs/tests/store.test.ts"
+ ],
+ "verification": [
+  {
+   "command": "node_modules/.bin/tsc -p kernel/tsconfig.json --noEmit",
+   "outcome": "exit 0, no errors anywhere in the kernel project (fs sources and tests included)"
+  },
+  {
+   "command": "node_modules/.bin/eslint kernel/src/core/fs --max-warnings 0",
+   "outcome": "exit 0, no problems"
+  },
+  {
+   "command": "node_modules/.bin/prettier --check kernel/src/core/fs",
+   "outcome": "All matched files use Prettier code style"
+  },
+  {
+   "command": "node_modules/.bin/vitest run --project kernel kernel/src/core/fs",
+   "outcome": "4 test files, 79 tests passed (VFS-01..08, SYS-01, VFS-10, PROC-07, ABI-05/07, DB-02, SYS-03, OFF-01). They ran on the stand-in tree first and pass on the real dsa/tree after its IMPLEMENTED flag flipped to true during this run; a temporary probe test confirmed the real tree is mounted, then was deleted."
+  },
+  {
+   "command": "node_modules/.bin/vitest run --project kernel",
+   "outcome": "33 test files, 394 tests passed (whole kernel project unaffected)"
+  }
+ ],
+ "integration_notes": "BOOT WIRING (kernel-services-web agent / vfs service): import from kernel/src/core/fs/index.ts. In the host: const { store, fallback } = await createFsStore({ indexedDB: self.indexedDB ?? null, storage: navigator.storage }) (kernel/src/core must not touch these globals, so the host passes them). Then: const fs = new KernelFs({ store, bus: kernel.bus, clock: host.clock, procs: kernel.procs, identity: host.identity, osSessionId: () => kernel.osSessionId, log: (lvl, msg) => kernel.log('vfs', lvl, msg) }); await fs.mount({ standalone: <true when no server is reachable, e.g. the offline demo>, epoch: <fencing epoch from the storage service, optional> }); registerFsSyscalls(kernel.handlers, fs, { verifyPlanToken }). Until this is called, fs calls answer ENOSYS at stage 2. mount() runs the fencing epoch, first-boot mkfs (idempotent, no outbox op), tmpfs clearing, users/groups mirrors and loads '/'. For a standalone demo, provisionLocalUser(fs, { uid, username }) creates a users row plus /home/<name> locally. DSA: KernelFsDeps.treeFactory defaults to the real createTree from @plotinium/dsa/tree (flag now true); tests switch on the flag automatically. OPTIONAL HOOKS in KernelFsDeps: busy (lockd lease check, EBUSY lease), onCommit (syncd.kick), hooks (VfsTxnHook: audit mirror / ai_* stores), swapBytes (mm tiers for statfs), synth (content of /system/log/*.log; /system/release is generated from identity). The kernel-internal event API is fs.events.listen(listener) (unfiltered, includes vfs.load; for the trie/indexer), fs.events.watch(cred, dirIno, listener) (permission-filtered directory watch) and fs.events.permEpoch. mount installs a bus visibility hook for vfs.* topics. FD GROUP (pipe, dup, dup2, tty.open): file fds are mirrored in pcb.fdTable (fd -> OFT description id). Pipes and TTY ends should put entries in pcb.fdTable with ids that are not OFT description ids (e.g. negative numbers); new file fds skip numbers already taken there. For file fds use fs.fds.dup(pcb, fd), fs.fds.dup2(pcb, fd, to) (close a pipe/tty at `to` first) and fs.fds.inherit(parentPcb, childPcb, fds?) at spawn; fs.fds.has(pid, fd) tells whether an fd is a file. The kill path is already registered via procs.onTerminate. PROC GROUP: chdir should resolve with fs.resolvePath(actorOf(pcb), path, { follow: true }) and set BOTH pcb.cwdIno and pcb.cwdPath; ProcManager.create currently copies only cwdPath, and should copy the parent's cwdIno too. While cwdIno is '', relative paths are joined to cwdPath as text. USERS: FsUserDirectory(fs, fallback) can back the kernel UserDirectory (the TODO(R2) in proc/users.ts); createKernel needs `users` before the fs exists, so pass a small delegating wrapper. TESTS ELSEWHERE: kernel/tests/loopback.test.ts asserts `stat` returns ENOSYS; update it if the loopback host starts registering fs syscalls.",
+ "problems": [
+  "Not implemented: the read-only scan calls find, grep, du, wc and lsof (outside the assigned list); they still answer ENOSYS.",
+  "Intent locks (\u00a75.7) are simplified to one kernel-wide FIFO mutation lock; reads never take it.",
+  "Bulk calls do not wait for the server's op.result (PVFS-05 SYNC_WAIT): synced mutations report sync 'pending' (tmpfs-only mutations report 'applied'); syncd should add the wait via onCommit or a future awaitSync hook.",
+  "write commits one transaction per call (syscall-abi C4), re-hashing the whole session content each time, so large streamed writes cost O(file size) per call. Session staging beyond 8 MiB (\u00a73.9.3 rule 3) is not implemented. Also, the dispatcher's audit hashes the full data ArrayBuffer of write/writeFile, on top of vfs contentOf's hashing (JS SHA-256 is about 38 ms/MiB).",
+  "IdbFsStore (the IndexedDB adapter) only delegates to vfs IdbStore. In Node only createFsStore's fallback path is tested, because the kernel package has no IndexedDB double (vfs's fake-idb is package-private). It needs a browser-project test.",
+  "Stage-5 order: for non-root callers, EACCES (a missing rwx bit) is answered before EBUSY (well-known directory) and EPERM (synthesised file); root reaches those. This matches the dispatcher contract and the tests assert it.",
+  "close returns {} per the ABI shape (errnos: EBADF only). Per VFS \u00a73.9.3 the poisoned errno is reported by the failing write itself; close removes a file that its own poisoned open created (so a failed cat big > f leaves no f).",
+  "Some VFS detail reasons are not registered in syscall-abi \u00a74.3.1 (well-known, ro-mount, device-full, tmpfs-full, too-large) and are passed through unchanged (the wire accepts any kebab-case reason). The ABI owner may want to register them.",
+  "copy's noReplace (EEXIST) is a pre-check in the handler's planning closure, because the vfs copy planner only offers noClobber (silent skip).",
+  "dsa/tree flipped to IMPLEMENTED=true while I was working. All tests now pass on the real tree, and the stand-in in tests/tree-double.ts is kept only as a fallback keyed on the flag."
+ ]
+}

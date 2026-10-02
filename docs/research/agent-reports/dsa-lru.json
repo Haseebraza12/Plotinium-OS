@@ -1,0 +1,49 @@
+{
+ "files_changed": [
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/src/lru/index.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/src/lru/README.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/tests/lru.prop.test.ts"
+ ],
+ "test_changes": "One change, in dsa/tests/lru.prop.test.ts only. The property test now passes an explicit timeout, `PROP_TIMEOUT_MS = Math.max(30_000, PROP.numRuns * 20)`, as the third argument of `it(...)`, with a comment explaining why.\n\nWhy: spec \u00a78 (line 1012) requires 10,000 runs nightly. Under Vitest's 5 s default that setting always fails by timeout: 10,000 runs take 32\u201343 s here. Even the 1,000-run PR setting takes about 3.6 s, which leaves little headroom on a slower CI runner.\n\nProfiling showed the cache itself (including 200,000 checkInvariants calls) is about 0.3 s of the 3.6 s. The rest is the array-filter model and the per-step deep toEqual. No run count, operation, arbitrary or assertion was changed, so the test is not weakened.\n\ndsa/tests/lru.test.ts and dsa/bench/lru.bench.ts are unchanged.",
+ "verification": [
+  {
+   "command": "pnpm exec tsc -p dsa/tsconfig.json --noEmit",
+   "outcome": "exit 0, no errors"
+  },
+  {
+   "command": "pnpm exec vitest run --project dsa dsa/tests/lru.test.ts dsa/tests/lru.prop.test.ts dsa/tests/scaffold.test.ts",
+   "outcome": "3 files passed. All 18 edge-case tests and the property test (1,000 runs) pass; the scaffold rows of structures still unimplemented pass too (21 passed, 9 skipped rows for structures whose flag is now true, lru included)."
+  },
+  {
+   "command": "PLT_PROP_RUNS=10000 pnpm exec vitest run --project dsa dsa/tests/lru.prop.test.ts",
+   "outcome": "Passed in 31.6 s (nightly depth). Before the timeout fix it failed with 'Test timed out in 5000ms', never an assertion failure."
+  },
+  {
+   "command": "Mutation sanity check: three bugs injected into dsa/src/lru/index.ts one at a time (unpin relinks at the LRU end; hit keeps the speculative flag; release leaves a stale pin count), each followed by a run of the LRU suites; the file was restored and cmp confirmed it identical to the original",
+   "outcome": "Every mutation was caught: 2, 2 and 1 tests failed respectively."
+  },
+  {
+   "command": "pnpm exec eslint dsa/src/lru dsa/tests dsa/bench --max-warnings 0",
+   "outcome": "exit 0. The one error found along the way, an unnecessary non-null assertion, was fixed."
+  },
+  {
+   "command": "pnpm exec vitest bench --run --project dsa dsa/bench/lru.bench.ts",
+   "outcome": "Startup error 'No projects matched the filter \"dsa\"': bench files run in the 'dsa (bench)' project, which is the documented command in harness.ts and the README."
+  },
+  {
+   "command": "PLT_BENCH_SIZES=1000,10000 NODE_OPTIONS=--expose-gc pnpm exec vitest bench --run --project 'dsa (bench)' dsa/bench/lru.bench.ts",
+   "outcome": "Passed in both runs (2/2 tests), even at load 7.5\u20138.6. These are the PR sizes of spec \u00a77.2."
+  },
+  {
+   "command": "NODE_OPTIONS=--expose-gc [PLT_BENCH_OUT=<scratchpad>] pnpm exec vitest bench --run --project 'dsa (bench)' dsa/bench/lru.bench.ts (full sizes 10^3, 10^4, 10^5; 8 runs)",
+   "outcome": "The DSA-GEN-09 memory test passed every time. The MEM-02 shape test passed in 1 of 8 runs. get passed in all 8 and pin+unpin stayed at or below 1.62 in all 8. put+evict exceeded the 2x limit in 7 of 8 runs (mean ratios 1.89, 2.09, 2.17, 2.40, 3.58, 3.78, 3.94 and 6.02), on a dev machine at load 4\u20139 from about 25 parallel agents. See problems."
+  }
+ ],
+ "benchmark": "Dev machine, not the lab machine: AMD Ryzen 5 7530U (6 cores / 12 threads, 512 KB L2 per core, 16 MB shared L3), Node 24.13.1, Vitest 5.0.1. The machine was heavily loaded by parallel agents. Batches are 1,000 operations. Cells are ns/op, as mean / p50 / p95, median of 3 JSON-recorded runs. Re-run on the lab machine.\n\n- get (hit, Zipf): 62/58/79 at 10^3, 68/63/82 at 10^4, 80/77/100 at 10^5. Mean ratio 1.27\u20131.44: flat, O(1).\n- put+evict (bounded, new keys): 120/117/150 at 10^3, 162/119/242 at 10^4, 229/175/376 at 10^5. Mean ratio 1.89\u20132.40 against a limit of 2; p50 ratio 1.42\u20131.84.\n- pin+unpin: 65/63/70 at 10^3, 86/80/92 at 10^4, 101/91/132 at 10^5. Ratio 1.15\u20131.62: flat.\n- Array-LRU baseline (touch): 341 ns at 10^3, 2,644 at 10^4, 27,475 at 10^5. It grows 72\u2013139x, the linear O(n) curve.\n- Absolute budget: in the three tabulated runs every mean was at most 0.3 \u00b5s, within the target of 0.5 \u00b5s.\n- Bytes/entry, measured including the Map (allocated / used from stats()): 46\u201359 (27.6 / 27.0) at 10^3; 100 (44.2 / 27.0) at 10^4; 78.6 (35.4 / 27.0) at 10^5. The estimate is 27 B/slot: typed arrays 11 B plus 2 x 8 B array elements, excluding the Map.\n\nThe README records all of this in the filled DSA.md template, with a text complexity curve and an explanation of the put+evict growth.",
+ "problems": [
+  "put+evict failed its shape assertion (mean ratio at most 2, 10^3 to 10^5) in 7 of 8 full-size runs on this dev machine (ratios 1.89\u20136.02). get and pin+unpin stayed within the limit in all 8 runs. The PR gate at 10^3 and 10^4 passed. I did not weaken the assertion.\n\nMy analysis: at steady state each put+evict does three Map operations (a get that misses, a delete, a set), one required [K, V] tuple, and constant sequential slot-array writes to slots i-1, i and i+1. The evicted slot is reused from the free stack, so there is no resize and no loop.\n\nThe part that grows with n is V8's Map: about 7 MB at 10^5, well past L2, plus rehashes under delete/insert churn that cause p95 spikes. Raw Map churn alone grew 1.7\u20133.5x on the same machine. A noise-robust min-p50 comparison still suggested some extra LRU cost at 10^5 (+208 ns against +25 ns at 10^3), which I could not isolate: the machine was at load 5\u20139 and perf counters are blocked (perf_event_paranoid=4).\n\nIt needs a clean lab-machine run. If it still fails there, the README states the reversal trigger: a spec amendment to use S6's IntHashTable instead of Map for integer keys.",
+  "The task's bench command `vitest bench --run --project dsa` fails with 'No projects matched'. Bench files run in the 'dsa (bench)' project, so the working command is `NODE_OPTIONS=--expose-gc pnpm exec vitest bench --run --project 'dsa (bench)' dsa/bench/lru.bench.ts`. Without --expose-gc, measured bytes/entry is null.",
+  "Not done because they are outside my allowed paths, and they are listed in the README as follow-ups: copy the filled entry into root DSA.md; commit benchmark JSON to docs/evidence/dsa/lru/ (my runs are only in the session scratchpad); add 'dsa' to GATED_PACKAGES in vitest.config.ts if no other structure has; complete AI_USAGE.md log row 8 and the \u00a75.4 owner checklist; request R5's review. dsa/src/index.ts already exported LruCache and its types, so it was not touched.",
+  "Authorship wording: AI_USAGE.md \u00a75 says these implementations are AI-written and not the owners' own first-principles authorship, which conflicts with the wording of spec \u00a710.2 until the instructor rules. The index.ts header and the README use that same framing (written by Claude Code, no package or pilot code) rather than claiming team authorship."
+ ]
+}

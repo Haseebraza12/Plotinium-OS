@@ -1,0 +1,23 @@
+/* Print a histogram of letter frequencies (a-z, case-insensitive) read from stdin.
+ * usage: ./hist < file.txt */
+#include <ctype.h>
+#include <stdio.h>
+
+int main(void) {
+    long counts[26] = {0};
+    long total = 0;
+    int c;
+    while ((c = getchar()) != EOF) {
+        if (isalpha(c)) {
+            counts[tolower(c) - 'a']++;
+            total++;
+        }
+    }
+    for (int i = 0; i < 26; i++) {
+        int bar = total ? (int)(60 * counts[i] / total) : 0;
+        printf("%c %6ld ", 'a' + i, counts[i]);
+        for (int j = 0; j < bar; j++) putchar('#');
+        putchar('\n');
+    }
+    return 0;
+}

@@ -1,0 +1,64 @@
+{
+ "files_changed": [
+  "/home/haseeb-raza/Desktop/Plotinium OS/docs/identity/logo.svg",
+  "/home/haseeb-raza/Desktop/Plotinium OS/docs/identity/logo-mono.svg",
+  "/home/haseeb-raza/Desktop/Plotinium OS/docs/identity/favicon.svg",
+  "/home/haseeb-raza/Desktop/Plotinium OS/docs/identity/wordmark.svg",
+  "/home/haseeb-raza/Desktop/Plotinium OS/docs/identity/lockup.svg",
+  "/home/haseeb-raza/Desktop/Plotinium OS/docs/identity/app-icon.svg",
+  "/home/haseeb-raza/Desktop/Plotinium OS/docs/identity/maskable-icon.svg",
+  "/home/haseeb-raza/Desktop/Plotinium OS/docs/identity/wallpaper-dark.svg",
+  "/home/haseeb-raza/Desktop/Plotinium OS/docs/identity/wallpaper-light.svg",
+  "/home/haseeb-raza/Desktop/Plotinium OS/docs/identity/manifest.webmanifest",
+  "/home/haseeb-raza/Desktop/Plotinium OS/docs/identity/identity.json",
+  "/home/haseeb-raza/Desktop/Plotinium OS/docs/identity/usage.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/docs/identity/README.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/docs/identity/render-png.mjs",
+  "/home/haseeb-raza/Desktop/Plotinium OS/docs/identity/icons/favicon-16.png",
+  "/home/haseeb-raza/Desktop/Plotinium OS/docs/identity/icons/favicon-32.png",
+  "/home/haseeb-raza/Desktop/Plotinium OS/docs/identity/icons/apple-touch-icon.png",
+  "/home/haseeb-raza/Desktop/Plotinium OS/docs/identity/icons/icon-192.png",
+  "/home/haseeb-raza/Desktop/Plotinium OS/docs/identity/icons/icon-512.png",
+  "/home/haseeb-raza/Desktop/Plotinium OS/docs/identity/icons/maskable-192.png",
+  "/home/haseeb-raza/Desktop/Plotinium OS/docs/identity/icons/maskable-512.png"
+ ],
+ "verification": [
+  {
+   "command": "node docs/identity/render-png.mjs  (Playwright, channel 'chrome', colorScheme light, DPR 1, omitBackground)",
+   "outcome": "Rendered 7 PNGs: favicon-16, favicon-32 (from favicon.svg, transparent), apple-touch-icon 180 (from maskable-icon.svg, opaque), icon-192 and icon-512 (from app-icon.svg, transparent corners), maskable-192 and maskable-512 (opaque). Recompressed losslessly with PIL optimize; pixels checked identical (icon-512 is 165 KB, maskable-512 168 KB)."
+  },
+  {
+   "command": "Read the PNG renders and contact sheets: 16/24/32 px magnified 8x on white and #202124, light and dark schemes; 64/96/256 px sheets; icon-512.png; maskable-512.png with the 80% safe circle drawn over it",
+   "outcome": "Legible at 16 px in both schemes: two crossing orbits, a solid nucleus and the electron. The 512 px renders are clean (continuous-corner tile, gloss, rim, soft halo), and the maskable atom plus its electron sit inside the safe circle. Fixed along the way: a donut-looking nucleus (now a lit sphere), an iris-like dot at small sizes (removed), a heavy mono mark (thinned), and halo clipping in the lock-up (viewBox padded)."
+  },
+  {
+   "command": "python3 xml.dom.minidom.parse on every docs/identity/*.svg, plus byte and gzip sizes",
+   "outcome": "All 9 SVGs are well-formed. favicon.svg is 355 B gzipped (budget 1 KB); logo.svg plus wordmark.svg is about 2.8 KB gzipped (budget 6 KB); each wallpaper is about 1 KB gzipped."
+  },
+  {
+   "command": "Chrome via CDP Page.getAppManifest, on a local static copy of docs/identity with an index.html linking the manifest",
+   "outcome": "Manifest errors: []. All 6 icon entries resolve with HTTP 200 and the right content type (image/svg+xml or image/png). No failed requests. Declared PNG sizes match the real pixel sizes. identity.json tagline (87 chars, max 90) equals the manifest description, and there are 5 members."
+  },
+  {
+   "command": "node_modules/.bin/prettier --check \"docs/identity/**/*.{md,json,webmanifest,mjs}\"",
+   "outcome": "All matched files use Prettier code style."
+  },
+  {
+   "command": "grep -rniE 'nuclear|atomic bomb|fission|critical mass|meltdown|fallout|reactor|radioactive|glowing|weapon|war|bomb|radiation|mushroom' docs/identity",
+   "outcome": "No matches: the kit is clean for the future PLT-ID-16 identity lint, and usage.md phrases its 'don't' rules without banned words. Wordmark variants (PLOTINIUM, Plotinium OS and so on) appear only in usage.md's list of forbidden forms."
+  },
+  {
+   "command": "tsc / vitest / eslint scoped to docs/identity",
+   "outcome": "Not applicable: docs/** is in eslint's globalIgnores and no tsconfig or vitest project covers docs/. The only code file is render-png.mjs (plain ESM JS, run successfully above)."
+  }
+ ],
+ "integration_notes": "WEB (kernel-services-web agent, web/):\n1. Copy docs/identity/{favicon.svg, app-icon.svg, maskable-icon.svg, manifest.webmanifest, icons/} into web/public/ with the layout unchanged. The manifest's icon paths are relative (\"app-icon.svg\", \"icons/icon-512.png\"), so the copy stays valid when the manifest is served at /manifest.webmanifest. If vite-plugin-pwa generates the manifest, mirror these fields and icons into its `manifest` option, or set manifest:false and serve this static file.\n2. Add to index.html: <link rel=icon href=/favicon.svg type=image/svg+xml>, <link rel=icon href=/icons/favicon-32.png sizes=32x32 type=image/png>, <link rel=apple-touch-icon href=/icons/apple-touch-icon.png>, <link rel=manifest href=/manifest.webmanifest>, and meta theme-color #EEF0F8 (light) and #0B0D1F (dark) using media attributes.\n3. Manifest background_color and theme_color are the light-theme --pl-bg #EEF0F8 and --pl-accent #5856D6, as spec \u00a74.5 requires. The boot screen is dark, so an installed app may flash light on its splash; switch background_color to #0B0D1F if that is preferred.\n\nUI and boot-ui (ui/, wm/src/boot-ui):\n4. The mark is exactly ui/src/icons/atom-logo.ts scaled by 20/3 (two orbits at \u00b132\u00b0, ry/rx 0.4, electron at the tip of the -32\u00b0 orbit), with the same --pl-logo-* colours. The Stitch boot-splash reference draws THREE orbits at 0/60/120\u00b0; the boot screen should use this two-orbit mark so boot, menu bar and kit match.\n5. logo.svg can be inlined in index.html for the boot screen (1.25 KB gzipped). Inlined, it reads the --pl-logo-* tokens; its classes and ids use the plt-logo-* and plt-lu-* prefixes to avoid collisions.\n6. The wallpapers are the --pl-wallpaper token layers as SVG (2560x1600, preserveAspectRatio slice, gradients only), plus the boot-splash orbit arcs. Use them with object-fit/background-size: cover and aria-hidden.\n7. logo-mono.svg uses currentColor, which only works inlined or as a CSS mask; through <img> it renders black.\n\nVFS / mkfs seed (protocol/wellknown/seed-ids.json, owned elsewhere):\n8. /system/branding can now include lockup.svg, app-icon.svg, maskable-icon.svg, the two wallpapers, manifest.webmanifest, identity.json and usage.md, as well as the spec's logo, logo-mono, wordmark and favicon.\n9. tokens.css is NOT copied into docs/identity: the source (ui/src/tokens/tokens.css) is still changing. Copy it at build or seed time.\n\nRoot docs agent:\n10. THIRD_PARTY.md already lists @fontsource-variable/inter (OFL-1.1). Add a line that docs/identity/wordmark.svg and lockup.svg contain outlines of Inter Semibold (wght 600, opsz 32), as spec \u00a73.5 requires. The README header can use docs/identity/lockup.svg.\n\nTests and tools (tests/, tools/):\n11. Suggested tests:\n   - 'PLT-ID-10 manifest name and short_name are Plotinium' (parse docs/identity/manifest.webmanifest);\n   - 'PLT-ID-05 README, identity.json and manifest description carry the same tagline of at most 90 characters';\n   - 'PLT-ID-03 favicon at 16 px and logo at 256 px render in both themes' (the render approach in docs/identity/render-png.mjs can be reused; spec \u00a73.6 names tools/render-icons.ts, which can simply invoke it).\n12. identity.json follows TeamIdentitySchema with the spec's placeholders (<S>, <NN>, <R1 name>..<R5 name>) plus name 'Plotinium'. Fill in the names after registration.",
+ "problems": [
+  "Spec conflict, needs an owner decision (R3): specs/00-product/identity-and-branding.md \u00a73.6 still describes a different logo, 'a plotted point on an orbit' (an open ring plus a dot). Its rules forbid gradients and filters, require strokes of at least 20 units and forbid a separate simplified favicon. This task, the Stitch references and ui/src/icons/atom-logo.ts all use the luminous two-orbit atom with a soft halo and a dedicated 16 px favicon, and I built to the task and the UI. As a result the planned test 'PLT-ID-03 logo SVGs contain no text, gradient, filter or stroke thinner than 20 units' would fail on logo.svg (it has a gradient and an optional blur filter) and on logo-mono.svg (6-unit strokes at large sizes). The spec and that test should be updated to the atom mark; I cannot edit specs/.",
+  "Spec \u00a73.11 points to wm/tokens/tokens.css, but the live tokens file is ui/src/tokens/tokens.css. The kit's colour fallbacks are taken from the latter.",
+  "Spec \u00a74.5 lists favicon.svg in the manifest icons. I listed app-icon.svg (any) and maskable-icon.svg (maskable), plus the 192/512 PNGs, because an installed app should show the tile, not the bare mark. favicon.svg is linked from HTML instead.",
+  "The docs/identity/README.md mentions a tokens.css copy, which I deliberately did not create (see integration_notes 9), so the kit is missing it until a build or seed step copies it.",
+  "The scratchpad generator that produced the SVGs (Python plus fontTools for the wordmark outlines) was not committed. The committed SVGs are the hand-editable source of truth, and render-png.mjs regenerates the PNGs. render-png.mjs does not apply the lossless PNG recompression I ran once, so re-running it gives files about 5-10% larger with the same pixels.",
+  "The PNG favicons (16/32) are rendered in the light scheme. On a dark tab strip their contrast is about 2.9:1; favicon.svg itself switches to the dark palette under prefers-color-scheme: dark."
+ ]
+}

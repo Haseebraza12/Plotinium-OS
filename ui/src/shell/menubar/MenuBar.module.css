@@ -1,0 +1,325 @@
+/*
+ * The menu bar (visual-language-macos.md §3.4 "Menu bar" material): 28 px of live glass with a
+ * hairline under it. Titles and status items are 22 px pills whose hover and pressed tints are a
+ * ::before crossfading its opacity; nothing but transform and opacity animates.
+ */
+.bar {
+  position: relative;
+  z-index: var(--pl-z-menubar);
+  display: flex;
+  align-items: center;
+  gap: var(--pl-space-2);
+  width: 100%;
+  height: var(--pl-menubar-h);
+  padding: 0 var(--pl-space-2) 0 var(--pl-space-2);
+  background: var(--pl-glass-menubar-bg);
+  -webkit-backdrop-filter: var(--pl-glass-menubar-filter);
+  backdrop-filter: var(--pl-glass-menubar-filter);
+  box-shadow:
+    inset 0 -1px 0 var(--pl-hairline-subtle),
+    var(--pl-glass-specular);
+  color: var(--pl-text);
+  font: var(--pl-type-callout);
+  font-feature-settings: var(--pl-font-features);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* The "Menu bar" landmark: the menus on the left, the status area on the right. */
+.nav {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: var(--pl-space-2);
+  min-width: 0;
+  height: 100%;
+}
+
+.menus {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 0;
+  min-width: 0;
+  height: 100%;
+}
+
+/* ---------- shared pill (titles and status items) ---------- */
+.title,
+.item {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--pl-space-1);
+  height: var(--pl-control-h-sm);
+  min-width: var(--pl-target-min);
+  padding: 0 var(--pl-space-2);
+  border: 0;
+  border-radius: var(--pl-radius-sm);
+  background: none;
+  color: inherit;
+  font: inherit;
+  white-space: nowrap;
+  cursor: default;
+  isolation: isolate;
+}
+.title::before,
+.item::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--pl-control-hover);
+  opacity: 0;
+  transition: opacity var(--pl-motion-fast) var(--pl-ease);
+}
+.title:hover::before,
+.item:hover::before {
+  opacity: 1;
+}
+.title[aria-expanded='true']::before,
+.item[aria-expanded='true']::before {
+  background: var(--pl-control-pressed);
+  box-shadow: var(--pl-glass-specular);
+  opacity: 1;
+}
+.title:focus-visible,
+.item:focus-visible {
+  outline: var(--pl-focus-ring);
+  outline-offset: 0;
+}
+.title[aria-disabled='true'] {
+  color: var(--pl-text-disabled);
+}
+
+.logo {
+  padding: 0 var(--pl-space-2);
+}
+/* 16 px on a whole-pixel offset (22 px title, 28 px bar); a 1 px glow keeps the edges crisp. */
+.atom {
+  display: block;
+  filter: drop-shadow(0 0 1px var(--pl-accent-glow));
+}
+
+.appName {
+  font-weight: var(--pl-weight-bold);
+}
+
+@keyframes label-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+}
+.appLabel {
+  display: inline-block;
+  animation: label-in var(--pl-motion-fast) var(--pl-ease) both;
+}
+
+/* ---------- status area ---------- */
+.status {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--pl-space-half);
+  height: 100%;
+  font-weight: var(--pl-weight-medium);
+}
+
+.iconItem {
+  justify-content: center;
+  padding: 0 var(--pl-space-1);
+}
+
+/* A status pill with text (offline, syncing, degraded). */
+.pill {
+  gap: var(--pl-space-1);
+  font-size: var(--pl-text-xs);
+}
+.pill::before {
+  background: var(--pl-control-bg);
+  opacity: 1;
+}
+.pill:hover::before {
+  background: var(--pl-control-hover);
+}
+/*
+ * Text on the tinted glass chips is pulled toward the primary text colour so it stays at least
+ * 4.5:1 over any wallpaper (UI-089): darker in the light theme, lighter in the dark theme.
+ */
+.warning {
+  color: color-mix(in srgb, var(--pl-warning) 72%, var(--pl-text));
+}
+.warning::before,
+.warning:hover::before {
+  background: var(--pl-warning-subtle);
+}
+
+.netIcon {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+}
+.onlineDot {
+  position: absolute;
+  right: calc(-1 * var(--pl-space-half));
+  bottom: calc(-1 * var(--pl-space-half));
+  width: 6px;
+  height: 6px;
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-status-online);
+  box-shadow:
+    0 0 0 1.5px var(--pl-glass-menubar-bg),
+    0 0 6px var(--pl-success-subtle);
+}
+.netText {
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes ring {
+  from {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.8);
+  }
+}
+.pulse {
+  position: absolute;
+  inset: calc(-1 * var(--pl-space-half));
+  border: 2px solid currentColor;
+  border-radius: var(--pl-radius-pill);
+  opacity: 0;
+  pointer-events: none;
+  animation: ring calc(600ms * var(--pl-k)) var(--pl-ease-out) 1 both;
+}
+
+.aiItem {
+  padding: 0 var(--pl-space-1);
+}
+.ai {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pl-space-1);
+  height: 18px;
+  padding: 0 var(--pl-space-2) 0 var(--pl-space-1);
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-accent-subtle);
+  box-shadow: inset 0 0 0 var(--pl-hairline-width) var(--pl-accent-glow);
+  color: color-mix(in srgb, var(--pl-accent-text) 72%, var(--pl-text));
+  font-size: var(--pl-text-xs);
+  font-weight: var(--pl-weight-bold);
+  line-height: 1;
+  letter-spacing: 0.02em;
+}
+.ai[data-state='off'] {
+  background: var(--pl-control-bg);
+  box-shadow: inset 0 0 0 var(--pl-hairline-width) var(--pl-hairline);
+  color: var(--pl-text-muted);
+}
+.ai[data-state='off'] .aiText {
+  text-decoration: line-through;
+}
+.ai[data-state='error'] {
+  background: var(--pl-danger-subtle);
+  box-shadow: none;
+  color: color-mix(in srgb, var(--pl-danger) 72%, var(--pl-text));
+}
+.aiProgress {
+  font-weight: var(--pl-weight-medium);
+  font-variant-numeric: tabular-nums;
+}
+
+.memory {
+  gap: var(--pl-space-2);
+}
+.memGlyph {
+  position: relative;
+  display: block;
+  width: 22px;
+  height: 10px;
+  overflow: hidden;
+  border-radius: var(--pl-radius-xs);
+  box-shadow: inset 0 0 0 1px var(--pl-text-muted);
+}
+.memFill {
+  position: absolute;
+  inset: var(--pl-space-half);
+  border-radius: 1.5px;
+  background: currentColor;
+  transform-origin: left center;
+  transition: transform var(--pl-motion-med) var(--pl-ease);
+}
+.memText {
+  font-size: var(--pl-text-xs);
+  font-variant-numeric: tabular-nums;
+}
+.memory[data-level='warning'] {
+  color: color-mix(in srgb, var(--pl-warning) 72%, var(--pl-text));
+}
+.memory[data-level='critical'] {
+  color: color-mix(in srgb, var(--pl-danger) 72%, var(--pl-text));
+}
+@keyframes mem-pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+.memPulse {
+  animation: mem-pulse calc(320ms * var(--pl-k)) var(--pl-ease) 1;
+}
+
+.clock {
+  gap: var(--pl-space-1);
+  padding-right: var(--pl-space-1);
+  font-variant-numeric: tabular-nums;
+}
+.clockDate {
+  margin-right: var(--pl-space-1);
+}
+.unread {
+  display: inline-grid;
+  place-items: center;
+  min-width: var(--pl-space-4);
+  height: var(--pl-space-4);
+  padding: 0 var(--pl-space-1);
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-accent);
+  color: var(--pl-on-accent);
+  font-size: var(--pl-text-xs);
+  font-weight: var(--pl-weight-bold);
+  line-height: 1;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Narrow viewports: the date goes first, then the app menus scroll out of the way. */
+@media (max-width: 720px) {
+  .clockDate {
+    display: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .bar {
+    border-bottom: 1px solid CanvasText;
+  }
+  .title[aria-expanded='true'],
+  .item[aria-expanded='true'] {
+    outline: 1px solid Highlight;
+  }
+  .onlineDot {
+    background: CanvasText;
+  }
+}

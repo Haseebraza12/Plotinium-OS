@@ -1,0 +1,92 @@
+/*
+ * CodeMirror host and syntax colours. Colours are text-safe tokens only (>= 4.5:1 on the
+ * editor surface in both themes); emphasis also changes weight or style, never colour alone.
+ */
+.host {
+  position: relative;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+.host > :global(.cm-editor) {
+  height: 100%;
+}
+
+/* ---------- syntax ---------- */
+.synHeading {
+  color: var(--pl-accent-text);
+  font-weight: var(--pl-weight-bold);
+}
+.synStrong {
+  color: var(--pl-text);
+  font-weight: var(--pl-weight-bold);
+}
+.synEmphasis {
+  font-style: italic;
+}
+.synStrike {
+  text-decoration: line-through;
+}
+.synLink {
+  color: var(--pl-info);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.synUrl {
+  color: var(--pl-info);
+}
+.synCode {
+  color: var(--pl-success);
+}
+.synQuote {
+  color: var(--pl-text-muted);
+}
+.synMark {
+  color: var(--pl-text-tertiary);
+}
+.synKeyword {
+  color: var(--pl-accent-text);
+}
+.synString {
+  color: var(--pl-success);
+}
+.synRegexp {
+  color: var(--pl-warning);
+}
+.synNumber {
+  color: var(--pl-warning);
+}
+.synComment {
+  color: var(--pl-text-tertiary);
+  font-style: italic;
+}
+.synDefinition {
+  color: var(--pl-info);
+}
+.synFunction {
+  color: var(--pl-info);
+}
+.synType {
+  color: var(--pl-info);
+  font-style: italic;
+}
+.synProperty {
+  color: var(--pl-text);
+}
+.synOperator {
+  color: var(--pl-text-muted);
+}
+.synPunctuation {
+  color: var(--pl-text-muted);
+}
+.synInvalid {
+  color: var(--pl-danger);
+  text-decoration: underline wavy;
+}
+.synInserted {
+  color: var(--pl-success);
+}
+.synDeleted {
+  color: var(--pl-danger);
+  text-decoration: line-through;
+}

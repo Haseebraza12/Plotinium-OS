@@ -1,0 +1,13 @@
+# Demo day checklist
+
+- [ ] charge laptop + bring the HDMI adapter (and a spare)
+- [ ] clear browser profile, then cold boot once to warm caches
+- [ ] examiner accounts reset, budgets checked
+- [ ] run the semantic search query **before** the memory stress test (the stress test may evict the embedding model)
+- [ ] have the offline demo ready: turn off wifi, edit a file, turn it on, show the replay
+- [ ] kill a process from the Task Manager, show it restarting
+- [ ] show `ps` with the indexer at low priority while typing
+- [ ] backup: screen recording of the full flow on a USB stick
+- [ ] print the architecture diagram, A3
+
+Roles: Alice drives, Bob narrates, Carol handles questions on the database, Dan on the kernel, Esha on CI and deployment.

@@ -1,0 +1,20 @@
+{
+  "phase": "A",
+  "console": [
+    "warning: Unable to determine content-length from response headers. Will expand buffer when needed."
+  ],
+  "failed": [
+    "GET / net::ERR_INTERNET_DISCONNECTED",
+    "GET / net::ERR_INTERNET_DISCONNECTED",
+    "GET / net::ERR_INTERNET_DISCONNECTED",
+    "GET / net::ERR_INTERNET_DISCONNECTED"
+  ],
+  "regsBefore": [],
+  "navErr": "Error: page.reload: net::ERR_INTERNET_DISCONNECTED\nCall log:\n  - waiting for navigation until \"load\"\n",
+  "offlineScreen": "none: TimeoutError: locator.waitFor: Timeout 60000ms exceeded.\nCall log:\n  - waiting for getByTestId('desk",
+  "offlineMs": 60008,
+  "controller": "no sw api",
+  "coi": false,
+  "bodyText": "Press space to play\n\nTry:\n\nChecking the network cables, modem, and router\nReconnecting to Wi-Fi\nERR_INTERNET_DISCONNECTED",
+  "net": null
+}

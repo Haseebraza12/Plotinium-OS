@@ -1,0 +1,19 @@
+# Banker's algorithm
+
+Dijkstra's idea: the OS behaves like a banker that never lends money in a way that could leave it unable to satisfy every customer's maximum claim.
+
+Data: `Available[m]`, `Max[n][m]`, `Allocation[n][m]`, `Need = Max - Allocation`.
+
+**Safety check:**
+1. Work = Available; Finish[i] = false for all i.
+2. Find i with Finish[i] == false and Need[i] <= Work. If none, go to 4.
+3. Work += Allocation[i]; Finish[i] = true; go to 2.
+4. Safe iff every Finish[i] is true.
+
+**Request:** pretend to grant, run the safety check, roll back if unsafe.
+
+Cost is O(m·n²) per request, and every process has to declare its maximum in advance, which is why nobody uses it in a general-purpose OS. It still shows up on every exam.
+
+Homework 3, question 2: with Available = (3, 3, 2) the safe sequence is P1, P3, P4, P0, P2 (not unique; P1, P3, P0, P2, P4 also works). A request of (1, 0, 2) by P1 can be granted immediately.
+
+See labs/bankers.py for the script I used to check my answers.

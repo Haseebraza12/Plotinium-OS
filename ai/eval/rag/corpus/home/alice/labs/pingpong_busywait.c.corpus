@@ -1,0 +1,34 @@
+/* Lab 5, part A (the "bad" version we were asked to measure first).
+ * Two threads alternate printing ping/pong by spinning on a shared variable.
+ * Works, but each waiting thread burns 100% of a core. `time` showed 1.9 s of user CPU
+ * for 10 rounds; the version with pthread_cond_wait used 0.001 s.
+ * build: gcc -Wall -O2 -pthread pingpong_busywait.c -o busy
+ */
+#include <pthread.h>
+#include <stdatomic.h>
+#include <stdio.h>
+
+#define ROUNDS 10
+
+static atomic_int turn = 0;
+
+static void *player(void *arg) {
+    int me = *(int *)arg;
+    for (int i = 0; i < ROUNDS; i++) {
+        while (atomic_load(&turn) != me)
+            ; /* spin */
+        printf("%s %d\n", me == 0 ? "ping" : "pong", i);
+        atomic_store(&turn, 1 - me);
+    }
+    return NULL;
+}
+
+int main(void) {
+    pthread_t a, b;
+    int ida = 0, idb = 1;
+    pthread_create(&a, NULL, player, &ida);
+    pthread_create(&b, NULL, player, &idb);
+    pthread_join(a, NULL);
+    pthread_join(b, NULL);
+    return 0;
+}

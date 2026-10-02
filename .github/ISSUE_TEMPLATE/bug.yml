@@ -1,0 +1,61 @@
+name: Bug
+description: Something does not behave as its spec says
+title: '[bug] '
+labels: ['bug']
+body:
+  - type: input
+    id: requirement
+    attributes:
+      label: Requirement ID(s) affected
+      placeholder: OFF-02
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Exact commands or clicks, starting from a fresh boot if possible.
+      placeholder: |
+        1. Log in as alice
+        2. Run `rm -r ~/old-drafts` while offline
+        3. Reconnect
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour (per the spec)
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour
+      description: Include the errno, `dmesg` or `bootlog` output, and a trace or screenshot for UI bugs.
+    validations:
+      required: true
+  - type: input
+    id: build
+    attributes:
+      label: Build
+      description: Output of `uname -a`, or the commit SHA.
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where it happens
+      options: [Local stack (docker compose), Production URL, Dev server, CI]
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and version
+      placeholder: Chrome 154.0.8037.57
+  - type: checkboxes
+    id: gate
+    attributes:
+      label: Severity
+      options:
+        - label: This blocks a gate demonstration or a required test

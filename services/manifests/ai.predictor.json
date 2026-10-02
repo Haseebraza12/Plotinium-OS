@@ -1,0 +1,12 @@
+{
+  "name": "ai.predictor",
+  "description": "Markov counts loaded from the telemetry ring",
+  "requires": ["sched", "storage", "login"],
+  "critical": false,
+  "weight": 1,
+  "timeoutMs": 2000,
+  "priority": 32,
+  "safeMode": false,
+  "runsIn": "executor",
+  "caps": ["mem", "mm.hint", "ai.telemetry", "ai.predict"]
+}

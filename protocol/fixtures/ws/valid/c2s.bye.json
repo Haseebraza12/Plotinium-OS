@@ -1,0 +1,8 @@
+{
+  "v": 1,
+  "t": "bye",
+  "id": 15,
+  "body": {
+    "reason": "reboot"
+  }
+}

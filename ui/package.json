@@ -1,0 +1,50 @@
+{
+  "name": "@plotinium/ui",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Presentational SolidJS component library for Plotinium's macOS-inspired glass UI: tokens, motion, primitives, desktop shell components and app views. Data arrives through props; no storage or kernel access.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./tokens.css": "./src/tokens/tokens.css",
+    "./motion.css": "./src/tokens/motion.css",
+    "./boot": "./src/boot/index.ts",
+    "./fonts.css": "./src/tokens/fonts.css",
+    "./apps/*": "./src/apps/*/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run --root .. --project ui",
+    "gallery": "vite --config gallery/vite.config.ts",
+    "gallery:build": "vite build --config gallery/vite.config.ts"
+  },
+  "dependencies": {
+    "@codemirror/commands": "catalog:",
+    "@codemirror/lang-javascript": "catalog:",
+    "@codemirror/lang-markdown": "catalog:",
+    "@codemirror/language": "catalog:",
+    "@codemirror/search": "catalog:",
+    "@codemirror/state": "catalog:",
+    "@codemirror/view": "catalog:",
+    "@fontsource-variable/geist": "catalog:",
+    "@fontsource-variable/geist-mono": "catalog:",
+    "@fontsource-variable/google-sans-code": "catalog:",
+    "@fontsource-variable/google-sans-flex": "catalog:",
+    "@fontsource-variable/inter": "catalog:",
+    "@fontsource-variable/inter-tight": "catalog:",
+    "@fontsource-variable/jetbrains-mono": "catalog:",
+    "@fontsource/jetbrains-mono": "catalog:",
+    "@plotinium/protocol": "workspace:*",
+    "@xterm/addon-fit": "catalog:",
+    "@xterm/xterm": "catalog:",
+    "lucide-solid": "catalog:",
+    "solid-js": "catalog:"
+  },
+  "devDependencies": {
+    "@solidjs/testing-library": "catalog:",
+    "happy-dom": "catalog:",
+    "vite": "catalog:",
+    "vite-plugin-solid": "catalog:"
+  }
+}

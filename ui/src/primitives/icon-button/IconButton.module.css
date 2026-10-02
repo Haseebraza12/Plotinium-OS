@@ -1,0 +1,87 @@
+.button {
+  position: relative;
+  isolation: isolate;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: var(--pl-control-h);
+  height: var(--pl-control-h);
+  padding: 0;
+  border: 0;
+  border-radius: var(--pl-radius-ctl);
+  color: var(--pl-text-muted);
+  background: transparent;
+  cursor: default;
+  transition: transform var(--pl-motion-med) var(--pl-ease-spring-soft);
+}
+/* The icon wrapper takes no box (a class, not an inline style: the CSP refuses those, UI-147). */
+.icon {
+  display: contents;
+}
+.button::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--pl-control-hover);
+  opacity: 0;
+  transition: opacity var(--pl-motion-fast) var(--pl-ease);
+}
+.button:hover {
+  color: var(--pl-text);
+}
+.button:hover::before {
+  opacity: 1;
+}
+.button:active:not([aria-disabled='true']) {
+  transform: scale(var(--pl-press-scale));
+  transition-duration: var(--pl-motion-press);
+}
+.button:focus-visible {
+  outline: var(--pl-focus-ring);
+  outline-offset: var(--pl-focus-offset);
+}
+.sm {
+  width: var(--pl-control-h-sm);
+  height: var(--pl-control-h-sm);
+  border-radius: var(--pl-radius-sm);
+}
+.lg {
+  width: var(--pl-control-h-lg);
+  height: var(--pl-control-h-lg);
+  border-radius: var(--pl-radius-md);
+}
+.round {
+  border-radius: var(--pl-radius-pill);
+}
+.glass {
+  color: var(--pl-text);
+  background: var(--pl-control-bg);
+  box-shadow: var(--pl-glass-specular);
+}
+.bordered {
+  color: var(--pl-text);
+  background: var(--pl-control-raised);
+  box-shadow: var(--pl-control-raised-shadow);
+}
+.button[aria-pressed='true'] {
+  color: var(--pl-accent-text);
+  background: var(--pl-accent-subtle);
+}
+.button[aria-disabled='true'] {
+  color: var(--pl-text-disabled);
+  cursor: not-allowed;
+}
+.button[aria-disabled='true']::before {
+  opacity: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .button,
+  .button::before {
+    transition: none;
+  }
+  .button:active:not([aria-disabled='true']) {
+    transform: none;
+  }
+}

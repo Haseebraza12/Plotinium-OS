@@ -1,0 +1,21 @@
+# TLB and multi-level page tables
+
+## TLB
+
+A small, fully associative cache of recent translations (64–1,536 entries). Hit: translation in about a cycle. Miss: walk the page table (hardware on x86, software on old MIPS).
+
+Effective access time = hit ratio × (TLB + mem) + (1 − hit ratio) × (TLB + 2 × mem) for a one-level table. With 98 % hits, 20 ns TLB and 100 ns memory: 0.98 × 120 + 0.02 × 220 = 122 ns.
+
+Context switch: either flush the TLB or tag entries with an address-space id (ASID/PCID).
+
+## Multi-level tables
+
+x86-64 uses four levels (PML4, PDPT, PD, PT), 9 bits each + 12-bit offset = 48-bit virtual addresses. Only the parts of the table that are in use exist, so sparse address spaces are cheap.
+
+Huge pages (2 MiB, 1 GiB) skip the last level(s) and let one TLB entry cover much more memory.
+
+## Inverted page tables
+
+One entry per physical frame, searched by hash of (pid, vpn). Small table, slow lookup, sharing is awkward.
+
+Midterm question: why does a TLB miss cost more with more levels? Because each level is one more memory reference in the walk (unless page-walk caches help).

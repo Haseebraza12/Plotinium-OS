@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <meta
+      name="description"
+      content="A local-first web OS that pages its own memory and lets AI act only through the kernel."
+    />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#EEF0F8" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0B0D1F" />
+    <title>Plotinium</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/icons/favicon-32.png" sizes="32x32" type="image/png" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <!-- Boot stage 1 (boot-and-services.md §3.2): Esc and V are buffered from the first line. -->
+    <script data-plt-keys>
+      (function () {
+        var k = (window.__pltKeys = []);
+        addEventListener(
+          'keydown',
+          function (e) {
+            var n = e.key === 'Escape' ? 'Escape' : e.key === 'v' || e.key === 'V' ? 'v' : '';
+            if (n && !(n === 'v' && e.repeat)) k.push(n);
+          },
+          true,
+        );
+      })();
+    </script>
+    <!--plt:boot-style-->
+    <!--plt:boot-manifest-->
+  </head>
+  <body>
+    <div id="plt-boot" data-testid="boot-screen"><!--plt:boot-splash--></div>
+    <div id="plt-desktop"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

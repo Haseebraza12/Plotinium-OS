@@ -1,0 +1,20 @@
+[
+  {
+    "id": "UI-082 Escape on a card never deletes it (ids unchanged)",
+    "ok": true,
+    "detail": {
+      "i0": ["c1", "b1", "a1", "welcome"],
+      "i1": ["c1", "b1", "a1", "welcome"],
+      "centreClosedByEsc": true
+    }
+  },
+  {
+    "id": "UI-082 Delete removes that card and focus moves to the next card",
+    "ok": true,
+    "detail": {
+      "i1": ["c1", "b1", "a1", "welcome"],
+      "i2": ["c1", "a1", "welcome"],
+      "foc": "a1"
+    }
+  }
+]

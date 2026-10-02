@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plotinium Overview</title>
+<!-- Hand-built reference render (NOT a Stitch export). Stitch returned no screen; see notes.md and screen.json. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+  :root {
+    --pl-bg: #0B0B1A;
+    --pl-label: rgba(255,255,255,.92);
+    --pl-label-2: rgba(255,255,255,.64);
+    --pl-label-3: rgba(255,255,255,.55);
+    --pl-accent: #5E5CE6; --pl-accent-hover: #7472FF; --pl-accent-glow: rgba(94,92,230,.45);
+    --pl-success: #30D158; --pl-warning: #FF9F0A; --pl-danger: #FF453A; --pl-info: #64D2FF;
+    --pl-hair: rgba(255,255,255,.10);
+    --pl-font: "Inter", system-ui, sans-serif;
+    --pl-mono: "JetBrains Mono", ui-monospace, monospace;
+    --pl-motion-fast: 120ms; --pl-motion-med: 200ms; --pl-motion-slow: 320ms;
+    --pl-ease: cubic-bezier(.2,.8,.2,1);
+    --pl-ease-out: cubic-bezier(0,0,.2,1);
+    --pl-ease-in: cubic-bezier(.4,0,1,1);
+    --pl-ease-spring: linear(0, 0.009, 0.035 2.1%, 0.141 4.4%, 0.723 12.9%, 0.938 16.7%, 1.017 19.4%, 1.067, 1.089 24.9%, 1.085 27.6%, 1.043 34.9%, 1.005 45.3%, 0.994 52.3%, 1.001 72.3%, 1);
+    --pl-ease-spring-soft: cubic-bezier(.32,1.28,.5,1);
+    --d-back: 280ms; --d-strip: 360ms; --d-cap: 200ms; --d-hud: 200ms;
+    color-scheme: dark;
+  }
+  @media (prefers-reduced-motion: reduce) { :root { --pl-motion-fast: 0ms; --pl-motion-med: 0ms; --pl-motion-slow: 0ms; --d-back: 0ms; --d-strip: 0ms; --d-cap: 0ms; --d-hud: 0ms; } }
+  :root[data-motion="reduce"] { --pl-motion-fast: 0ms; --pl-motion-med: 0ms; --pl-motion-slow: 0ms; --d-back: 0ms; --d-strip: 0ms; --d-cap: 0ms; --d-hud: 0ms; }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { width: 1440px; height: 900px; overflow: hidden; position: relative; font: 13px/1.4 var(--pl-font); color: var(--pl-label); background: var(--pl-bg); -webkit-font-smoothing: antialiased; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: default; }
+  svg.i { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  :focus-visible { outline: 3px solid rgba(94,92,230,.75); outline-offset: 2px; }
+  .mono { font-family: var(--pl-mono); }
+  .num { font-variant-numeric: tabular-nums; }
+
+  /* ---------- backdrop: static blurred wallpaper + dim (blur never animates) ---------- */
+  .wall, .wall-blur { position: absolute; inset: 0; background:
+      radial-gradient(900px 600px at 18% 78%, rgba(94,92,230,.42), transparent 60%),
+      radial-gradient(700px 520px at 82% 22%, rgba(140,80,255,.32), transparent 62%),
+      radial-gradient(520px 420px at 58% 60%, rgba(40,120,255,.22), transparent 60%),
+      linear-gradient(160deg, #0B0B1A 0%, #141033 45%, #2A1F5C 100%); }
+  .wall-blur { filter: blur(30px) saturate(140%); transform: scale(1.06); animation: fade var(--d-back) var(--pl-ease-out) both; }
+  .dim { position: absolute; inset: 0; background: rgba(4,4,10,.45); animation: fade var(--d-back) var(--pl-ease-out) both; }
+  @keyframes fade { from { opacity: 0; } }
+
+  /* ---------- desktops strip ---------- */
+  .strip { position: absolute; top: 14px; left: 50%; translate: -50% 0; display: flex; align-items: flex-start; gap: 18px; padding: 12px 18px 8px; border-radius: 20px;
+    background: rgba(40,40,50,.42); border: 1px solid rgba(255,255,255,.10); backdrop-filter: blur(30px) saturate(170%); -webkit-backdrop-filter: blur(30px) saturate(170%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 12px 40px rgba(0,0,0,.35); animation: strip-in var(--d-strip) var(--pl-ease-spring) 60ms both; }
+  @keyframes strip-in { from { opacity: 0; transform: translateY(-24px); } }
+  .space { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .space .thumb { width: 150px; height: 94px; border-radius: 10px; position: relative; overflow: hidden; outline: 2px solid transparent; outline-offset: 2px;
+    background: radial-gradient(160px 100px at 20% 80%, rgba(94,92,230,.55), transparent 60%), linear-gradient(160deg, #0B0B1A, #2A1F5C);
+    box-shadow: 0 4px 14px rgba(0,0,0,.4); transition: transform 200ms var(--pl-ease-spring-soft); }
+  .space:hover .thumb { transform: scale(1.04); }
+  .space[aria-selected="true"] .thumb { outline-color: var(--pl-accent); box-shadow: 0 0 0 5px rgba(94,92,230,.22), 0 4px 14px rgba(0,0,0,.4); }
+  .space .thumb i { position: absolute; border-radius: 2px; background: rgba(60,60,70,.9); border: .5px solid rgba(255,255,255,.2); }
+  .space .thumb .mb { position: absolute; top: 0; left: 0; right: 0; height: 4px; background: rgba(30,30,36,.6); }
+  .space span { font-size: 11.5px; font-weight: 600; color: var(--pl-label); }
+  .space[aria-selected="false"] span { color: var(--pl-label-2); }
+  .add { width: 40px; height: 40px; margin-top: 27px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.10); border: 1px solid rgba(255,255,255,.14);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.15); transition: transform 200ms var(--pl-ease-spring-soft); }
+  .add:hover { transform: scale(1.08); }
+  .add:active svg { transform: rotate(90deg); }
+  .add svg { transition: transform 200ms var(--pl-ease-spring-soft); }
+  .hint-top { position: absolute; top: 58px; right: 40px; font-size: 11.5px; color: var(--pl-label-2); display: flex; gap: 6px; align-items: center; animation: fade 300ms var(--pl-ease-out) 200ms both; }
+  kbd { font: 600 10.5px/1 var(--pl-mono); padding: 3px 5px; border-radius: 5px; background: rgba(255,255,255,.10); border: 1px solid rgba(255,255,255,.16); color: var(--pl-label); }
+
+  /* ---------- window grid (real windows, FLIP-scaled) ---------- */
+  .grid { position: absolute; inset: 0; list-style: none; }
+  .slot { position: absolute; left: 0; top: 0; }
+  .w { position: absolute; left: 0; top: 0; transform-origin: 0 0; border-radius: 12px; overflow: hidden;
+    background: rgba(36,36,40,.92); border: 1px solid rgba(255,255,255,.12);
+    box-shadow: 0 30px 80px rgba(0,0,0,.55), 0 4px 14px rgba(0,0,0,.35); }
+  .hit { position: absolute; border-radius: 10px; transition: transform 200ms var(--pl-ease-spring-soft); }
+  .hit::after { content: ""; position: absolute; inset: -5px; border-radius: 14px; border: 3px solid var(--pl-accent); box-shadow: 0 0 0 1px rgba(0,0,0,.5), 0 0 28px var(--pl-accent-glow); opacity: 0; transition: opacity var(--pl-motion-fast) var(--pl-ease); pointer-events: none; }
+  .hit:hover::after, .hit[aria-selected="true"]::after { opacity: 1; }
+  .hit:hover, .hit[aria-selected="true"] { transform: scale(1.03); }
+  .x { position: absolute; top: -9px; left: -9px; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; z-index: 3;
+    background: rgba(70,70,80,.95); border: 1px solid rgba(255,255,255,.2); box-shadow: 0 2px 6px rgba(0,0,0,.5); opacity: 0; transform: scale(.8); transition: opacity var(--pl-motion-fast) var(--pl-ease), transform var(--pl-motion-fast) var(--pl-ease); }
+  .x svg.i { width: 12px; height: 12px; stroke-width: 2.6; }
+  .hit:hover .x, .hit[aria-selected="true"] .x { opacity: 1; transform: scale(1); }
+  .cap { position: absolute; left: 50%; translate: -50% 0; display: flex; align-items: center; gap: 7px; height: 26px; padding: 0 11px 0 5px; border-radius: 13px; white-space: nowrap;
+    background: rgba(40,40,50,.62); border: 1px solid rgba(255,255,255,.12); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); font-size: 12px; font-weight: 600;
+    animation: cap-in var(--d-cap) var(--pl-ease-out) 420ms both; }
+  .cap.sel { background: rgba(94,92,230,.85); border-color: rgba(255,255,255,.25); }
+  @keyframes cap-in { from { opacity: 0; transform: translateY(4px); } }
+  .mini { width: 18px; height: 18px; border-radius: 5px; display: grid; place-items: center; color: #fff; box-shadow: inset 0 1px 0 rgba(255,255,255,.3); }
+  .mini svg.i { width: 11px; height: 11px; stroke-width: 2.4; }
+
+  /* window chrome (full scale, then scaled down) */
+  .tb { height: 38px; display: flex; align-items: center; gap: 8px; padding: 0 14px; border-bottom: 1px solid rgba(255,255,255,.08); background: rgba(255,255,255,.03); position: relative; }
+  .tl { width: 12px; height: 12px; border-radius: 50%; }
+  .tl.r { background: #FF5F57; } .tl.y { background: #FEBC2E; } .tl.g { background: #28C840; }
+  .tt { position: absolute; left: 0; right: 0; text-align: center; font-weight: 600; font-size: 13px; color: var(--pl-label); pointer-events: none; }
+  .body { height: calc(100% - 38px); }
+  .side { background: rgba(255,255,255,.04); border-right: 1px solid rgba(255,255,255,.07); padding: 12px 8px; font-size: 12.5px; color: var(--pl-label-2); }
+  .side h6 { font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--pl-label-3); margin: 4px 8px 6px; font-weight: 600; }
+  .side div { padding: 5px 8px; border-radius: 6px; display: flex; gap: 8px; align-items: center; }
+  .side div.sel { background: rgba(94,92,230,.85); color: #fff; }
+  table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+  th { text-align: left; font-weight: 600; font-size: 11.5px; color: var(--pl-label-3); padding: 6px 12px; border-bottom: 1px solid rgba(255,255,255,.08); }
+  td { padding: 6px 12px; color: var(--pl-label); border-bottom: 1px solid rgba(255,255,255,.04); }
+  td.m { color: var(--pl-label-2); }
+  tr.sel td { background: rgba(94,92,230,.85); color: #fff; }
+  .term { background: rgba(14,14,18,.96); height: calc(100% - 38px); padding: 14px 16px; font: 14px/1.5 var(--pl-mono); color: #d7d9e2; white-space: pre; }
+  .term .p { color: #7fdc9a; } .term .h { color: var(--pl-label-3); } .term .r { color: #ffcf70; } .term .ai { color: #e3a0ff; }
+  .cursor { display: inline-block; width: 9px; height: 17px; background: var(--pl-accent-hover); vertical-align: -3px; }
+  .doc { padding: 24px 40px; color: var(--pl-label-2); font-size: 14px; line-height: 1.65; }
+  .doc h1 { font-size: 24px; color: var(--pl-label); margin-bottom: 12px; letter-spacing: -.01em; }
+  .doc h2 { font-size: 16px; color: var(--pl-label); margin: 16px 0 6px; }
+  .doc code { font-family: var(--pl-mono); font-size: 12.5px; background: rgba(255,255,255,.07); padding: 1px 5px; border-radius: 4px; color: #e3a0ff; }
+  .md { color: var(--pl-label-3); }
+  .foot { position: absolute; left: 0; right: 0; bottom: 0; height: 28px; display: flex; align-items: center; gap: 14px; padding: 0 16px; font-size: 11.5px; color: var(--pl-label-3); border-top: 1px solid rgba(255,255,255,.07); background: rgba(255,255,255,.02); }
+  .bar { height: 6px; border-radius: 3px; background: rgba(255,255,255,.1); overflow: hidden; width: 90px; display: inline-block; vertical-align: middle; }
+  .bar i { display: block; height: 100%; width: 100%; transform-origin: left; background: var(--pl-accent-hover); }
+  .tabs { display: flex; gap: 2px; padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,.07); }
+  .tabs span { padding: 4px 12px; border-radius: 7px; font-size: 12.5px; color: var(--pl-label-2); }
+  .tabs span.on { background: rgba(255,255,255,.12); color: var(--pl-label); font-weight: 600; }
+
+  /* ---------- app icons ---------- */
+  .a-files { background: linear-gradient(160deg, #62A8FF, #1E5BD8); }
+  .a-term { background: linear-gradient(160deg, #3A3A44, #121216); }
+  .a-editor { background: linear-gradient(160deg, #8B89FF, #4B49C8); }
+  .a-task { background: linear-gradient(160deg, #4BE07A, #148A3A); }
+  .a-settings { background: linear-gradient(160deg, #9A9AA2, #48484F); }
+  .tg { font: 700 8px/1 var(--pl-mono); color: #A9A8FF; }
+
+  /* ---------- switcher HUD ---------- */
+  .hud { position: absolute; left: 50%; bottom: 34px; translate: -50% 0; padding: 18px 22px 12px; border-radius: 30px;
+    background: rgba(36,36,46,.62); border: 1px solid rgba(255,255,255,.14); backdrop-filter: blur(40px) saturate(180%); -webkit-backdrop-filter: blur(40px) saturate(180%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.16), 0 30px 80px rgba(0,0,0,.6), 0 2px 10px rgba(0,0,0,.35); animation: hud-in var(--d-hud) var(--pl-ease-spring) 520ms both; }
+  @keyframes hud-in { from { opacity: 0; transform: scale(.94); } }
+  .hud-row { position: relative; display: flex; gap: 20px; list-style: none; }
+  .plate { position: absolute; top: -8px; left: -8px; width: 88px; height: 88px; border-radius: 22px; background: rgba(255,255,255,.14);
+    border: 1px solid rgba(255,255,255,.18); box-shadow: 0 0 0 1px rgba(94,92,230,.55), 0 0 34px rgba(94,92,230,.55), inset 0 1px 0 rgba(255,255,255,.2);
+    transition: transform 180ms var(--pl-ease-spring-soft); }
+  .opt { position: relative; width: 72px; height: 72px; border-radius: 17px; display: grid; place-items: center; color: #fff;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.32), inset 0 -1px 0 rgba(0,0,0,.3), 0 8px 18px rgba(0,0,0,.45); transition: transform 180ms var(--pl-ease-spring-soft); }
+  .opt svg.i { width: 34px; height: 34px; stroke-width: 1.9; }
+  .opt[aria-selected="true"] { transform: scale(1.08); }
+  .opt .tgl { font: 700 21px/1 var(--pl-mono); color: #A9A8FF; }
+  .hud-title { text-align: center; margin-top: 14px; font-size: 13.5px; font-weight: 600; min-height: 20px; }
+  .hud-title small { font-weight: 500; color: var(--pl-label-2); font-size: 12px; margin-left: 6px; }
+  .hud-hint { position: absolute; left: 50%; bottom: 10px; translate: -50% 0; font-size: 11.5px; color: var(--pl-label-2); display: flex; gap: 8px; align-items: center; white-space: nowrap; animation: fade 200ms var(--pl-ease-out) 620ms both; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  @media (prefers-reduced-transparency: reduce) { .strip, .hud, .cap { backdrop-filter: none; -webkit-backdrop-filter: none; background: #1C1C1E; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="atom" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.1"><ellipse cx="12" cy="12" rx="10.5" ry="4.2" transform="rotate(-28 12 12)"/><ellipse cx="12" cy="12" rx="10.5" ry="4.2" transform="rotate(32 12 12)"/><ellipse cx="12" cy="12" rx="10.5" ry="4.2" transform="rotate(92 12 12)" opacity=".55"/></g><circle cx="12" cy="12" r="4.5" fill="currentColor" opacity=".35"/><circle cx="12" cy="12" r="2.4" fill="#fff"/></symbol>
+  <symbol id="folder" viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></symbol>
+  <symbol id="pen" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/></symbol>
+  <symbol id="activity" viewBox="0 0 24 24"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></symbol>
+  <symbol id="gear" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+  <symbol id="plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+  <symbol id="search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="home" viewBox="0 0 24 24"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+  <symbol id="file" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></symbol>
+  <symbol id="left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+  <symbol id="right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="trash" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></symbol>
+</defs></svg>
+
+<div class="wall" aria-hidden="true"></div>
+<div class="wall-blur" aria-hidden="true"></div>
+<div class="dim" aria-hidden="true"></div>
+
+<div role="dialog" aria-modal="true" aria-label="Overview">
+  <div class="strip" role="tablist" aria-label="Desktops">
+    <button class="space" role="tab" aria-selected="true"><div class="thumb"><span class="mb"></span><i style="left:14px;top:14px;width:48px;height:32px"></i><i style="left:54px;top:22px;width:46px;height:30px"></i><i style="left:92px;top:12px;width:44px;height:34px"></i><i style="left:22px;top:52px;width:52px;height:30px"></i><i style="left:86px;top:54px;width:46px;height:28px"></i></div><span>Desktop 1</span></button>
+    <button class="space" role="tab" aria-selected="false"><div class="thumb" style="background:radial-gradient(160px 100px at 80% 20%, rgba(140,80,255,.5), transparent 60%), linear-gradient(160deg, #0B0B1A, #2A1F5C)"><span class="mb"></span></div><span>Desktop 2</span></button>
+    <button class="add" aria-label="Add desktop"><svg class="i" style="width:18px;height:18px"><use href="#plus"/></svg></button>
+  </div>
+  <div class="hint-top"><kbd>Alt</kbd><kbd>O</kbd><span>Overview</span></div>
+
+  <ul class="grid" role="listbox" aria-label="Open windows" id="grid">
+    <!-- 1. Files — notes -->
+    <li class="slot" data-x="82" data-y="180" data-s=".5" data-w="800" data-h="500" data-from="80,70">
+      <div class="hit" role="option" aria-selected="false" aria-label="Files — notes">
+        <button class="x" aria-label="Close Files — notes" tabindex="-1"><svg class="i"><use href="#x"/></svg></button>
+        <div class="w" style="width:800px;height:500px">
+          <div class="tb"><span class="tl r"></span><span class="tl y"></span><span class="tl g"></span><svg class="i" style="margin-left:14px;color:var(--pl-label-2)"><use href="#left"/></svg><svg class="i" style="color:var(--pl-label-3)"><use href="#right"/></svg><span class="tt">notes</span>
+            <span style="margin-left:auto;display:flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:7px;background:rgba(255,255,255,.08);color:var(--pl-label-3);font-size:12px;width:170px"><svg class="i" style="width:13px;height:13px"><use href="#search"/></svg>Search notes</span></div>
+          <div class="body" style="display:grid;grid-template-columns:180px 1fr;position:relative">
+            <div class="side"><h6>Favourites</h6><div><svg class="i" style="width:14px;height:14px"><use href="#home"/></svg>student</div><div><svg class="i" style="width:14px;height:14px"><use href="#folder"/></svg>Documents</div><div class="sel"><svg class="i" style="width:14px;height:14px"><use href="#folder"/></svg>notes</div><div><svg class="i" style="width:14px;height:14px"><use href="#folder"/></svg>Downloads</div>
+              <h6 style="margin-top:12px">Locations</h6><div>/</div><div>/tmp</div><div><svg class="i" style="width:14px;height:14px"><use href="#trash"/></svg>Trash</div></div>
+            <div><table><thead><tr><th>Name</th><th>Size</th><th>Modified</th><th>Owner</th></tr></thead><tbody>
+              <tr class="sel"><td>os-report.md</td><td class="num">14 KB</td><td>Today 10:31</td><td>student</td></tr>
+              <tr><td>report.md</td><td class="m num">9 KB</td><td class="m">Today 10:40</td><td class="m">student</td></tr>
+              <tr><td>report (conflict from bob).md</td><td class="m num">9 KB</td><td class="m">Today 10:28</td><td class="m">bob</td></tr>
+              <tr><td>lecture-07-scheduling.md</td><td class="m num">22 KB</td><td class="m">Yesterday</td><td class="m">student</td></tr>
+              <tr><td>lab3-vfs.png</td><td class="m num">380 KB</td><td class="m">21 Sep</td><td class="m">alice</td></tr>
+              <tr><td>todo.txt</td><td class="m num">1 KB</td><td class="m">Today 09:02</td><td class="m">student</td></tr>
+            </tbody></table></div>
+            <div class="foot" style="left:180px">6 items · /home/student/notes · Synced</div>
+          </div>
+        </div>
+      </div>
+      <div class="cap"><span class="mini a-files"><svg class="i"><use href="#folder"/></svg></span>Files — notes</div>
+    </li>
+    <!-- 2. Terminal — ~ (selected) -->
+    <li class="slot" data-x="530" data-y="186" data-s=".5" data-w="760" data-h="480" data-from="540,220">
+      <div class="hit" role="option" aria-selected="true" aria-label="Terminal — ~, selected">
+        <button class="x" aria-label="Close Terminal — ~" tabindex="-1"><svg class="i"><use href="#x"/></svg></button>
+        <div class="w" style="width:760px;height:480px">
+          <div class="tb" style="background:rgba(20,20,24,.95)"><span class="tl r"></span><span class="tl y"></span><span class="tl g"></span><span class="tt">student@plotinium: ~</span></div>
+<div class="term"><span class="p">student@plotinium</span>:<span class="ai">~</span>$ ps
+<span class="h">  PID  PRI  STATE  MEM      NAME</span>
+    1    0  S       1.2 MB  init
+    7    8  S       2.4 MB  sched
+    9    8  S       6.1 MB  vfs
+   14   16  S       3.8 MB  syncd
+   23   32  <span class="r">R</span>      41.0 MB  <span class="ai">ai.indexer</span>
+   31   16  <span class="r">R</span>       4.6 MB  terminal
+   35   16  S      12.3 MB  files
+<span class="p">student@plotinium</span>:<span class="ai">~</span>$ nice -n 32 ai.indexer --status
+<span class="h">indexed 1,284 files · 0 errors · up to date</span>
+<span class="p">student@plotinium</span>:<span class="ai">~</span>$ <span class="cursor"></span></div>
+        </div>
+      </div>
+      <div class="cap sel"><span class="mini a-term"><span class="tg">&gt;_</span></span>Terminal — ~</div>
+    </li>
+    <!-- 3. Editor — os-report.md -->
+    <li class="slot" data-x="958" data-y="176" data-s=".5" data-w="800" data-h="520" data-from="620,90">
+      <div class="hit" role="option" aria-selected="false" aria-label="Editor — os-report.md">
+        <button class="x" aria-label="Close Editor — os-report.md" tabindex="-1"><svg class="i"><use href="#x"/></svg></button>
+        <div class="w" style="width:800px;height:520px">
+          <div class="tb"><span class="tl r"></span><span class="tl y"></span><span class="tl g"></span><span class="tt">os-report.md</span></div>
+          <div class="body" style="position:relative">
+            <div class="doc"><h1><span class="md">#</span> OS Report — Process Scheduling</h1>
+              <p>Plotinium schedules every app as a process. <code>sched</code> keeps a binary-heap ready queue ordered by priority, so <code>ai.indexer</code> (pid 23, priority 32) never delays <code>terminal</code> or <code>files</code> (priority 16).</p>
+              <h2><span class="md">##</span> Measurements</h2>
+              <p>With 10 windows dragged and the frame meter on, p95 frame time stayed at 16.7 ms at 60 Hz with 0.4% dropped frames.</p>
+              <h2><span class="md">##</span> Memory</h2>
+              <p>Budget 256 MB; minimised windows are paged first when use reaches 85%.</p></div>
+            <div class="foot"><span>Lock: student</span><span>·</span><span>Saved</span><span style="margin-left:auto">Markdown · UTF-8 · Ln 14, Col 22</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="cap"><span class="mini a-editor"><svg class="i"><use href="#pen"/></svg></span>Editor — os-report.md</div>
+    </li>
+    <!-- 4. Task Manager -->
+    <li class="slot" data-x="150" data-y="498" data-s=".5" data-w="840" data-h="440" data-from="300,380">
+      <div class="hit" role="option" aria-selected="false" aria-label="Task Manager">
+        <button class="x" aria-label="Close Task Manager" tabindex="-1"><svg class="i"><use href="#x"/></svg></button>
+        <div class="w" style="width:840px;height:440px">
+          <div class="tb"><span class="tl r"></span><span class="tl y"></span><span class="tl g"></span><span class="tt">Task Manager</span></div>
+          <div class="tabs"><span class="on">Processes</span><span>Memory</span><span>Performance</span><span style="margin-left:auto;color:var(--pl-label-2)" class="num">Memory 142 / 256 MB <span class="bar"><i style="transform:scaleX(.555)"></i></span></span></div>
+          <div style="display:grid;grid-template-columns:1fr 250px">
+            <table><thead><tr><th>PID</th><th>Name</th><th>User</th><th>Pri</th><th>CPU</th><th>Memory</th></tr></thead><tbody>
+              <tr><td class="num">1</td><td>init</td><td class="m">root</td><td class="m num">0</td><td class="num">0.1%</td><td class="num">1.2 MB</td></tr>
+              <tr class="sel"><td class="num">23</td><td>ai.indexer</td><td>student</td><td class="num">32</td><td class="num">18.4%</td><td class="num">41.0 MB</td></tr>
+              <tr><td class="num">7</td><td>sched</td><td class="m">root</td><td class="m num">8</td><td class="num">2.1%</td><td class="num">2.4 MB</td></tr>
+              <tr><td class="num">9</td><td>vfs</td><td class="m">root</td><td class="m num">8</td><td class="num">1.3%</td><td class="num">6.1 MB</td></tr>
+              <tr><td class="num">14</td><td>syncd</td><td class="m">root</td><td class="m num">16</td><td class="num">0.6%</td><td class="num">3.8 MB</td></tr>
+              <tr><td class="num">35</td><td>files</td><td class="m">student</td><td class="m num">16</td><td class="num">0.9%</td><td class="num">12.3 MB</td></tr>
+            </tbody></table>
+            <div style="padding:14px;border-left:1px solid rgba(255,255,255,.07)">
+              <div style="font-size:11.5px;color:var(--pl-label-3);font-weight:600;margin-bottom:6px">MEMORY · 60 s</div>
+              <svg width="220" height="120" viewBox="0 0 220 120" aria-hidden="true"><defs><linearGradient id="g" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#7472FF" stop-opacity=".55"/><stop offset="1" stop-color="#7472FF" stop-opacity="0"/></linearGradient></defs>
+                <line x1="0" y1="18" x2="220" y2="18" stroke="#FF9F0A" stroke-dasharray="3 4" stroke-width="1" opacity=".7"/>
+                <path d="M0 70 L20 66 L40 68 L60 60 L80 62 L100 55 L120 58 L140 50 L160 54 L180 52 L200 56 L220 54 L220 120 L0 120Z" fill="url(#g)"/>
+                <path d="M0 70 L20 66 L40 68 L60 60 L80 62 L100 55 L120 58 L140 50 L160 54 L180 52 L200 56 L220 54" fill="none" stroke="#7472FF" stroke-width="2"/></svg>
+              <div class="num" style="font-size:20px;font-weight:700;margin-top:6px">142 <span style="font-size:13px;color:var(--pl-label-2);font-weight:500">/ 256 MB</span></div>
+              <div style="font-size:11.5px;color:var(--pl-label-3)">Reclaim at 85% · 218 MB</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="cap"><span class="mini a-task"><svg class="i"><use href="#activity"/></svg></span>Task Manager</div>
+    </li>
+    <!-- 5. Settings — About -->
+    <li class="slot" data-x="908" data-y="498" data-s=".5" data-w="760" data-h="440" data-from="700,300">
+      <div class="hit" role="option" aria-selected="false" aria-label="Settings — About">
+        <button class="x" aria-label="Close Settings — About" tabindex="-1"><svg class="i"><use href="#x"/></svg></button>
+        <div class="w" style="width:760px;height:440px">
+          <div class="tb"><span class="tl r"></span><span class="tl y"></span><span class="tl g"></span><span class="tt">About</span></div>
+          <div class="body" style="display:grid;grid-template-columns:200px 1fr">
+            <div class="side"><div>General</div><div>Appearance</div><div>Memory</div><div>Keyboard</div><div>Privacy &amp; AI</div><div>Developer</div><div class="sel">About</div></div>
+            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center">
+              <svg style="width:96px;height:96px;color:#7472FF;filter:drop-shadow(0 0 18px rgba(94,92,230,.8))"><use href="#atom"/></svg>
+              <div style="font-size:28px;font-weight:700;letter-spacing:-.02em">Plotinium</div>
+              <div class="mono" style="font-size:13px;color:var(--pl-label-2)">Plotinium 0.3.0 · build a1f93c2</div>
+              <div style="font-size:12.5px;color:var(--pl-label-3);line-height:1.6">Memory budget 256 MB · Chrome 140<br>Signed in as student (uid 1001)</div>
+              <span style="margin-top:6px;height:28px;padding:0 14px;border-radius:8px;background:rgba(255,255,255,.1);display:inline-flex;align-items:center;font-size:12.5px;font-weight:600">Check for Updates…</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="cap"><span class="mini a-settings"><svg class="i"><use href="#gear"/></svg></span>Settings — About</div>
+    </li>
+  </ul>
+</div>
+
+<div class="hud" role="listbox" aria-label="Switch window" id="hud">
+  <ul class="hud-row" id="row">
+    <span class="plate" id="plate" aria-hidden="true"></span>
+    <li class="opt a-files" role="option" aria-selected="false" data-t="Files — notes"><svg class="i"><use href="#folder"/></svg></li>
+    <li class="opt a-term" role="option" aria-selected="true" data-t="Terminal — ~"><span class="tgl">&gt;_</span></li>
+    <li class="opt a-editor" role="option" aria-selected="false" data-t="Editor — os-report.md"><svg class="i"><use href="#pen"/></svg></li>
+    <li class="opt a-task" role="option" aria-selected="false" data-t="Task Manager"><svg class="i"><use href="#activity"/></svg></li>
+    <li class="opt a-settings" role="option" aria-selected="false" data-t="Settings — About"><svg class="i"><use href="#gear"/></svg></li>
+  </ul>
+  <div class="hud-title" id="hud-title">Terminal <small>~ · 2 of 5</small></div>
+</div>
+<div class="hud-hint"><kbd>Alt</kbd><kbd>`</kbd>next<span style="opacity:.4">·</span><kbd>Alt</kbd><kbd>Shift</kbd><kbd>`</kbd>previous<span style="opacity:.4">·</span><kbd>Esc</kbd>cancel</div>
+<div class="sr" role="status" aria-live="polite" id="live">Switch window: Terminal — student@plotinium:~, 2 of 5</div>
+
+<script>
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.dataset.motion === 'reduce';
+  const spring = getComputedStyle(document.documentElement).getPropertyValue('--pl-ease-spring').trim();
+  // Lay out slots: each real window is scaled with transform only; the caption sits under the scaled box.
+  document.querySelectorAll('.slot').forEach(slot => {
+    const x = +slot.dataset.x, y = +slot.dataset.y, s = +slot.dataset.s, w = +slot.dataset.w, h = +slot.dataset.h;
+    const hit = slot.querySelector('.hit'), win = slot.querySelector('.w'), cap = slot.querySelector('.cap');
+    hit.style.cssText = `left:${x}px;top:${y}px;width:${w * s}px;height:${h * s}px`;
+    win.style.transform = `scale(${s})`;
+    cap.style.left = (x + w * s / 2) + 'px'; cap.style.top = (y + h * s + 14) + 'px';
+    // Entrance: FLIP from the window's desktop rectangle (scale 1) into its slot.
+    if (!reduce) { const [fx, fy] = slot.dataset.from.split(',').map(Number);
+      hit.animate([{ transform: `translate(${fx - x}px, ${fy - y}px) scale(${1 / s})` }, { transform: 'none' }], { duration: 420, easing: spring, fill: 'backwards' }); }
+  });
+  // Switcher: Alt+` / Alt+Shift+` (and J/K alternates) move the highlight plate with a transform.
+  const opts = [...document.querySelectorAll('.opt')], plate = document.getElementById('plate'), title = document.getElementById('hud-title'), live = document.getElementById('live');
+  let i = 1;
+  const sel = n => { const wrap = Math.abs(n - i) > 1; i = (n + opts.length) % opts.length;
+    opts.forEach((o, k) => o.setAttribute('aria-selected', String(k === i)));
+    if (wrap && !reduce) plate.animate([{ opacity: 1 }, { opacity: 0 }, { opacity: 1 }], { duration: 240 });
+    plate.style.transform = `translateX(${i * 92}px)`;
+    const t = opts[i].dataset.t, [app, rest] = t.split(' — ');
+    title.innerHTML = app + (rest ? ` <small>${rest} · ${i + 1} of 5</small>` : ` <small>${i + 1} of 5</small>`);
+    live.textContent = `Switch window: ${t}, ${i + 1} of 5`; };
+  sel(1);
+  addEventListener('keydown', e => { if (e.altKey && (e.code === 'Backquote' || e.key === 'j' || e.key === 'k')) { e.preventDefault(); sel(i + ((e.shiftKey || e.key === 'k') ? -1 : 1)); } });
+  opts.forEach((o, k) => o.addEventListener('click', () => sel(k)));
+  // Overview grid: arrow keys move the selection outline.
+  const hits = [...document.querySelectorAll('.hit')];
+  addEventListener('keydown', e => { const cur = hits.findIndex(h => h.getAttribute('aria-selected') === 'true');
+    const m = { ArrowRight: 1, ArrowLeft: -1, ArrowDown: 3, ArrowUp: -3 }[e.key]; if (m == null) return;
+    const n = Math.max(0, Math.min(hits.length - 1, cur + m)); hits.forEach((h, k) => h.setAttribute('aria-selected', String(k === n))); });
+</script>
+</body>
+</html>

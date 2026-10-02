@@ -1,0 +1,65 @@
+{
+  "console": [],
+  "pageErrors": [],
+  "failed": ["401 GET /api/auth/me"],
+  "metrics": {
+    "date": "Sunday, 27 September",
+    "time": "09:50",
+    "datetime": "2026-09-27T04:50:35.811Z",
+    "tiles": [
+      {
+        "label": "demo",
+        "rect": [582, 289, 116, 146],
+        "checked": "true",
+        "tabindex": "0"
+      },
+      {
+        "label": "alice",
+        "rect": [726, 289, 116, 146],
+        "checked": "false",
+        "tabindex": "-1"
+      },
+      {
+        "label": "bob",
+        "rect": [870, 289, 116, 146],
+        "checked": "false",
+        "tabindex": "-1"
+      },
+      {
+        "label": "Guest, no password",
+        "rect": [1014, 289, 116, 146],
+        "checked": "false",
+        "tabindex": "-1"
+      }
+    ],
+    "pill": [508, 452, 264, 40],
+    "hint": "Press Enter to sign in",
+    "power": [
+      ["Sleep", [517, 676, 48, 76]],
+      ["Restart", [609, 676, 48, 76]],
+      ["Shut Down", [701, 676, 62, 76]]
+    ],
+    "brand": "PlotiniumPlotinium 0.1.0-dev.0build 0000000",
+    "brandRect": [24, 747, 162, 33],
+    "brandLogo": [24, 749, 28, 28],
+    "active": "login-password",
+    "mainLandmarks": 1,
+    "docScroll": [1280, 800],
+    "lang": "en",
+    "title": "Plotinium",
+    "theme": null,
+    "bodyOverflow": "visible"
+  },
+  "tabOrder": [
+    "BUTTON Show password vis=1",
+    "BUTTON Sign in vis=0.5",
+    "BUTTON Sleep vis=1",
+    "BUTTON Restart vis=1",
+    "BUTTON Shut Down vis=1",
+    "BODY Sunday, 27 September vis=1",
+    "BUTTON Show password vis=0.472372",
+    "BUTTON Sign in vis=0.5",
+    "BUTTON Sleep vis=1",
+    "BUTTON Restart vis=1"
+  ]
+}

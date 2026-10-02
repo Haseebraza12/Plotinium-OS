@@ -1,0 +1,63 @@
+{
+ "files_changed": [
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/demo/index.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/demo/README.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/demo/cmd/burn.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/demo/cmd/memhog.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/demo/cmd/mktree.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/demo/cmd/lockdemo.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/demo/cmd/idx50k.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/demo/lib/cli.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/demo/lib/pattern.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/demo/lib/pages.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/demo/lib/tree.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/demo/lib/prose.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/demo/lib/argspec.gen.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/demo/scripts/gen-argspec.mjs",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/demo/man/burn.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/demo/man/memhog.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/demo/man/mktree.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/demo/man/lockdemo.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/demo/man/idx50k.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/demo/tests/fakesys.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/demo/tests/burn.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/demo/tests/memhog.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/demo/tests/mktree.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/demo/tests/lockdemo.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/demo/tests/idx50k.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/demo/tests/lib.test.ts"
+ ],
+ "verification": [
+  {
+   "command": "node_modules/.bin/tsc -p apps/tsconfig.json --noEmit",
+   "outcome": "exit 0, no errors (the whole apps package, including apps/demo)"
+  },
+  {
+   "command": "node_modules/.bin/eslint apps/demo --max-warnings 0",
+   "outcome": "exit 0, 0 problems (includes local/no-yieldless-loop-in-generator and the apps import boundary)"
+  },
+  {
+   "command": "node_modules/.bin/vitest run --project apps apps/demo",
+   "outcome": "6 test files passed, 76 tests passed (burn 17, memhog 20, mktree 10, lockdemo 7, idx50k 9, lib/man pages 13)"
+  },
+  {
+   "command": "node_modules/.bin/prettier --check apps/demo",
+   "outcome": "All matched files use Prettier code style"
+  },
+  {
+   "command": "node apps/demo/scripts/gen-argspec.mjs --check",
+   "outcome": "argspec.gen.ts matches the man-page front matter"
+  },
+  {
+   "command": "grep test titles in apps/demo/tests",
+   "outcome": "every title starts with a registered ID: PROC-03/04/05/07, MEM-03/06/07, VFS-07/09, DB-02, RAG-02/06, SYS-02, KPS-14, KMM-14"
+  }
+ ],
+ "integration_notes": "This is the demo-programs slice of the request: five stress programs for the defence demos. It is not the boot screen, logo or other UI work. Nothing outside apps/demo/ was edited. Before the programs can run from the Terminal:\n\n1. Program registry and /bin: import DEMO_PROGRAMS (or demoProgram(name)) and DEMO_MANIFESTS from apps/demo/index.ts into whatever loads programs onto executors and seeds /bin/<name>.json. apps/src/index.ts (owned by R3) exports nothing of the demo yet. The manifest `entry` values are placeholders ('apps/demo/<name>'). burn and memhog spawn their children from the hard-coded paths /bin/burn.json and /bin/memhog.json, so those must exist. burn, memhog and lockdemo are checkpointable: true; mktree and idx50k are not.\n\n2. Man pages: copy apps/demo/man/*.md to /usr/share/man/1/ and add them to /usr/share/man/index.json, where coreutils `man` reads pages. After editing a man page's front matter, run `node apps/demo/scripts/gen-argspec.mjs` (`--check` verifies).\n\n3. Sys client: the programs use @plotinium/kernel/sys (ctx.sys stubs, ctx.sleep, ctx.tick), not apps/src/_sys.ts. Argument parsing reuses the generic parser in apps/coreutils/lib/argspec.ts.\n\n4. ctx.mem (R1): kernel/sys ProgramContext has no `mem` yet (it is a TODO there). memhog looks for ctx.mem shaped `{ alloc({kind:'chunk', size, label}) -> SysGen<{pageIds}>, get(id, 'r'|'rw') -> SysGen<Uint8Array|ArrayBuffer>, free(ids) -> SysGen }`, following memory-and-paging.md \u00a74.2 (the type is CtxMem in apps/demo/lib/pages.ts). Until that lands it falls back to one protocol `mem.alloc({bytes, key:'memhog.<child>.<page>', kind:'buffer'})` per 256 KiB page plus `mem.free({segId})`. Every byte is still reserved and accounted, but the page bodies live in the generator frame and are rebuilt from their seeds after a restore. So until ctx.mem exists, page-in is not truly tested byte-for-byte.\n   - get() must return the page's live buffer and a written page must count as dirty. get() must also re-fault if the page was evicted again before the process runs; the fake kernel does this.\n   - Mismatch to resolve: kernel/src/core/mm/mm.ts alloc takes {kind:'logical'|'chunk'|'segment', size, label} -> {pageIds}, while the protocol's mem.alloc takes {bytes, key?, kind?:'state'|'buffer'} -> {segId}. The syscall handler or the protocol needs to settle this.\n\n5. Protocol requests (R1): add `exclusive?` to SpawnArgs (burn --exclusive passes it and treats EINVAL/EPERM as refused, prints a warning and runs shared). Add `committed`, `oldestBlockedMs` and `maxOverBudgetMs` to MemStat; memhog reads them when present and prints '-' otherwise.\n\n6. Capabilities: idx50k's manifest lists 'ai.search', but that cap is not in the user bounding set (protocol/src/caps.ts). If `ai.semsearch` is checked against 'ai.search', `idx50k --wait` will fail with a permission error until 'ai.search' is added to the user bounding set (rag-semantic-search.md asks for it as a default).\n\n7. Demo defaults:\n   - With default arguments, mktree builds exactly tests/fixtures/trees.ts tree1000 (manifest sha256 5c9b2025\u2026f430, 210 directories, 1,609,683 bytes, depth 13), so the server seed and the fault-injection oracle agree with it.\n   - idx50k writes 51,200 bytes to ~/idx50k.md.\n   - lockdemo assumes the kernel renews the lease heartbeat and releases a process's leases when it exits (PROC-07).",
+ "problems": [
+  "Coverage reporting did not work here. `vitest --coverage` reports 0/0 files for any include glob I tried, so I could not measure coverage for apps/demo; I did not check whether other packages are affected. Tests, tsc and eslint all pass.",
+  "memhog's per-page byte-identical check can only run against a real pager once the executor provides ctx.mem. Until then it runs on the mem.alloc fallback described in integration note 4.",
+  "burn --exclusive cannot get exclusive placement until protocol SpawnArgs accepts `exclusive`. Until then the spawn is refused (strict schema), and burn prints a warning and runs the threads shared.",
+  "prettier --check fails on existing files in apps/coreutils (46 man pages plus several lib files). Those files are outside my paths and I left them alone; everything under apps/demo is formatted."
+ ]
+}

@@ -1,0 +1,52 @@
+{
+  "id": "AGT40-G08",
+  "category": "glob",
+  "tags": [],
+  "user": "alice",
+  "cwd": "/home/alice",
+  "now": "2026-10-05T10:00:00+05:00",
+  "tz": "Asia/Karachi",
+  "fixture": "fx-agt@v1",
+  "prompt": "delete the files in tmp with a .tmp extension",
+  "expect": {
+    "kind": "plan",
+    "ops": [["unlink", "/home/alice/tmp/cache.tmp"]],
+    "confirm": true
+  },
+  "reference": {
+    "tool": "submit_plan",
+    "input": {
+      "summary": "plan",
+      "steps": [
+        {
+          "id": "s1",
+          "span": "the files in tmp with a .tmp extension",
+          "op": {
+            "call": "glob",
+            "args": {
+              "path": "~/tmp",
+              "name": "*.tmp"
+            }
+          },
+          "sources": null
+        },
+        {
+          "id": "s2",
+          "span": "delete the files in tmp with a .tmp extension",
+          "op": {
+            "call": "unlink",
+            "args": {
+              "path": "~/tmp",
+              "recursive": false
+            }
+          },
+          "sources": {
+            "ref": "s1"
+          }
+        }
+      ],
+      "assumptions": [],
+      "suspicious_content_seen": false
+    }
+  }
+}

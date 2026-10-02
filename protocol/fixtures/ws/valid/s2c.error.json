@@ -1,0 +1,11 @@
+{
+  "v": 1,
+  "t": "error",
+  "id": 18,
+  "body": {
+    "code": "schema",
+    "refId": 7,
+    "errno": "EINVAL",
+    "msg": "body.op.name: invalid"
+  }
+}

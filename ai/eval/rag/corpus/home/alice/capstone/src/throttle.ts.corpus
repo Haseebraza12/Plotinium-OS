@@ -1,0 +1,34 @@
+/**
+ * Run `fn` at most once every `intervalMs`, on the leading edge, with one trailing call so the
+ * last value is never lost. Used for the resize handle: window size updates are sent to the app
+ * at most 20 times per second while the user resizes.
+ */
+export function throttle<A extends unknown[]>(fn: (...args: A) => void, intervalMs: number) {
+  let last = Number.NEGATIVE_INFINITY;
+  let trailing: ReturnType<typeof setTimeout> | undefined;
+  let pendingArgs: A | undefined;
+
+  return (...args: A): void => {
+    const now = performance.now();
+    const remaining = intervalMs - (now - last);
+    if (remaining <= 0) {
+      if (trailing !== undefined) {
+        clearTimeout(trailing);
+        trailing = undefined;
+      }
+      last = now;
+      fn(...args);
+      return;
+    }
+    pendingArgs = args;
+    trailing ??= setTimeout(() => {
+      trailing = undefined;
+      last = performance.now();
+      if (pendingArgs !== undefined) fn(...pendingArgs);
+      pendingArgs = undefined;
+    }, remaining);
+  };
+}
+
+// Difference from debounce: throttle fires regularly DURING a burst,
+// debounce fires once AFTER the burst ends.

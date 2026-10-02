@@ -1,0 +1,18 @@
+# Disk scheduling
+
+Only matters for spinning disks where seek time dominates; SSDs mostly use noop/none or mq-deadline.
+
+Queue: 98, 183, 37, 122, 14, 124, 65, 67; head at 53; cylinders 0–199.
+
+| Algorithm | Order | Total head movement |
+|---|---|---|
+| FCFS | as given | 640 |
+| SSTF | 65, 67, 37, 14, 98, 122, 124, 183 | 236 |
+| SCAN (towards 0) | 37, 14, 0, 65, 67, 98, 122, 124, 183 | 236 |
+| C-SCAN (towards 199) | 65, 67, 98, 122, 124, 183, 199, 0, 14, 37 | 382 incl. return |
+| LOOK | like SCAN but turns at the last request | 208 (towards 0 first) |
+| C-LOOK | like C-SCAN but jumps from the last to the first request | 322 |
+
+SSTF can starve far requests. SCAN is the elevator. C-SCAN gives more uniform waiting times.
+
+Check whether the exam counts the return sweep of C-SCAN as movement; the textbook does, the TA said either is fine if stated.

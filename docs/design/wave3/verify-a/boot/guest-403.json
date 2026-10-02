@@ -1,0 +1,12 @@
+[
+  {
+    "name": "UI-005 guest 403 says Guest accounts are disabled",
+    "ok": true,
+    "detail": "{\"hint\":\"Guest accounts are disabled\",\"alert\":\"Guest accounts are disabled\"}"
+  },
+  {
+    "name": "CSP",
+    "ok": true,
+    "detail": ""
+  }
+]

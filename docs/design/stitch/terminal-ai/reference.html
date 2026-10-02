@@ -1,0 +1,335 @@
+<!doctype html>
+<!--
+  Plotinium · Terminal: AI plan (terminal-ai)
+  HAND-BUILT REFERENCE RENDER, NOT a Stitch export. Stitch generation timed out and
+  returned no screen (see screen.json). It renders the exact prompt from notes.md with the
+  Plotinium Glass (Dark) roles. Reload the page to replay the entrance animations
+  (@starting-style); prefers-reduced-motion turns every animation off.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1440">
+<title>Plotinium Terminal AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme: dark;
+  --bg:#0B0B1A; --surface:#1C1C1E; --surface-2:#2C2C2E;
+  --label:rgb(255 255 255 / .92); --label-2:rgb(255 255 255 / .70); --label-3:rgb(255 255 255 / .56); /* both >= 4.5:1 on the glass tints (checked) */
+  --sep:rgb(255 255 255 / .10); --hi:rgb(255 255 255 / .08);
+  --accent:#5E5CE6; --accent-hover:#7472FF; --accent-text:#A9A8FF; --accent-glow:rgb(94 92 230 / .45);
+  --ring:0 0 0 3px rgb(94 92 230 / .55);
+  --success:#30D158; --success-text:#5BE07F; --warning:#FF9F0A; --danger:#FF453A; --danger-text:#FF6B61; --info:#64D2FF;
+  --tl-close:#FF5F57; --tl-min:#FEBC2E; --tl-max:#28C840;
+  --font-ui:"Inter",system-ui,sans-serif; --font-mono:"JetBrains Mono",ui-monospace,monospace;
+  --m-fast:120ms; --m-med:200ms; --m-open:240ms; --m-slow:320ms;
+  --ease:cubic-bezier(.2,.8,.2,1); --ease-out:cubic-bezier(0,0,.2,1); --ease-in:cubic-bezier(.4,0,1,1);
+  --spring:linear(0, 0.048 3%, 0.163 6%, 0.360 10%, 0.557 14%, 0.725 18%, 0.878 23%, 0.973 28%, 1.026 34%, 1.038 42%, 1.021 52%, 1.004 64%, 0.999 80%, 1);
+  --spring-calm:linear(0, 0.035 3%, 0.118 6%, 0.265 10%, 0.420 14%, 0.562 18%, 0.709 23%, 0.819 28%, 0.907 34%, 0.971 42%, 1.001 52%, 1.006 64%, 1.003 80%, 1);
+}
+@media (prefers-reduced-motion: reduce){ :root{ --m-fast:0ms; --m-med:0ms; --m-open:0ms; --m-slow:0ms; } .cursor{ animation:none !important; } }
+:root[data-motion="reduce"]{ --m-fast:0ms; --m-med:0ms; --m-open:0ms; --m-slow:0ms; }
+*{ box-sizing:border-box; margin:0; padding:0; }
+html,body{ width:1440px; height:900px; overflow:hidden; background:var(--bg); }
+body{ font-family:var(--font-ui); color:var(--label); font-size:13px; -webkit-font-smoothing:antialiased; }
+svg.i{ width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; flex:none; }
+
+/* ---------- wallpaper ---------- */
+.wall{ position:fixed; inset:0; overflow:hidden;
+  background:
+    radial-gradient(700px 520px at 18% 22%, rgb(94 92 230 / .38), transparent 70%),
+    radial-gradient(620px 520px at 84% 78%, rgb(140 90 255 / .28), transparent 70%),
+    radial-gradient(520px 380px at 70% 12%, rgb(100 210 255 / .10), transparent 70%),
+    linear-gradient(135deg,#0B0B1A 0%,#15123a 50%,#2A1F5C 100%); }
+.wall::after{ content:""; position:absolute; left:52%; top:40%; width:420px; height:420px; border-radius:50%;
+  background:radial-gradient(circle, rgb(169 168 255 / .20), transparent 65%); filter:blur(10px); }
+
+/* ---------- menu bar ---------- */
+.menubar{ position:fixed; top:0; left:0; right:0; height:28px; display:flex; align-items:center; gap:18px; padding:0 14px;
+  background:rgb(30 30 36 / .55); backdrop-filter:blur(30px) saturate(180%); box-shadow:inset 0 -1px 0 var(--sep), inset 0 1px 0 var(--hi); z-index:50; }
+.menubar .mark{ width:18px; height:18px; display:grid; place-items:center; }
+.menubar .app{ font-weight:700; }
+.menubar .m{ color:var(--label); opacity:.88; padding:2px 6px; margin:0 -6px; border-radius:6px; transition:background var(--m-fast) var(--ease); }
+.menubar .m:hover{ background:rgb(255 255 255 / .10); }
+.menubar .tray{ margin-left:auto; display:flex; align-items:center; gap:14px; color:var(--label); }
+.menubar .tray .clock{ font-variant-numeric:tabular-nums; font-weight:500; }
+
+/* ---------- window ---------- */
+.win{ position:absolute; left:160px; top:48px; width:1120px; height:704px; border-radius:14px; overflow:hidden;
+  background:rgb(22 22 28 / .82); backdrop-filter:blur(40px) saturate(170%);
+  border:1px solid rgb(255 255 255 / .10);
+  box-shadow:0 22px 70px rgb(0 0 0 / .55), 0 0 0 .5px rgb(0 0 0 / .6), inset 0 1px 0 rgb(255 255 255 / .09);
+  display:flex; flex-direction:column;
+  transform-origin:50% 110%;
+  transition:opacity var(--m-open) var(--spring-calm), transform var(--m-open) var(--spring-calm); }
+@starting-style{ .win{ opacity:0; transform:scale(.94); } }
+
+.titlebar{ height:38px; flex:none; display:flex; align-items:center; position:relative; padding:0 14px;
+  background:linear-gradient(rgb(255 255 255 / .05), rgb(255 255 255 / .02)); }
+.lights{ display:flex; gap:8px; }
+.lights button{ width:12px; height:12px; border-radius:50%; border:0; display:grid; place-items:center; cursor:default;
+  box-shadow:inset 0 0 0 .5px rgb(0 0 0 / .25); }
+.lights .c{ background:var(--tl-close); } .lights .n{ background:var(--tl-min); } .lights .x{ background:var(--tl-max); }
+.lights svg{ width:8px; height:8px; stroke:rgb(0 0 0 / .6); stroke-width:3; opacity:0; transition:opacity var(--m-fast) var(--ease-out); }
+.lights:hover svg{ opacity:1; }
+.titlebar .title{ position:absolute; left:0; right:0; text-align:center; pointer-events:none; font-weight:600; font-size:13px; color:var(--label-2); }
+
+.tabs{ height:34px; flex:none; display:flex; align-items:center; gap:6px; padding:0 10px; border-bottom:1px solid var(--sep); background:rgb(0 0 0 / .12); }
+.tab{ height:26px; display:flex; align-items:center; gap:8px; padding:0 10px 0 12px; border-radius:8px; font-size:12px; color:var(--label-2); min-width:220px; }
+.tab.on{ background:rgb(255 255 255 / .09); color:var(--label); box-shadow:inset 0 1px 0 rgb(255 255 255 / .08), 0 1px 2px rgb(0 0 0 / .3); }
+.tab .dot{ width:6px; height:6px; border-radius:50%; background:var(--accent-text); }
+.tab .close{ margin-left:auto; width:16px; height:16px; border-radius:4px; display:grid; place-items:center; color:var(--label-3); }
+.tab .close svg{ width:11px; height:11px; }
+.newtab{ width:26px; height:26px; border-radius:7px; display:grid; place-items:center; color:var(--label-2); transition:background var(--m-fast) var(--ease); }
+.newtab:hover{ background:rgb(255 255 255 / .08); }
+
+/* ---------- terminal content ---------- */
+.term{ flex:1; position:relative; padding:14px 20px; font-family:var(--font-mono); font-size:13px; line-height:21px; color:var(--label);
+  background:rgb(12 12 18 / .55); overflow:hidden; }
+.dim{ color:var(--label-2); } .faint{ color:var(--label-3); }
+.ps{ color:var(--accent-text); font-weight:700; } .ps .path{ color:#8FB8FF; font-weight:500; }
+.line{ white-space:pre; }
+.gap{ height:8px; }
+.kh{ color:#8FB8FF; font-weight:700; white-space:pre; }
+
+.plan{ width:780px; margin:6px 0 10px; border-radius:12px; border:1px solid rgb(94 92 230 / .42);
+  background:linear-gradient(rgb(94 92 230 / .10), rgb(255 255 255 / .03)); box-shadow:inset 0 1px 0 rgb(255 255 255 / .06), 0 8px 24px rgb(0 0 0 / .25);
+  overflow:hidden; transition:opacity var(--m-med) var(--spring-calm), transform var(--m-med) var(--spring-calm); transition-delay:180ms; }
+@starting-style{ .plan{ opacity:0; transform:translateY(6px); } }
+.plan-h{ display:flex; align-items:center; gap:10px; padding:9px 14px; border-bottom:1px solid var(--sep); font-family:var(--font-ui); }
+.plan-h .t{ font-weight:700; font-size:13px; }
+.plan-h .t b{ color:var(--label-2); font-weight:500; }
+.plan-h .wand{ color:var(--accent-text); }
+.plan-h .pill{ margin-left:auto; font-size:11px; font-weight:600; letter-spacing:.02em; color:var(--label-2); border:1px solid var(--sep); border-radius:999px; padding:2px 9px; }
+.steps{ list-style:none; padding:4px 0; }
+.step{ display:grid; grid-template-columns:22px 70px 1fr auto; align-items:center; column-gap:10px; height:30px; padding:0 14px;
+  transition:opacity var(--m-fast) var(--spring), transform var(--m-fast) var(--spring); }
+.step:nth-child(1){ transition-delay:260ms } .step:nth-child(2){ transition-delay:290ms } .step:nth-child(3){ transition-delay:320ms } .step:nth-child(4){ transition-delay:350ms }
+@starting-style{ .step{ opacity:0; transform:translateY(4px); } }
+.step:hover{ background:rgb(255 255 255 / .04); }
+.step .n{ color:var(--label-3); text-align:right; }
+.step .cmd{ white-space:pre; overflow:hidden; text-overflow:ellipsis; }
+.step .cmd .arg{ color:var(--label-2); }
+.step .eff{ color:var(--label-2); white-space:pre; font-size:12.5px; }
+.step .eff .w{ color:var(--warning); font-weight:700; }
+.badge{ justify-self:start; font-family:var(--font-ui); font-size:10.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+  border-radius:999px; padding:2px 8px; line-height:15px; }
+.b-create{ color:var(--success-text); background:rgb(48 209 88 / .15); box-shadow:inset 0 0 0 1px rgb(48 209 88 / .30); }
+.b-read{ color:var(--info); background:rgb(100 210 255 / .13); box-shadow:inset 0 0 0 1px rgb(100 210 255 / .28); }
+.b-move{ color:var(--accent-text); background:rgb(94 92 230 / .22); box-shadow:inset 0 0 0 1px rgb(94 92 230 / .45); }
+.b-chmod{ color:var(--warning); background:rgb(255 159 10 / .14); box-shadow:inset 0 0 0 1px rgb(255 159 10 / .32); }
+.disc{ padding:0 14px 6px 128px; color:var(--label-3); font-size:12px; display:flex; align-items:center; gap:6px; }
+.disc svg{ width:12px; height:12px; transition:transform var(--m-med) var(--spring); }
+.disc:hover{ color:var(--label-2); }
+.blast{ display:flex; align-items:center; gap:8px; padding:9px 14px; border-top:1px solid var(--sep); background:rgb(0 0 0 / .14); font-family:var(--font-ui); font-size:12px; }
+.blast .lbl{ color:var(--label-2); font-weight:600; margin-right:2px; }
+.chip{ display:inline-flex; align-items:center; gap:5px; border-radius:999px; padding:3px 9px; font-weight:600; font-variant-numeric:tabular-nums;
+  background:rgb(255 255 255 / .06); box-shadow:inset 0 0 0 1px var(--sep);
+  transition:opacity var(--m-fast) var(--spring-calm), transform var(--m-fast) var(--spring-calm); }
+.chip:nth-of-type(1){ transition-delay:400ms } .chip:nth-of-type(2){ transition-delay:440ms } .chip:nth-of-type(3){ transition-delay:480ms } .chip:nth-of-type(4){ transition-delay:520ms }
+@starting-style{ .chip{ opacity:0; transform:translateY(4px); } }
+.chip.ok{ color:var(--success-text); background:rgb(48 209 88 / .10); box-shadow:inset 0 0 0 1px rgb(48 209 88 / .25); }
+.chip svg{ width:12px; height:12px; }
+
+.why{ color:var(--label-2); white-space:pre; } .why .w{ color:var(--danger-text); font-weight:700; }
+.proceed{ display:flex; align-items:center; gap:4px; white-space:pre; }
+.opt{ display:inline-grid; place-items:center; min-width:22px; height:20px; padding:0 6px; border-radius:6px; font-weight:700; font-size:12px; }
+.opt.o{ box-shadow:inset 0 0 0 1px rgb(255 255 255 / .22); color:var(--label-2); }
+.opt.def{ background:var(--accent); color:#fff; box-shadow:var(--ring); position:relative; margin:0 4px; }
+.opt.def::after{ content:""; position:absolute; inset:-3px; border-radius:8px; box-shadow:0 0 0 3px rgb(94 92 230 / .55); opacity:0;
+  animation:ring-pulse var(--m-slow) var(--spring) 600ms 1 both; } /* one-shot attention pulse, then gone */
+@keyframes ring-pulse{ 0%{ transform:scale(1.35); opacity:0; } 45%{ opacity:1; } 100%{ transform:scale(1); opacity:0; } }
+.def-note{ font-family:var(--font-ui); font-size:11px; color:var(--label-3); margin-left:8px; }
+.typed{ color:var(--label); font-weight:700; margin-left:8px; }
+
+.ok-line{ color:var(--success-text); display:flex; align-items:center; gap:6px; white-space:pre; margin-top:2px;
+  transition:opacity var(--m-med) var(--spring), transform var(--m-med) var(--spring); transition-delay:700ms; }
+@starting-style{ .ok-line{ opacity:0; transform:translateX(-4px); } }
+.ok-line .ck{ display:inline-grid; place-items:center; width:16px; height:16px; border-radius:50%; background:rgb(48 209 88 / .18); }
+.ok-line .ck svg{ width:11px; height:11px; stroke-width:3; }
+.code{ display:inline-flex; align-items:center; gap:5px; font-weight:700; color:var(--label); background:rgb(255 255 255 / .08); border-radius:6px; padding:0 7px; line-height:20px;
+  box-shadow:inset 0 0 0 1px rgb(255 255 255 / .14); position:relative; }
+.code svg{ width:12px; height:12px; color:var(--label-2); }
+.code::before{ content:""; position:absolute; inset:0; border-radius:inherit; background:rgb(94 92 230 / .28); opacity:0; transition:opacity var(--m-fast) var(--ease); }
+.code:hover::before, .code:focus-visible::before{ opacity:1; }
+.cursor{ display:inline-block; width:8px; height:17px; background:var(--accent-text); vertical-align:-3px; margin-left:1px; animation:blink 1.06s steps(1) infinite; }
+:root[data-capture] .cursor{ animation:none; } /* static capture for reference.png */
+@keyframes blink{ 0%,55%{ opacity:1; } 56%,100%{ opacity:0; } }
+
+/* ---------- stale autocomplete popover ---------- */
+.ac{ position:absolute; right:26px; top:132px; width:272px; border-radius:14px; padding:6px; font-family:var(--font-ui);
+  background:rgb(44 44 52 / .72); backdrop-filter:blur(30px) saturate(180%); box-shadow:0 14px 40px rgb(0 0 0 / .45), inset 0 1px 0 rgb(255 255 255 / .10), 0 0 0 1px rgb(255 255 255 / .10);
+  opacity:.5; transition:opacity var(--m-med) var(--ease), transform var(--m-fast) var(--spring-calm); }
+@starting-style{ .ac{ opacity:0; transform:translateY(4px) scale(.98); } }
+.ac:hover{ opacity:.8; }
+.ac .hd{ font-size:10.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--label-3); padding:4px 8px 6px; }
+.ac .row{ display:flex; align-items:center; gap:9px; height:30px; padding:0 8px; border-radius:8px; }
+.ac .row.sel{ background:rgb(94 92 230 / .85); }
+.ac .row svg{ width:14px; height:14px; color:var(--label-2); }
+.ac .row.sel svg{ color:#fff; }
+.ac .row .c{ font-family:var(--font-mono); font-size:12px; font-weight:500; }
+.ac .row .d{ margin-left:auto; font-size:11px; color:var(--label-2); }
+.ac .row.sel .d{ color:rgb(255 255 255 / .8); }
+.ac .ft{ border-top:1px solid var(--sep); margin-top:4px; padding:6px 8px 2px; font-size:11px; color:var(--label-3); display:flex; gap:10px; }
+.kc{ font-size:10px; border-radius:4px; padding:0 4px; box-shadow:inset 0 0 0 1px rgb(255 255 255 / .2); color:var(--label-2); }
+
+/* ---------- status strip ---------- */
+.status{ height:26px; flex:none; display:flex; align-items:center; gap:18px; padding:0 14px; border-top:1px solid var(--sep);
+  background:rgb(255 255 255 / .035); font-size:11px; color:var(--label-2); }
+.status .live{ display:flex; align-items:center; gap:7px; }
+.status .led{ width:7px; height:7px; border-radius:50%; background:var(--success); box-shadow:0 0 6px rgb(48 209 88 / .8); position:relative; }
+.status .led::after{ content:""; position:absolute; inset:0; border-radius:50%; background:var(--success); opacity:0; transform:scale(2.2);
+  transition:opacity var(--m-slow) var(--ease-out), transform var(--m-slow) var(--ease-out); }
+@starting-style{ .status .led::after{ opacity:.6; transform:scale(1); } }
+.status .mid{ margin:0 auto; display:flex; align-items:center; gap:6px; }
+.status .mid svg{ width:12px; height:12px; color:var(--success-text); }
+.status .mono{ font-family:var(--font-mono); font-size:10.5px; color:var(--label-3); }
+
+/* ---------- dock ---------- */
+.dock{ position:fixed; left:50%; bottom:8px; transform:translateX(-50%); display:flex; align-items:flex-end; gap:10px; padding:8px 10px 10px;
+  border-radius:22px; background:rgb(40 40 48 / .5); backdrop-filter:blur(40px) saturate(180%);
+  box-shadow:0 12px 40px rgb(0 0 0 / .45), inset 0 1px 0 rgb(255 255 255 / .16), 0 0 0 1px rgb(255 255 255 / .10); z-index:40; }
+.dock .app{ position:relative; width:52px; height:52px; border-radius:13px; display:grid; place-items:center;
+  box-shadow:inset 0 1px 0 rgb(255 255 255 / .22), 0 4px 10px rgb(0 0 0 / .35);
+  transition:transform var(--m-med) var(--spring); transform-origin:50% 100%; }
+.dock .app:hover{ transform:scale(1.28) translateY(-4px); }
+.dock .app svg{ width:26px; height:26px; stroke-width:2; }
+.dock .app.run::after{ content:""; position:absolute; bottom:-7px; left:50%; width:4px; height:4px; margin-left:-2px; border-radius:50%; background:rgb(255 255 255 / .85); }
+.a-files{ background:linear-gradient(160deg,#4d8dff,#2a4fd6); color:#fff; }
+.a-term{ background:linear-gradient(160deg,#2b2b36,#121218); color:var(--accent-text); }
+.a-edit{ background:linear-gradient(160deg,#8a88ff,#5E5CE6); color:#fff; }
+.a-task{ background:linear-gradient(160deg,#2fd07a,#15935a); color:#fff; }
+.a-set{ background:linear-gradient(160deg,#8e8e98,#55555f); color:#fff; }
+.dock .sep{ width:1px; height:44px; background:rgb(255 255 255 / .16); margin:0 2px 4px; }
+.a-search{ background:linear-gradient(160deg,#3a3a46,#24242c); color:var(--label); }
+</style>
+<script>if(location.search.indexOf('capture')>-1)document.documentElement.setAttribute('data-capture','');</script>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+    <symbol id="i-wifi" viewBox="0 0 24 24"><path d="M12 20h.01"/><path d="M2 8.82a15 15 0 0 1 20 0"/><path d="M5 12.859a10 10 0 0 1 14 0"/><path d="M8.5 16.429a5 5 0 0 1 7 0"/></symbol>
+    <symbol id="i-battery" viewBox="0 0 24 24"><rect width="16" height="10" x="2" y="7" rx="2"/><path d="M22 11v2"/><path d="M6 11v2"/><path d="M10 11v2"/><path d="M14 11v2"/></symbol>
+    <symbol id="i-toggle" viewBox="0 0 24 24"><rect width="20" height="12" x="2" y="6" rx="6"/><circle cx="16" cy="12" r="2"/></symbol>
+    <symbol id="i-wand" viewBox="0 0 24 24"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/><path d="M11 3H9"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
+    <symbol id="i-log" viewBox="0 0 24 24"><path d="M15 12h-5"/><path d="M15 8h-5"/><path d="M19 17V5a2 2 0 0 0-2-2H4"/><path d="M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3"/></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+    <symbol id="i-expand" viewBox="0 0 24 24"><path d="m15 3 6 0 0 6"/><path d="m9 21-6 0 0-6"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="i-term" viewBox="0 0 24 24"><path d="M12 19h8"/><path d="m4 17 6-6-6-6"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></symbol>
+    <symbol id="i-pen" viewBox="0 0 24 24"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></symbol>
+    <symbol id="i-activity" viewBox="0 0 24 24"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></symbol>
+    <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M20 7h-9"/><path d="M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></symbol>
+    <symbol id="mark" viewBox="0 0 32 32">
+      <ellipse cx="16" cy="16" rx="13" ry="5.2" fill="none" stroke="#5E5CE6" stroke-width="1.6" transform="rotate(30 16 16)"/>
+      <ellipse cx="16" cy="16" rx="13" ry="5.2" fill="none" stroke="#8C8AFF" stroke-width="1.6" transform="rotate(-30 16 16)" opacity=".85"/>
+      <ellipse cx="16" cy="16" rx="13" ry="5.2" fill="none" stroke="#5E5CE6" stroke-width="1.2" transform="rotate(90 16 16)" opacity=".55"/>
+      <circle cx="16" cy="16" r="3.6" fill="#EDEBFF"/><circle cx="16" cy="16" r="6" fill="#5E5CE6" opacity=".35"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="wall" aria-hidden="true"></div>
+
+<nav class="menubar" aria-label="Menu bar">
+  <span class="mark" role="img" aria-label="Plotinium menu"><svg width="18" height="18"><use href="#mark"/></svg></span>
+  <span class="app">Terminal</span>
+  <span class="m">Shell</span><span class="m">Edit</span><span class="m">View</span><span class="m">Window</span><span class="m">Help</span>
+  <div class="tray">
+    <svg class="i" aria-label="Wi-Fi connected"><use href="#i-wifi"/></svg>
+    <svg class="i" style="width:20px" aria-label="Battery 82 percent"><use href="#i-battery"/></svg>
+    <svg class="i" aria-label="Control Centre"><use href="#i-toggle"/></svg>
+    <svg class="i" aria-label="Search"><use href="#i-search"/></svg>
+    <span class="clock">Thu 24 Sep&nbsp;&nbsp;10:42</span>
+  </div>
+</nav>
+
+<section class="win" role="region" aria-label="Terminal — student@plotinium: ~">
+  <header class="titlebar">
+    <div class="lights">
+      <button class="c" aria-label="Close window"><svg viewBox="0 0 24 24"><use href="#i-x"/></svg></button>
+      <button class="n" aria-label="Minimise window"><svg viewBox="0 0 24 24"><use href="#i-minus"/></svg></button>
+      <button class="x" aria-label="Zoom window"><svg viewBox="0 0 24 24"><use href="#i-expand"/></svg></button>
+    </div>
+    <div class="title">student@plotinium: ~ — 120×36</div>
+  </header>
+
+  <div class="tabs" role="tablist" aria-label="Terminal tabs">
+    <div class="tab on" role="tab" aria-selected="true"><span class="dot"></span>zsh-like shell — 1<span class="close" aria-label="Close tab"><svg class="i"><use href="#i-x"/></svg></span></div>
+    <button class="newtab" aria-label="New tab" style="border:0;background:none"><svg class="i"><use href="#i-plus"/></svg></button>
+  </div>
+
+  <div class="term" role="tabpanel" aria-label="zsh-like shell — 1">
+    <div class="line dim"><span class="ps" style="opacity:.7">student@plotinium<span class="path">:~</span>$</span> ls ~/notes</div>
+    <div class="line dim">os-report.md   sched-notes.md   lab3-vfs.pdf   todo.txt</div>
+    <div class="gap"></div>
+    <div class="line"><span class="ps">student@plotinium<span class="path">:~</span>$</span> ai "move every PDF I changed last week into a new folder called reports, and make it read-only for others"</div>
+    <div class="line dim">ai: looking: find ~ -type f -name "*.pdf" (changed 2026-09-17 → 2026-09-24) … 12 files · 38 ms</div>
+    <div class="kh">── Kernel confirmation · ai.agent (pid 212) ─────────────────────────────────────</div>
+
+    <div class="plan" role="group" aria-label="Plan, 4 steps, 1 transaction">
+      <div class="plan-h">
+        <svg class="i wand"><use href="#i-wand"/></svg>
+        <span class="t">Plan · 4 steps · 1 transaction</span>
+        <span class="pill">dry run · read-write</span>
+      </div>
+      <ol class="steps">
+        <li class="step"><span class="n">1</span><span class="badge b-create">Create</span><span class="cmd">mkdir <span class="arg">~/reports</span></span><span class="eff">→ create 1 dir</span></li>
+        <li class="step"><span class="n">2</span><span class="badge b-read">Read</span><span class="cmd">find <span class="arg">~ -type f -name "*.pdf" -mtime -7</span></span><span class="eff">→ 12 files</span></li>
+        <li class="step"><span class="n">3</span><span class="badge b-move">Move</span><span class="cmd">mv <span class="arg">&lt;12 files&gt; ~/reports/</span></span><span class="eff">→ modify 12 entries</span></li>
+        <li class="step"><span class="n">4</span><span class="badge b-chmod">Chmod</span><span class="cmd">chmod <span class="arg">-R o-w ~/reports</span></span><span class="eff">→ <span class="w">chmod</span> · modify 13 inodes</span></li>
+      </ol>
+      <div class="disc"><svg class="i"><use href="#i-chev"/></svg>show 12 files · lab3-vfs.pdf, sched-paper.pdf, os-report-draft.pdf …</div>
+      <div class="blast">
+        <span class="lbl">Blast radius</span>
+        <span class="chip">13 inodes</span>
+        <span class="chip ok">0 deletions</span>
+        <span class="chip ok">0 overwrites</span>
+        <span class="chip ok"><svg class="i"><use href="#i-check"/></svg>within quota</span>
+      </div>
+    </div>
+
+    <div class="why">Needs confirmation because: <span class="w">chmod</span></div>
+    <div class="proceed">Proceed? <span class="faint">[</span><span class="opt o">y</span><span class="faint">/</span><span class="opt def" title="Default">N</span><span class="faint">/</span><span class="opt o">e=edit</span><span class="faint">]</span><span class="typed">y</span><span class="def-note">N is the default · Enter declines</span></div>
+    <div class="ok-line"><span class="ck"><svg class="i"><use href="#i-check"/></svg></span>committed in 41 ms · txn 8f2c · undo with: <span class="code" tabindex="0"><svg class="i"><use href="#i-undo"/></svg>ai undo 8f2c</span></div>
+    <div class="gap"></div>
+    <div class="line"><span class="ps">student@plotinium<span class="path">:~</span>$</span> <span class="cursor" aria-hidden="true"></span></div>
+
+    <div class="ac" aria-hidden="true">
+      <div class="hd">ai · suggestions</div>
+      <div class="row sel"><svg class="i"><use href="#i-undo"/></svg><span class="c">ai undo &lt;txn&gt;</span><span class="d">revert a transaction</span></div>
+      <div class="row"><svg class="i"><use href="#i-log"/></svg><span class="c">ai log</span><span class="d">show audited actions</span></div>
+      <div class="row"><svg class="i"><use href="#i-help"/></svg><span class="c">ai explain</span><span class="d">explain last command</span></div>
+      <div class="row"><svg class="i"><use href="#i-list"/></svg><span class="c">ai plan</span><span class="d">dry-run only</span></div>
+      <div class="ft"><span><span class="kc">Tab</span> to accept</span><span><span class="kc">Esc</span> to dismiss</span></div>
+    </div>
+  </div>
+
+  <footer class="status" role="status" aria-live="polite">
+    <span class="live"><span class="led" aria-hidden="true"></span>ai.agent pid 212 · Claude via gateway</span>
+    <span class="mid"><svg class="i"><use href="#i-check"/></svg>txn 8f2c committed</span>
+    <span class="mono">UTF-8 · zsh-like · 120×36 · /home/student</span>
+  </footer>
+</section>
+
+<nav class="dock" aria-label="Dock">
+  <div class="app a-files" aria-label="Files"><svg class="i"><use href="#i-folder"/></svg></div>
+  <div class="app a-term run" aria-label="Terminal, running"><svg class="i"><use href="#i-term"/></svg></div>
+  <div class="app a-edit" aria-label="Editor"><svg class="i"><use href="#i-pen"/></svg></div>
+  <div class="app a-task" aria-label="Task Manager"><svg class="i"><use href="#i-activity"/></svg></div>
+  <div class="app a-set" aria-label="Settings"><svg class="i"><use href="#i-sliders"/></svg></div>
+  <span class="sep" aria-hidden="true"></span>
+  <div class="app a-search" aria-label="Search"><svg class="i"><use href="#i-search"/></svg></div>
+</nav>
+</body>
+</html>

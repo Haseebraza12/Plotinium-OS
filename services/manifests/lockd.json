@@ -1,0 +1,11 @@
+{
+  "name": "lockd",
+  "description": "Lease table ready, heartbeat armed; else local advisory locks only",
+  "requires": ["sync"],
+  "critical": false,
+  "weight": 1,
+  "timeoutMs": 2000,
+  "priority": 20,
+  "safeMode": true,
+  "onDegradedDependency": "start-degraded"
+}

@@ -1,0 +1,12 @@
+// Presentational UI library (DOM + Solid). No Node types, no WebWorker lib.
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "types": [],
+    "jsx": "preserve",
+    "jsxImportSource": "solid-js"
+  },
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules", "dist", "coverage"]
+}

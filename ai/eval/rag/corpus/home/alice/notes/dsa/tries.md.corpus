@@ -1,0 +1,18 @@
+# Tries
+
+A tree keyed by characters: each edge is a character, each path from the root spells a prefix. Lookup cost depends on the key length L, not on how many keys are stored: O(L).
+
+Good for:
+- autocomplete: walk to the node for the typed prefix, then enumerate its subtree;
+- spell checking;
+- IP routing (longest prefix match with binary tries);
+- our shell's tab completion over command names.
+
+Memory is the problem: a node with a 26- or 256-entry child array wastes a lot. Fixes:
+- a hash map or sorted array of children per node;
+- **radix / Patricia tries** collapse chains of single-child nodes into one edge labelled with a string;
+- ternary search trees.
+
+Compare with a hash set: hashing is O(L) too (you hash the whole key), but a hash set can't answer "all keys starting with abc".
+
+Assignment: implement insert, contains, startsWith and delete (delete must prune nodes that become empty).

@@ -1,0 +1,13 @@
+{
+  "note": "No Stitch screen for settings-about. mcp__stitch__generate_screen_from_text returned 'The operation timed out.' at about 2026-09-24T15:19Z with no screen id. It was NOT retried, per the run's instructions. list_screens for project 12849137298552292712 returned {} on 20+ polls from about 15:20Z to 15:47Z; get_project updateTime stayed 2026-09-24T15:22:02Z and list_projects showed 0 screens in the project. Sibling agents saw the same. Without a screen id, get_screen and edit_screens could not be used.",
+  "request": {
+    "projectId": "12849137298552292712",
+    "deviceType": "DESKTOP",
+    "designSystem": "assets/10121591451242352758",
+    "modelId": "GEMINI_3_8_FLASH",
+    "prompt": "see notes.md, section 'Final prompt'"
+  },
+  "response": { "error": "The operation timed out." },
+  "list_screens_last": {},
+  "fallback": "reference.html and reference.png in this folder are a hand-built render of the same prompt, NOT a Stitch export. Re-run the generation when Stitch recovers and save its output as screen.html and screenshot.png."
+}

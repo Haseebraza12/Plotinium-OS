@@ -1,0 +1,11 @@
+import { env, AutoTokenizer, AutoModel } from '@huggingface/transformers';
+env.allowRemoteModels = false; env.localModelPath = new URL('./models/', import.meta.url).pathname;
+const id='MongoDB/mdbr-leaf-ir'; const tok=await AutoTokenizer.from_pretrained(id); const m=await AutoModel.from_pretrained(id,{dtype:'q8'});
+const P='Represent this sentence for searching relevant passages: ';
+const q=['where do we evict least recently used pages','how is the boot order computed'];
+const d=['The LRU pager keeps a hash map and a doubly linked list; on memory pressure it evicts the least recently used unpinned page to local swap.','Services declare dependencies in manifests; the service manager builds a DAG and runs Kahn topological sort to compute concurrent start levels.'];
+const o=await m(await tok([...q.map(x=>P+x),...d],{padding:true}));
+const e=o.sentence_embedding; console.log('dims',e.dims);
+const v=e.tolist(); const dot=(a,b)=>a.reduce((s,x,i)=>s+x*b[i],0);
+console.log('norms',v.map(x=>Math.sqrt(dot(x,x)).toFixed(4)).join(' '));
+console.log('q0·d0',dot(v[0],v[2]).toFixed(3),'q0·d1',dot(v[0],v[3]).toFixed(3),'q1·d0',dot(v[1],v[2]).toFixed(3),'q1·d1',dot(v[1],v[3]).toFixed(3));

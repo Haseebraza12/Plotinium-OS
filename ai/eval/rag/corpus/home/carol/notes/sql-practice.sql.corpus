@@ -1,0 +1,18 @@
+-- Carol's practice queries for the DB lab (schema: student, course, enrolment)
+
+-- top 3 students per course by grade
+SELECT course_id, student_id, grade
+FROM (
+  SELECT e.*, rank() OVER (PARTITION BY course_id ORDER BY grade DESC) AS r
+  FROM enrolment e
+) ranked
+WHERE r <= 3;
+
+-- courses with no enrolments
+SELECT c.id, c.title
+FROM course c
+WHERE NOT EXISTS (SELECT 1 FROM enrolment e WHERE e.course_id = c.id);
+
+-- running average per student over terms
+SELECT student_id, term, avg(grade) OVER (PARTITION BY student_id ORDER BY term) AS running_avg
+FROM enrolment;

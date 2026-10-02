@@ -1,0 +1,5 @@
+scratch - window follows cursor badly when moving fast
+- mousemove on titlebar only -> events stop when cursor leaves it. use pointer capture.
+- left/top on every event = layout thrash. transform in rAF instead.
+- sometimes window stuck to cursor after release: mouseup lost outside element. capture fixes that too.
+- test with the gaming mouse (1000 Hz)

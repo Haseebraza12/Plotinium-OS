@@ -1,0 +1,8 @@
+new router setup
+- admin page 192.168.1.1, changed the default admin password (stored in my password manager, not here)
+- wifi name: home-5g and home-2g
+- WPA3 where supported, WPA2 fallback for the old TV
+- guest network for visitors, isolated
+- disabled WPS
+- DNS 1.1.1.1
+- firmware updated to latest

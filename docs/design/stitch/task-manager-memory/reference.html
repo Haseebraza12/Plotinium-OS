@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Task Manager Memory</title>
+<!-- Hand-built reference render (NOT a Stitch export). Stitch generation timed out for the whole project; see notes.md and screen.json. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#0B0B1A; --wall2:#2A1F5C;
+  --label:rgba(255,255,255,.92); --label2:rgba(255,255,255,.62); --label3:rgba(255,255,255,.40);
+  --hair:rgba(255,255,255,.10); --hair2:rgba(255,255,255,.06);
+  --glass-win:rgba(30,30,36,.80); --glass-bar:rgba(30,30,36,.55); --glass-dock:rgba(40,40,48,.50);
+  --accent:#5E5CE6; --accent-h:#7472FF; --accent-glow:rgba(94,92,230,.45);
+  --ok:#30D158; --warn:#FF9F0A; --danger:#FF453A; --info:#64D2FF;
+  --seg-kernel:#8E8EA0; --seg-apps:#5E5CE6; --seg-embed:#30C6B0; --seg-vec:#64D2FF; --seg-spec:#FF9F0A;
+  --font:"Inter",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,monospace;
+  --ease-spring:linear(0,.009,.035 2.1%,.141 4.4%,.723 12.9%,.938 16.7%,1.017 20.1%,1.043 23.5%,1.035 28.2%,1.007 36.2%,.998 45.4%,1);
+  --ease-out:cubic-bezier(.16,1,.3,1);
+  --ease-snap:cubic-bezier(.34,1.56,.64,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--label);font:13px/1.4 var(--font);-webkit-font-smoothing:antialiased;overflow:hidden;min-width:1440px;min-height:900px;position:relative}
+svg.i{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.mono{font-family:var(--mono)}
+.num{font-variant-numeric:tabular-nums}
+
+/* wallpaper */
+.wall{position:absolute;inset:0;background:
+  radial-gradient(700px 500px at 18% 78%,rgba(94,92,230,.38),transparent 70%),
+  radial-gradient(620px 460px at 86% 18%,rgba(140,90,255,.30),transparent 70%),
+  radial-gradient(420px 320px at 62% 92%,rgba(100,210,255,.14),transparent 70%),
+  linear-gradient(160deg,#0B0B1A 0%,#16123A 45%,var(--wall2) 100%)}
+.wall::after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.45))}
+
+/* menu bar */
+.menubar{position:absolute;top:0;left:0;right:0;height:28px;display:flex;align-items:center;gap:2px;padding:0 10px;
+  background:var(--glass-bar);backdrop-filter:blur(30px) saturate(180%);box-shadow:inset 0 -1px 0 rgba(255,255,255,.06),inset 0 1px 0 rgba(255,255,255,.08);z-index:5;
+  animation:drop .5s var(--ease-out) both}
+.menubar .mi{padding:3px 9px;border-radius:6px;font-weight:500;color:var(--label);cursor:default;transition:background .15s}
+.menubar .mi:hover{background:rgba(255,255,255,.12)}
+.menubar .mi.app{font-weight:700}
+.menubar .logo{display:grid;place-items:center;width:30px;height:22px;border-radius:6px}
+.menubar .right{margin-left:auto;display:flex;align-items:center;gap:4px}
+.menubar .right .st{display:grid;place-items:center;height:22px;min-width:28px;padding:0 6px;border-radius:6px;color:var(--label)}
+.menubar .right .st:hover{background:rgba(255,255,255,.12)}
+.clock{font-weight:500;padding:0 8px}
+
+/* dock */
+.dock{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);display:flex;align-items:flex-end;gap:10px;padding:8px 10px 10px;
+  border-radius:22px;background:var(--glass-dock);backdrop-filter:blur(40px) saturate(180%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 0 0 1px rgba(255,255,255,.08),0 20px 50px rgba(0,0,0,.45);z-index:4;
+  animation:rise .6s var(--ease-spring) .1s both}
+.dock .app{position:relative;width:52px;height:52px;border-radius:13px;display:grid;place-items:center;color:#fff;
+  transition:transform .25s var(--ease-snap);transform-origin:50% 100%;box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 6px 14px rgba(0,0,0,.35)}
+.dock .app svg.i{width:26px;height:26px;stroke-width:1.6}
+.dock .app:hover{transform:scale(1.28) translateY(-6px)}
+.dock .app:hover + .app,.dock .app:has(+ .app:hover){transform:scale(1.12) translateY(-2px)}
+.dock .app.run::after{content:"";position:absolute;bottom:-7px;left:50%;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:rgba(255,255,255,.85)}
+.dock .sep{width:1px;height:44px;background:rgba(255,255,255,.16);margin:0 2px 4px}
+.a-files{background:linear-gradient(160deg,#5AC8FA,#2F6BDB)}
+.a-term{background:linear-gradient(160deg,#3A3A44,#15151B)}
+.a-edit{background:linear-gradient(160deg,#FFB547,#F2762E)}
+.a-task{background:linear-gradient(160deg,#4CD97B,#1E9E55)}
+.a-set{background:linear-gradient(160deg,#9A9AA8,#55555F)}
+.a-search{background:linear-gradient(160deg,#7472FF,#4A3FC8)}
+.a-trash{background:linear-gradient(160deg,rgba(255,255,255,.22),rgba(255,255,255,.06))}
+
+/* window */
+.win{position:absolute;left:130px;top:46px;width:1180px;height:760px;border-radius:14px;overflow:hidden;
+  background:var(--glass-win);backdrop-filter:blur(40px) saturate(170%);
+  box-shadow:0 0 0 1px rgba(255,255,255,.10),inset 0 1px 0 rgba(255,255,255,.10),0 22px 70px rgba(0,0,0,.55),0 4px 14px rgba(0,0,0,.3);
+  display:flex;flex-direction:column;z-index:3;
+  animation:winOpen .42s var(--ease-spring) .15s both;transform-origin:50% 40%}
+.toolbar{height:52px;flex:none;display:flex;align-items:center;gap:14px;padding:0 14px 0 16px;border-bottom:1px solid var(--hair);background:rgba(255,255,255,.025)}
+.lights{display:flex;gap:8px}
+.lights button{width:12px;height:12px;border-radius:50%;border:0;display:grid;place-items:center;cursor:default;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.25)}
+.lights svg{width:8px;height:8px;stroke:rgba(0,0,0,.6);stroke-width:2.6;fill:none;opacity:0;transition:opacity .12s}
+.lights:hover svg{opacity:1}
+.l-close{background:#FF5F57}.l-min{background:#FEBC2E}.l-max{background:#28C840}
+.wtitle{font-weight:600;font-size:14px;margin-left:6px}
+.seg{position:relative;display:flex;padding:2px;border-radius:8px;background:rgba(255,255,255,.07);box-shadow:inset 0 0 0 1px var(--hair2);margin-left:22px}
+.seg button{position:relative;z-index:1;border:0;background:none;color:var(--label2);font:500 12.5px var(--font);padding:4px 13px;border-radius:6px;cursor:default;transition:color .2s}
+.seg button:hover{color:var(--label)}
+.seg button[aria-selected=true]{color:#fff}
+.seg .thumb{position:absolute;top:2px;bottom:2px;border-radius:6px;background:var(--accent);box-shadow:0 1px 3px rgba(0,0,0,.35),0 0 12px var(--accent-glow),inset 0 1px 0 rgba(255,255,255,.22);
+  transition:transform .28s var(--ease-snap),width .28s var(--ease-snap)}
+.tb-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.search{display:flex;align-items:center;gap:6px;width:210px;height:28px;padding:0 9px;border-radius:8px;background:rgba(255,255,255,.07);box-shadow:inset 0 0 0 1px var(--hair2);color:var(--label3)}
+.search input{all:unset;flex:1;color:var(--label);font-size:12.5px}
+.search input::placeholder{color:var(--label3)}
+.search:focus-within{box-shadow:0 0 0 3px rgba(94,92,230,.55)}
+.btn{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 12px;border-radius:8px;border:0;font:500 12.5px var(--font);color:var(--label);
+  background:rgba(255,255,255,.10);box-shadow:inset 0 0 0 1px var(--hair),inset 0 1px 0 rgba(255,255,255,.08);cursor:default;transition:transform .14s var(--ease-snap),background .15s}
+.btn:hover{background:rgba(255,255,255,.15)}
+.btn:active{transform:scale(.97)}
+.btn:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(94,92,230,.55)}
+.btn[disabled]{color:var(--label3);background:rgba(255,255,255,.05)}
+
+.body{flex:1;min-height:0;padding:18px 20px 0;display:flex;flex-direction:column;gap:14px}
+
+/* header */
+.hdr{display:flex;align-items:flex-end;gap:14px;animation:fadeUp .4s var(--ease-out) .35s both}
+.hdr .lbl{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--label3);font-weight:600;margin-bottom:4px}
+.big{font-size:30px;font-weight:700;letter-spacing:-.02em;line-height:1}
+.big small{font-size:15px;font-weight:500;color:var(--label2);letter-spacing:0;margin-left:4px}
+.chip{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 9px;border-radius:999px;font-size:11.5px;font-weight:600}
+.chip.warn{background:rgba(255,159,10,.16);color:#FFB340;box-shadow:inset 0 0 0 1px rgba(255,159,10,.35)}
+.chip.warn .dot{width:6px;height:6px;border-radius:50%;background:var(--warn);animation:pulse 2s ease-in-out infinite}
+.hdr .sp{margin-left:auto;display:flex;gap:8px;align-items:center}
+.hint{color:var(--label3);font-size:12px}
+
+/* stacked bar */
+.budget{animation:fadeUp .4s var(--ease-out) .4s both}
+.track{position:relative;height:30px;border-radius:9px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px var(--hair2),inset 0 2px 6px rgba(0,0,0,.35);overflow:visible}
+.track .segs{position:absolute;inset:0;display:flex;border-radius:9px;overflow:hidden}
+.track .s{height:100%;position:relative;transform-origin:0 50%;animation:growX .55s var(--ease-spring) both;box-shadow:inset -1px 0 0 rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.25);transition:transform .2s var(--ease-out),filter .2s}
+.track .s:hover{filter:brightness(1.15)}
+.s.k{background:linear-gradient(180deg,#A2A2B6,var(--seg-kernel));width:7.03%;animation-delay:.45s}
+.s.a{background:linear-gradient(180deg,#7C7AF5,var(--seg-apps));width:33.59%;animation-delay:.49s}
+.s.e{background:linear-gradient(180deg,#4FDCC6,#1FA893);width:39.06%;animation-delay:.53s}
+.s.v{background:linear-gradient(180deg,#8FE0FF,#3FB8E8);width:5.86%;animation-delay:.57s}
+.s.sp{width:4.69%;animation-delay:.61s;background:rgba(255,159,10,.28);overflow:hidden}
+.s.sp::before{content:"";position:absolute;inset:0 -12px 0 -12px;background:repeating-linear-gradient(135deg,rgba(255,179,64,.95) 0 3px,transparent 3px 7px);animation:hatch 1.2s linear infinite}
+.s .in{position:absolute;left:9px;top:50%;transform:translateY(-50%);font-size:11px;font-weight:600;color:rgba(0,0,0,.72);white-space:nowrap}
+.s.a .in,.s.k .in{color:rgba(255,255,255,.95)}
+.tick{position:absolute;top:-6px;bottom:-6px;width:0;border-left:1.5px dashed rgba(255,255,255,.55)}
+.tick span{position:absolute;top:-16px;left:0;transform:translateX(-50%);font-size:10px;font-weight:600;color:var(--label2);white-space:nowrap}
+.tick.hi{border-color:rgba(255,159,10,.9)}
+.tick.hi span{color:#FFB340}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:10px;font-size:12px;color:var(--label2)}
+.legend b{color:var(--label);font-weight:600;margin-left:3px}
+.sw{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.sw.sp{background:repeating-linear-gradient(135deg,#FFB340 0 2px,rgba(255,159,10,.25) 2px 4px)}
+.sw.fr{background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 1px var(--hair)}
+.tag{display:inline-flex;align-items:center;height:16px;padding:0 6px;border-radius:5px;font-size:10px;font-weight:600;letter-spacing:.02em;margin-left:6px}
+.tag.ev{color:#5FE3CF;box-shadow:inset 0 0 0 1px rgba(48,198,176,.55);background:rgba(48,198,176,.10)}
+.tag.spc{color:#FFB340;box-shadow:inset 0 0 0 1px rgba(255,159,10,.5);background:rgba(255,159,10,.10)}
+.tag.sus{color:var(--label2);box-shadow:inset 0 0 0 1px var(--hair)}
+
+/* cards */
+.cards{display:grid;grid-template-columns:repeat(4,1fr) 1.35fr;gap:10px}
+.card{position:relative;padding:11px 13px 10px;border-radius:12px;background:rgba(255,255,255,.055);box-shadow:inset 0 0 0 1px var(--hair2),inset 0 1px 0 rgba(255,255,255,.06);
+  animation:fadeUp .36s var(--ease-spring) both;transition:transform .16s var(--ease-out),background .16s}
+.card:nth-child(1){animation-delay:.55s}.card:nth-child(2){animation-delay:.58s}.card:nth-child(3){animation-delay:.61s}.card:nth-child(4){animation-delay:.64s}.card:nth-child(5){animation-delay:.67s}
+.card:hover{transform:translateY(-1px);background:rgba(255,255,255,.075)}
+.card .t{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--label2);font-weight:500}
+.card .t svg.i{width:13px;height:13px}
+.card .v{font-size:21px;font-weight:700;letter-spacing:-.015em;margin-top:5px;line-height:1.1}
+.card .d{font-size:11px;color:var(--label3);margin-top:2px}
+.card .d .up{color:#FFB340}.card .d .ok{color:var(--ok)}
+.card svg.spark{position:absolute;right:10px;bottom:10px;width:78px;height:28px;overflow:visible}
+.spark path{fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.spark .area{stroke:none}
+.swap .rows{display:grid;gap:5px;margin-top:7px}
+.swap .r{display:grid;grid-template-columns:44px 1fr 56px;align-items:center;gap:8px;font-size:11.5px;color:var(--label2)}
+.swap .r b{color:var(--label);font-weight:600;text-align:right}
+.mini{height:6px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden}
+.mini i{display:block;height:100%;border-radius:3px;transform-origin:0 50%;animation:growX .6s var(--ease-spring) .8s both}
+
+/* lower */
+.lower{flex:1;min-height:0;display:grid;grid-template-columns:1fr 292px;gap:12px}
+.tablewrap{border-radius:12px;background:rgba(0,0,0,.18);box-shadow:inset 0 0 0 1px var(--hair2);overflow:hidden;display:flex;flex-direction:column;animation:fadeUp .4s var(--ease-out) .7s both}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+caption{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+thead th{position:sticky;top:0;height:28px;text-align:left;font-weight:500;font-size:11.5px;color:var(--label2);padding:0 10px;background:rgba(40,40,48,.92);border-bottom:1px solid var(--hair);white-space:nowrap}
+thead th.r,td.r{text-align:right}
+thead th.c,td.c{text-align:center}
+thead th[aria-sort] {color:var(--label)}
+thead th .caret{display:inline-block;width:10px;height:10px;vertical-align:-1px;margin-left:3px}
+tbody tr{height:26px;animation:rowIn .26s var(--ease-out) both;transition:background .12s}
+tbody tr:nth-child(even){background:rgba(255,255,255,.018)}
+tbody tr:hover,tbody tr.hover{background:rgba(255,255,255,.065)}
+tbody tr.sel{background:rgba(94,92,230,.85)!important;color:#fff}
+tbody tr.sel td,tbody tr.sel .dim{color:#fff}
+tbody tr.warnrow{background:rgba(255,159,10,.08)}
+td{padding:0 10px;white-space:nowrap;color:var(--label)}
+td .dim{color:var(--label3)}
+td.pid{font-family:var(--mono);font-size:12px;color:var(--label2);width:52px}
+td.proc{font-weight:500}
+td.proc .pico{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:4px;margin-right:7px;vertical-align:-4px;color:#fff}
+td.proc .pico svg.i{width:11px;height:11px;stroke-width:2}
+.res{display:flex;align-items:center;justify-content:flex-end;gap:8px}
+.res .bar{width:54px;height:4px;border-radius:2px;background:rgba(255,255,255,.08);overflow:hidden}
+.res .bar i{display:block;height:100%;background:var(--accent);transform-origin:0 50%;animation:growX .5s var(--ease-out) 1s both}
+.res .bar i.e{background:#30C6B0}.res .bar i.w{background:var(--warn)}.res .bar i.s{background:repeating-linear-gradient(135deg,#FFB340 0 2px,rgba(255,159,10,.3) 2px 4px)}
+.swp{font-family:var(--mono);font-size:11.5px}
+.swp .sl{color:var(--label2)}.swp .sr{color:#9FD8FF}
+.bang{display:inline-grid;place-items:center;width:15px;height:15px;border-radius:50%;background:var(--warn);color:#1A1204;font-weight:800;font-size:10px;margin-left:6px;vertical-align:1px;animation:pop .3s var(--ease-snap) 1.2s both}
+/* switch */
+.sw2{position:relative;display:inline-block;width:30px;height:17px;border-radius:999px;background:rgba(255,255,255,.14);box-shadow:inset 0 0 0 1px var(--hair);cursor:default;vertical-align:middle;transition:background .2s}
+.sw2::after{content:"";position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.4);transition:transform .26s var(--ease-snap)}
+.sw2[aria-checked=true]{background:var(--accent)}
+.sw2[aria-checked=true]::after{transform:translateX(13px)}
+.sw2[aria-disabled=true]{opacity:.55}
+.sw2:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(94,92,230,.55)}
+.sw2.squish::after{animation:squish .26s var(--ease-snap)}
+
+.tfoot{margin-top:auto;display:flex;justify-content:space-between;align-items:center;height:30px;padding:0 12px;border-top:1px solid var(--hair2);font-size:11.5px;color:var(--label3)}
+/* predictions */
+.pred{border-radius:12px;padding:13px 14px;background:linear-gradient(180deg,rgba(94,92,230,.14),rgba(255,255,255,.04));box-shadow:inset 0 0 0 1px rgba(116,114,255,.25),inset 0 1px 0 rgba(255,255,255,.08);
+  display:flex;flex-direction:column;gap:10px;animation:slideIn .45s var(--ease-spring) .75s both}
+.pred h3{display:flex;align-items:center;gap:7px;font-size:13.5px;font-weight:600}
+.pred h3 svg.i{color:#A9A7FF}
+.localtag{display:inline-flex;align-items:center;gap:5px;align-self:flex-start;height:20px;padding:0 8px;border-radius:999px;font-size:11px;font-weight:600;color:#C9C8FF;background:rgba(94,92,230,.22);box-shadow:inset 0 0 0 1px rgba(116,114,255,.45)}
+.localtag svg.i{width:11px;height:11px}
+.pred .sub{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--label3);font-weight:600;margin-top:2px}
+.prow{display:grid;grid-template-columns:22px 1fr 40px;align-items:center;gap:8px;font-size:12.5px}
+.prow .ai{width:22px;height:22px;border-radius:6px;display:grid;place-items:center;color:#fff}
+.prow .ai svg.i{width:13px;height:13px}
+.prow .nm{display:flex;flex-direction:column;gap:4px;font-weight:500}
+.prow .cb{height:6px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden}
+.prow .cb i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,var(--accent),var(--accent-h));transform-origin:0 50%;animation:growX .6s var(--ease-spring) both;box-shadow:0 0 10px var(--accent-glow)}
+.prow b{text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+.pf{display:inline-flex;align-items:center;height:15px;padding:0 5px;border-radius:4px;font-size:9.5px;font-weight:700;color:#FFB340;background:rgba(255,159,10,.14);margin-left:6px;animation:fadeRight .3s var(--ease-out) 1.4s both}
+.reason{font-size:11.5px;color:var(--label2);line-height:1.45;padding:8px 10px;border-radius:8px;background:rgba(0,0,0,.2)}
+.reason code{font-family:var(--mono);font-size:11px;color:#C9C8FF}
+.kv{display:grid;grid-template-columns:1fr auto;gap:4px 10px;font-size:11.5px;color:var(--label2)}
+.kv b{color:var(--label);font-weight:600;text-align:right}
+.pred .foot{margin-top:auto;display:flex;align-items:center;gap:6px;font-size:11px;color:var(--label3)}
+
+/* status bar */
+.status{height:30px;flex:none;display:flex;align-items:center;gap:14px;padding:0 20px;margin-top:12px;border-top:1px solid var(--hair);font-size:11.5px;color:var(--label3);background:rgba(0,0,0,.12)}
+.status .ok{display:inline-flex;align-items:center;gap:6px;color:var(--label2)}
+.status .ok::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px rgba(48,209,88,.7)}
+.status .ver{margin-left:auto;font-family:var(--mono);font-size:11px}
+.live{display:inline-flex;align-items:center;gap:5px}
+.live i{width:6px;height:6px;border-radius:50%;background:var(--accent-h);animation:pulse 1s ease-in-out infinite}
+
+/* tooltip */
+.tip{position:absolute;z-index:10;padding:7px 10px;border-radius:9px;font-size:11.5px;line-height:1.4;color:var(--label);white-space:nowrap;
+  background:rgba(44,44,52,.92);backdrop-filter:blur(30px);box-shadow:0 0 0 1px rgba(255,255,255,.12),0 10px 30px rgba(0,0,0,.45);
+  animation:tipIn .2s var(--ease-out) 1.6s both;pointer-events:none}
+.tip b{font-weight:600}
+.tip::after{content:"";position:absolute;left:50%;bottom:-5px;width:10px;height:10px;margin-left:-5px;background:rgba(44,44,52,.92);transform:rotate(45deg);box-shadow:1px 1px 0 rgba(255,255,255,.12)}
+
+@keyframes winOpen{from{opacity:0;transform:scale(.94) translateY(10px)}to{opacity:1;transform:none}}
+@keyframes drop{from{opacity:0;transform:translateY(-100%)}to{opacity:1;transform:none}}
+@keyframes rise{from{opacity:0;transform:translate(-50%,24px)}to{opacity:1;transform:translate(-50%,0)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes growX{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes hatch{from{transform:translateX(0)}to{transform:translateX(9.9px)}}
+@keyframes rowIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+@keyframes slideIn{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:none}}
+@keyframes fadeRight{from{opacity:0;transform:translateX(-4px)}to{opacity:1;transform:none}}
+@keyframes pop{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:scale(1)}}
+@keyframes pulse{0%,100%{opacity:.55;transform:scale(1)}50%{opacity:1;transform:scale(1.25)}}
+@keyframes tipIn{from{opacity:0;transform:translateY(4px) scale(.98)}to{opacity:1;transform:none}}
+@keyframes squish{50%{transform:translateX(7px) scaleX(1.15)}}
+@keyframes tick{from{transform:translateY(6px);opacity:0}to{transform:none;opacity:1}}
+.tickin{display:inline-block;animation:tick .22s var(--ease-out) both}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.12s!important;animation-delay:0s!important;animation-iteration-count:1!important;transition-duration:0s!important}
+  .s.sp::before,.chip.warn .dot,.live i{animation:none!important}
+  .dock .app:hover{transform:none}
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <radialGradient id="nuc" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#fff"/><stop offset=".45" stop-color="#C9C8FF"/><stop offset="1" stop-color="#5E5CE6" stop-opacity="0"/></radialGradient>
+  </defs>
+  <symbol id="atom" viewBox="0 0 24 24"><g fill="none" stroke="#8F8DFF" stroke-width="1.3"><ellipse cx="12" cy="12" rx="10" ry="3.6"/><ellipse cx="12" cy="12" rx="10" ry="3.6" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="3.6" transform="rotate(120 12 12)"/></g><circle cx="12" cy="12" r="4" fill="url(#nuc)"/><circle cx="12" cy="12" r="1.7" fill="#fff"/></symbol>
+  <symbol id="search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7.5"/><path d="m20.5 20.5-4.2-4.2"/></symbol>
+  <symbol id="wifi" viewBox="0 0 24 24"><path d="M12 20h.01"/><path d="M2 8.82a15 15 0 0 1 20 0"/><path d="M5 12.86a10 10 0 0 1 14 0"/><path d="M8.5 16.43a5 5 0 0 1 7 0"/></symbol>
+  <symbol id="battery" viewBox="0 0 24 24"><rect x="2" y="7" width="17" height="10" rx="2.5"/><path d="M22 11v2"/><rect x="4" y="9" width="10" height="6" rx="1" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="cc" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="7" rx="3.5"/><circle cx="16.5" cy="7.5" r="1.8" fill="currentColor"/><rect x="2" y="13" width="20" height="7" rx="3.5"/><circle cx="7.5" cy="16.5" r="1.8"/></symbol>
+  <symbol id="folder" viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></symbol>
+  <symbol id="term" viewBox="0 0 24 24"><path d="m4 17 6-6-6-6"/><path d="M12 19h8"/></symbol>
+  <symbol id="edit" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M8 13h8M8 17h5"/></symbol>
+  <symbol id="activity" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></symbol>
+  <symbol id="gear" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="trash" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></symbol>
+  <symbol id="zap" viewBox="0 0 24 24"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></symbol>
+  <symbol id="target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></symbol>
+  <symbol id="up" viewBox="0 0 24 24"><path d="M12 17V3M6 9l6-6 6 6M5 21h14"/></symbol>
+  <symbol id="down" viewBox="0 0 24 24"><path d="M12 3v14M18 11l-6 6-6-6M5 21h14"/></symbol>
+  <symbol id="drive" viewBox="0 0 24 24"><path d="M22 12H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/><path d="M6 16h.01M10 16h.01"/></symbol>
+  <symbol id="spark" viewBox="0 0 24 24"><path d="M9.94 15.5A2 2 0 0 0 8.5 14.06l-6.14-1.58a.5.5 0 0 1 0-.96L8.5 9.94A2 2 0 0 0 9.94 8.5l1.58-6.14a.5.5 0 0 1 .96 0l1.58 6.14a2 2 0 0 0 1.44 1.44l6.14 1.58a.5.5 0 0 1 0 .96l-6.14 1.58a2 2 0 0 0-1.44 1.44l-1.58 6.14a.5.5 0 0 1-.96 0z"/></symbol>
+  <symbol id="shield" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></symbol>
+  <symbol id="cpu" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6" rx="1"/><path d="M15 2v2M15 20v2M2 15h2M2 9h2M20 15h2M20 9h2M9 2v2M9 20v2"/></symbol>
+  <symbol id="broom" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></symbol>
+  <symbol id="x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+  <symbol id="plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="db" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></symbol>
+  <symbol id="sync" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></symbol>
+  <symbol id="clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+  <symbol id="note" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></symbol>
+  <symbol id="flame" viewBox="0 0 24 24"><path d="M12 2v6M12 22a7 7 0 0 0 7-7c0-4-3-6-7-9-4 3-7 5-7 9a7 7 0 0 0 7 7Z"/></symbol>
+</svg>
+
+<div class="wall" aria-hidden="true"></div>
+
+<nav class="menubar" role="menubar" aria-label="Menu bar">
+  <span class="mi logo" role="menuitem" aria-label="Plotinium menu"><svg width="18" height="18"><use href="#atom"/></svg></span>
+  <span class="mi app" role="menuitem">Task Manager</span>
+  <span class="mi" role="menuitem">File</span><span class="mi" role="menuitem">Edit</span><span class="mi" role="menuitem">View</span>
+  <span class="mi" role="menuitem">Process</span><span class="mi" role="menuitem">Window</span><span class="mi" role="menuitem">Help</span>
+  <div class="right" role="group" aria-label="Status">
+    <span class="st" title="Network: online"><svg class="i"><use href="#wifi"/></svg></span>
+    <span class="st" title="Battery 72%"><svg class="i" style="width:20px"><use href="#battery"/></svg></span>
+    <span class="st" title="Control Centre"><svg class="i"><use href="#cc"/></svg></span>
+    <span class="st" title="Search"><svg class="i"><use href="#search"/></svg></span>
+    <span class="clock num">Thu 24 Sep&nbsp; 14:32</span>
+  </div>
+</nav>
+
+<section class="win" aria-labelledby="wt">
+  <div class="toolbar" role="toolbar" aria-label="Task Manager toolbar">
+    <div class="lights">
+      <button class="l-close" aria-label="Close"><svg viewBox="0 0 24 24"><use href="#x"/></svg></button>
+      <button class="l-min" aria-label="Minimise"><svg viewBox="0 0 24 24"><use href="#minus"/></svg></button>
+      <button class="l-max" aria-label="Zoom"><svg viewBox="0 0 24 24"><use href="#plus"/></svg></button>
+    </div>
+    <h1 class="wtitle" id="wt">Task Manager</h1>
+    <div class="seg" role="tablist" aria-label="Views" id="seg">
+      <span class="thumb" id="thumb" aria-hidden="true"></span>
+      <button role="tab" aria-selected="false">Processes</button>
+      <button role="tab" aria-selected="false">Performance</button>
+      <button role="tab" aria-selected="true" aria-controls="memPanel">Memory</button>
+      <button role="tab" aria-selected="false">Scheduler</button>
+      <button role="tab" aria-selected="false">Predictions</button>
+    </div>
+    <div class="tb-right">
+      <label class="search"><svg class="i" style="width:14px;height:14px"><use href="#search"/></svg><input type="search" placeholder="Filter processes" aria-label="Filter processes"></label>
+      <button class="btn" disabled title="Select a process first"><svg class="i" style="width:14px;height:14px"><use href="#x"/></svg>End Process</button>
+    </div>
+  </div>
+
+  <div class="body" role="tabpanel" id="memPanel" aria-label="Memory">
+    <div class="hdr">
+      <div>
+        <div class="lbl">Memory budget</div>
+        <div class="big num"><span id="acc">231</span> / 256 MB <small>accounted</small></div>
+      </div>
+      <span class="chip warn" title="Background reclaim runs above 85% (HIGH_WM) and stops at 75% (LOW_WM)"><span class="dot"></span>90% · above high watermark 85%</span>
+      <div class="sp">
+        <button class="btn"><svg class="i" style="width:14px;height:14px"><use href="#broom"/></svg>Reclaim now</button>
+      </div>
+    </div>
+
+    <div class="budget">
+      <div class="track" role="meter" aria-valuemin="0" aria-valuemax="256" aria-valuenow="231" aria-valuetext="231 of 256 MB accounted, 90 percent, above high watermark">
+        <div class="segs" role="list">
+          <div class="s k" role="listitem" aria-label="Kernel 18 MB"><span class="in">Kernel</span></div>
+          <div class="s a" role="listitem" aria-label="Apps 86 MB"><span class="in">Apps · 86 MB</span></div>
+          <div class="s e" role="listitem" aria-label="ai.embed model 100 MiB, evictable"><span class="in">ai.embed model · 100 MiB · evictable</span></div>
+          <div class="s v" role="listitem" aria-label="Vector index 15 MB"></div>
+          <div class="s sp" role="listitem" aria-label="Speculative 12 MB"></div>
+        </div>
+        <div class="tick" style="left:75%"><span>LOW 75%</span></div>
+        <div class="tick hi" style="left:85%"><span>HIGH 85%</span></div>
+      </div>
+      <div class="legend">
+        <span><i class="sw" style="background:var(--seg-kernel)"></i>Kernel<b class="num">18 MB</b></span>
+        <span><i class="sw" style="background:var(--seg-apps)"></i>Apps<b class="num">86 MB</b></span>
+        <span><i class="sw" style="background:#30C6B0"></i>ai.embed model<b class="num">100 MiB</b><span class="tag ev">EVICTABLE</span></span>
+        <span><i class="sw" style="background:var(--seg-vec)"></i>Vector index<b class="num">15 MB</b></span>
+        <span><i class="sw sp"></i>Speculative<b class="num">12 MB</b><span class="tag spc">FIRST TO EVICT</span></span>
+        <span><i class="sw fr"></i>Free<b class="num">25 MB</b></span>
+      </div>
+    </div>
+
+    <div class="cards" role="list">
+      <div class="card" role="listitem">
+        <div class="t"><svg class="i"><use href="#zap"/></svg>Page faults</div>
+        <div class="v num" id="faults">1,284</div>
+        <div class="d"><span class="up">+12/s</span> · 38 major</div>
+        <svg class="spark" viewBox="0 0 78 28" aria-hidden="true"><path class="area" fill="rgba(255,159,10,.14)" d="M0 22 L8 20 L16 21 L24 17 L32 18 L40 14 L48 15 L56 10 L64 12 L72 7 L78 8 L78 28 L0 28Z"/><path stroke="#FFB340" d="M0 22 L8 20 L16 21 L24 17 L32 18 L40 14 L48 15 L56 10 L64 12 L72 7 L78 8"/></svg>
+      </div>
+      <div class="card" role="listitem">
+        <div class="t"><svg class="i"><use href="#target"/></svg>Hit ratio</div>
+        <div class="v num">97.2%</div>
+        <div class="d"><span class="ok">▲ 0.4</span> vs 5 min ago</div>
+        <svg class="spark" viewBox="0 0 78 28" aria-hidden="true"><path class="area" fill="rgba(48,209,88,.12)" d="M0 12 L10 10 L20 11 L30 9 L40 9 L50 7 L60 8 L70 6 L78 6 L78 28 L0 28Z"/><path stroke="#30D158" d="M0 12 L10 10 L20 11 L30 9 L40 9 L50 7 L60 8 L70 6 L78 6"/></svg>
+      </div>
+      <div class="card" role="listitem">
+        <div class="t"><svg class="i"><use href="#up"/></svg>Paged out</div>
+        <div class="v num">312 MB</div>
+        <div class="d">since boot · 1,248 pages</div>
+        <svg class="spark" viewBox="0 0 78 28" aria-hidden="true"><path class="area" fill="rgba(94,92,230,.18)" d="M0 24 L10 22 L20 23 L30 18 L40 19 L50 13 L60 15 L70 9 L78 10 L78 28 L0 28Z"/><path stroke="#8F8DFF" d="M0 24 L10 22 L20 23 L30 18 L40 19 L50 13 L60 15 L70 9 L78 10"/></svg>
+      </div>
+      <div class="card" role="listitem">
+        <div class="t"><svg class="i"><use href="#down"/></svg>Paged in</div>
+        <div class="v num">88 MB</div>
+        <div class="d">p95 page-in 142 ms local</div>
+        <svg class="spark" viewBox="0 0 78 28" aria-hidden="true"><path class="area" fill="rgba(100,210,255,.14)" d="M0 20 L10 21 L20 17 L30 19 L40 16 L50 18 L60 14 L70 16 L78 13 L78 28 L0 28Z"/><path stroke="#64D2FF" d="M0 20 L10 21 L20 17 L30 19 L40 16 L50 18 L60 14 L70 16 L78 13"/></svg>
+      </div>
+      <div class="card swap" role="listitem">
+        <div class="t"><svg class="i"><use href="#drive"/></svg>Swap</div>
+        <div class="rows">
+          <div class="r"><span>OPFS</span><span class="mini"><i style="width:60%;background:linear-gradient(90deg,#7472FF,#5E5CE6)"></i></span><b class="num">1.2 GB</b></div>
+          <div class="r"><span>Cloud</span><span class="mini"><i style="width:17%;background:linear-gradient(90deg,#8FE0FF,#3FB8E8)"></i></span><b class="num">340 MB</b></div>
+        </div>
+        <div class="d" style="margin-top:5px">write-behind: 3 pages pending · quota 2 GB</div>
+      </div>
+    </div>
+
+    <div class="lower">
+      <div class="tablewrap">
+        <table aria-rowcount="12">
+          <caption>Processes by memory</caption>
+          <thead><tr>
+            <th scope="col">PID</th><th scope="col">Process</th><th scope="col">User</th>
+            <th scope="col" class="r" aria-sort="descending">Resident<svg class="i caret"><use href="#chev"/></svg></th>
+            <th scope="col" class="r">Swapped <span style="color:var(--label3)">local / remote</span></th>
+            <th scope="col" class="r">Faults</th><th scope="col" class="c">Pin</th>
+          </tr></thead>
+          <tbody id="rows">
+            <tr style="animation-delay:.80s"><td class="pid">24</td><td class="proc"><span class="pico" style="background:#1FA893"><svg class="i"><use href="#spark"/></svg></span>ai.embed<span class="tag ev">EVICTABLE</span></td><td class="dim">root</td><td class="r"><div class="res"><span class="num">100 MiB</span><span class="bar"><i class="e" style="width:100%"></i></span></div></td><td class="r swp"><span class="sl">0</span> <span class="dim">/</span> <span class="sr">0</span></td><td class="r num">9</td><td class="c"><span class="sw2" role="switch" tabindex="0" aria-checked="false" aria-label="Pin ai.embed, pid 24"></span></td></tr>
+            <tr class="warnrow" style="animation-delay:.81s"><td class="pid">151</td><td class="proc"><span class="pico" style="background:#C24A3A"><svg class="i"><use href="#flame"/></svg></span>memhog<span class="bang" title="Over soft limit (64 MB)">!</span></td><td>alice</td><td class="r"><div class="res"><span class="num">48.0 MB</span><span class="bar"><i class="w" style="width:48%"></i></span></div></td><td class="r swp"><span class="sl">96</span> <span class="dim">/</span> <span class="sr">40</span></td><td class="r num" style="color:#FFB340">612</td><td class="c"><span class="sw2" role="switch" tabindex="0" aria-checked="false" aria-label="Pin memhog, pid 151"></span></td></tr>
+            <tr class="sel" style="animation-delay:.82s" aria-selected="true"><td class="pid">134</td><td class="proc"><span class="pico a-edit"><svg class="i"><use href="#edit"/></svg></span>editor</td><td>student</td><td class="r"><div class="res"><span class="num">24.3 MB</span><span class="bar"><i style="width:24%;background:#fff"></i></span></div></td><td class="r swp"><span class="sl">6.8</span> <span class="dim">/</span> <span class="sr">1.2</span></td><td class="r num">96</td><td class="c"><span class="sw2" role="switch" tabindex="0" aria-checked="true" aria-label="Pin editor, pid 134"></span></td></tr>
+            <tr style="animation-delay:.83s"><td class="pid">23</td><td class="proc"><span class="pico" style="background:#4A3FC8"><svg class="i"><use href="#db"/></svg></span>ai.indexer <span class="dim" style="font-weight:400">· pri 32</span></td><td>student</td><td class="r"><div class="res"><span class="num">14.6 MB</span><span class="bar"><i style="width:15%"></i></span></div></td><td class="r swp"><span class="sl">22</span> <span class="dim">/</span> <span class="sr">8</span></td><td class="r num">201</td><td class="c"><span class="sw2" role="switch" tabindex="0" aria-checked="false" aria-label="Pin ai.indexer, pid 23"></span></td></tr>
+            <tr style="animation-delay:.84s"><td class="pid">140</td><td class="proc"><span class="pico a-edit" style="opacity:.75"><svg class="i"><use href="#edit"/></svg></span>prefetch:editor<span class="tag spc">SPECULATIVE</span></td><td>student</td><td class="r"><div class="res"><span class="num">12.0 MB</span><span class="bar"><i class="s" style="width:12%"></i></span></div></td><td class="r swp"><span class="sl">0</span> <span class="dim">/</span> <span class="sr">0</span></td><td class="r num">0</td><td class="c"><span class="sw2" role="switch" tabindex="0" aria-checked="false" aria-label="Pin prefetch:editor, pid 140"></span></td></tr>
+            <tr class="hover" style="animation-delay:.85s"><td class="pid">121</td><td class="proc"><span class="pico a-files"><svg class="i"><use href="#folder"/></svg></span>files</td><td>student</td><td class="r"><div class="res"><span class="num">11.9 MB</span><span class="bar"><i style="width:12%"></i></span></div></td><td class="r swp"><span class="sl">2.4</span> <span class="dim">/</span> <span class="sr">0</span></td><td class="r num">57</td><td class="c"><span class="sw2" role="switch" tabindex="0" aria-checked="false" aria-label="Pin files, pid 121"></span></td></tr>
+            <tr style="animation-delay:.86s"><td class="pid">118</td><td class="proc"><span class="pico a-term"><svg class="i"><use href="#term"/></svg></span>terminal</td><td>student</td><td class="r"><div class="res"><span class="num">8.4 MB</span><span class="bar"><i style="width:8%"></i></span></div></td><td class="r swp"><span class="sl">0</span> <span class="dim">/</span> <span class="sr">0</span></td><td class="r num">4</td><td class="c"><span class="sw2" role="switch" tabindex="0" aria-checked="true" aria-label="Pin terminal, pid 118"></span></td></tr>
+            <tr style="animation-delay:.87s"><td class="pid">9</td><td class="proc"><span class="pico" style="background:#55555F"><svg class="i"><use href="#drive"/></svg></span>vfs</td><td class="dim">root</td><td class="r"><div class="res"><span class="num">6.8 MB</span><span class="bar"><i style="width:7%"></i></span></div></td><td class="r swp"><span class="sl">0.4</span> <span class="dim">/</span> <span class="sr">0</span></td><td class="r num">41</td><td class="c"><span class="sw2" role="switch" tabindex="0" aria-checked="false" aria-label="Pin vfs, pid 9"></span></td></tr>
+            <tr style="animation-delay:.88s;opacity:.62"><td class="pid">163</td><td class="proc"><span class="pico" style="background:#8A6D3B"><svg class="i"><use href="#note"/></svg></span>notes<span class="tag sus">SUSPENDED</span></td><td>bob</td><td class="r"><div class="res"><span class="num">5.5 MB</span><span class="bar"><i style="width:5%"></i></span></div></td><td class="r swp"><span class="sl">3.1</span> <span class="dim">/</span> <span class="sr">2.0</span></td><td class="r num">22</td><td class="c"><span class="sw2" role="switch" tabindex="0" aria-checked="false" aria-label="Pin notes, pid 163"></span></td></tr>
+            <tr style="animation-delay:.89s"><td class="pid">12</td><td class="proc"><span class="pico" style="background:#1E9E55"><svg class="i"><use href="#sync"/></svg></span>syncd</td><td class="dim">root</td><td class="r"><div class="res"><span class="num">3.2 MB</span><span class="bar"><i style="width:3%"></i></span></div></td><td class="r swp"><span class="sl">1.1</span> <span class="dim">/</span> <span class="sr">0.6</span></td><td class="r num">18</td><td class="c"><span class="sw2" role="switch" tabindex="0" aria-checked="false" aria-label="Pin syncd, pid 12"></span></td></tr>
+            <tr style="animation-delay:.90s"><td class="pid">1</td><td class="proc"><span class="pico" style="background:#3A3A44"><svg class="i"><use href="#cpu"/></svg></span>init</td><td class="dim">root</td><td class="r"><div class="res"><span class="num">2.1 MB</span><span class="bar"><i style="width:2%"></i></span></div></td><td class="r swp"><span class="sl">0</span> <span class="dim">/</span> <span class="sr">0</span></td><td class="r num">12</td><td class="c"><span class="sw2" role="switch" tabindex="-1" aria-checked="true" aria-disabled="true" title="Kernel processes are always resident" aria-label="Pin init, pid 1"></span></td></tr>
+            <tr style="animation-delay:.91s"><td class="pid">7</td><td class="proc"><span class="pico" style="background:#3A3A44"><svg class="i"><use href="#clock"/></svg></span>sched</td><td class="dim">root</td><td class="r"><div class="res"><span class="num">1.4 MB</span><span class="bar"><i style="width:1.4%"></i></span></div></td><td class="r swp"><span class="sl">0</span> <span class="dim">/</span> <span class="sr">0</span></td><td class="r num">3</td><td class="c"><span class="sw2" role="switch" tabindex="-1" aria-checked="true" aria-disabled="true" title="Kernel processes are always resident" aria-label="Pin sched, pid 7"></span></td></tr>
+          </tbody>
+        </table>
+        <div class="tfoot"><span>12 of 31 processes · sorted by Resident</span><span>Soft limit 64 MB per process · budget in Settings › Memory</span></div>
+      </div>
+
+      <aside class="pred" aria-labelledby="ph">
+        <h3 id="ph"><svg class="i"><use href="#spark"/></svg>Predictions</h3>
+        <span class="localtag"><svg class="i"><use href="#shield"/></svg>Markov-2 · local only</span>
+        <div class="sub">Next app</div>
+        <div class="prow"><span class="ai a-term"><svg class="i"><use href="#term"/></svg></span><span class="nm">Terminal<span class="cb" role="meter" aria-valuenow="62" aria-valuemin="0" aria-valuemax="100" aria-label="Terminal confidence 62%"><i style="width:62%;animation-delay:.95s"></i></span></span><b>62%</b></div>
+        <div class="prow"><span class="ai a-files"><svg class="i"><use href="#folder"/></svg></span><span class="nm">Files<span class="cb" role="meter" aria-valuenow="21" aria-valuemin="0" aria-valuemax="100" aria-label="Files confidence 21%"><i style="width:21%;animation-delay:1.0s"></i></span></span><b>21%</b></div>
+        <div class="prow"><span class="ai a-edit"><svg class="i"><use href="#edit"/></svg></span><span class="nm"><span>Editor<span class="pf">PRE-FETCHED</span></span><span class="cb" role="meter" aria-valuenow="9" aria-valuemin="0" aria-valuemax="100" aria-label="Editor confidence 9%"><i style="width:9%;animation-delay:1.05s"></i></span></span><b>9%</b></div>
+        <div class="reason">Top reason: <code>after Files → Editor (markov-2, 14 obs)</code></div>
+        <div class="kv">
+          <span>Threshold θ</span><b class="num">0.40</b>
+          <span>Training launches</span><b class="num">612</b>
+          <span>Speculative</span><b class="num">12 MB · expires 00:48</b>
+          <span>Today adopted / wasted</span><b class="num">38 / 6 MB</b>
+        </div>
+        <div class="foot"><svg class="i" style="width:12px;height:12px"><use href="#shield"/></svg>Usage telemetry stays on this device.</div>
+      </aside>
+    </div>
+  </div>
+
+  <div class="status" role="status">
+    <span class="ok">Thrashing guard: off</span>
+    <span class="num"><span id="fps">4.2</span> faults/s</span>
+    <span class="live"><i></i>updated 1 s ago</span>
+    <span class="ver">Plotinium 0.3.0 · build a1f93c2</span>
+  </div>
+</section>
+
+<!-- hovered segment tooltip (captured state) -->
+<div class="tip" style="left:694px;top:128px" role="tooltip"><b>ai.embed model</b> · 100 MiB · evictable<br><span style="color:var(--label2)">evict = terminate · page-in = reload</span></div>
+
+<nav class="dock" aria-label="Dock">
+  <span class="app a-files run" title="Files"><svg class="i"><use href="#folder"/></svg></span>
+  <span class="app a-term run" title="Terminal"><svg class="i"><use href="#term"/></svg></span>
+  <span class="app a-edit run" title="Editor"><svg class="i"><use href="#edit"/></svg></span>
+  <span class="app a-task run" title="Task Manager"><svg class="i"><use href="#activity"/></svg></span>
+  <span class="app a-set" title="Settings"><svg class="i"><use href="#gear"/></svg></span>
+  <span class="app a-search" title="Search"><svg class="i"><use href="#search"/></svg></span>
+  <span class="sep"></span>
+  <span class="app a-trash" title="Trash"><svg class="i"><use href="#trash"/></svg></span>
+</nav>
+
+<script>
+// segmented thumb (FLIP-free: transform + width set once, then transitions on change)
+const seg=document.getElementById('seg'),thumb=document.getElementById('thumb');
+function place(b){thumb.style.width=b.offsetWidth+'px';thumb.style.transform='translateX('+(b.offsetLeft-2)+'px)';}
+const tabs=[...seg.querySelectorAll('[role=tab]')];
+place(tabs.find(t=>t.getAttribute('aria-selected')==='true'));
+tabs.forEach(t=>t.addEventListener('click',()=>{tabs.forEach(x=>x.setAttribute('aria-selected',x===t));place(t);}));
+// pin switches
+document.querySelectorAll('.sw2').forEach(s=>{const flip=()=>{if(s.getAttribute('aria-disabled')==='true')return;s.setAttribute('aria-checked',s.getAttribute('aria-checked')!=='true');s.classList.remove('squish');void s.offsetWidth;s.classList.add('squish');};
+  s.addEventListener('click',flip);s.addEventListener('keydown',e=>{if(e.key===' '||e.key==='Enter'){e.preventDefault();flip();}});});
+// live samples start after the intro so the captured frame matches the spec figures
+let faults=1284;
+setTimeout(()=>setInterval(()=>{faults+=Math.round(8+Math.random()*8);const el=document.getElementById('faults');el.innerHTML='<span class="tickin">'+faults.toLocaleString('en-GB')+'</span>';
+  document.getElementById('fps').textContent=(3.5+Math.random()*1.6).toFixed(1);},1000),6000);
+</script>
+</body>
+</html>

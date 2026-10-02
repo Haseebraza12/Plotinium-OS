@@ -1,0 +1,8 @@
+questions to ask in DSA lab thursday
+
+1. for the LRU cache assignment: is it ok to use Map insertion order instead of a doubly linked list? (JS Map preserves insertion order, delete + set moves a key to the end)
+2. heap assignment: do we need decrease-key or is lazy deletion accepted?
+3. can the trie delete be recursive or do they want iterative?
+4. why does my skip list sometimes have height 20 with only 30 elements - bad RNG?
+5. does the bloom filter need to support deletion? (I think no)
+6. deadline extension for hash table lab - quiz week.

@@ -1,0 +1,352 @@
+/* Settings › About and the About window (docs/design/stitch/settings-about). */
+.pane {
+  /* The columns follow the pane's own width, not the viewport (UI-143: Settings is 880 px). */
+  container: pl-about / inline-size;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--pl-space-5);
+}
+.live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--pl-space-2);
+  text-align: center;
+}
+.mark {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: calc(var(--pl-avatar-xl) + var(--pl-space-6));
+  height: calc(var(--pl-avatar-xl) + var(--pl-space-6));
+}
+.glow {
+  position: absolute;
+  inset: 12%;
+  border-radius: var(--pl-radius-pill);
+  background: radial-gradient(circle, var(--pl-accent-glow), transparent 68%);
+  animation: pl-about-glow calc(900ms * var(--pl-k)) var(--pl-ease-out) both;
+}
+@keyframes pl-about-glow {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+/* One-shot entrance: the mark scales up, then stays still. The Bohr P is not rotated: its
+   stem is the P of Plotinium (UI-164). */
+.atom {
+  position: relative;
+  animation: pl-about-atom calc(600ms * var(--pl-k)) var(--pl-ease-spring) both;
+}
+@keyframes pl-about-atom {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+}
+.wordmark {
+  margin: var(--pl-space-2) 0 0;
+  font: var(--pl-type-display);
+  font-size: calc(var(--pl-text-3xl) + var(--pl-space-1));
+  letter-spacing: -0.02em;
+  animation: pl-about-rise calc(320ms * var(--pl-k)) var(--pl-ease-out) calc(60ms * var(--pl-k))
+    backwards;
+}
+.tagline {
+  margin: 0;
+  font: var(--pl-type-body);
+  font-size: var(--pl-text-md);
+  color: var(--pl-text-muted);
+  animation: pl-about-rise calc(320ms * var(--pl-k)) var(--pl-ease-out) calc(100ms * var(--pl-k))
+    backwards;
+}
+@keyframes pl-about-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+.versionPill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pl-space-2);
+  margin: var(--pl-space-1) 0 0;
+  padding: var(--pl-space-1) var(--pl-space-3);
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-accent-subtle);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pl-accent) 45%, transparent);
+  font: var(--pl-type-callout);
+  font-variant-numeric: tabular-nums;
+  animation: pl-about-rise calc(320ms * var(--pl-k)) var(--pl-ease-out) calc(140ms * var(--pl-k))
+    backwards;
+}
+.okDot {
+  width: calc(var(--pl-status-dot) - 1px);
+  height: calc(var(--pl-status-dot) - 1px);
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-status-online);
+}
+.columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--pl-space-5);
+  width: 100%;
+}
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pl-space-2);
+  min-width: 0;
+}
+.caption {
+  margin: 0;
+  padding: 0 var(--pl-space-3);
+  font: var(--pl-type-section);
+  letter-spacing: var(--pl-tracking-caps);
+  text-transform: uppercase;
+  color: var(--pl-text-muted);
+}
+.card {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  list-style: none;
+  border-radius: var(--pl-radius-md);
+  background: var(--pl-glass-card-bg);
+  box-shadow: inset 0 0 0 var(--pl-hairline-width) var(--pl-hairline);
+}
+.fact,
+.member {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  gap: var(--pl-space-3);
+  min-height: calc(var(--pl-row-h) + var(--pl-space-3));
+  padding: var(--pl-space-1) var(--pl-space-3);
+  animation: pl-about-rise calc(240ms * var(--pl-k)) var(--pl-ease-out) backwards;
+  animation-delay: calc((180ms + var(--pl-stagger-index, 0) * 25ms) * var(--pl-k));
+}
+.fact + .fact::before,
+.member + .member::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: var(--pl-space-3);
+  left: var(--pl-space-3);
+  height: var(--pl-hairline-width);
+  background: var(--pl-separator);
+}
+.fact::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--pl-control-bg);
+  opacity: 0;
+  transition: opacity var(--pl-motion-fast) var(--pl-ease);
+}
+.fact:hover::after {
+  opacity: 1;
+}
+.factLabel {
+  flex: none;
+  font-weight: var(--pl-weight-medium);
+}
+.factValue {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--pl-space-2);
+  min-width: 0;
+  margin: 0;
+  color: var(--pl-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+/* Long values (the kernel release, a local build) wrap instead of being cut off (UI-143). */
+.factText {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-align: end;
+}
+.mono .factText {
+  font-family: var(--pl-font-mono);
+  font-size: var(--pl-text-xs);
+}
+.copy {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  min-width: var(--pl-target-min);
+  height: var(--pl-target-min);
+  padding: 0 var(--pl-space-1);
+  border: 0;
+  border-radius: var(--pl-radius-sm);
+  background: transparent;
+  color: var(--pl-text-tertiary);
+  opacity: 0;
+  transition: opacity var(--pl-motion-fast) var(--pl-ease);
+  cursor: default;
+}
+.fact:hover .copy,
+.copy:focus-visible,
+.copy:has(.copied) {
+  opacity: 1;
+}
+.copy:focus-visible {
+  outline: var(--pl-focus-ring);
+  outline-offset: 0;
+}
+.copied {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pl-space-half);
+  padding: 0 var(--pl-space-1);
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-success-subtle);
+  color: var(--pl-success);
+  font: var(--pl-type-caption);
+  font-weight: var(--pl-weight-semibold);
+  animation: pl-about-copied calc(180ms * var(--pl-k)) var(--pl-ease-spring-bouncy) both;
+}
+@keyframes pl-about-copied {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+}
+.memberText {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+/* A member still to be announced: a neutral disc instead of initials taken from the role. */
+.tbdAvatar {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: var(--pl-avatar-sm);
+  height: var(--pl-avatar-sm);
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-control-bg);
+  box-shadow: inset 0 0 0 var(--pl-hairline-width) var(--pl-hairline);
+  color: var(--pl-text-muted);
+}
+.memberName {
+  font-weight: var(--pl-weight-medium);
+}
+.tbd {
+  color: var(--pl-text-muted);
+  font-style: italic;
+}
+.memberRole {
+  font: var(--pl-type-caption);
+  color: var(--pl-text-muted);
+}
+.roleChip {
+  --pl-chip: var(--pl-accent-text);
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--pl-space-1);
+  height: var(--pl-control-h-sm);
+  padding: 0 var(--pl-space-2);
+  border-radius: var(--pl-radius-pill);
+  background: color-mix(in srgb, var(--pl-chip) 14%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pl-chip) 35%, transparent);
+  color: var(--pl-chip);
+  font: var(--pl-type-caption);
+  font-weight: var(--pl-weight-semibold);
+}
+.role-R2 {
+  --pl-chip: var(--pl-info);
+}
+.role-R3 {
+  --pl-chip: var(--pl-warning);
+}
+.role-R4 {
+  --pl-chip: var(--pl-accent-text);
+}
+.role-R5 {
+  --pl-chip: var(--pl-success);
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--pl-space-2);
+}
+.footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--pl-space-half);
+  font: var(--pl-type-caption);
+  color: var(--pl-text-tertiary);
+}
+.footer p {
+  margin: 0;
+}
+.licences {
+  width: 100%;
+  border-collapse: collapse;
+  font: var(--pl-type-caption);
+}
+.licences th,
+.licences td {
+  padding: var(--pl-space-1) var(--pl-space-2);
+  text-align: start;
+  vertical-align: top;
+}
+.licences th {
+  color: var(--pl-text-muted);
+  font-weight: var(--pl-weight-medium);
+  box-shadow: inset 0 calc(var(--pl-hairline-width) * -1) 0 var(--pl-separator);
+}
+.licences tbody tr + tr td {
+  box-shadow: inset 0 var(--pl-hairline-width) 0 var(--pl-separator);
+}
+.licenceId {
+  font-family: var(--pl-font-mono);
+  white-space: nowrap;
+}
+.licenceNote {
+  margin: var(--pl-space-3) 0 0;
+  font: var(--pl-type-caption);
+  color: var(--pl-text-muted);
+}
+@container pl-about (width < 720px) {
+  .columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .glow,
+  .atom,
+  .wordmark,
+  .tagline,
+  .versionPill,
+  .fact,
+  .member,
+  .copied {
+    animation: none;
+  }
+  .fact::after,
+  .copy {
+    transition: none;
+  }
+}

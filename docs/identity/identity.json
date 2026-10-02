@@ -1,0 +1,13 @@
+{
+  "name": "Plotinium",
+  "tagline": "A local-first web OS that pages its own memory and lets AI act only through the kernel.",
+  "section": "<S>",
+  "teamCode": "<NN>",
+  "members": [
+    { "name": "<R1 name>", "role": "R1" },
+    { "name": "<R2 name>", "role": "R2" },
+    { "name": "<R3 name>", "role": "R3" },
+    { "name": "<R4 name>", "role": "R4" },
+    { "name": "<R5 name>", "role": "R5" }
+  ]
+}

@@ -1,0 +1,13 @@
+# std::vector notes (C++ lab)
+
+- contiguous storage, random access O(1);
+- `push_back` amortised O(1); capacity grows geometrically (1.5× in MSVC, 2× in libstdc++);
+- `reserve(n)` avoids repeated reallocation when you know the size;
+- reallocation invalidates **all** iterators, pointers and references into the vector;
+- `emplace_back` constructs in place; `shrink_to_fit` is only a request;
+- `erase` in the middle is O(n); the erase–remove idiom removes by value in one pass;
+- `vector<bool>` is a bit-packed specialisation and not a real container of bools.
+
+Bug from lab 2: I stored a pointer to `v[0]`, then pushed more elements, then used the pointer. Worked in debug, crashed in release. Classic dangling pointer after reallocation.
+
+Use `std::array` when the size is fixed at compile time and `std::deque` when you need cheap push at both ends.

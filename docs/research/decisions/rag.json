@@ -1,0 +1,751 @@
+{
+ "key": "rag",
+ "title": "Embedding model, vector store & predictor model (local AI)",
+ "record": {
+  "decision_title": "D-07 Local AI stack: embedding model and runtime (RAG), vector store, and pre-fetch predictor model",
+  "context_constraints_ranked": [
+   "1. RAG-03 zero permission leaks, filtered by the user's CURRENT rwx at query time. Vectors must live next to the authoritative inode/dentry metadata and be deleted in the same transaction as the file (DB-02: no orphan vectors after rm -r).",
+   "2. BOOT-10, MEM-01 and MEM-06: weights may load only after the desktop is interactive (cold boot <=3.0 s). The model and the index must fit inside the 256 MB accounted budget, and the LRU pager must be able to evict them.",
+   "3. RAG-02 (the index is consistent within 30 s for a 50 KB file) and RAG-05 (p95 <=500 ms over >=10,000 chunks) must hold on a modest lab machine that is probably CPU-only. WebGPU cannot be assumed: Chrome on Linux enables it by default only on Intel Gen12+ (Chrome 144) and NVIDIA on Wayland (Chrome 147).",
+   "4. RAG-04: Recall@5 >=0.80 plus MRR on the team's set of >=200 docs and >=30 queries, and again on the examiners' hidden set.",
+   "5. Coupling depth is graded (AI is 20% of marks). The indexer is a niced process visible in ps and throttled while the user is active (RAG-01). The AI reads through syscalls. Predictions drive pre-fetch at idle priority with speculative pages (PRE-04, PRE-06).",
+   "6. Offline and local-first (OFF-01, RAG-06, s12.6): search must fall back to keywords when the model is missing. Telemetry stays on the device unless the user opts in (PRE-05). File contents should not be sent to a third party.",
+   "7. PRE-01 (one prediction <=5 ms in a worker) and PRE-02 (top-3 beats the better of MFU and MRU). Any model more complex than a Markov chain must be shown to beat one.",
+   "8. Student budget in Pakistan (free tiers, one cheap VPS) and fewer moving parts: every extra service must earn its place. The team is strong in TypeScript and JavaScript, not Python or ML-ops.",
+   "9. The DSA rule: the top-k heap, the telemetry ring buffer and the Bloom filter are the team's own code. No library may stand in for a mandated structure."
+  ],
+  "options": [
+   {
+    "name": "O1 Local-first hybrid (RECOMMENDED): in-browser small model + own exact client index + pgvector copy in the existing Postgres + hand-written Markov predictor",
+    "current_version": "@huggingface/transformers 4.3.0 (2026-09-16; bundles onnxruntime-web 1.31.0-dev.20260914) + MongoDB/mdbr-leaf-ir @4262131 q8 ONNX (23 MB; fallback Xenova/bge-small-en-v1.5 q8, 34 MB) + pgvector 0.8.6 (2026-07-29) on PostgreSQL 18",
+    "summary": "Embedding runs in the ai.runtime Web Worker on the WASM backend (2 threads when the page is crossOriginIsolated). The indexer is a niced kernel process. Chunks and vectors are kept in private IndexedDB stores and searched by a hand-written exact index: permissions are filtered first, then rows are ranked, with top-k taken from dsa/heap. A hand-written BM25 inverted index is the offline and fallback path. Every index change is also sent through the outbox to file_chunks (pgvector, FK to inodes ON DELETE CASCADE), which is the durable multi-user copy. Other sessions and devices pull vectors from there instead of re-embedding.",
+    "status_notes": "All parts are actively maintained. Transformers.js v4 went stable on 2026-03-30. Its default web build fetches ORT WASM from cdn.jsdelivr.net, so wasmPaths must point to our own copies for offline use. mdbr-leaf-ir is a 2025 research model (Apache-2.0, 96k downloads), and bge-small is pinned as a drop-in fallback."
+   },
+   {
+    "name": "O5 Client-only: same in-browser model and own index, no server-side vectors",
+    "current_version": "@huggingface/transformers 4.3.0 + mdbr-leaf-ir q8; no pgvector",
+    "summary": "Same client pipeline as O1, but vectors exist only in each browser. The server stores no chunks or vectors, so every device, new session and reader of a shared file re-embeds the content locally.",
+    "status_notes": "This is the honest 'fewer moving parts' alternative. It removes the index.put sync op and the server search path, but loses the DB-side file_chunks coupling and makes every new device re-embed everything."
+   },
+   {
+    "name": "O2 Server-side local model + pgvector only",
+    "current_version": "@huggingface/transformers 4.3.0 in Node (onnxruntime-node 1.30.0), or Ollama v0.34.3 (2026-09-19) with an embedding model; pgvector 0.8.6",
+    "summary": "The VPS embeds every file after upload and answers every query with a SQL permission join. The browser holds no model and no index.",
+    "status_notes": "This gives the simplest correctness story: one authoritative copy and the filter in SQL. However, there is no semantic search offline (keyword only), one small VPS CPU is shared by every user's indexing, and the client-side scheduler and memory coupling is lost. Ollama would add another service."
+   },
+   {
+    "name": "O4 Heavy in-browser model (EmbeddingGemma-300m or nomic-embed-text-v1.5, 768-d) + client index [expected to lose]",
+    "current_version": "onnx-community/embeddinggemma-300m-ONNX q4 (197 MB external data; q4f16 175 MB) or nomic-embed-text-v1.5 q8 (137 MB) via Transformers.js 4.3.0, WebGPU preferred",
+    "summary": "This option pays for the best quality: a bigger multilingual or long-context model running in the browser.",
+    "status_notes": "EmbeddingGemma is under the Gemma Terms (not OSI; restrictions must be passed on) and its activations do not support fp16. Its weights alone nearly consume the 256 MB MEM-01 budget, and CPU-only WASM is roughly 10x the compute of a 23M model."
+   },
+   {
+    "name": "O3 Hosted embedding API through the backend + Qdrant [expected to lose]",
+    "current_version": "OpenAI text-embedding-3-small ($0.02 per 1M tokens) or Gemini Embedding 2 ($0.20 per 1M; its free tier uses content to improve Google products); Qdrant v1.19.1 (@qdrant/js-client-rest 1.19.0). Also considered for the store: chromadb 3.5.0, @lancedb/lancedb 0.39.0, sqlite-vec 0.1.9",
+    "summary": "The LLM gateway calls a hosted embedding API. A separate Qdrant container stores vectors with owner, group and mode copied into the payload for filtering.",
+    "status_notes": "Cost is not the blocker: 10k chunks x 400 tokens is about $0.08 on 3-small. The blockers are that it cannot index or search semantically offline, file contents go to a third party, a second datastore holds permission copies that go stale on chmod (a leak risk), and a delete cannot be atomic with the VFS transaction."
+   }
+  ],
+  "criteria": [
+   {
+    "name": "Permission safety & integrity",
+    "weight": 15,
+    "why": "RAG-03 allows zero leaks and uses the current rwx. DB-02 and DB-04 require no orphans and constraints enforced in the database. These are graded as live safety tests at Phase 4 and at the final defence."
+   },
+   {
+    "name": "CPU latency (RAG-02/RAG-05)",
+    "weight": 15,
+    "why": "Hard numeric gates on a modest lab machine: 50 KB consistent in <=30 s while throttled, retrieval p95 <=500 ms at >=10k chunks, and a prediction in <=5 ms (PRE-01)."
+   },
+   {
+    "name": "Retrieval quality (RAG-04)",
+    "weight": 15,
+    "why": "Recall@5 >=0.80 on our set and on a hidden examiner set. Model quality sets the ceiling that chunking and hybrid search can reach."
+   },
+   {
+    "name": "OS coupling depth",
+    "weight": 15,
+    "why": "The AI score grades depth and coupling: the indexer as a scheduled process, evictable model and index pages, VFS events, syscalls, DB file_chunks, and predictions driving the scheduler and pager. Also the litmus test in s12."
+   },
+   {
+    "name": "Memory & boot budget",
+    "weight": 10,
+    "why": "MEM-01 and MEM-06 (256 MB budget, never exceeded for more than 1 s), plus BOOT-10 and the cold boot of <=3 s, which the AI must not delay."
+   },
+   {
+    "name": "Offline & local-first",
+    "weight": 10,
+    "why": "OFF-01, RAG-06 and the s12.6 graceful-degradation rules. Semantic search that works offline is a differentiator against Puter (s7)."
+   },
+   {
+    "name": "Cost & privacy",
+    "weight": 10,
+    "why": "Student budget, s12.6 cost accounting and key handling, and PRE-05. Users' file contents should not leave infrastructure we control."
+   },
+   {
+    "name": "Moving parts & effort",
+    "weight": 10,
+    "why": "The spec penalises arbitrary technology. Five students have 18 weeks, and the whole team must be able to defend every component in the viva."
+   }
+  ],
+  "scores": [
+   {
+    "option": "O1 Local-first hybrid (recommended)",
+    "per_criterion": [
+     {
+      "criterion": "Permission safety & integrity",
+      "score": 4,
+      "reason": "The client filters first and ranks second: the kernel computes a readable-ino bitmap from the current inode modes, so the text of unreadable files is never touched. The server uses FK ON DELETE CASCADE in the same transaction as rm -r, and ingest is version-checked. Minus 1 because a second (cached) copy exists on offline devices, which is inherent to local-first design."
+     },
+     {
+      "criterion": "CPU latency (RAG-02/RAG-05)",
+      "score": 4,
+      "reason": "Pilot on WASM: leaf q8 with 2 threads is 181 ms/chunk p50, and 50 KB of prose indexes in 6.1 s. Query embedding p95 is 7-70 ms. The brute-force scan over 10k chunks is 3.2 ms p95. Minus 1 because a single thread (no COOP/COEP) on a loaded CPU took 31.5 s for 50 KB of code."
+     },
+     {
+      "criterion": "Retrieval quality (RAG-04)",
+      "score": 4,
+      "reason": "mdbr-leaf-ir has BEIR nDCG@10 53.55, #1 among models with <=100M parameters and above text-embedding-3-small (51.08). It is still about 2 points below text-embedding-3-large (55.43). Hybrid BM25 with RRF is available to help on identifiers."
+     },
+     {
+      "criterion": "OS coupling depth",
+      "score": 5,
+      "reason": "The indexer is a niced process in ps. The model and index segments are pages the LRU pager can evict. It subscribes to VFS events and reads through syscalls. file_chunks holds a vector index in the DB. The predictor spawns idle-priority pre-fetch jobs with speculative pages."
+     },
+     {
+      "criterion": "Memory & boot budget",
+      "score": 4,
+      "reason": "Weights are 23 MB and the ORT WASM binary is 14-27 MB, both loaded after the desktop is interactive. The index is 14.6 MB per 10k chunks at 384-d. It fits the 256 MB budget, but must be declared and evicted when idle."
+     },
+     {
+      "criterion": "Offline & local-first",
+      "score": 5,
+      "reason": "Semantic search and indexing work fully offline from the Cache API (useWasmCache plus self-hosted weights). BM25 is the fallback with a clear notice."
+     },
+     {
+      "criterion": "Cost & privacy",
+      "score": 5,
+      "reason": "There is no per-request cost. Contents never leave the user's browser or our own VPS, and there are no API keys for embeddings."
+     },
+     {
+      "criterion": "Moving parts & effort",
+      "score": 3,
+      "reason": "pgvector is only an extension in the Postgres we already run, but we must write an index.put sync op, a hydration pull and two small query paths: a client index and a server SQL search that also serves as the test oracle."
+     }
+    ],
+    "weighted_total": 4.25
+   },
+   {
+    "option": "O5 Client-only (same model and index, no server vectors)",
+    "per_criterion": [
+     {
+      "criterion": "Permission safety & integrity",
+      "score": 4,
+      "reason": "The same filter-then-rank in the kernel. There is nothing to cascade on the server, but also no DB-enforced integrity for the index."
+     },
+     {
+      "criterion": "CPU latency (RAG-02/RAG-05)",
+      "score": 3,
+      "reason": "Queries are as fast as O1. But every new device or session and every reader of a shared file re-embeds: 10k chunks at 0.2-0.7 s is 30-120 min of CPU on the lab machine."
+     },
+     {
+      "criterion": "Retrieval quality (RAG-04)",
+      "score": 4,
+      "reason": "Same model as O1."
+     },
+     {
+      "criterion": "OS coupling depth",
+      "score": 4,
+      "reason": "It loses the coupling-map entry 'Database: file_chunks with vector index' and the remote swap tier for index pages."
+     },
+     {
+      "criterion": "Memory & boot budget",
+      "score": 4,
+      "reason": "Same as O1."
+     },
+     {
+      "criterion": "Offline & local-first",
+      "score": 5,
+      "reason": "Fully local."
+     },
+     {
+      "criterion": "Cost & privacy",
+      "score": 5,
+      "reason": "Free, and nothing leaves the device."
+     },
+     {
+      "criterion": "Moving parts & effort",
+      "score": 4,
+      "reason": "No vector sync protocol and no server search endpoint."
+     }
+    ],
+    "weighted_total": 4.05
+   },
+   {
+    "option": "O2 Server-side local model + pgvector only",
+    "per_criterion": [
+     {
+      "criterion": "Permission safety & integrity",
+      "score": 5,
+      "reason": "One authoritative copy, the permission check done in SQL at query time, and cascade in the same transaction."
+     },
+     {
+      "criterion": "CPU latency (RAG-02/RAG-05)",
+      "score": 3,
+      "reason": "One 1-2 vCPU VPS serialises every user's indexing, so demo-day contention threatens the 30 s bound. Every query also pays a WAN round trip."
+     },
+     {
+      "criterion": "Retrieval quality (RAG-04)",
+      "score": 4,
+      "reason": "Same small model. It could afford a larger one, but that would cost more VPS RAM."
+     },
+     {
+      "criterion": "OS coupling depth",
+      "score": 3,
+      "reason": "The client-side indexer would be a proxy process, and the model and index are not managed by the kernel's memory manager."
+     },
+     {
+      "criterion": "Memory & boot budget",
+      "score": 5,
+      "reason": "Nothing extra in the browser."
+     },
+     {
+      "criterion": "Offline & local-first",
+      "score": 2,
+      "reason": "Keyword-only offline (the RAG-06 minimum). New files cannot be indexed until the client reconnects."
+     },
+     {
+      "criterion": "Cost & privacy",
+      "score": 4,
+      "reason": "Data stays on our VPS, but it probably needs a bigger VPS tier for CPU and RAM."
+     },
+     {
+      "criterion": "Moving parts & effort",
+      "score": 4,
+      "reason": "A single query path. It becomes 3 if Ollama is added as another service."
+     }
+    ],
+    "weighted_total": 3.75
+   },
+   {
+    "option": "O4 Heavy in-browser model (EmbeddingGemma-300m / nomic v1.5)",
+    "per_criterion": [
+     {
+      "criterion": "Permission safety & integrity",
+      "score": 4,
+      "reason": "Same client filter design as O1."
+     },
+     {
+      "criterion": "CPU latency (RAG-02/RAG-05)",
+      "score": 1,
+      "reason": "137-300M parameters is about 6-13x the compute of a 23M model. At our measured 0.2-0.7 s per chunk for 23M, 40-50 chunks would take minutes on WASM. WebGPU is not guaranteed on Linux lab GPUs."
+     },
+     {
+      "criterion": "Retrieval quality (RAG-04)",
+      "score": 5,
+      "reason": "EmbeddingGemma scores 69.67 mean on MTEB English v2, with 2k context and more than 100 languages. nomic v1.5 scores 62.28 MTEB average with 8k context."
+     },
+     {
+      "criterion": "OS coupling depth",
+      "score": 4,
+      "reason": "The same process and pager coupling, but the model is too large to page in and out cheaply."
+     },
+     {
+      "criterion": "Memory & boot budget",
+      "score": 1,
+      "reason": "175-197 MB of q4 weights (137 MB for nomic q8) plus 768-d vectors (29 MB per 10k) against a 256 MB global budget."
+     },
+     {
+      "criterion": "Offline & local-first",
+      "score": 5,
+      "reason": "Local."
+     },
+     {
+      "criterion": "Cost & privacy",
+      "score": 4,
+      "reason": "Free, but the Gemma Terms are not OSI and their restrictions must be passed on in THIRD_PARTY.md."
+     },
+     {
+      "criterion": "Moving parts & effort",
+      "score": 4,
+      "reason": "Same code as O5."
+     }
+    ],
+    "weighted_total": 3.5
+   },
+   {
+    "option": "O3 Hosted embedding API + Qdrant",
+    "per_criterion": [
+     {
+      "criterion": "Permission safety & integrity",
+      "score": 2,
+      "reason": "Owner, group and mode must be copied into the Qdrant payload, and the copy goes stale on chmod, chown or a group change, which is a leak window. The Qdrant delete cannot share the Postgres rm -r transaction, which risks orphans."
+     },
+     {
+      "criterion": "CPU latency (RAG-02/RAG-05)",
+      "score": 3,
+      "reason": "Batch indexing is fast, but every query pays an internet round trip from Lahore to a US or EU endpoint (unmeasured) plus rate limits."
+     },
+     {
+      "criterion": "Retrieval quality (RAG-04)",
+      "score": 4,
+      "reason": "text-embedding-3-small scores BEIR 51.08, below mdbr-leaf-ir's 53.55. Only -large (55.43, $0.13 per 1M) is clearly better."
+     },
+     {
+      "criterion": "OS coupling depth",
+      "score": 2,
+      "reason": "The model is an external HTTP call. It cannot be scheduled, throttled or paged by the kernel."
+     },
+     {
+      "criterion": "Memory & boot budget",
+      "score": 5,
+      "reason": "Nothing in the browser."
+     },
+     {
+      "criterion": "Offline & local-first",
+      "score": 1,
+      "reason": "No embedding offline: neither indexing nor semantic query."
+     },
+     {
+      "criterion": "Cost & privacy",
+      "score": 2,
+      "reason": "The money is trivial (about $0.08 for 10k chunks), but contents go to a third party, the Gemini free tier uses content to improve its products, and a billing account is needed."
+     },
+     {
+      "criterion": "Moving parts & effort",
+      "score": 2,
+      "reason": "An extra container (Qdrant), an external dependency, key management and payload sync code."
+     }
+    ],
+    "weighted_total": 2.65
+   }
+  ],
+  "evidence": [
+   {
+    "claim": "@huggingface/transformers latest is 4.3.0 (published 2026-09-16). 4.0.0 went stable on 2026-03-30, and 4.1.0 and 4.2.0 followed in April 2026. Licence Apache-2.0. The legacy @xenova/transformers stopped at 2.17.2 (2024).",
+    "source": "https://registry.npmjs.org/@huggingface/transformers (time field) ; https://registry.npmjs.org/@xenova/transformers",
+    "verified": true
+   },
+   {
+    "claim": "Transformers.js 4.3.0 depends on onnxruntime-web 1.31.0-dev.20260914-8d85527a0 (a dev build) and onnxruntime-node 1.30.0.",
+    "source": "https://registry.npmjs.org/@huggingface/transformers/4.3.0",
+    "verified": true
+   },
+   {
+    "claim": "v4 adds a C++ WebGPU runtime that runs in browsers, Node, Bun and Deno. Adopting com.microsoft.MultiHeadAttention gave a ~4x speedup for BERT-based embedding models. env.useWasmCache caches the ORT WASM so apps work fully offline after the first load.",
+    "source": "https://huggingface.co/blog/transformersjs-v4",
+    "verified": true
+   },
+   {
+    "claim": "By default the 4.3.0 web build loads ORT from https://cdn.jsdelivr.net/npm/onnxruntime-web@<ver>/dist/ort-wasm-simd-threaded.asyncify.wasm unless env.backends.onnx.wasm.wasmPaths is set. The file sizes are 26.9 MB (asyncify), 28.4 MB (jsep) and 14.3 MB (plain CPU) uncompressed.",
+    "source": "Local inspection of node_modules/@huggingface/transformers/dist/transformers.web.js (4.3.0, around line 8733) and node_modules/onnxruntime-web/dist",
+    "verified": true
+   },
+   {
+    "claim": "env.allowRemoteModels, env.localModelPath (default '/models/' in browsers) and env.useBrowserCache (Cache API, key 'transformers-cache') allow fully self-hosted, cached weights.",
+    "source": "https://huggingface.co/docs/transformers.js/api/env",
+    "verified": true
+   },
+   {
+    "claim": "ONNX Runtime Web enables WASM multi-threading only when crossOriginIsolated (SharedArrayBuffer via COOP/COEP). The proxy worker cannot be used with WebGPU.",
+    "source": "https://onnxruntime.ai/docs/tutorials/web/env-flags-and-session-options.html",
+    "verified": true
+   },
+   {
+    "claim": "Chrome WebGPU on Linux is on by default only for Intel Gen12+ (Chrome 144) and NVIDIA driver 535.183.01+ on Wayland (Chrome 147). Other GPUs need a flag. Windows has had it since Chrome 113.",
+    "source": "https://github.com/gpuweb/gpuweb/wiki/Implementation-Status",
+    "verified": true
+   },
+   {
+    "claim": "Older published measurement: all-MiniLM-L6-v2 fp32 at sequence length 512 took 386 ms on WASM versus 23.8 ms on WebGPU at batch 1. WASM time grows linearly with batch size (25.3 s at batch 64). Chrome 122 on an Intel Mac.",
+    "source": "https://huggingface.co/spaces/Xenova/webgpu-embedding-benchmark/discussions/4",
+    "verified": true
+   },
+   {
+    "claim": "mdbr-leaf-ir: 22.6M parameters, BertModel with 6 layers and hidden size 384, max_seq_length 512, uncased BertTokenizer, Apache-2.0. BEIR average nDCG@10 is 53.55 (54.03 asymmetric). The same table lists bge-small-en-v1.5 51.65, arctic-embed-s 51.98, arctic-embed-xs 50.15, OpenAI text-embedding-3-small 51.08, -large 55.43, granite-small-r2 50.87, MiniLM-L6-v2 41.95 and BM25 41.14. These are vendor-reported numbers.",
+    "source": "https://huggingface.co/MongoDB/mdbr-leaf-ir (README, config.json, sentence_bert_config.json)",
+    "verified": true
+   },
+   {
+    "claim": "mdbr-leaf-ir's ONNX output 'sentence_embedding' is 768-d and unit-normalised (2_Dense maps 384 to 768). The model is MRL-trained, so it can be truncated (256-d is shown on the card). The q8 ONNX is 23 MB (model_quantized.onnx_data).",
+    "source": "Local run with Transformers.js 4.3.0 (dims [4,768], norms 1.0000) ; https://huggingface.co/MongoDB/mdbr-leaf-ir/tree/main/onnx ; 2_Dense/config.json",
+    "verified": true
+   },
+   {
+    "claim": "The mdbr-leaf-ir q8 graph uses 6 fused com.microsoft MultiHeadAttention nodes. The older Xenova-style exports of arctic-embed-xs and bge-small use unfused attention (12 and 24 plain MatMul). This explains why leaf beat arctic-xs in our pilot despite the identical shape.",
+    "source": "Local operator census (strings) of the three model_quantized.onnx files",
+    "verified": true
+   },
+   {
+    "claim": "LEAF: knowledge distillation of text embedding models (leaf-ir, 23M parameters). arXiv 2509.12539, submitted 16 Sep 2025, revised 20 Apr 2026.",
+    "source": "https://arxiv.org/abs/2509.12539",
+    "verified": true
+   },
+   {
+    "claim": "bge-small-en-v1.5: 33.4M parameters, 384-d, 512 tokens, MIT licence, MTEB average 62.17, retrieval 51.68. gte-small has retrieval 49.46.",
+    "source": "https://huggingface.co/BAAI/bge-small-en-v1.5",
+    "verified": true
+   },
+   {
+    "claim": "Quantized ONNX sizes: Xenova/bge-small-en-v1.5 is 34 MB (fp32 133 MB), arctic-embed-xs 23 MB, arctic-embed-s 34 MB, all-MiniLM-L6-v2 23 MB and nomic-embed-text-v1.5 137 MB.",
+    "source": "https://huggingface.co/Xenova/bge-small-en-v1.5/tree/main/onnx ; https://huggingface.co/Snowflake/snowflake-arctic-embed-xs/tree/main/onnx ; https://huggingface.co/Snowflake/snowflake-arctic-embed-s/tree/main/onnx ; https://huggingface.co/Xenova/all-MiniLM-L6-v2/tree/main/onnx ; https://huggingface.co/nomic-ai/nomic-embed-text-v1.5/tree/main/onnx",
+    "verified": true
+   },
+   {
+    "claim": "arctic-embed-xs is 22M parameters, 384-d and 512 tokens with MTEB retrieval 50.15. arctic-embed-s is 33M with 51.98. Both are Apache-2.0 and use the query prefix 'Represent this sentence for searching relevant passages: '.",
+    "source": "https://huggingface.co/Snowflake/snowflake-arctic-embed-xs",
+    "verified": true
+   },
+   {
+    "claim": "all-MiniLM-L6-v2 truncates input longer than 256 word pieces and was fine-tuned at 128 tokens, so it cannot represent the spec's ~400-token chunks.",
+    "source": "https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2",
+    "verified": true
+   },
+   {
+    "claim": "EmbeddingGemma-300m: 768-d (MRL 512/256/128), 2,048-token context, Gemma licence, MTEB English v2 mean 69.67. Activations do not support float16. ONNX external data is 197 MB for q4, 175 MB for q4f16 and 309 MB for q8.",
+    "source": "https://huggingface.co/google/embeddinggemma-300m ; https://huggingface.co/onnx-community/embeddinggemma-300m-ONNX/tree/main/onnx",
+    "verified": true
+   },
+   {
+    "claim": "The Gemma Terms of Use are a custom, non-OSI licence. Redistributors must pass on the use restrictions (last modified 2026-04-01).",
+    "source": "https://ai.google.dev/gemma/terms",
+    "verified": true
+   },
+   {
+    "claim": "nomic-embed-text-v1.5: about 0.1B parameters, 768-d with MRL (MTEB 62.28 at 768), 8,192-token context, Apache-2.0, requires search_query/search_document prefixes.",
+    "source": "https://huggingface.co/nomic-ai/nomic-embed-text-v1.5",
+    "verified": true
+   },
+   {
+    "claim": "granite-embedding-small-english-r2 (47M, 8,192 context, Apache-2.0) has no ONNX or Transformers.js path documented on its model card, so it was excluded.",
+    "source": "https://huggingface.co/ibm-granite/granite-embedding-small-english-r2",
+    "verified": true
+   },
+   {
+    "claim": "pgvector 0.8.6 was released 2026-07-29, after HNSW-vacuum corruption fixes in 0.8.3 and 0.8.4. Iterative index scans arrived in 0.8.0 (2024-10-30).",
+    "source": "https://github.com/pgvector/pgvector/blob/master/CHANGELOG.md",
+    "verified": true
+   },
+   {
+    "claim": "In pgvector, HNSW filtering is applied after the index scan (default ef_search 40), so filtered queries can return fewer than k rows. hnsw.iterative_scan = strict_order or relaxed_order fixes this (max_scan_tuples default 20,000). The vector type indexes up to 2,000 dimensions. Supports Postgres 13+.",
+    "source": "https://github.com/pgvector/pgvector",
+    "verified": true
+   },
+   {
+    "claim": "The Docker image pgvector/pgvector:0.8.6-pg18 exists (also as trixie and bookworm variants).",
+    "source": "https://hub.docker.com/r/pgvector/pgvector/tags",
+    "verified": true
+   },
+   {
+    "claim": "OpenAI text-embedding-3-small costs $0.02 per 1M tokens and -large $0.13. So 10k chunks x 400 tokens (4M tokens) is about $0.08.",
+    "source": "https://developers.openai.com/api/docs/pricing",
+    "verified": true
+   },
+   {
+    "claim": "Gemini Embedding 2 costs $0.20 per 1M text tokens ($0.10 batch). On the free tier, 'content used to improve our products: Yes'.",
+    "source": "https://ai.google.dev/gemini-api/docs/pricing",
+    "verified": true
+   },
+   {
+    "claim": "Current versions of the alternatives: Qdrant v1.19.1 (JS client 1.19.0, 2026-08-04), chromadb npm 3.5.0 (2026-06-30), @lancedb/lancedb 0.39.0 (2026-09-17, Node/embedded, no browser build), sqlite-vec 0.1.9 (2026-03-31, pre-1.0, brute-force vec0), Ollama v0.34.3 (2026-09-19).",
+    "source": "https://github.com/qdrant/qdrant/releases ; https://registry.npmjs.org/@qdrant/js-client-rest ; https://registry.npmjs.org/chromadb ; https://registry.npmjs.org/@lancedb/lancedb ; https://registry.npmjs.org/sqlite-vec ; https://github.com/ollama/ollama/releases",
+    "verified": true
+   },
+   {
+    "claim": "Hybrid vector plus full-text search with RRF over BGE-small helps, because vector-heavy and FTS-heavy rankings disagree in the top-10 for 74.5% of 753 queries. Search took a 20.9 ms median at 50K chunks.",
+    "source": "https://arxiv.org/abs/2604.15484",
+    "verified": true
+   },
+   {
+    "claim": "Our pilot (AMD Ryzen 5 7530U, onnxruntime-web WASM in Node 24, q8, batch 1, 400/60-token chunks; machine load average 14-19, so treat as ranges). 50 KB of prose = 11,111 tokens = 33 chunks; 50 KB of JS = 15,699 tokens = 46 chunks. Single thread: leaf 408-724 ms/chunk p50, prose indexed in 13.3-23.8 s, code in 31.5 s. bge-small 554-810 ms p50 (p95 up to 1.9 s), prose 25.0-33.8 s, code 53.9 s. arctic-xs 796 ms, 25.8 s. Two threads: leaf 181 ms and 6.1 s; bge-small 319 ms and 10.5 s. Query embedding p95: leaf 7-70 ms, bge 16-130 ms. onnxruntime-node CPU single thread: leaf 272, arctic-xs 324, bge 552 ms/chunk.",
+    "source": "Own pilot: scratchpad/embbench/bench_wasm.mjs and bench.mjs (results in wasm_results.jsonl)",
+    "verified": true
+   },
+   {
+    "claim": "Our pilot of an exact top-5 scan in plain JS (V8, 384-d float32, two thirds of files permitted, own bounded min-heap): 10k chunks p50 2.2 / p95 3.2 ms (14.6 MB); 50k p95 13.9 ms (73 MB); 100k p95 28.1 ms (146 MB).",
+    "source": "Own pilot: scratchpad/embbench/bruteforce.mjs",
+    "verified": true
+   },
+   {
+    "claim": "drizzle-orm (0.45.3) has a native PgVector column type, so the pgvector npm helper is only needed with raw node-postgres.",
+    "source": "https://github.com/drizzle-team/drizzle-orm/blob/main/drizzle-orm/src/pg-core/columns/vector_extension/vector.ts ; https://registry.npmjs.org/drizzle-orm",
+    "verified": true
+   },
+   {
+    "claim": "Embedding a query through a hosted API from Lahore adds a WAN round trip of a few hundred ms per query. This is a hypothesis to measure, not established.",
+    "source": "None; to be measured in the Week-3 prototype",
+    "verified": false
+   }
+  ],
+  "recommendation": "Choose O1, the local-first hybrid. Weighted score 4.25 against 4.05 for the runner-up; criteria and weights were declared before scoring.\n\n(a) Embedding model and runtime: MongoDB/mdbr-leaf-ir, pinned at revision 4262131b, q8 ONNX (23 MB, Apache-2.0).\n- It runs in the ai.runtime Web Worker with @huggingface/transformers 4.3.0 on the WASM backend. Set numThreads = 2 when crossOriginIsolated, otherwise 1.\n- WebGPU is used only where the lab machine has it and our check across backends passes.\n- Queries get the prefix 'Represent this sentence for searching relevant passages: '. Documents get no prefix.\n- Its 768-d unit output is MRL-truncated to 384 dimensions and renormalised. The Week-3 eval confirms 384 against 768.\n- The drop-in fallback is Xenova/bge-small-en-v1.5 q8 (MIT, 384-d, same uncased WordPiece tokenizer, same prefix). Switching is a config change plus a background re-index.\n- Weights and the ORT WASM are self-hosted under /models and /ort. The defaults would fetch from the HF Hub and jsDelivr, so set env.allowRemoteModels = false, localModelPath and wasmPaths. They are cached through the Cache API with useWasmCache, and persistent storage is requested at POST.\n- Nothing is fetched until the desktop is interactive and idle (BOOT-10).\n\n(b) Vector store: two layers.\n- Our own exact index in the browser: a Float32Array in 1,024-row segments, which are pager-managed pages. The kernel builds a readable-ino bitmap from the current rwx and x on the ancestors, filtering happens before ranking, and dsa/heap gives the top-k. It is the default query path online and offline, measured at 3.2 ms p95 for 10k chunks.\n- file_chunks in the Postgres we already run, as pgvector 0.8.6 vector(384): FK to inodes ON DELETE CASCADE, with no mode or owner copied. This is the durable, authoritative multi-user copy. It is written by a version-checked, idempotent index.put op through the outbox and read by other sessions, devices and readers of shared files so they never re-embed. It also serves the server search (fresh session, optional LLM answer) and the CI test oracle.\n- Exact scan until our own benchmark shows HNSW is needed. If HNSW is added, use hnsw.iterative_scan = relaxed_order.\n- The keyword fallback is our own BM25 inverted index (RAG-06). Hybrid RRF ships only if it raises Recall@5.\n- Our own Bloom filter over chunk content hashes skips redundant embeddings.\n\n(c) Predictor: a hand-written, Witten-Bell interpolated 2nd-order Markov chain.\n- It backs off to 1st order, then to MFU by time bucket, then to global MFU.\n- It runs in its own tiny worker with O(1) updates and no ML library.\n- It uses MFU until there are 50 launches.\n- Categorical naive Bayes is the challenger. It ships only if it beats Markov's top-3 by at least 2 points on the chronological held-out split.\n\nChunking uses the embedding model's own tokenizer (uncased BERT WordPiece, 30,522 tokens, via AutoTokenizer).\n- Sections are heading-aware; code blocks, tables and lists are atomic.\n- Target 400 tokens (min 120, max 480), with about 60 tokens of overlap only inside a section.\n- Each chunk gets a header of at most 24 tokens (file name plus heading trail), keeping the total at or under 512 tokens.\n\nTwo consequences for other decisions:\n- Deployment must send COOP/COEP headers. MEM-01's measureUserAgentSpecificMemory needs them too.\n- The indexer runs at priority 32. It is throttled to a 50% duty cycle while the user is active, with deadline-aware aging so a file pending more than 15 s still finishes within RAG-02's 30 s.",
+  "runner_up": "Stack runner-up: O5, client-only (4.05). It is the same browser pipeline without the server-side pgvector copy. It is simpler, but every device, session and reader of a shared file re-embeds everything, and it loses the DB coupling. Switch to O5 if the index.put sync work threatens the Phase 4 gate. Component runners-up: bge-small-en-v1.5 q8 for the model (safer and more widely used, but about 1.7x slower in our 2-thread pilot and 2 points lower on BEIR), and categorical naive Bayes for the predictor.",
+  "chat_reason": "Run a tiny 23 MB open embedding model (mdbr-leaf-ir, with bge-small as backup) inside a Web Worker using Transformers.js, loaded only after the desktop is up. Semantic search is then free, private and works offline. Searches go through your own hand-written in-browser index (about 3 ms for 10,000 chunks), which checks the user's current permissions first, and a durable copy of the vectors sits in your existing PostgreSQL via pgvector so deletes stay atomic and other devices don't re-embed. App prediction is a hand-written Markov chain that falls back to most-frequently-used: it is instant, needs little data and is easy to defend.",
+  "gave_up": "- Top-tier embedding quality: text-embedding-3-large (BEIR 55.43) and EmbeddingGemma (MTEB English v2 69.67). We accept a gap of about 2 points on BEIR.\n- Multilingual retrieval, including Urdu and Roman-Urdu, and long context: chunks must fit 512 tokens.\n- Guaranteed GPU speed: WASM is the baseline at 0.2-0.7 s per chunk.\n- A single copy of the vectors: we keep a client cache plus the server copy, and write a sync op and hydration for them.\n- ANN on the client: the index is exact only, bounded to about 30k resident chunks at float32 before int8 quantization is needed.\n- Some CPU on the user's machine, and a first-run download of about 38-51 MB (model + tokenizer + ORT WASM, uncompressed).\n- The maturity of a widely used model: mdbr-leaf-ir is a 2025 research model, so bge-small stays pinned as the fallback.\n- A predictor more expressive than Markov and naive Bayes: logistic regression, kNN and tiny networks are not built unless both fail PRE-02.",
+  "risks": [
+   {
+    "risk": "Single-thread WASM on a weak or loaded lab CPU misses RAG-02. Our pilot took 31.5 s (leaf) and 53.9 s (bge-small) to index 50 KB of code with one thread.",
+    "mitigation": "Serve COOP/COEP so ORT uses 2 threads (pilot: 6.1 s for 50 KB of prose with leaf). Only changed chunks are re-embedded, with boundaries anchored to headings and blank lines. Deadline-aware aging applies after 15 s. The fallback is a 256-token chunk budget, or a server-side backfill using the same model in Node."
+   },
+   {
+    "risk": "mdbr-leaf-ir is a young research model with vendor-reported BEIR numbers. Its ONNX needs an external data file and the AutoModel path, and the dimensions after MRL truncation are unvalidated.",
+    "mitigation": "Pin the HF revision and self-host the weights. Put models behind an Embedder interface. The Week-3 eval compares leaf-768, leaf-384 and bge-small-384. Switch if leaf's Recall@5 is more than 0.03 below bge-small's."
+   },
+   {
+    "risk": "Transformers.js 4.3.0 pins a dev build of onnxruntime-web (1.31.0-dev.20260914). A regression could break WASM inference.",
+    "mitigation": "Lock exact versions in pnpm-lock and freeze after the Week-4 defence. CI runs a smoke test (embed 10 fixture chunks, cosine >=0.999 against recorded vectors). The rollback is 4.2.0."
+   },
+   {
+    "risk": "Model weights or the ORT WASM are fetched from third-party CDNs by default (HF Hub, jsDelivr), which breaks offline boot and depends on the lab network.",
+    "mitigation": "Set env.allowRemoteModels = false, localModelPath '/models/' and wasmPaths '/ort/', served from our own origin with brotli and long cache headers. Enable useWasmCache and call navigator.storage.persist() at POST."
+   },
+   {
+    "risk": "Memory pressure: weights (23 MB), the ORT heap and the index (14.6 MB per 10k at 384-d float32) crowd the 256 MB budget.",
+    "mitigation": "Declare them as large assets to the memory manager. The pager evicts index segments (they are persisted already, with checksums) and releases the ORT session after 5 minutes idle. Pin both while a search UI is focused. Above 30k chunks, use int8 quantization (\u00b10.3 calibration) with float rescoring of the top 50."
+   },
+   {
+    "risk": "Permission leak through stale state: a chmod or group removal while a device is offline, symlinks or hard links into private directories, or snippets from the chunk text.",
+    "mitigation": "Filter before ranking on the current inode tree (r on the file and x on every ancestor, for at least one link), and resolve paths at result time. The server applies revocations via sync. CI runs a leak suite over the permission matrix, chmod after indexing and ancestor x removal, with 0 leaks allowed. The offline-cache caveat is documented in SECURITY.md."
+   },
+   {
+    "risk": "Vector poisoning: a client uploads vectors that do not match the chunk text, to boost its own files in other users' results.",
+    "mitigation": "The server checks that the inode version matches, that the chunk text equals the blob slice and its hash, and the dimensions and unit norm. A nightly job re-embeds a 1% sample in Node with the same ONNX and flags cosine below 0.99. Vectors are only ever served to users who can read the file."
+   },
+   {
+    "risk": "Prompt injection via indexed content when chunks feed the optional LLM answer or the agent.",
+    "mitigation": "Chunks are always wrapped as untrusted data. The retrieval path never issues tool calls. Covered by the AGT-06 fixtures."
+   },
+   {
+    "risk": "The predictor cannot beat max(MFU, MRU) top-3 because real traces are small or too regular.",
+    "mitigation": "Collect at least 500 real launches from all 5 members from Week 7. The naive Bayes challenger is already built. Tune the time buckets and decay half-life on a validation slice. A seeded persona generator is used for CI only."
+   },
+   {
+    "risk": "The examiners' hidden RAG set contains Urdu or other non-English documents.",
+    "mitigation": "Ask at the Week-4 defence. If yes, re-run the bake-off with a multilingual candidate (EmbeddingGemma at MRL-256 over WebGPU, or a multilingual e5-small) under a new decision record."
+   }
+  ],
+  "reversal_trigger": "Each observation below reopens part of the decision.\n\n1. Retrieval quality: mdbr-leaf-ir's Recall@5 on our eval is below 0.80, or more than 0.03 below bge-small-en-v1.5. Switch to bge-small (same dimensions, re-index) or store the full 768-d.\n\n2. Index latency: on the published lab workstation, the 2-thread q8 embedding takes more than 350 ms per chunk p50, or indexing a 50 KB code file at 100% duty takes more than 15 s, leaving less than 2x headroom for throttling. Move bulk indexing to the server (Transformers.js in Node, same ONNX) and keep only query embedding and search on the client. If cross-origin isolation is refused by the deployment decision, re-evaluate the model on single-thread numbers.\n\n3. Client query latency or memory: client semsearch p95 exceeds 350 ms, or the resident index exceeds 40 MB at the target corpus. Use int8 with rescoring, then WASM SIMD, then the server pgvector as the online path.\n\n4. pgvector: exact search p95 exceeds 100 ms at 100k chunks. Add HNSW (m=16, ef_construction=64) with iterative_scan. If filtered HNSW recall@10 is below 0.95 against exact, go back to exact search with a readable-ino prefilter.\n\n5. Predictor: interpolated Markov misses PRE-02 on the held-out 30%. Adopt naive Bayes if it clears PRE-02 by 2 or more points.\n\n6. Language: the examiners confirm non-English documents in the hidden set. Reopen the model choice.",
+  "team_prototype": "Weeks 2-4. Owner: the AI Pipeline Specialist; secondary: the QA/DevOps engineer. Everything goes in ai/eval/bench/. The run should take about 3 days of work, and all numbers go into STACK_DECISION.md with raw CSVs committed.\n\n(1) Model bake-off in real Chrome, on the Week-2 lab workstation and the weakest team laptop.\n- Setup: a Vite page served with and without COOP/COEP. A Web Worker loads Transformers.js 4.3.0 with self-hosted weights and wasmPaths.\n- Candidates, all q8: mdbr-leaf-ir, bge-small-en-v1.5 and arctic-embed-xs. Also load all-MiniLM-L6-v2 as the expected loser and EmbeddingGemma q4 once, only to record memory.\n- Settings: WASM with numThreads 1, 2 and 4, plus WebGPU if the machine exposes it.\n- Measure:\n  - cold load time from network and warm load from the Cache API;\n  - per-chunk latency p50 and p95 at 128, 256, 400 and 512 tokens (200 chunks each);\n  - query embedding p95 (30 runs);\n  - end-to-end time to index a 50 KB Markdown file and a 50 KB .ts file;\n  - performance.measureUserAgentSpecificMemory() before and after loading;\n  - main-thread frame p95 during indexing with 10 windows open.\n- Pass: 50 KB indexed in 15 s or less at 100% duty, and frame p95 at or under 16.7 ms.\n- For reference, our pilot scripts are in /tmp/claude-1000/-home-haseeb-raza-Desktop-Plotinium-OS/6bdb43c3-e62e-4f77-88ef-40bcd9948f85/scratchpad/embbench/ (bench_wasm.mjs, bench.mjs, bruteforce.mjs, check.mjs). Its indicative results: leaf 2-thread 181 ms/chunk and 6.1 s per 50 KB of prose; bge-small 319 ms and 10.5 s.\n\n(2) Pilot retrieval eval.\n- Corpus: 60 of the team's own documents (course notes, READMEs, source files), with 15 queries labelled with their relevant files. This grows to 200 documents and 30 queries by Phase 4.\n- Harness: Node with the same ONNX files.\n- Compare leaf-768 against leaf-384 against bge-small, with and without heading-aware chunking, and vector-only against BM25 against hybrid RRF.\n- Report Recall@5 and MRR. Pass: 0.80 or higher on the pilot set.\n\n(3) Vector search benchmark.\n- Seeded 10k, 50k and 100k unit vectors at 384-d, over a 1,000-file tree with a realistic permission mix.\n- Client: the own index in a worker, reporting p50 and p95 over 1,000 queries including the permission bitmap.\n- Server: pgvector 0.8.6 in Docker, exact search versus HNSW at ef_search 40 and 100, filtered, with iterative_scan relaxed_order. Capture EXPLAIN ANALYZE and recall@10 against exact.\n- Pass: client p95 at or under 50 ms at 10k.\n\n(4) Predictor pilot.\n- Data: a seeded 3-persona generator (1,000 events) plus a few days of real launches from each member.\n- Compare MFU, MRU, Markov-1, interpolated Markov-2 and naive Bayes on top-1 and top-3, using a 70/30 chronological split plus a prequential curve.\n- Also measure prediction latency p95 in a worker. Pass: 0.1 ms or less.",
+  "requirement_ids_served": [
+   "RAG-01",
+   "RAG-02",
+   "RAG-03",
+   "RAG-04",
+   "RAG-05",
+   "RAG-06",
+   "PRE-01",
+   "PRE-02",
+   "PRE-03",
+   "PRE-04",
+   "PRE-05",
+   "PRE-06",
+   "BOOT-01",
+   "BOOT-10",
+   "MEM-01",
+   "MEM-02",
+   "MEM-06",
+   "MEM-07",
+   "OFF-01",
+   "OFF-02",
+   "OFF-04",
+   "PROC-04",
+   "PROC-05",
+   "DB-01",
+   "DB-02",
+   "DB-04",
+   "DB-05",
+   "AGT-06",
+   "SYS-01"
+  ],
+  "packages": [
+   {
+    "name": "@huggingface/transformers",
+    "version": "4.3.0",
+    "licence": "Apache-2.0",
+    "purpose": "Tokenizer (AutoTokenizer) and ONNX inference (AutoModel) for embeddings, in the ai.runtime Web Worker. The same package runs in Node for the eval harness, CI recorded-embedding fixtures and optional server backfill."
+   },
+   {
+    "name": "onnxruntime-web (transitive)",
+    "version": "1.31.0-dev.20260914-8d85527a0",
+    "licence": "MIT",
+    "purpose": "WASM (and optional WebGPU) execution provider pinned by Transformers.js 4.3.0. Do not add it directly; lock it through the lockfile. Self-host dist/ort-wasm-simd-threaded*.wasm and .mjs under /ort/."
+   },
+   {
+    "name": "onnxruntime-node (transitive)",
+    "version": "1.30.0",
+    "licence": "MIT",
+    "purpose": "Native CPU backend for Transformers.js in Node, used by the CI eval and fixture generation and the optional server re-embed or backfill job."
+   },
+   {
+    "name": "pgvector (PostgreSQL extension)",
+    "version": "0.8.6 (Docker image pgvector/pgvector:0.8.6-pg18)",
+    "licence": "PostgreSQL License",
+    "purpose": "The vector(384) column in file_chunks, exact and optional HNSW search, and iterative index scans for filtered queries. It runs inside the existing Postgres, so there is no new service."
+   },
+   {
+    "name": "pgvector (npm)",
+    "version": "0.3.0",
+    "licence": "MIT",
+    "purpose": "Serialises vectors for node-postgres. Only needed if the ORM lacks a vector type; drizzle-orm 0.45.3 has a native vector column."
+   },
+   {
+    "name": "MongoDB/mdbr-leaf-ir (model weights)",
+    "version": "HF revision 4262131b32c3182bd06e67e92ae69d7bd66e0c5c; onnx/model_quantized.onnx + model_quantized.onnx_data (23 MB), tokenizer.json",
+    "licence": "Apache-2.0",
+    "purpose": "Primary embedding model: 6-layer BERT, 768-d unit output (MRL-truncated to 384), 512-token context. Self-hosted under /models/."
+   },
+   {
+    "name": "Xenova/bge-small-en-v1.5 (model weights, BAAI original)",
+    "version": "HF revision ea104dacec62c0de699686887e3f920caeb4f3e3; onnx/model_quantized.onnx (34 MB)",
+    "licence": "MIT (BAAI/bge-small-en-v1.5)",
+    "purpose": "Pinned drop-in fallback embedding model: 384-d, CLS pooling plus normalisation, same tokenizer family and query prefix."
+   },
+   {
+    "name": "Hand-written modules (no package)",
+    "version": "n/a",
+    "licence": "Team code",
+    "purpose": "ai/search/vecindex (exact index, filter then rank), ai/search/bm25 (inverted index), dsa/bloom, dsa/ringbuffer (telemetry), dsa/heap (top-k and runtime job queue, shared with the scheduler), ai/indexer/chunker (heading-aware, chunker-v1), ai/predictor (interpolated Markov, naive Bayes challenger, MFU and MRU baselines)."
+   }
+  ],
+  "design_notes": "1. TOPOLOGY\nBrowser, per session:\n- ai.runtime: a kernel service (non-critical) in Web Worker A. It owns:\n  - the ORT session and tokenizer;\n  - VecIndex, BM25 and the Bloom filter;\n  - its own private IndexedDB stores: ai_chunks (key [ino,seq], indexes byHash and byIno), ai_vecseg (segId -> ArrayBuffer of 1,024 x D float32; 1.5 MiB at D=384) and ai_lex.\n  It never reads VFS stores directly. File text reaches it only through sys.read as the invoking uid. Apps reach it only through the syscalls ai.semsearch(query,{k,cwd}) and ai.index.status.\n- ai.indexer: a kernel process at pid N, nice +10, priority 32, visible in ps and top. It subscribes to the kernel event bus (vfs.write, vfs.rename, vfs.unlink, vfs.chmod) with a 1.5 s debounce per ino, and sends 'embed chunk' quanta to ai.runtime.\n- ai.predictor: its own tiny Worker B (ring buffer plus Markov). The kernel spawns prefetch:<app> processes at priority 39.\nServer:\n- file_chunks (pgvector) and telemetry_events (opt-in only).\n- POST /index/batch: index.put ops from the outbox, over HTTPS for bulk.\n- GET /index/pull?since=cursor: hydration by (ino, version).\n- POST /search: server exact search, used for a fresh session, the optional LLM answer and as the test oracle.\n\n2. EMBEDDER CONTRACT\ninterface Embedder { modelKey; dims; embedDocs(texts): Promise<Float32Array[]>; embedQuery(q): Promise<Float32Array> }\n- Primary model: {id:'MongoDB/mdbr-leaf-ir', rev:'4262131b', dtype:'q8', out:'sentence_embedding', storeDims:384}. Take v.slice(0,384) and L2-renormalise; confirm against 768 in the Week-3 eval.\n- Fallback model: {id:'Xenova/bge-small-en-v1.5', dtype:'q8', pooling:'cls', normalize:true, dims:384}.\n- Query prefix for both: 'Represent this sentence for searching relevant passages: '. Documents get no prefix.\n- modelKey = id@rev:q8:d384:chunker-v1, stored on every chunk. A mismatch triggers a background re-index, and queries filter on the current modelKey.\n- env settings:\n  - allowRemoteModels=false, localModelPath='/models/'\n  - backends.onnx.wasm.wasmPaths='/ort/' (the default is the cdn.jsdelivr.net asyncify build of 26.9 MB; also measure the plain 14.3 MB CPU build)\n  - backends.onnx.wasm.numThreads = crossOriginIsolated ? 2 : 1\n  - useBrowserCache=true, useWasmCache=true\n- Load progress comes from Transformers.js progress_callback bytes and is shown truthfully in the Task Manager.\n\n3. BOOT (BOOT-10)\nManifests:\n- {name:'ai.runtime', requires:['kernel','mm','sched'], critical:false, weight:1, timeoutMs:4000, priority:32, safeMode:false}. start() only spawns the worker and registers the process (under 50 ms). The weights are fetched on the first of: desktop:interactive plus 2 s of requestIdleCallback idle, or the first semsearch.\n- {name:'ai.indexer', requires:['ai.runtime','vfs'], critical:false, weight:3, timeoutMs:4000, priority:32}.\n- {name:'ai.predictor', requires:['kernel','storage'], critical:false, weight:1, priority:32}. It has no weights; its count tables load from IndexedDB at boot in under 1 ms.\nSafe mode skips all AI services, and semsearch becomes keyword-only with a notice. Offline without cached weights gives a degraded badge (OFF-04) plus the BM25 fallback.\n\n4. SCHEDULING (RAG-01, RAG-02, PROC-05)\n- One quantum is one chunk inference: 180-700 ms measured, and not preemptible inside ORT. It runs off the main thread, so frames are unaffected.\n- The runtime keeps its own job heap (dsa/heap). Query embeds jump ahead of index jobs, so a query waits at most one in-flight chunk.\n- Throttle: if there was user input in the last 1 s, the duty cycle is 50% (sleep for as long as the last quantum took, via the timer heap). When idle, 100%.\n- Deadline-aware aging: a file pending for more than 15 s gains effective priority every second. The bound follows the PROC-04 aging proof.\n- RAG-02 budget: T = 1.5 s debounce + tokenize/chunk (24-86 ms measured for 50 KB) + N x t_chunk / duty + IndexedDB commit. With leaf on 2 threads, the worst case for 50 KB of code (46 chunks) under continuous typing is about 20 s.\n- Files over 2 MB, or with NUL bytes in the first 8 KB, are not embedded; only their name goes into BM25.\n\n5. CHUNKER (ai/indexer/chunker.ts, chunker-v1)\nTokenizer: the embedding model's own uncased BERT WordPiece tokenizer (30,522 tokens, same pinned tokenizer.json). Measured 4.6 bytes/token for prose and 3.3 bytes/token for JS.\nBlocks:\n- Markdown: ATX and setext headings start sections. Fenced code, tables and list items are atomic blocks. Paragraphs split on blank lines.\n- Code (.ts .js .py .c .h .java .go .rs .css .json): split at blank lines at brace or indent depth 0, and at declaration lines (function, class, def, fn, export).\n- Plain text: paragraphs.\nPacking: greedy per section.\n- Target 400 tokens, min 120 (a tiny tail merges into the previous chunk), max 480.\n- A block over 480 tokens is split at sentence boundaries (prose) or line boundaries (code).\n- Overlap: the trailing 40-80 tokens of whole sentences or lines from the previous chunk, inside the same section only.\n- Header: basename plus heading trail, e.g. 'memory.md > LRU > Eviction', at most 24 tokens. It is embedded but never shown in snippets.\n- Invariant: header + chunk + [CLS]/[SEP] <= 512.\nEach chunk record: {seq, byteStart, byteEnd, lineStart, lineEnd, text, contentHash = SHA-256(modelKey || header || text) via crypto.subtle}.\nIncremental updates:\n- Unchanged hashes reuse stored vectors. The Bloom filter is checked first, then the byHash index.\n- Rename or move: nothing to embed. Chunks are keyed by ino and the path is resolved at result time; only the BM25 name field is updated.\n- Unlink: tombstone by ino in the same IndexedDB transaction as the chunk metadata; compact when tombstones exceed 20%. On the server, ON DELETE CASCADE.\n- chmod or chown: nothing, because the filter reads the current mode.\n\n6. CLIENT QUERY (ai.semsearch, as the caller's uid)\n- a) q = embedQuery. Pilot p95: 7-70 ms.\n- b) permitted = kernel.readableSet(uid, indexedInos) as a Uint8Array. A file is readable if the uid has the r bit through the owner, group or other class (root bypasses) AND there is x on every ancestor for at least one link. Ancestor results are memoised per directory for the query.\n- c) Exact dot-product scan over permitted rows only, with a bounded min-heap for top-k. Pilot p95: 3.2 ms at 10k, 13.9 ms at 50k, 28.1 ms at 100k chunks.\n- d) Optional RRF (k=60) of vector top-50 and BM25 top-50. BM25 uses k1=1.2 and b=0.75; its lexical tokenizer is the Unicode \\p{L}\\p{N}_ word regex, lowercased, with camelCase and snake_case split.\n- e) Result = {path resolved now, lineStart-lineEnd citation, snippet of at most 240 chars, score}.\nFallback: if the model is unavailable, run BM25 only with the notice 'Semantic search unavailable - showing keyword matches'.\nBloom filter: m = 10 bits x expected n, k = 7 (about 0.8% false positives), double hashing from the SHA-256 bytes.\nPaging: vecseg pages sit in ai.runtime's page table (RESIDENT, LOCAL_SWAP or REMOTE_SWAP, with checksum). The remote tier re-pulls from file_chunks. The model is one declared page: evicting it releases the ORT session and page-in recreates it. Both are pinned while a search box is focused.\n\n7. SERVER DDL (migration with a down script: DROP TABLE file_chunks; DROP EXTENSION vector)\nCREATE EXTENSION IF NOT EXISTS vector;\nCREATE TABLE file_chunks (\n  chunk_id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,\n  ino bigint NOT NULL REFERENCES inodes(ino) ON DELETE CASCADE,\n  inode_version bigint NOT NULL,\n  seq int NOT NULL CHECK (seq >= 0),\n  byte_start int NOT NULL,\n  byte_end int NOT NULL CHECK (byte_end > byte_start),\n  line_start int NOT NULL,\n  line_end int NOT NULL,\n  text text NOT NULL,\n  content_hash bytea NOT NULL CHECK (octet_length(content_hash) = 32),\n  model_key text NOT NULL,\n  embedding vector(384) NOT NULL,\n  UNIQUE (ino, seq));\nCREATE INDEX ON file_chunks USING hash (content_hash);\nCREATE INDEX dentries_ino ON dentries (ino);  -- reverse lookup for the ancestor x check\nOnly after measuring: CREATE INDEX ON file_chunks USING hnsw (embedding vector_ip_ops) WITH (m=16, ef_construction=64).\nNo uid or mode is copied into file_chunks: a copy goes stale and leaks.\n\nIngest: the index.put op, idempotency key ino:inodeVersion:modelKey, in one transaction:\n- SELECT version FROM inodes WHERE ino=$1 FOR SHARE; if it differs, return 409 STALE and drop the op.\n- Verify each chunk's text equals blob[byteStart:byteEnd], its hash, the dimensions, and |norm - 1| < 1e-3.\n- DELETE FROM file_chunks WHERE ino=$1; INSERT the new chunks; COMMIT.\n\nServer search:\nSELECT ino, line_start, line_end, left(text,240) AS snippet, -(embedding <#> $1) AS score\nFROM file_chunks\nWHERE model_key=$3 AND can_read($2, ino)\nORDER BY embedding <#> $1 LIMIT 5;\ncan_read is a STABLE SQL function: r on the file plus x on the ancestors, walked bottom-up through dentries_ino. With an exact scan, the filter runs before ORDER BY/LIMIT. With HNSW: SET LOCAL hnsw.iterative_scan=relaxed_order and hnsw.ef_search=100.\n\n8. PREDICTOR (ai/predictor)\nTelemetry: a ring buffer (dsa/ringbuffer) of 4,096 events {ts, kind, app, prev, hourBucket 0-5, weekend, sessionPos}, persisted to a bounded IndexedDB store. Settings -> Privacy offers view, clear and export. Sync only after opt-in.\nModel:\n- Counts C2[(a-2,a-1)], C1[a-1], C0[hourBucket x weekend] and G (MFU), each a Map from app to count, with lazy exponential decay (half-life 14 days).\n- Witten-Bell weight: lambda = N/(N+T), where T is the number of distinct followers.\n- P = l2*P2 + (1-l2)*(l1*P1 + (1-l1)*(l0*P0 + (1-l0)*PG)).\n- Candidates exclude running apps. Top-3 in a single pass. Updates are O(1).\n- Cold start: fewer than 50 launches means time-bucketed MFU with confidence 0.\nPre-fetch fires when conf >= theta (tuned; starts at 0.4) AND idle >= 2 s AND free memory >= the app's declared bytes + 16 MB. The prefetch process does import() of the app chunk and pages in its last state as SPECULATIVE pages, which are evicted first and discarded after 5 minutes unused. Wasted bytes are counted.\npredict output: top-3 with confidence and a reason string.\nEval: at least 500 real launches, a chronological 70/30 split and a prequential curve, compared with MFU and MRU.\n\n9. SUB-MATRICES (1-5; weights fixed before scoring)\n(a) Model. Weights: quality 30, CPU latency 25, memory 20, context >=480 tokens 10, licence 10, maturity 5.\n- leaf q8: 4.70\n- arctic-xs q8: 4.10\n- bge-small q8: 3.75\n- arctic-s q8: 3.70\n- MiniLM-L6 (expected loser; truncates at 256): 3.15\n- nomic v1.5 q8: 3.05\n- EmbeddingGemma q4 (expected loser): 2.85\n- granite-small-r2: excluded, no ONNX\n(b) Store. Weights: current-permission filtering 25, atomic with VFS ops 20, offline 20, multi-user durability 15, latency 10, moving parts 10.\n- pgvector + own client index: 4.90\n- own client index only: 4.20\n- pgvector only: 4.10\n- sqlite-vec in SQLite-WASM: 3.55\n- Qdrant: 2.60\n- LanceDB: 2.20\n- Chroma (expected loser): 2.10\n(c) Predictor. Weights: accuracy vs baselines 35, latency and training cost 20, data efficiency 20, incremental 10, explainability 10, effort 5.\n- interpolated Markov-2: 4.40\n- Markov-1: 4.30\n- naive Bayes: 4.30\n- kNN: 3.55\n- logistic regression: 3.45\n- tiny NN (expected loser): 2.45\nThe spec's burden of proof breaks the tie in favour of Markov.\n\n10. CI TESTS\n- rag-leak: 3 users, modes 600/640/644, directories 700/711, group removal, chmod after indexing, symlink and hard link cases, 30 queries; 0 leaks allowed.\n- rag-consistency: RAG-02 timed test under a typing simulator.\n- vecindex: property test that top-k equals a sorted full scan; page-out and page-in are byte-identical.\n- Oracle: client top-k equals server exact top-k on the seeded corpus (ties broken by chunk_id).\n- Eval: Recall@5 and MRR with recorded embeddings keyed by modelKey and sha256(text); a nightly live drift check requires cosine >= 0.999.\n- Predictor: PRE-01 timing and PRE-02 against the baselines on seeded traces.",
+  "open_questions": [
+   "What is the exact lab workstation spec, published in Week 2 (CPU cores, GPU, OS, Chrome version)? It sets numThreads, decides whether a WebGPU path is worth building, and gives the real RAG-02 headroom.",
+   "Will the deployment decision serve COOP/COEP (cross-origin isolation)? It is needed for 2-thread WASM here and for measureUserAgentSpecificMemory in MEM-01. Every third-party subresource (fonts, images) then needs CORP/CORS or to be self-hosted.",
+   "Does the examiners' hidden RAG set include Urdu, Roman-Urdu or other non-English documents? The recommended models are English-only.",
+   "Should leaf vectors be stored at 768 or MRL-truncated to 384 or 256? The Week-3 eval decides. The default of 384 keeps parity with the bge-small fallback.",
+   "Will the team build the optional LLM answer (s12.2)? If so, it uses the server /search path and the LLM-gateway decision; retrieval itself does not depend on it.",
+   "Which ORM wins the database decision? drizzle-orm has a native vector column, so the pgvector npm helper would be unnecessary."
+  ]
+ },
+ "examiner_review": {
+  "verdict": "upheld_with_changes",
+  "factual_errors": [
+   {
+    "claim": "Evidence: 'Two threads: leaf 181 ms and 6.1 s; bge-small 319 ms and 10.5 s', citing 'results in wasm_results.jsonl'.",
+    "correction": "wasm_results.jsonl has only 1-thread and 4-thread rows. No 2-thread row exists, and the 4-thread rows, taken on a heavily loaded machine, show leaf and bge-small almost equal (228 vs 244 ms/chunk p50). I re-ran on the same Ryzen 5 7530U with load average about 1.5. At 2 threads: leaf 123 ms p50 / 152 ms p95, 5.9 s for 50 KB of code; bge-small 262 ms / 287 ms, 11.9 s. At 1 thread: leaf 210 ms and 9.8 s; bge 425 ms and 19.9 s. The direction holds (leaf is about 2x faster), but the committed evidence file does not support the numbers quoted and must be regenerated.",
+    "source": "scratchpad/embbench/wasm_results.jsonl; re-run of bench_wasm.mjs (DOC=code50k.txt, threads 1 and 2) on 2026-09-23"
+   },
+   {
+    "claim": "Memory: 'Weights are 23 MB and the ORT WASM binary is 14-27 MB ... It fits the 256 MB budget'. The pager 'releases the ORT session after 5 minutes idle' to reclaim memory.",
+    "correction": "I measured ORT WASM linear memory for leaf q8 directly by hooking WebAssembly.Memory. It is 36 MiB after the session is created, 83 MiB after one 512-token inference, and 397 MiB after a single 8x512 batch. It stayed at 397 MiB after session.release(), because WebAssembly memory never shrinks. bge-small: 103 MiB at batch 1 and 281 MiB at batch 8. Spec s9.2 names 'WebAssembly memory' as a large asset that must be declared. So the record understates the model page by about 3x. Releasing the session frees nothing; only worker.terminate() does.",
+    "source": "scratchpad/embbench/mem_probe3.mjs (Node 24, onnxruntime-web 1.31.0-dev.20260914); spec s9.2 'Memory accounting'"
+   },
+   {
+    "claim": "Config: backends.onnx.wasm.wasmPaths='/ort/' (string) together with useWasmCache=true 'caches the ORT WASM so apps work fully offline'.",
+    "correction": "In Transformers.js 4.3.0, ensureWasmLoaded() turns on the WASM cache only when wasmPaths is an object with both `wasm` and `mjs` keys. With a string prefix, useWasmCache is silently ignored and offline use depends only on the Service Worker or HTTP cache. Use {wasm:'/ort/ort-wasm-simd-threaded.asyncify.wasm', mjs:'/ort/ort-wasm-simd-threaded.asyncify.mjs'}.",
+    "source": "node_modules/@huggingface/transformers/dist/transformers.web.js 4.3.0, ensureWasmLoaded (around lines 8648-8700)"
+   },
+   {
+    "claim": "Risk mitigation: 'The rollback is 4.2.0' (to escape the onnxruntime-web dev pin).",
+    "correction": "Transformers.js 4.2.0 also pins a dev build (onnxruntime-web 1.26.0-dev.20260416) and pins onnxruntime-node 1.24.3. Rolling back therefore jumps five ORT minor versions and does not remove the dev-build risk. Every v4 release pins a dev ORT. A stable onnxruntime-web 1.30.0 was published on 2026-09-14. A pnpm override to that version, tested in CI, is the lighter rollback, though API compatibility with 4.3.0 is still unverified.",
+    "source": "https://registry.npmjs.org/@huggingface/transformers/4.2.0 ; https://registry.npmjs.org/onnxruntime-web (dist-tags latest 1.30.0)"
+   },
+   {
+    "claim": "'Also measure the plain 14.3 MB CPU build' (implied: it can be chosen through wasmPaths).",
+    "correction": "Transformers.js 4.3.0 imports 'onnxruntime-web/webgpu' and defaults to the .asyncify glue and binary (26.9 MB). It is not verified that the plain ort-wasm-simd-threaded.wasm and its .mjs work with the webgpu JS bundle; it probably needs a bundler alias to a WASM-only ORT entry. Plan and budget for 26.9 MB until a prototype proves otherwise.",
+    "source": "transformers.web.js 4.3.0 line 8492 (import from 'onnxruntime-web/webgpu') and lines 8731-8741"
+   },
+   {
+    "claim": "Constraint 3 / risk 1: single-thread WASM missed RAG-02 in the pilot ('31.5 s for 50 KB of code with one thread').",
+    "correction": "That figure was taken at load average 14-19. On a quiet machine, single-thread leaf indexes the same 50 KB code file in 9.8 s (210 ms/chunk p50, 231 ms p95). COOP/COEP is still worth having for a weak lab CPU, but the claim that RAG-02 fails without it is overstated. Present it as a range that depends on machine load.",
+    "source": "re-run of bench_wasm.mjs 1 leaf, code50k.txt, 2026-09-23"
+   },
+   {
+    "claim": "mdbr-leaf-ir has '96k downloads'.",
+    "correction": "96,240 is Hugging Face's downloads-last-month counter, not a lifetime total. Minor, but examiners reading the model card will see 'last month'.",
+    "source": "https://huggingface.co/api/models/MongoDB/mdbr-leaf-ir"
+   }
+  ],
+  "spec_gaps": [
+   "s9.2 memory accounting explicitly lists 'WebAssembly memory' as a declared large asset. The record declares only the 23 MB of weights. The measured ORT linear memory is 83 MiB at batch 1 and 397 MiB after an 8x512 batch, and it never shrinks. MEM-01/MEM-06 need batch size 1, the measured figure declared, and eviction by worker.terminate().",
+   "s2 (constraints table) says 'several tabs, devices and users can change the same data at the same time'. The record has no multi-tab design. Each tab would start its own ai.runtime and indexer, which means duplicated model memory (roughly 100 MiB per tab), duplicated index.put ops and IndexedDB write races. It needs leader election (navigator.locks) for ai.indexer.",
+   "s17 clean bring-up (at most 3 commands, done within 5 minutes, on a machine the team does not control): the seed must load PRECOMPUTED vectors. Embedding 10k chunks natively took about 10-15 min on our laptop CPU (onnxruntime-node leaf: 59 ms/chunk at 2 threads, 91 ms at 1), and 20 min to 2 h in client WASM. Model weights must also reach the image without a runtime HF Hub fetch. The record does not say how either happens.",
+   "RAG-05 under concurrent indexing: Transformers.js serialises all web inference through a single promise chain (webInferenceChain), so a query waits behind the in-flight index chunk. With one thread under load, chunk p95 reached 970 ms in the pilot, so retrieval p95 can pass 500 ms. The record's 'waits at most one in-flight chunk' is right but unbudgeted. The indexer must pause when a search UI gains focus, and RAG-05 must be measured with the indexer active.",
+   "s17 order: the 2x-memory-budget workload runs just before the hidden semantic query. If the model page was evicted, the first query pays for a worker re-spawn, WASM compile and session creation. MEM-05 (page-in p95 <= 300 ms local) and RAG-05 both apply. The record pins the model only while a search box is already focused. It should start page-in on focus, show BM25 results first, and measure this case.",
+   "s12.2 says 'A rename updates path metadata without re-embedding'. The chunker embeds a header containing the basename and includes it in contentHash. A rename therefore either forces a re-embed or leaves vectors that carry the old name. The design notes contradict themselves ('Rename or move: nothing to embed'). Fix: the header holds only the in-file heading trail.",
+   "RAG-03: GET /index/pull and POST /search are specified without per-requester authorisation. If pull returns chunk text for inodes the requester cannot read, that text lands in their browser storage, which counts as a leak even if never displayed. can_read must gate pull as well as search. Revocations also need to purge client caches on sync.",
+   "RAG-03: client chunk records are keyed [ino, seq] with no inode version or generation. If inode numbers are ever reused (for example client-allocated inos offline), stale chunks inherit the new file's permissions. Store inodeVersion (or guarantee inos are never reused) and check it at result time.",
+   "DB-05 / RAG-05 on the server path: can_read as a per-row STABLE function that walks ancestors over 10k+ rows is an unmeasured cost. Compute the readable set once per request (top-down recursive CTE pruning on x) and join, with EXPLAIN ANALYZE in DATABASE.md. With hnsw.iterative_scan=relaxed_order, pgvector's README requires a materialized CTE to restore strict order. The record omits this.",
+   "BOOT-10 / cold boot <= 3.0 s: the record does not keep /ort (26.9 MB) and /models (23-34 MB) out of the Service Worker precache. It also does not say that the worker must dynamically import Transformers.js (the 450 KB minified web build) rather than statically at start(). Either omission puts large assets on the first-visit boot path on a throttled network.",
+   "s12 trust boundary (least privilege, the invoking user's uid): the record does not say which uid the background indexer runs as when several users or a guest share one browser (a spec 'should'). It needs one indexer per logged-in session running as that uid.",
+   "PROC-05 (pool sized from navigator.hardwareConcurrency; p95 frame <= 16.7 ms under a CPU-bound load): ORT's pthreads (numThreads=2) are invisible to the kernel's worker pool. On a 4-core lab machine this oversubscribes the CPU during the frame-time test. The pool must reserve ORT's threads.",
+   "s12.6 says 'Every model call goes through your backend, with per-user rate limits.' The record does not explain why in-browser embedding is exempt: the clause sits under 'Keys stay on the server', and the same section allows browser runtimes. It also does not say how local CPU cost (CPU-ms per chunk) enters the cost report."
+  ],
+  "weaknesses": [
+   "Most other version, licence and pricing claims check out as of 2026-09-23. Verified: @huggingface/transformers 4.3.0 (2026-09-16, Apache-2.0, pins onnxruntime-web 1.31.0-dev.20260914 and onnxruntime-node 1.30.0); v4.0.0 stable 2026-03-30; pgvector 0.8.6 (2026-07-29), with HNSW-vacuum fixes in 0.8.3/0.8.4 and 0.8.7 unreleased; Docker tag pgvector/pgvector:0.8.6-pg18; Qdrant v1.19.1 and JS client 1.19.0; chromadb 3.5.0; @lancedb/lancedb 0.39.0; sqlite-vec 0.1.9; Ollama v0.34.3 as latest stable (v0.34.4 pre-release on 2026-09-23); pgvector npm 0.3.0; drizzle-orm latest 0.45.3; OpenAI 3-small $0.02 and 3-large $0.13 per 1M tokens; Gemini Embedding 2 $0.20 ($0.10 batch), with free-tier content used to improve products; Chrome WebGPU on Linux (Intel Gen12+ in 144, NVIDIA Wayland in 147); mdbr-leaf-ir revision 4262131b, Apache-2.0, 768-d via 2_Dense, query prompt, and BEIR table as vendor-reported; LEAF arXiv 2509.12539 v2 (2026-04-20); vstash arXiv 2604.15484; EmbeddingGemma 69.67, no fp16, Gemma licence. Tokenizers: leaf and bge-small share an identical 30,522-token uncased WordPiece vocabulary. The errors are in the pilot evidence, the memory model and the wasmPaths config, not in version facts.",
+   "The main-matrix weights look derived from the spec (four spec-critical criteria at 15, four at 10), not reverse-engineered. The O1-over-O5 margin (0.20), however, comes almost entirely from scoring O5 3 on 'CPU latency (RAG-02/RAG-05)' for re-embedding on new devices. Per-file RAG-02 and per-query RAG-05 latency are identical between O1 and O5. Scoring O5 at 4 makes it 4.20 vs 4.25.",
+   "Two O1 scores are generous. Memory should be 3, not 4, given 83-397 MiB of non-shrinking WASM memory (this applies to O5 too). Moving parts should be 2, not 3: an index.put op with blob-slice verification, hydration pull, server search, a can_read SQL function and a nightly poisoning job. Corrected: O1 4.05 vs O5 3.95, or O5 ahead at 4.10 if the re-embedding penalty is removed from CPU latency. The margin is fragile. The record should name the real separators explicitly: the s17 fresh-machine demo with a >=10k-chunk corpus, the s12.5 coupling-map entry 'Database: file_chunks with vector index', the s11 reference schema column file_chunks.embedding, and cascade inside the rm -r transaction.",
+   "Sub-matrix (a) gives maturity only 5% while choosing a one-year-old research model with vendor-reported BEIR numbers, which looks convenient. It is rescued by evidence the record under-uses: leaf is measurably about 2x faster than bge-small on WASM (fused MultiHeadAttention in its ONNX) with the same vocabulary and prefix. Lead with the measured speed, not the vendor BEIR number.",
+   "All pilot numbers come from onnxruntime-web WASM running in Node on a heavily loaded laptop (load average 14-19), not Chrome on the lab workstation. Ranges such as 181-724 ms/chunk mix load noise with real differences. The quiet re-run is much tighter.",
+   "The vector-poisoning defence (a nightly 1% re-embed in Node) is extra machinery for little gain. A user who can write a file can already change its text to rank higher. Accepting index.put only from uids with write permission, plus text/hash/norm checks, covers it.",
+   "Ingest takes SELECT ... FOR SHARE on the inode and then verifies chunk text against the blob in object storage inside the same transaction. That holds a row lock across object-storage I/O and blocks the user's own writes and rm -r. Verify first, then re-check the version optimistically inside a short transaction.",
+   "Constraint 3 frames WebGPU availability as Linux-specific. The lab OS is unknown until Week 2, and many university labs run Windows, where Chrome has enabled WebGPU by default since version 113. The bake-off should treat WebGPU as a probable path to measure, not an afterthought, while keeping WASM as the baseline.",
+   "Two expected losers (O3, O4) plus a genuine runner-up satisfy the >=3-options rule. However, 'O1 hybrid' is compared against no leaner hybrid, for example O5 plus a static precomputed seed index, which would answer the fresh-machine argument without a sync protocol. Name it as the reversal fallback."
+  ],
+  "amended_recommendation": "Choose O1, the local-first hybrid, with the corrections below.\n\n**Scores and the real reason O1 wins**\n- As first scored, O1 was 4.25 and O5 4.05.\n- After correcting the memory evidence (O1 and O5 memory 4 \u2192 3) and O1's moving-parts score (3 \u2192 2), it is 4.05 against 3.95.\n- If the re-embedding penalty is removed from 'CPU latency', O5 edges ahead (4.10 against 4.05).\n- The decision therefore rests on three reasons from the spec, and STACK_DECISION.md must state them instead of folding them into CPU latency:\n  1. s17: the final defence runs on a machine the team does not control. A fresh browser must search a \u226510,000-chunk corpus (RAG-05) without re-embedding it. At the measured 123-650 ms per chunk on client WASM, re-embedding takes 20 minutes to 2 hours.\n  2. The s12.5 coupling map lists 'Database: file_chunks with vector index' for RAG, and the s11 reference schema defines file_chunks.embedding.\n  3. Vectors are deleted by cascade inside the same Postgres transaction as rm -r (DB-02).\n- A sensitivity table showing this margin goes in the record.\n\n**(a) Embedding model and runtime**\n- **Model:** MongoDB/mdbr-leaf-ir at revision 4262131b, q8 ONNX (23 MB, Apache-2.0).\n  - Its 768-d unit output is MRL-truncated to 384 and renormalised. The Week-3 eval confirms 384 against 768.\n  - It is chosen on measured speed, not on the vendor's BEIR number. On the same CPU it is 2.0-2.1x faster than bge-small on WASM: 123 vs 262 ms per chunk at 2 threads, 210 vs 425 ms at 1 thread, and 5.9 s vs 11.9 s for 50 KB of code.\n  - Its uncased WordPiece vocabulary (30,522 tokens) is identical to bge-small's, and it uses the same query prefix.\n- **Fallback:** Xenova/bge-small-en-v1.5 q8 (MIT), pinned. The switch rule is unchanged: switch if leaf's Recall@5 is below 0.80 or more than 0.03 below bge-small's.\n- **Runtime:** @huggingface/transformers 4.3.0 on the WASM backend.\n  - numThreads = crossOriginIsolated ? 2 : 1.\n  - Batch size is always 1 and input is at most 512 tokens. One 8x512 batch grew ORT's WASM memory to 397 MiB, and it never shrinks.\n  - WebGPU is used only where the lab machine exposes it and our check across backends passes (cosine \u22650.999).\n- **Two workers:**\n  - ai.embed holds only the ORT session and tokenizer. It is the evictable 'model page'.\n  - ai.search holds VecIndex, BM25, the Bloom filter and chunk metadata.\n  - Evicting the model means worker.terminate() on ai.embed. session.release() does not return WebAssembly memory.\n  - Page-in re-spawns ai.embed. It is triggered early, when a search UI gains focus or on the first semsearch keystroke, and BM25 results render while it loads.\n- **Memory accounting:** declare ai.embed's measured WASM linear memory plus its compiled code, not just the weights. The Node pilot measured 36 MiB after load and 83 MiB after one 512-token run; re-measure in Chrome with performance.measureUserAgentSpecificMemory() and report the error of the model. Budget about 100 MiB for a resident ai.embed and 14.6 MB per 10k chunks for ai.search.\n- **Self-hosting:**\n  - Set env.allowRemoteModels=false and localModelPath='/models/'.\n  - Set wasmPaths as an OBJECT: {wasm:'/ort/ort-wasm-simd-threaded.asyncify.wasm', mjs:'/ort/ort-wasm-simd-threaded.asyncify.mjs'}. useWasmCache is ignored when wasmPaths is a string prefix.\n  - Set useBrowserCache=true and useWasmCache=true.\n  - Budget 26.9 MB for the asyncify WASM unless the prototype proves the 14.3 MB plain build works.\n- **Boot (BOOT-10):**\n  - The worker entry dynamically imports Transformers.js only when loading starts.\n  - /models and /ort are excluded from the Service Worker precache and cached at runtime after desktop:interactive plus idle.\n  - Weights and WASM are fetched on the first of: interactive plus 2 s idle, a search focus, or the first semsearch.\n- **Multi-tab:** navigator.locks elects one leader per origin for 'ai.indexer'. Only the leader indexes and emits index.put. Other tabs load ai.embed lazily for query embedding only, or forward queries to the leader over BroadcastChannel when memory is tight.\n- **CPU accounting:** ORT's threads count against the kernel's worker pool (pool = hardwareConcurrency \u2212 1 \u2212 ortThreads).\n\n**(b) Vector store: two layers**\n- **Client:** our own exact index.\n  - Float32Array segments of 1,024 rows, which are pages the pager manages.\n  - The kernel builds a readable-ino set from the current tree: r on the file and x on every ancestor, for at least one link. It is built before ranking, and dsa/heap gives the top-k.\n  - Measured at 2.0-3.2 ms p95 for 10k chunks.\n  - Chunk records carry inodeVersion, and a result is dropped unless the current inode matches (or the VFS guarantees inos are never reused).\n  - The chunk header is the in-file heading trail only, with no file name. A rename or move therefore needs no re-embedding (s12.2), and the name lives in BM25's name field.\n- **Server:** file_chunks in the existing Postgres.\n  - pgvector 0.8.6 in the image pgvector/pgvector:0.8.6-pg18. Mount the volume at /var/lib/postgresql, because PG18 images moved PGDATA to /var/lib/postgresql/18/docker.\n  - vector(384), FK to inodes ON DELETE CASCADE, an inode_version column, and no owner or mode copied: they are held by reference and joined at query time.\n- **Ingest (index.put, idempotency key ino:inodeVersion:modelKey):**\n  - Accepted only from a uid with write permission on the file.\n  - Before the transaction, verify that each chunk's text equals the blob slice, its hash, the dimensions and a unit norm.\n  - Then, in one short transaction, re-check the inode version (409 STALE if it differs), delete the file's old chunks and insert the new ones.\n  - The nightly re-embed sample is optional.\n- **Pull and search:** GET /index/pull and POST /search compute the requester's readable-ino set once per request, with a top-down recursive CTE that prunes on x, and join it. Do not use a per-row ancestor walk. EXPLAIN ANALYZE plans go in DATABASE.md.\n- **Seed and bring-up:**\n  - The seed script loads PRECOMPUTED vectors: committed fixtures keyed by modelKey and sha256(text), the same ones CI uses as recorded embeddings. A clean bring-up is then searchable at \u226510k chunks within 5 minutes.\n  - Model weights are baked into the published image or fetched by a sha256-pinned script, never from the HF Hub at run time.\n- **Server search mode:** exact scan until our benchmark shows HNSW is needed. HNSW would use m=16 and ef_construction=64, with SET LOCAL hnsw.iterative_scan=relaxed_order and ef_search=100, plus a materialized CTE to restore strict order.\n- **Keyword fallback:** our own BM25 (RAG-06). Hybrid RRF ships only if it raises Recall@5. Our own Bloom filter over content hashes skips redundant embeddings.\n\n**(c) Predictor (unchanged)**\n- A hand-written, Witten-Bell interpolated 2nd-order Markov chain.\n- It backs off to 1st order, then to MFU by time bucket, then to global MFU.\n- It runs in its own tiny worker with a telemetry ring buffer (dsa/ringbuffer).\n- It uses MFU until there are 50 launches.\n- Categorical naive Bayes is the challenger and ships only if it beats Markov's top-3 by at least 2 points on the chronological held-out split.\n\n**Scheduling**\n- ai.indexer is a process at priority 32, nice +10, visible in ps.\n- It is throttled to a 50% duty cycle while the user is active, with deadline-aware aging after 15 s.\n- It is PAUSED while a search UI is focused or a semsearch is running. Transformers.js serialises all inference, so otherwise a query waits behind the chunk being embedded.\n- RAG-05 is benchmarked three ways: warm, with the indexer active, and as the first query after the model page has been evicted.\n\n**Chunking (unchanged, except the header)**\n- Heading-aware chunks of 400 tokens (min 120, max 480), with 40-80 tokens of overlap inside a section only.\n- Each chunk carries a header of at most 24 tokens, made of the heading trail only.\n\n**Consequences for other decisions**\n- **Deployment:**\n  - COOP: same-origin and COEP (require-corp, or credentialless in Chrome) are sent on every document and worker script.\n  - This includes the Vite dev and preview servers, the Playwright e2e server and any response the Service Worker synthesises.\n  - Auth avoids OAuth popups.\n  - The same headers enable measureUserAgentSpecificMemory for MEM-01.\n- **Versions:**\n  - Exact versions are locked in pnpm-lock and frozen after Week 4.\n  - The rollback for an ORT regression is a pnpm override to the stable onnxruntime-web 1.30.0, tested in CI. It is not Transformers.js 4.2.0, which pins onnxruntime-web 1.26.0-dev and onnxruntime-node 1.24.3.\n\n**Reversal triggers**\n- The original triggers 1 to 6 stand.\n- 7. ai.embed's resident memory in Chrome exceeds 120 MiB at batch 1: use 256-token chunks, or keep only query embedding on the client and move bulk indexing to the server.\n- 8. First-query-after-eviction p95 exceeds 2 s: keep the model pinned while the Files window or Terminal is focused.\n- 9. The index.put sync work threatens the Phase 4 gate: fall back to O5 plus a static, versioned precomputed seed index.\n\n**Evidence status**\n- Regenerate the pilot evidence: wasm_results.jsonl contains no 2-thread rows.\n- Re-run the bake-off in Chrome on the Week-2 lab workstation, and commit the raw CSVs.",
+  "amended_chat_reason": "I'm keeping the recommendation, with fixes. Run the small 23 MB mdbr-leaf-ir model (bge-small as a pinned backup) in a Web Worker, loaded only after the desktop is up. Search your own hand-written index in the browser, which checks the user's current permissions first (about 2-3 ms for 10,000 chunks). Keep an authoritative copy of the vectors in your existing Postgres via pgvector, so deletes are atomic and a fresh machine, such as the examiner's on demo day, doesn't have to re-embed everything. The predictor stays a hand-written Markov chain that falls back to most-frequently-used.\n\nFive corrections came out of re-running the pilot:\n- **Memory:** the model's WebAssembly memory is really 83 MiB+, not 23 MB, and it never shrinks. Run one input at a time and evict the model by terminating its worker.\n- **Offline caching:** the WASM file only gets cached if `wasmPaths` is given as an object; with a plain string the cache setting is silently ignored.\n- **Demo seed:** load precomputed vectors so a clean bring-up can search a \u226510,000-chunk corpus within 5 minutes.\n- **Multiple tabs:** only one tab should run the indexer.\n- **Search while indexing:** pause indexing while a search box is focused so search stays under 500 ms.\n\nThe lead over the client-only option is small. It rests on the fresh-machine demo and on the spec's own `file_chunks` design, so say that openly in the record.",
+  "defence_qa": [
+   {
+    "question": "You say the model is 23 MB. What does it really cost against the 256 MB MEM-01 budget, and how does your pager evict it?",
+    "strong_answer": "The weights are 23 MB, but spec s9.2 tells us to count WebAssembly memory. We measured ORT's linear memory directly: 36 MiB after load, 83 MiB after one 512-token inference, and 397 MiB if we ever batch 8x512. It never shrinks, even after session.release(). So we always run batch size 1 and declare the measured Chrome figure (measureUserAgentSpecificMemory, report error X%) as one page. The model sits alone in the ai.embed worker, so eviction is worker.terminate(), which really frees the memory. The index lives in a separate ai.search worker, so it survives. Page-in re-spawns the worker, takes N ms (measured), and starts as soon as a search box gains focus. BM25 results show while it loads."
+   },
+   {
+    "question": "The spec's vector store is {chunk, ino, offset, vector, hash, owner, mode}. Your file_chunks table has no owner or mode. Why?",
+    "strong_answer": "We store owner and mode by reference, not by copy. file_chunks has an FK to inodes, and the query joins the readable-ino set computed from the CURRENT inodes and dentries: r on the file and x on every ancestor. A copied mode goes stale the moment someone runs chmod or removes a user from a group, and that stale window is exactly the leak RAG-03 forbids. Our leak suite runs chmod 600 after indexing, removes x from an ancestor and removes a group member, and requires zero leaks. The same filter runs before ranking on the client, so the text of an unreadable file is never scored."
+   },
+   {
+    "question": "Keeping vectors in both the browser and Postgres is two copies. Why not the client-only option, which is simpler?",
+    "strong_answer": "Honestly, the margin is small, and our sensitivity table shows it. Three spec facts decide it. First, s17: the final defence runs on a machine we don't control. RAG-05 needs at least 10,000 chunks, and re-embedding them in a fresh browser takes 20 minutes to 2 hours at our measured 123-650 ms per chunk, so client-only cannot demo. Second, the s12.5 coupling map lists 'Database: file_chunks with vector index' for RAG. Third, cascade inside the rm -r transaction gives DB-enforced integrity with no orphans. The client copy is a cache that is always filtered by the current tree. The server copy is authoritative. If the sync work threatens Phase 4, our reversal trigger drops to client-only plus a static precomputed seed index."
+   },
+   {
+    "question": "ORT inference can't be interrupted. How do you guarantee RAG-05's p95 of 500 ms while the indexer is busy?",
+    "strong_answer": "Transformers.js runs all inference in a worker one call at a time, so a query can wait behind one chunk: 152 ms p95 at 2 threads, and up to about 1 s on one loaded thread. Three things prevent that. The indexer is paused as soon as a search UI gains focus or a semsearch starts. Chunks are capped at 480 tokens, or 256 as a fallback. And our RAG-05 benchmark is reported with the indexer active and as the first query after model eviction, not only warm. The main thread is never involved, so frame time is unaffected either way."
+   },
+   {
+    "question": "Section 12.6 says 'every model call goes through your backend with per-user rate limits'. Your embeddings run in the browser. Isn't that a violation?",
+    "strong_answer": "That sentence sits under 'Keys stay on the server'. Its purpose is to keep API keys out of the bundle. The same section says local models 'in the browser through WebAssembly or WebGPU runtimes' are acceptable. Our local embedder has no keys and no per-request cost. Every hosted LLM call the agent makes does go through our gateway with per-user rate limits, token and cost logging, and a budget cap. The cost report still includes the local model's CPU-ms per chunk and the first-run download size, so the trade-off is visible."
+   },
+   {
+    "question": "Why a one-year-old research model (mdbr-leaf-ir) over the widely used bge-small?",
+    "strong_answer": "Our own measurements decided it, not the vendor's BEIR table. On the same CPU, in WASM, leaf is 2.0-2.1x faster: 123 vs 262 ms per chunk at 2 threads and 210 vs 425 ms at 1 thread. That is because its ONNX export uses fused MultiHeadAttention, which we confirmed with an operator count. RAG-02 on a modest lab machine is our tightest numeric gate. Both models share an identical 30,522-token uncased WordPiece vocabulary and the same query prefix. bge-small is pinned behind the same Embedder interface, so switching is a config change plus a background re-index. We switch automatically if leaf's Recall@5 on our set is below 0.80 or more than 0.03 below bge-small's."
+   }
+  ],
+  "extra_risks": [
+   {
+    "risk": "Multi-tab: each tab boots its own ai.runtime and indexer. That doubles model memory (about 100 MiB per tab), produces duplicate index.put ops and races on IndexedDB writes to the shared origin stores.",
+    "mitigation": "Elect a leader with navigator.locks.request('ai.indexer'). Only the leader indexes and emits index.put. Follower tabs load ai.embed lazily for query embedding only, or forward queries over BroadcastChannel. The e2e test opens two tabs and asserts one indexer process and no duplicate ops."
+   },
+   {
+    "risk": "WebAssembly memory never shrinks. A single accidental batched call (8x512 measured at 397 MiB) permanently breaks MEM-06 for that worker.",
+    "mitigation": "Enforce batch=1 and max_length=512 in the Embedder, with a unit test. Evict only via worker.terminate() of a dedicated ai.embed worker. The Task Manager shows ai.embed's measured memory."
+   },
+   {
+    "risk": "Clean bring-up (s17): an empty database after a fresh clone means no searchable corpus. Embedding 10k chunks at bring-up takes about 10-15 min natively, far over the 5-minute window. Fetching weights from the HF Hub during the build adds a third-party dependency on the examiner's network.",
+    "mitigation": "The seed loads committed precomputed vectors, keyed by modelKey and sha256(text) and shared with the CI fixtures. The weights and ORT WASM are baked into the published image, or fetched by a sha256-pinned script with a mirror. CI times a clean bring-up."
+   },
+   {
+    "risk": "The Service Worker precache pulls /ort (26.9 MB) and /models (23-34 MB) during the first visit's cold boot. On a throttled network this breaks BOOT-10 and the 3 s cold-boot target, and makes the truthful progress bar crawl.",
+    "mitigation": "Exclude AI assets from the precache manifest. Cache them at runtime only after desktop:interactive plus idle. The worker imports Transformers.js dynamically. A Lighthouse or Playwright throttled cold-boot test asserts no /ort or /models requests before interactive."
+   },
+   {
+    "risk": "Cross-origin isolation side effects. COEP blocks any cross-origin subresource without CORP (fonts, avatars, CDN scripts). COOP same-origin severs window.opener and breaks OAuth popups. The Vite dev server, Playwright and SW-synthesised responses must also carry the headers, or crossOriginIsolated is silently false and ORT drops to 1 thread.",
+    "mitigation": "Self-host every asset, or use COEP: credentialless. Use redirect-based auth. Set the headers in the Vite server/preview config, the reverse proxy and the SW response wrapper. A boot self-test logs crossOriginIsolated and the ORT thread count in bootlog --verbose."
+   },
+   {
+    "risk": "PostgreSQL 18 Docker images moved PGDATA to /var/lib/postgresql/18/docker and the VOLUME to /var/lib/postgresql. Compose files copied from older guides that mount /var/lib/postgresql/data lose data or fail on restart.",
+    "mitigation": "Mount the named volume at /var/lib/postgresql. Include a restart-persistence check in the bring-up smoke test and document it in the backup-and-restore procedure."
+   },
+   {
+    "risk": "Stale client chunks after ino reuse, or offline revocation. A recycled ino inherits the new file's permissions, and an offline device keeps text it could read at the last sync.",
+    "mitigation": "Store inodeVersion (or inode generation) on every chunk and check it at result time, or guarantee inos are never reused. Apply revocations first on reconnect and purge the affected chunks. Document the offline-cache caveat in SECURITY.md, since it matches the VFS's own offline file cache."
+   },
+   {
+    "risk": "On a 4-core lab machine, ORT's pthreads plus the kernel's worker pool oversubscribe the CPU during the PROC-05 test (a CPU-bound process while dragging 10 windows).",
+    "mitigation": "Size the pool as hardwareConcurrency \u2212 1 \u2212 ortThreads. Pause or duty-cycle the indexer while the user is active. The bake-off measures frame p95 with the indexer running."
+   },
+   {
+    "risk": "The ORT dev-build pin cannot be avoided: every Transformers.js v4 release pins a dev ORT, and rolling back to 4.2.0 jumps to onnxruntime-web 1.26.0-dev.",
+    "mitigation": "Keep exact lockfile pins. Run a CI smoke test (10 fixture chunks, cosine \u22650.999 against recorded vectors). Pre-test a pnpm.overrides entry to stable onnxruntime-web 1.30.0 as the documented rollback."
+   }
+  ]
+ }
+}

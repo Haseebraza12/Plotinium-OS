@@ -1,0 +1,34 @@
+{
+  "name": "@plotinium/kernel",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Kernel worker: process table, scheduler, executors, watchdog, syscall dispatcher and IPC, memory manager, LRU pager, swap.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./sys": "./src/runtime/sys.ts",
+    "./hooks": "./src/core/hooks/index.ts",
+    "./host/main": "./src/host/main.ts",
+    "./host/worker": "./src/host/worker.ts",
+    "./host/loopback": "./src/host/loopback.ts",
+    "./runtime/executor-entry": "./src/runtime/executor-entry.ts",
+    "./programs": "./src/core/programs/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run --root .. --project kernel"
+  },
+  "dependencies": {
+    "@plotinium/dsa": "workspace:*",
+    "@plotinium/protocol": "workspace:*",
+    "@plotinium/services": "workspace:*",
+    "@plotinium/vfs": "workspace:*",
+    "valibot": "catalog:"
+  },
+  "sideEffects": [
+    "./src/host/worker.ts",
+    "./src/runtime/executor.worker.ts",
+    "./src/blkio/blkio.worker.ts"
+  ]
+}

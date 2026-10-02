@@ -1,0 +1,33 @@
+"""Compare average waiting time of SJF (non-preemptive) and round robin on random workloads."""
+import random
+
+
+def sjf(bursts):
+    t = wait = 0
+    for b in sorted(bursts):
+        wait += t
+        t += b
+    return wait / len(bursts)
+
+
+def rr(bursts, q):
+    remaining = list(bursts)
+    t, finish = 0, [0] * len(bursts)
+    while any(remaining):
+        for i, r in enumerate(remaining):
+            if r:
+                run = min(q, r)
+                t += run
+                remaining[i] -= run
+                if remaining[i] == 0:
+                    finish[i] = t
+    return sum(f - b for f, b in zip(finish, bursts)) / len(bursts)
+
+
+if __name__ == "__main__":
+    random.seed(4)
+    jobs = [random.randint(1, 30) for _ in range(10)]
+    print("bursts", jobs)
+    print("SJF", sjf(jobs))
+    for q in (1, 4, 10, 100):
+        print(f"RR q={q}", rr(jobs, q))

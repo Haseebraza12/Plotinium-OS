@@ -1,0 +1,13 @@
+# Monitors
+
+A monitor bundles shared data, the procedures that operate on it and an implicit lock: at most one thread is active inside at a time. Condition variables inside the monitor let threads wait.
+
+**Hoare semantics:** `signal` hands the monitor to the woken thread immediately; the signaller waits. The condition is guaranteed true when the waiter resumes.
+
+**Mesa semantics:** the signaller keeps running; the woken thread re-acquires the lock later and must re-check the condition (hence `while`). Almost every real system uses Mesa because it's simpler and lets `broadcast` exist.
+
+Java: every object is a monitor; `synchronized` methods plus `wait()`, `notify()`, `notifyAll()`.
+
+Go has no monitors but "don't communicate by sharing memory; share memory by communicating" with channels.
+
+Exam: be able to write a bounded buffer as a monitor with `notFull` and `notEmpty`.

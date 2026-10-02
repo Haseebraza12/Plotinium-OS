@@ -1,0 +1,13 @@
+# Reading notes: retrieval-augmented generation
+
+Lewis et al., 2020: combine a retriever with a generator; the generator conditions on retrieved passages, which reduces hallucination and lets knowledge be updated without retraining.
+
+Pipeline in practice:
+1. split documents into chunks (a few hundred tokens, overlapping, respecting headings);
+2. embed chunks, store vectors with metadata (file, line range, content hash);
+3. at query time embed the question, take the top-k chunks, optionally rerank;
+4. put the chunks into the prompt with instructions to cite them.
+
+Failure modes: chunk boundaries that cut an answer in half, stale index after edits, retrieving text the user isn't allowed to see (permission filtering must happen before ranking, not after), and the model citing passages that don't say what it claims.
+
+For the capstone the retrieval part is mandatory; generating an answer is optional and the first thing to cut.

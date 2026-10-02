@@ -1,0 +1,36 @@
+.frames {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+  gap: var(--pl-space-4);
+}
+.frame {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 16 / 10;
+  border-radius: var(--pl-radius-lg);
+  background: var(--pl-bg);
+  box-shadow:
+    var(--pl-shadow-1),
+    inset 0 0 0 var(--pl-hairline-width) var(--pl-hairline);
+  contain: layout paint;
+}
+.inner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1280px;
+  height: 800px;
+  transform-origin: 0 0;
+  transform: scale(var(--frame-scale, 0.4));
+}
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--pl-space-2);
+}
+.intent {
+  color: var(--pl-text-muted);
+  font: var(--pl-type-caption);
+  font-family: var(--pl-font-mono);
+}

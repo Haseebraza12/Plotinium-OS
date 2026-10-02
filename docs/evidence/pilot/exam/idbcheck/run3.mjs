@@ -1,0 +1,15 @@
+import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path';
+import { chromium } from 'playwright-core';
+const root = process.cwd(); const types = { '.html': 'text/html', '.mjs': 'text/javascript', '.js': 'text/javascript' };
+const srv = http.createServer((q, s) => { const p = path.join(root, decodeURIComponent(new URL(q.url, 'http://x').pathname)); fs.readFile(p, (e, d) => { if (e) { s.writeHead(404); return s.end(); } s.writeHead(200, { 'Content-Type': types[path.extname(p)] || 'application/octet-stream' }); s.end(d); }); });
+await new Promise((r) => srv.listen(0, r)); const port = srv.address().port;
+const udd = fs.mkdtempSync('/tmp/claude-1000/-home-haseeb-raza-Desktop-Plotinium-OS/6bdb43c3-e62e-4f77-88ef-40bcd9948f85/scratchpad/exam/idbcheck/prof-');
+const ctx = await chromium.launchPersistentContext(udd, { executablePath: '/usr/bin/google-chrome', headless: true, args: (process.env.FEAT ? ['--enable-features=' + process.env.FEAT] : []) });
+const page = await ctx.newPage(); page.on('console', (m) => console.error('console:', m.text()));
+await page.goto(`http://localhost:${port}/index.html`);
+await page.waitForFunction(() => window.__result, null, { timeout: 600000, polling: 500 });
+const r = await page.evaluate(() => ({ res: window.__result, persistMain: window.__persistType, ua: navigator.userAgent }));
+await ctx.close(); srv.close();
+const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name).replace(udd, '')]);
+r.idbFiles = walk(udd).filter((f) => /IndexedDB|indexeddb/i.test(f)).slice(0, 20);
+console.log(JSON.stringify(r, null, 1));

@@ -1,0 +1,56 @@
+/*
+ * Small pieces shared by the overlays: the visually hidden text for live regions and spoken
+ * values, and the one-shot "answer this first" nudge. The nudge moves transform only; two
+ * identical keyframes let a repeat restart the animation by flipping data-nudge.
+ */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@keyframes nudgeA {
+  0%,
+  100% {
+    transform: none;
+  }
+  25% {
+    transform: translateX(6px);
+  }
+  55% {
+    transform: translateX(-4px);
+  }
+  80% {
+    transform: translateX(2px);
+  }
+}
+@keyframes nudgeB {
+  0%,
+  100% {
+    transform: none;
+  }
+  25% {
+    transform: translateX(6px);
+  }
+  55% {
+    transform: translateX(-4px);
+  }
+  80% {
+    transform: translateX(2px);
+  }
+}
+.nudge[data-nudge='a'] {
+  animation: nudgeA calc(240ms * var(--pl-k)) var(--pl-ease-spring) 1;
+}
+.nudge[data-nudge='b'] {
+  animation: nudgeB calc(240ms * var(--pl-k)) var(--pl-ease-spring) 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nudge[data-nudge] {
+    animation: none;
+  }
+}

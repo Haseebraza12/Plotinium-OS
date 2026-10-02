@@ -1,0 +1,27 @@
+/* Count page faults for LRU with a given number of frames, using a timestamp per frame.
+ * O(frames) per reference; good enough for the homework strings. */
+#include <stdio.h>
+
+int lru_faults(const int *refs, int n, int frames) {
+    int page[16], stamp[16], used = 0, faults = 0;
+    for (int t = 0; t < n; t++) {
+        int hit = -1;
+        for (int f = 0; f < used; f++)
+            if (page[f] == refs[t]) { hit = f; break; }
+        if (hit >= 0) { stamp[hit] = t; continue; }
+        faults++;
+        if (used < frames) { page[used] = refs[t]; stamp[used++] = t; continue; }
+        int victim = 0;
+        for (int f = 1; f < used; f++)
+            if (stamp[f] < stamp[victim]) victim = f;
+        page[victim] = refs[t];
+        stamp[victim] = t;
+    }
+    return faults;
+}
+
+int main(void) {
+    int s[] = {7, 0, 1, 2, 0, 3, 0, 4, 2, 3, 0, 3, 2};
+    printf("LRU, 3 frames: %d faults\n", lru_faults(s, 13, 3)); /* 9 */
+    return 0;
+}

@@ -1,0 +1,14 @@
+/** Human-readable sizes for the Files app and `ls -h`: 1536 -> "1.5 KiB". */
+const UNITS = ['B', 'KiB', 'MiB', 'GiB', 'TiB'] as const;
+
+export function formatBytes(bytes: number, digits = 1): string {
+  if (!Number.isFinite(bytes) || bytes < 0) return '—';
+  let value = bytes;
+  let unit = 0;
+  while (value >= 1024 && unit < UNITS.length - 1) {
+    value /= 1024;
+    unit++;
+  }
+  const text = unit === 0 ? String(value) : value.toFixed(digits).replace(/\.0+$/, '');
+  return `${text} ${UNITS[unit]}`;
+}

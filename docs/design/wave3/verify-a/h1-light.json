@@ -1,0 +1,43 @@
+[
+  {
+    "id": "UI-080 four identical notifications in 1 s give one banner with a count",
+    "ok": true,
+    "detail": ["Information from Files:Copied 3 items×4nowjust now, 4 times, unreadto ~/Projects"]
+  },
+  {
+    "id": "UI-080 at most one banner per source per 2 s",
+    "ok": true,
+    "detail": ["Information from Files:Copied 3 items×4nowjust now, 4 times, unreadto ~/Projects"]
+  },
+  {
+    "id": "UI-024 banners hand off when Control Centre opens",
+    "ok": true,
+    "detail": 0
+  },
+  {
+    "id": "UI-079 \"+N from Files\" is clickable (hit test) and expands the group",
+    "ok": true,
+    "detail": {
+      "hit": "+4 from Files",
+      "before": 4,
+      "after": 8
+    }
+  },
+  {
+    "id": "UI-082 Escape on a card never deletes it",
+    "ok": false,
+    "detail": {
+      "n0": 8,
+      "n1": 4,
+      "ccOpen": 0
+    }
+  },
+  {
+    "id": "UI-082 Delete removes the card and focus moves to the next card",
+    "ok": false,
+    "detail": {
+      "n": 4,
+      "focus": "ARTICLE Information from Files:Upload 2 donenowjust now"
+    }
+  }
+]

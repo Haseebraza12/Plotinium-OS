@@ -1,0 +1,77 @@
+{
+ "files_changed": [
+  "apps/coreutils/index.ts",
+  "apps/coreutils/README.md",
+  "apps/coreutils/scripts/gen-argspec.mjs",
+  "apps/coreutils/cmd/*.ts (46 new programs: ai bootlog cat chmod chown cp debug df du echo find free fsck grep help id kill ln ls lsof man mkdir mv nice pmap predict ps pwd quota reboot renice rm rmdir semsearch shutdown stat su svcctl swapctl top touch tree uname uptime vmstat whoami)",
+  "apps/coreutils/lib/command.ts (new)",
+  "apps/coreutils/lib/io.ts (new)",
+  "apps/coreutils/lib/fs.ts (new)",
+  "apps/coreutils/lib/procs.ts (new)",
+  "apps/coreutils/lib/mem.ts (new)",
+  "apps/coreutils/lib/mode.ts (new)",
+  "apps/coreutils/lib/markdown.ts (new)",
+  "apps/coreutils/lib/signals.ts (new)",
+  "apps/coreutils/lib/users.ts (new)",
+  "apps/coreutils/lib/uuid.ts (new)",
+  "apps/coreutils/lib/exec.ts (new)",
+  "apps/coreutils/lib/ai.ts (new)",
+  "apps/coreutils/lib/argspec.ts (kept from the earlier run; added optional FlagSpec.desc)",
+  "apps/coreutils/lib/argspec.gen.ts (regenerated, now includes flag descriptions)",
+  "apps/coreutils/lib/errors.ts (kept; added reasonOf and the ' \u2014 restored' suffix)",
+  "apps/coreutils/lib/format.ts (kept; added binSize, hms, byCodePoint, plural and minimum column widths in table)",
+  "apps/coreutils/lib/sys.ts (kept; more requested-call types: swap.checkpoint, svc.verify, svc.restoreDefaults, swap.ctl tier 'local')",
+  "apps/coreutils/lib/path.ts (kept unchanged)",
+  "apps/coreutils/man/{ps,top,free,vmstat,pmap,swapctl,ai,svcctl,reboot,kill,stat,predict}.md (rewritten to the kernel, memory, boot, agentic and predict specs); the other 34 pages kept",
+  "apps/coreutils/tests/harness.ts, fakefs.ts (test-only fake kernel and in-memory VFS)",
+  "apps/coreutils/tests/{identity,files,files-mutate,search,procs,system,ai,lib,smoke}.test.ts"
+ ],
+ "verification": [
+  {
+   "command": "pnpm exec tsc -p apps/tsconfig.json --noEmit",
+   "outcome": "exit 0, no errors (an earlier run showed one error in the shell agent's apps/shell/state.ts; it has since been fixed by that agent)"
+  },
+  {
+   "command": "pnpm exec tsc -p tsconfig.json --noEmit (whole repo, filtered to coreutils)",
+   "outcome": "no errors in apps/coreutils (after switching the test's import.meta.glob typing to /// <reference types=\"vite/client\" />)"
+  },
+  {
+   "command": "pnpm exec eslint apps/coreutils --max-warnings 0",
+   "outcome": "exit 0, 0 problems (no-yieldless-loop-in-generator, the boundary rules and switch exhaustiveness all pass)"
+  },
+  {
+   "command": "pnpm exec vitest run --project apps",
+   "outcome": "19 files, 466 tests passed; the 9 coreutils files hold 244 of them"
+  },
+  {
+   "command": "pnpm exec vitest run --project apps apps/coreutils --coverage --coverage.include='**/coreutils/**' (tests, scripts and *.gen.ts excluded)",
+   "outcome": "98.45% lines, 97.17% statements, 89.68% branches, 98.08% functions (every file at least 77% lines; whoami.ts is the lowest at 77.8%)"
+  }
+ ],
+ "problems": [
+  "Where the specs disagree I followed topic ownership (specs/README.md \u00a73.3) and the assignment. ps and top use the kernel spec \u00a73.18 layout (default `PID TTY STAT TIME COMMAND`, 3-letter STAT codes); free, vmstat, pmap and swapctl use memory spec \u00a73.17; predict uses predictive-prefetch.md \u00a73.8 (`-n`, `--why`; the shell spec's `-k` and `--explain` kept as aliases; exit codes 0/1/2); ai uses agentic-shell.md \u00a73.3 (exit codes 0-4, `-n/--dry-run`, `log --all`). The man pages were updated to match.",
+  "Two shell-spec SYS-02 session checks will not match this output. Step 20 expects `budget` in `free` output, but memory spec \u00a73.17.1 labels that column `total`. Step 17 uses `ps -o cmd`; that works because `cmd` is accepted as an alias.",
+  "Protocol `ProcInfo` lacks sid, tty, fg, leader, boosted, exclusive, overSoftLimit, pinned, overruns, kind and exit. ps and top read them when present and otherwise show `?` or `-`. Default ps selection falls back to the caller's uid and session.",
+  "Protocol `MemStat` and `ProcDetail.pages` lack pinned, avail, local swap cap, device, upload queue, pagesIn/pagesOut, bytesUploaded, per-process swap split, working set, last page-in time, and per-page kind, label, copies, sha256, gen and pin reasons. Those columns print `-` (lib/mem.ts). vmstat's us/ke/id and top's Sched line and CPU split need a `sched.info` call.",
+  "Protocol `bootlog` returns only log lines, the critical-path names and a total, with `boot: current|previous`. bootlog derives timings from each service's first and last log line. `--list` reports ENOSYS, and `--boot N` accepts only current/previous (or 0, -1, 1).",
+  "Protocol `fsck` has no `path` and no directory or user counts. PATH appears only in the `--checksum` line; `--server` sends `scope: 'both'`.",
+  "Protocol `Stat` has no sync state, so stat prints `Sync: -` unless the kernel adds a `sync` field. `Quota` has no confirmation time, so quota prints `source: server` without `(confirmed HH:MM:SS)`.",
+  "Protocol `find` returns only a count of denied directories, so find and du print `'<start>': Permission denied (N directories skipped)` instead of one line per directory.",
+  "The `id` syscall with `{user}` does not exist in protocol; id, chown, find -user, ps -u and quota -u use `users.list`. `reboot` has no verbose flag, so `--verbose` warns and restarts without it.",
+  "Interactive top cannot read keys without blocking (no timed read or poll call). It redraws every delay and exits cleanly on SIGINT/SIGTERM/SIGHUP (caught through sig.action); the k, r, P, M, T and s keys are not implemented yet.",
+  "The `ai` front end cannot import ai/ (boundary rule). It starts the agent from the manifest `/bin/lib/ai.agent.json` with argv `['ai', ...flags, instruction]` and passes its exit status through. That manifest path is my assumption and needs confirming by R4.",
+  "find.ts imports `matchGlob` from the shell agent's apps/shell/glob.ts to avoid a second glob implementation. A signature change there would break find.",
+  "No DSA structure is implemented. svcctl leaves cycle detection to the kernel's requested `svc.verify` (ENOSYS today); without it `require` keeps the edit and says the graph could not be verified."
+ ],
+ "todos_for_team": [
+  "R1/protocol: add the requested calls typed locally in apps/coreutils/lib/sys.ts CoreExtraCalls to protocol/src/sys (swap.stat, swap.ctl, swap.bench, swap.checkpoint, svc.control, svc.verify, svc.restoreDefaults, debug.status, debug.clear, shutdown.cancel, ai.status), then delete CoreExtraCalls and extCall.",
+  "R1/protocol: extend ProcInfo with sid, tty, fg, leader, boosted, exclusive, overSoftLimit, pinned, overruns, kind and exit (kernel spec \u00a73.18.1); extend MemStat and ProcDetail.pages with the fields listed in apps/coreutils/lib/mem.ts; add `sched.info` (run tokens, executors, CPU split) and a timed TTY read or poll for top's interactive keys.",
+  "R1: when @plotinium/kernel/sys exports the program model, switch apps/coreutils/lib/sys.ts from apps/src/_sys.ts to it (TODO(R1) is in place).",
+  "R5/protocol: make `bootlog` return the BootRecord and CriticalPathRow shapes of boot-and-services.md \u00a74.6/\u00a74.7 with `boot?: number` and `list?: boolean`; add `verbose` (or `next`) to RebootArgs.",
+  "R2/protocol: add `path` to FsckArgs and directory and user counts to FsckReport; add `sync` to Stat and `confirmedAt` to Quota; return the denied directory paths from `find` and `du`; decide on an `id({user})` call or keep users.list.",
+  "R3: tools/manpages.ts should take over apps/coreutils/scripts/gen-argspec.mjs (it now emits flag `desc` too) and seed /usr/share/man/1/*.md and index.json from apps/coreutils/man; the /bin/<name>.json manifests should point at the programs in apps/coreutils/index.ts (PROGRAMS).",
+  "R4: confirm or replace the agent manifest path `/bin/lib/ai.agent.json` and its argv contract (`ai [--dry-run] [--json] INSTRUCTION`, `ai undo TXN`) used by apps/coreutils/cmd/ai.ts; supply the data for predict `--why`, `--latency` and `--eval`.",
+  "Tests agent / R3: resolve the SYS-02 step 20 `budget` regex against memory spec \u00a73.17.1 (`total`), and record the ps/top format ownership (kernel spec \u00a73.18 over shell spec \u00a73.14.22-23) as a cross-spec request in both specs' \u00a79."
+ ],
+ "deps_requested": []
+}

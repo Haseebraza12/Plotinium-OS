@@ -1,0 +1,12 @@
+{
+  "name": "wm",
+  "description": "Compositor attached; kernel-compositor port handshake done",
+  "requires": ["kernel"],
+  "critical": true,
+  "weight": 2,
+  "timeoutMs": 1000,
+  "priority": 2,
+  "safeMode": true,
+  "runsIn": "kernel+main",
+  "recovery": true
+}

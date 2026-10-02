@@ -1,0 +1,17 @@
+[
+  {
+    "name": "UI-068 heading visible, last item within viewport",
+    "ok": true,
+    "detail": "{\"heading\":{\"top\":93,\"bottom\":110},\"items\":9,\"lastBottom\":599,\"vh\":800,\"dots\":0}"
+  },
+  {
+    "name": "CSP violations (recovery)",
+    "ok": true,
+    "detail": "[]"
+  },
+  {
+    "name": "console/page errors",
+    "ok": true,
+    "detail": ""
+  }
+]

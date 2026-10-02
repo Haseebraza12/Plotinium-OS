@@ -1,0 +1,62 @@
+/**
+ * Array-backed binary min-heap.
+ * `from(values)` builds in O(n) by sifting down from the last parent (Floyd), which is cheaper
+ * than n pushes (O(n log n)).
+ */
+export class MinHeap<T> {
+  private constructor(
+    private readonly a: T[],
+    private readonly less: (x: T, y: T) => boolean,
+  ) {}
+
+  static from<T>(values: Iterable<T>, less: (x: T, y: T) => boolean): MinHeap<T> {
+    const h = new MinHeap([...values], less);
+    for (let i = (h.a.length >> 1) - 1; i >= 0; i--) h.down(i);
+    return h;
+  }
+
+  get size(): number {
+    return this.a.length;
+  }
+
+  peek(): T | undefined {
+    return this.a[0];
+  }
+
+  push(x: T): void {
+    this.a.push(x);
+    this.up(this.a.length - 1);
+  }
+
+  pop(): T | undefined {
+    const top = this.a[0];
+    const last = this.a.pop();
+    if (this.a.length > 0 && last !== undefined) {
+      this.a[0] = last;
+      this.down(0);
+    }
+    return top;
+  }
+
+  private up(i: number): void {
+    while (i > 0) {
+      const p = (i - 1) >> 1;
+      if (!this.less(this.a[i]!, this.a[p]!)) break;
+      [this.a[i], this.a[p]] = [this.a[p]!, this.a[i]!];
+      i = p;
+    }
+  }
+
+  private down(i: number): void {
+    for (;;) {
+      const l = 2 * i + 1;
+      const r = l + 1;
+      let m = i;
+      if (l < this.a.length && this.less(this.a[l]!, this.a[m]!)) m = l;
+      if (r < this.a.length && this.less(this.a[r]!, this.a[m]!)) m = r;
+      if (m === i) return;
+      [this.a[i], this.a[m]] = [this.a[m]!, this.a[i]!];
+      i = m;
+    }
+  }
+}

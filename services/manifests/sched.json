@@ -1,0 +1,11 @@
+{
+  "name": "sched",
+  "description": "Ready heap and aging tick armed; executor #1 alive (nested-worker probe passed)",
+  "requires": ["kernel"],
+  "critical": true,
+  "weight": 1,
+  "timeoutMs": 500,
+  "priority": 0,
+  "safeMode": true,
+  "recovery": true
+}

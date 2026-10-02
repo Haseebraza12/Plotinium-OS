@@ -1,0 +1,22 @@
+{
+  "which": "takeover",
+  "console": [],
+  "pageErrors": [],
+  "failed": ["401 GET /api/auth/me", "401 GET /api/auth/me"],
+  "tab2": {
+    "text": "Plotinium | is starting | dev build version 0.1.0-dev.0 · build 0000000 | Loading kernel · 564 of 564 KB | Starting kernel | verbose boot | [    0.000] firmware: Plotinium 0.1.0-dev.0 · POST ok (workers, indexeddb, crypto, isolated) | [    0.158] loader: kernel image 564 KB | Esc | Boot menu | V | Verbose log | ONE KE",
+    "active": "↵Use here"
+  },
+  "tab2After": {
+    "login": true,
+    "text": "Sunday, 27 September | 0 | 9 | : | 4 | 8 | D | demo | A | alice | B | bob | Guest | Press Enter to sign in | Sleep | Restart | Shut Down | Plotinium 0.1.0-dev.0 | build 0000000"
+  },
+  "tab1After": {
+    "login": true,
+    "text": "Sunday, 27 September | 0 | 9 | : | 4 | 8 | D | demo | A | alice | B | bob | Guest | Press Enter to sign in | Sleep | Restart | Shut Down | Plotinium 0.1.0-dev.0 | build 0000000 | SESSION MOVED | Plotinium moved to another tab | Plotinium 0.1.0-dev.0 · build 0000000 | This tab stopped its kernel because another tab took over. Reload to ",
+    "active": "INPUT "
+  },
+  "tab1After2": {
+    "active": "INPUT login-password"
+  }
+}

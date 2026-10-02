@@ -1,0 +1,24 @@
+# Binary heaps
+
+Complete binary tree stored in an array; parent of i is (i − 1)/2, children 2i + 1 and 2i + 2. Min-heap property: every parent ≤ its children.
+
+| Operation | Cost |
+|---|---|
+| peek min | O(1) |
+| insert (sift up) | O(log n) |
+| extract min (move last to root, sift down) | O(log n) |
+| decrease key (needs an index map) | O(log n) |
+
+## Building one from n unordered values
+
+Naive: n inserts, O(n log n).
+
+Floyd's method: put the values in the array as they are, then sift down every internal node from the last one (index n/2 − 1) back to the root. This is **linear**. Intuition: half the nodes are leaves and do no work, a quarter move at most one level, an eighth at most two… Σ h · n/2^(h+1) = O(n). Most of the nodes are near the bottom, where sifting is cheap.
+
+This is also the first phase of heapsort, which is then O(n log n) overall because of the n extractions.
+
+## Uses
+
+Priority queues, Dijkstra, top-k (keep a min-heap of size k: anything smaller than the root is rejected), event simulation, the timer queue in our kernel.
+
+Bounded top-k is exactly what the vector search uses to keep the best K' scores.

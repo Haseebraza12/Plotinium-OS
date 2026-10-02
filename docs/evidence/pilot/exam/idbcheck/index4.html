@@ -1,0 +1,4 @@
+<!doctype html><meta charset="utf-8"><title>b</title><script type="module">
+window.__persistType = typeof navigator.storage.persist;
+const w = new Worker('/w4.mjs', { type: 'module' }); w.onmessage = (e) => { window.__result = e.data; }; w.onerror = (e) => { window.__result = { ok: false, err: 'werr ' + e.message }; }; w.postMessage('go');
+</script>

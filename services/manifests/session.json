@@ -1,0 +1,11 @@
+{
+  "name": "session",
+  "description": "Layout restored; restoring states queued",
+  "requires": ["login", "mm"],
+  "critical": true,
+  "weight": 3,
+  "timeoutMs": 2000,
+  "priority": 10,
+  "safeMode": true,
+  "caps": ["proc", "mm.speculative"]
+}

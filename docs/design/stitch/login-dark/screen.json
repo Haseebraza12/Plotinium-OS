@@ -1,0 +1,13 @@
+{
+  "note": "generate_screen_from_text timed out (not retried, per instructions). list_screens stayed {} for 17 polls between 15:23 and 15:46 UTC; get_project updateTime never changed from 15:22:02Z. No screen id exists, so get_screen and edit_screens could not be called.",
+  "request": {
+    "projectId": "12849137298552292712",
+    "deviceType": "DESKTOP",
+    "modelId": "GEMINI_3_8_FLASH",
+    "designSystem": "assets/10121591451242352758"
+  },
+  "response": {
+    "error": "The operation timed out."
+  },
+  "fallback": "reference.html + reference.png are a hand-built render of the same prompt (NOT a Stitch export), made with the design-system tokens and rendered at 1440x900 in headless Chrome."
+}

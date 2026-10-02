@@ -1,0 +1,70 @@
+{
+  "id": "AGT40-G03",
+  "category": "glob",
+  "tags": [],
+  "user": "alice",
+  "cwd": "/home/alice",
+  "now": "2026-10-05T10:00:00+05:00",
+  "tz": "Asia/Karachi",
+  "fixture": "fx-agt@v1",
+  "prompt": "copy the TypeScript files in src into a new folder called ts-backup",
+  "expect": {
+    "kind": "plan",
+    "ops": [
+      ["mkdir", "/home/alice/ts-backup"],
+      ["copy", "/home/alice/src/app.ts", "/home/alice/ts-backup/app.ts"],
+      ["copy", "/home/alice/src/test.ts", "/home/alice/ts-backup/test.ts"],
+      ["copy", "/home/alice/src/util.ts", "/home/alice/ts-backup/util.ts"]
+    ],
+    "confirm": false
+  },
+  "reference": {
+    "tool": "submit_plan",
+    "input": {
+      "summary": "plan",
+      "steps": [
+        {
+          "id": "s1",
+          "span": "a new folder called ts-backup",
+          "op": {
+            "call": "mkdir",
+            "args": {
+              "path": "~/ts-backup",
+              "parents": false
+            }
+          },
+          "sources": null
+        },
+        {
+          "id": "s2",
+          "span": "the TypeScript files in src",
+          "op": {
+            "call": "glob",
+            "args": {
+              "path": "~/src",
+              "name": "*.ts"
+            }
+          },
+          "sources": null
+        },
+        {
+          "id": "s3",
+          "span": "copy the TypeScript files in src into a new folder called ts-backup",
+          "op": {
+            "call": "copy",
+            "args": {
+              "from": "~/src",
+              "to": "~/ts-backup",
+              "recursive": false
+            }
+          },
+          "sources": {
+            "ref": "s2"
+          }
+        }
+      ],
+      "assumptions": [],
+      "suspicious_content_seen": false
+    }
+  }
+}

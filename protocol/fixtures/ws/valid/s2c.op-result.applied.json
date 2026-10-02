@@ -1,0 +1,33 @@
+{
+  "v": 1,
+  "t": "op.result",
+  "id": 2,
+  "body": {
+    "opId": "0192f0c1-8a3b-7c4d-8e5f-0123456789ab",
+    "status": "applied",
+    "duplicate": false,
+    "versions": [
+      {
+        "ino": "0192f0c1-8a3b-7c4d-9e5f-0123456789ac",
+        "version": 1,
+        "mtime": 1790000000000,
+        "ctime": 1790000000001
+      }
+    ],
+    "ownerSeqs": [
+      {
+        "ownerUid": 1001,
+        "seq": 131
+      }
+    ],
+    "commitTime": "2026-09-24T10:00:00.000Z",
+    "lamport": 901,
+    "quota": {
+      "uid": 1001,
+      "usedBytes": 12,
+      "usedInodes": 1,
+      "quotaBytes": 104857600,
+      "quotaInodes": 10000
+    }
+  }
+}

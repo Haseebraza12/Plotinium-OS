@@ -1,0 +1,77 @@
+[
+  {
+    "name": "UI-001 idle 3.5 s: no shake",
+    "ok": true,
+    "detail": "shake mutations 0"
+  },
+  {
+    "name": "UI-001 slow typing keeps every char",
+    "ok": true,
+    "detail": "1,2,3,4,5,6,7,8"
+  },
+  {
+    "name": "UI-001 reveal survives 2.5 s",
+    "ok": true,
+    "detail": "{\"type\":\"text\",\"len\":8,\"pressed\":\"true\"}"
+  },
+  {
+    "name": "UI-064 no Sleep button",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "UI-001 focus on Restart survives 3 s",
+    "ok": true,
+    "detail": "Restart"
+  },
+  {
+    "name": "UI-064 Esc cancels Shut Down?",
+    "ok": true,
+    "detail": "focus after: Shut Down"
+  },
+  {
+    "name": "UI-064 Forgot password? explains",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "UI-064 Reduce motion switch writes data-motion",
+    "ok": true,
+    "detail": "reduce / undefined"
+  },
+  {
+    "name": "UI-150 clock read as one time",
+    "ok": true,
+    "detail": "{\"label\":\"18:22\",\"hidden\":\"true\"}"
+  },
+  {
+    "name": "UI-005 guest 429 shows the wait in minutes",
+    "ok": true,
+    "detail": "{\"hint\":\"Too many guest sessions from this network. Try again in 20 min\",\"ariaDisabled\":\"true\",\"live\":\"Too many guest sessions from this network. Try again in 20 minutes.\"}"
+  },
+  {
+    "name": "UI-005 Continue aria-disabled after 429",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "UI-065 back-off announced once, politely, in words",
+    "ok": true,
+    "detail": "Too many guest sessions from this network. Try again in 20 minutes."
+  },
+  {
+    "name": "UI-005 demo stays usable after guest 429",
+    "ok": true,
+    "detail": "{\"disabled\":false,\"hint\":\"Press Enter to sign in·Forgot password?\"}"
+  },
+  {
+    "name": "CSP violations on login",
+    "ok": true,
+    "detail": "[]"
+  },
+  {
+    "name": "console/page errors",
+    "ok": true,
+    "detail": ""
+  }
+]

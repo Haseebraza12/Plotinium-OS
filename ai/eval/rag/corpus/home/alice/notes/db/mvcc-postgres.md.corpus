@@ -1,0 +1,13 @@
+# MVCC in PostgreSQL
+
+Every row version (tuple) has `xmin` (the transaction that created it) and `xmax` (the one that deleted or updated it). An UPDATE writes a new version and sets xmax on the old one; nothing is overwritten in place.
+
+A snapshot = (xmin, xmax, list of in-progress xids). A tuple is visible if its creator committed before the snapshot and its deleter didn't.
+
+Consequences:
+- readers never block writers and writers never block readers;
+- dead tuples pile up and **VACUUM** must reclaim them; autovacuum does it in the background;
+- xids are 32-bit, so old tuples must be frozen before wraparound, or the database stops accepting writes to protect itself;
+- HOT updates avoid touching indexes when no indexed column changed and there is room on the same page.
+
+`pg_stat_user_tables.n_dead_tup` shows bloat. Long-running transactions hold back the horizon and prevent cleanup, which bit us when a psql session was left open in a BEGIN over the weekend.

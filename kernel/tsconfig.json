@@ -1,0 +1,10 @@
+// Runs in the kernel worker, executors and blkio worker; kernel/src/host/main.ts runs on the main thread.
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2024", "DOM", "DOM.Iterable", "WebWorker"],
+    "types": []
+  },
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules", "dist", "coverage"]
+}

@@ -1,0 +1,29 @@
+/**
+ * Bloom filter over SHA-256 digests (the indexer's "have I embedded this chunk before?" check).
+ * k = 7 positions by double hashing from the first 8 bytes of the digest. No deletion.
+ */
+export class Bloom {
+  private readonly bits: Uint32Array;
+
+  constructor(readonly m: number, readonly k = 7) {
+    this.bits = new Uint32Array(Math.ceil(m / 32));
+  }
+
+  private positions(digest: Uint8Array): number[] {
+    const view = new DataView(digest.buffer, digest.byteOffset, 8);
+    const h1 = view.getUint32(0);
+    const h2 = view.getUint32(4) | 1;
+    const out: number[] = [];
+    for (let i = 0; i < this.k; i++) out.push((h1 + Math.imul(i, h2)) >>> 0) % this.m);
+    return out;
+  }
+
+  add(digest: Uint8Array): void {
+    for (const p of this.positions(digest)) this.bits[p >>> 5]! |= 1 << (p & 31);
+  }
+
+  /** false = certainly never added; true = maybe added (~0.8 % false positives at 10 bits/item). */
+  mayContain(digest: Uint8Array): boolean {
+    return this.positions(digest).every((p) => ((this.bits[p >>> 5]! >>> (p & 31)) & 1) === 1);
+  }
+}

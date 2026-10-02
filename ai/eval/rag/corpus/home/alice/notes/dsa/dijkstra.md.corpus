@@ -1,0 +1,21 @@
+# Dijkstra's shortest paths
+
+Single source, non-negative edge weights.
+
+```
+dist[s] = 0, others ∞; push (0, s)
+while heap not empty:
+    (d, u) = pop min
+    if d > dist[u]: continue          # stale entry
+    for (v, w) in adj[u]:
+        if dist[u] + w < dist[v]:
+            dist[v] = dist[u] + w; push (dist[v], v)
+```
+
+O((V + E) log V) with a binary heap and lazy deletion. With a Fibonacci heap O(E + V log V) in theory, slower in practice.
+
+Negative edges break it: a node can be finalised before a cheaper path through a negative edge is discovered. Use Bellman–Ford (O(VE)), which also detects negative cycles.
+
+A* = Dijkstra + an admissible heuristic added to the priority. On a grid with Manhattan distance it explores far fewer nodes.
+
+Lab: shortest bus route across the city map; my first version forgot the stale-entry check and was 10x slower.

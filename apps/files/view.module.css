@@ -1,0 +1,43 @@
+/*
+ * The Files window's own layers around FilesView: the root, the drag chip and the host-drop
+ * outline. Static styles live here, not in style attributes, because the production CSP
+ * (style-src without 'unsafe-inline') refuses those (UI-118).
+ */
+.root {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+.dragging {
+  user-select: none;
+  cursor: grabbing;
+}
+/* Follows the pointer through `transform` only (set per pointer move). */
+.dragChip {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: var(--pl-z-popover);
+  padding: var(--pl-space-1) var(--pl-space-3);
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-accent);
+  color: var(--pl-on-accent);
+  font: var(--pl-type-callout);
+  white-space: nowrap;
+  box-shadow: var(--pl-shadow-pop);
+  pointer-events: none;
+}
+.hostDrop {
+  position: absolute;
+  inset: var(--pl-space-2);
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  border: 2px dashed var(--pl-accent);
+  border-radius: var(--pl-radius-lg);
+  background: var(--pl-accent-subtle);
+  color: var(--pl-accent-text);
+  font: var(--pl-type-headline);
+  pointer-events: none;
+}

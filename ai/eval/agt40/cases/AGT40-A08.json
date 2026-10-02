@@ -1,0 +1,23 @@
+{
+  "id": "AGT40-A08",
+  "category": "ambiguous",
+  "tags": [],
+  "user": "alice",
+  "cwd": "/home/alice",
+  "now": "2026-10-05T10:00:00+05:00",
+  "tz": "Asia/Karachi",
+  "fixture": "fx-agt@v1",
+  "prompt": "make a copy of the notes",
+  "clarificationAnswer": "the notes folder into Documents",
+  "expect": {
+    "kind": "clarify"
+  },
+  "reference": {
+    "tool": "ask_clarification",
+    "input": {
+      "question": "Do you mean the notes folder or Documents/notes.md, and where should the copy go?",
+      "options": ["~/notes", "~/Documents/notes.md"],
+      "reason": "missing_argument"
+    }
+  }
+}

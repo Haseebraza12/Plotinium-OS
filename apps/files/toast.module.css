@@ -1,0 +1,54 @@
+/*
+ * The in-window toast of Files and the Editor: a HUD pill at the bottom centre (HUDs may use a
+ * live backdrop filter). Centred with auto margins, so the pop-in scale owns `transform`.
+ * Static styles here, not in style attributes: the production CSP refuses those (UI-118).
+ */
+.toast {
+  position: absolute;
+  right: 0;
+  bottom: calc(var(--pl-space-8) + var(--pl-space-4));
+  left: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: var(--pl-space-3);
+  width: fit-content;
+  max-width: min(560px, 80%);
+  margin-inline: auto;
+  padding: var(--pl-space-2) var(--pl-space-4);
+  border: var(--pl-hairline-width) solid var(--pl-hairline);
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-glass-hud-bg);
+  backdrop-filter: var(--pl-glass-hud-filter);
+  box-shadow: var(--pl-shadow-pop);
+  color: var(--pl-text);
+  font: var(--pl-type-callout);
+  cursor: default;
+}
+.toast[data-tone='error'] {
+  color: var(--pl-danger);
+}
+.text {
+  min-width: 0;
+}
+.errno {
+  color: var(--pl-text-muted);
+}
+.action {
+  flex: none;
+  min-height: 24px;
+  padding: 0 var(--pl-space-2);
+  border: 0;
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-accent-subtle);
+  color: var(--pl-accent-text);
+  font: var(--pl-type-callout);
+  font-weight: var(--pl-weight-semibold);
+}
+.action:hover {
+  background: var(--pl-control-hover);
+}
+.action:focus-visible {
+  outline: var(--pl-focus-ring);
+  outline-offset: var(--pl-focus-offset);
+}

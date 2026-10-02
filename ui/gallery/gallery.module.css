@@ -1,0 +1,100 @@
+.app {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  height: 100vh;
+  background: var(--pl-wallpaper);
+  color: var(--pl-text);
+}
+.skip {
+  position: absolute;
+  top: var(--pl-space-2);
+  left: var(--pl-space-2);
+  z-index: var(--pl-z-tooltip);
+  padding: var(--pl-space-2) var(--pl-space-3);
+  border-radius: var(--pl-radius-ctl);
+  background: var(--pl-accent);
+  color: var(--pl-on-accent);
+  transform: translateY(-200%);
+}
+.skip:focus {
+  transform: none;
+}
+.sidebar {
+  height: calc(100vh - 2 * var(--pl-space-2));
+  background: var(--pl-glass-popover-bg);
+  -webkit-backdrop-filter: var(--pl-glass-popover-filter);
+  backdrop-filter: var(--pl-glass-popover-filter);
+  box-shadow:
+    var(--pl-shadow-pop),
+    var(--pl-glass-specular),
+    inset 0 0 0 var(--pl-hairline-width) var(--pl-hairline);
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--pl-space-2);
+  padding: var(--pl-space-2) var(--pl-space-2) var(--pl-space-3);
+}
+.brandText {
+  display: flex;
+  flex-direction: column;
+}
+.brandName {
+  font: var(--pl-type-headline);
+}
+.brandSub {
+  font: var(--pl-type-caption);
+  color: var(--pl-text-muted);
+}
+.main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100vh;
+  padding: var(--pl-space-2) var(--pl-space-2) var(--pl-space-2) 0;
+}
+.window {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: var(--pl-radius-win);
+  background: var(--pl-glass-window-bg);
+  box-shadow:
+    var(--pl-shadow-win-focus),
+    var(--pl-glass-specular),
+    inset 0 0 0 var(--pl-hairline-width) var(--pl-hairline);
+  contain: layout paint;
+}
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--pl-space-4);
+  min-height: var(--pl-toolbar-h);
+  padding: var(--pl-space-2) var(--pl-space-4);
+  border-bottom: var(--pl-hairline-width) solid var(--pl-separator);
+}
+.toolbarTitle {
+  flex: 1;
+  margin: 0;
+  font: var(--pl-type-headline);
+}
+.content {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  outline: none;
+}
+@media (width < 820px) {
+  .app {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .sidebar {
+    display: none;
+  }
+  .main {
+    padding-left: var(--pl-space-2);
+  }
+}

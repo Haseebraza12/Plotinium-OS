@@ -1,0 +1,27 @@
+{
+  "phase": "B",
+  "console": [
+    "warning: Unable to determine content-length from response headers. Will expand buffer when needed.",
+    "info: This document requires 'TrustedScriptURL' assignment. The policy is report-only, so the violation has been logged but no further action has been taken.",
+    "verbose: [DOM] Password forms should have (optionally hidden) username fields for accessibility: (More info: https://goo.gl/9p2vKq) %o"
+  ],
+  "failed": ["GET /api/auth/me net::ERR_INTERNET_DISCONNECTED"],
+  "regsBefore": [],
+  "register": {
+    "ms": 607,
+    "active": "activated",
+    "cacheNames": [
+      "plotinium-ort",
+      "transformers-cache",
+      "workbox-precache-v2-http://localhost:4718/"
+    ],
+    "entries": 161
+  },
+  "navErr": null,
+  "offlineScreen": "login-screen",
+  "offlineMs": 315,
+  "controller": "http://localhost:4718/sw.js",
+  "coi": true,
+  "bodyText": "Sunday, 27 September\n\n0\n9\n:\n3\n2\nD\ndemo\nA\nalice\nB\nbob\nGuest\n\nPress Enter to sign in\n\nOffline — using cached verifier\n\nSleep\nRestart\nShut Down\nPlotinium 0.1.0-dev.0\nbuild 0000000",
+  "net": null
+}

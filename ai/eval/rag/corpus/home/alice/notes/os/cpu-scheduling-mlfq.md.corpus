@@ -1,0 +1,25 @@
+# Multi-level feedback queue
+
+MLFQ tries to get the response time of round robin for interactive jobs and the turnaround of shortest-job-first without knowing job lengths in advance. It learns from behaviour.
+
+## Rules (OSTEP version)
+
+1. If A is on a higher level than B, A runs.
+2. Same level: round robin.
+3. A new job enters at the top level.
+4. Once a job uses up its allotment at a level (no matter how many times it gave up the CPU), it moves down one level.
+5. After some period S, move every job back to the top (priority boost).
+
+Rule 4 in this form stops gaming: in the old version a job could issue an I/O just before its slice ended and stay at the top forever.
+
+Rule 5 fixes starvation of long jobs and lets a job that became interactive climb back.
+
+## Tuning knobs
+
+- number of levels (we used 4 in the lab);
+- quantum per level, usually longer at lower levels (10 ms, 20 ms, 40 ms, 80 ms);
+- boost period S. Too long and CPU-bound jobs starve; too short and interactive jobs lose their advantage. Ousterhout called these "voo-doo constants".
+
+## Where it shows up
+
+Solaris TS class, the BSD scheduler and Windows NT all use variations. Linux moved to CFS instead (see cfs-notes.md).

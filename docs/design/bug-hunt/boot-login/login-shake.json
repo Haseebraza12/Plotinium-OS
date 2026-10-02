@@ -1,0 +1,22 @@
+{
+  "console": [],
+  "pageErrors": [],
+  "failed": ["401 GET /api/auth/me"],
+  "animationsWhileIdle": [
+    "2400 start pl-login-shake on _pill_ura75_370 pl-anim-login-shake",
+    "3399 start pl-login-shake on _pill_ura75_370 pl-anim-login-shake",
+    "4399 start pl-login-shake on _pill_ura75_370 pl-anim-login-shake"
+  ],
+  "eyeToggle": [
+    "0ms type=text pressed=true len=6",
+    "200ms type=text pressed=true len=6",
+    "400ms type=password pressed=false len=0",
+    "600ms type=password pressed=false len=0",
+    "800ms type=password pressed=false len=0",
+    "1000ms type=password pressed=false len=0",
+    "1200ms type=password pressed=false len=0",
+    "1400ms type=password pressed=false len=0",
+    "1600ms type=password pressed=false len=0",
+    "1800ms type=password pressed=false len=0"
+  ]
+}

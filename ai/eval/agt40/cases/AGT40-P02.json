@@ -1,0 +1,83 @@
+{
+  "id": "AGT40-P02",
+  "category": "pipeline",
+  "tags": [],
+  "user": "alice",
+  "cwd": "/home/alice",
+  "now": "2026-10-05T10:00:00+05:00",
+  "tz": "Asia/Karachi",
+  "fixture": "fx-agt@v1",
+  "prompt": "copy all the markdown files in notes into a new folder called notes-backup",
+  "expect": {
+    "kind": "plan",
+    "ops": [
+      ["mkdir", "/home/alice/notes-backup"],
+      ["copy", "/home/alice/notes/ideas.md", "/home/alice/notes-backup/ideas.md"],
+      [
+        "copy",
+        "/home/alice/notes/meeting-2026-09-28.md",
+        "/home/alice/notes-backup/meeting-2026-09-28.md"
+      ],
+      [
+        "copy",
+        "/home/alice/notes/meeting-2026-10-01.md",
+        "/home/alice/notes-backup/meeting-2026-10-01.md"
+      ],
+      ["copy", "/home/alice/notes/todo.md", "/home/alice/notes-backup/todo.md"]
+    ],
+    "confirm": false
+  },
+  "reference": {
+    "tool": "submit_plan",
+    "input": {
+      "summary": "plan",
+      "steps": [
+        {
+          "id": "s1",
+          "span": "a new folder called notes-backup",
+          "op": {
+            "call": "mkdir",
+            "args": {
+              "path": "~/notes-backup",
+              "parents": false
+            }
+          },
+          "sources": null
+        },
+        {
+          "id": "s2",
+          "span": "all the markdown files in notes",
+          "op": {
+            "call": "find",
+            "args": {
+              "path": "~/notes",
+              "name": "*.md",
+              "type": "f",
+              "mtime": null,
+              "size": null,
+              "maxdepth": null
+            }
+          },
+          "sources": null
+        },
+        {
+          "id": "s3",
+          "span": "copy all the markdown files in notes into a new folder called notes-backup",
+          "op": {
+            "call": "copy",
+            "args": {
+              "from": "~/notes",
+              "to": "~/notes-backup",
+              "recursive": false
+            }
+          },
+          "sources": {
+            "ref": "s2"
+          }
+        }
+      ],
+      "assumptions": [],
+      "suspicious_content_seen": false
+    }
+  }
+}

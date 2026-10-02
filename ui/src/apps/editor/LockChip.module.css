@@ -1,0 +1,130 @@
+/*
+ * Title-bar lock chip. The ring steps once per second without a transition, so the only
+ * animations are the one-shot renewal pulse and the read-only shake (transform only).
+ */
+.chip {
+  --chip-tone: var(--pl-warning);
+  --chip-fill: var(--pl-warning-subtle);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pl-space-2);
+  height: var(--pl-control-h-sm);
+  padding: 0 var(--pl-space-half) 0 var(--pl-space-2);
+  border: 0;
+  border-radius: var(--pl-radius-pill);
+  background: var(--chip-fill);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--chip-tone) 42%, transparent);
+  color: var(--pl-text);
+  font: var(--pl-type-caption);
+  font-weight: var(--pl-weight-medium);
+  white-space: nowrap;
+  cursor: default;
+}
+/* Entry plays once; the class is dropped after it, so later one-shots never replay it. */
+.enter {
+  animation: chip-in var(--pl-motion-med) var(--pl-ease-spring) both;
+}
+.chip:hover {
+  background: color-mix(in srgb, var(--chip-tone) 26%, transparent);
+}
+.chip:focus-visible {
+  outline: var(--pl-focus-ring);
+  outline-offset: var(--pl-focus-offset);
+}
+.chip[data-kind='mine'] {
+  --chip-tone: var(--pl-accent);
+  --chip-fill: var(--pl-accent-subtle);
+  padding-right: var(--pl-space-3);
+}
+.chip[data-kind='released'] {
+  --chip-tone: var(--pl-success);
+  --chip-fill: var(--pl-success-subtle);
+  padding-right: var(--pl-space-3);
+}
+.expiring {
+  --chip-fill: color-mix(in srgb, var(--pl-warning) 30%, transparent);
+  box-shadow: inset 0 0 0 1px var(--pl-warning);
+}
+.icon {
+  display: inline-flex;
+  color: var(--chip-tone);
+}
+.chip[data-kind='mine'] .icon {
+  color: var(--pl-accent-text);
+}
+.text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ring {
+  flex: none;
+  transform: rotate(-90deg);
+}
+.ringTrack {
+  fill: none;
+  stroke: var(--pl-border-subtle);
+  stroke-width: 2.5;
+}
+.ringFill {
+  fill: none;
+  stroke: var(--pl-warning);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+.chip .avatar {
+  --pl-avatar-size: calc(var(--pl-avatar-sm) - var(--pl-space-1));
+}
+.pulse {
+  animation: pulse var(--pl-motion-slow) var(--pl-ease-spring) 1;
+}
+.shake {
+  animation: shake var(--pl-motion-slow) var(--pl-ease) 1;
+}
+.hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@keyframes chip-in {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+}
+@keyframes pulse {
+  45% {
+    transform: scale(1.06);
+  }
+}
+@keyframes shake {
+  20% {
+    transform: translateX(-3px);
+  }
+  45% {
+    transform: translateX(3px);
+  }
+  70% {
+    transform: translateX(-2px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .enter,
+  .pulse,
+  .shake {
+    animation: none;
+  }
+}
+@media (forced-colors: active) {
+  .chip {
+    border: 1px solid CanvasText;
+  }
+  .ringFill {
+    stroke: CanvasText;
+  }
+}

@@ -1,0 +1,11 @@
+// web/ unit tests (vitest project `web`): pure boot, Service Worker and build logic on Node.
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2024", "DOM", "DOM.Iterable", "WebWorker"],
+    "types": ["node", "vite/client"],
+    "jsx": "preserve",
+    "jsxImportSource": "solid-js"
+  },
+  "include": ["**/*.ts"]
+}

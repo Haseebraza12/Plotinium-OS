@@ -1,0 +1,3336 @@
+                 LAHORE GARRISON UNIVERSITY
+                           Department of Computer Science
+                             BS Computer Science — Fall 2026
+
+
+
+
+                         Semester Capstone Project Specification
+
+
+              AI-Native Web-Based
+            Operating System (WebOS)
+            An operating system that boots, schedules, pages, persists and
+                       reasons entirely inside a web browser
+
+
+
+
+Disciplines integrated         Operating Systems; Data Structures & Algorithms; Database
+                               Systems; Artificial Intelligence
+
+Team size                      Exactly five students per team
+
+Duration                       18 weeks, delivered in five phases
+
+Programme                      BS Computer Science
+
+Issued by                      Mr. Haseeb Ur Rehman, Course Coordinator
+
+Document version               Version 1.0 — September 2026
+AI-Native Web-Based Operating System — Capstone Project Specification                                        Fall 2026
+
+
+About This Document
+This is the complete and authoritative specification for the Fall 2026 semester capstone project. It
+explains why the project exists and what your team must build. It gives the measurable acceptance
+criteria your system will be tested against, the phases in which it will be delivered, and how it will be
+graded.
+
+If this document disagrees with an informal message, a slide or a conversation, this document
+prevails. It changes only through a numbered written amendment posted on Google Classroom. Read
+Part I together as a team before you choose a stack, a name or a role.
+
+
+The project at a glance
+
+ What you build                    A named, bootable, AI-native operating system that runs inside a modern
+                                   browser and is backed by a multi-user server.
+
+ Team                              Exactly five students per team, each owning a defined engineering role (Section
+                                   4).
+
+ Disciplines integrated            Operating Systems, Data Structures & Algorithms, Database Systems and
+                                   Artificial Intelligence. Each has mandatory, testable requirements.
+
+ Identity                          Your team names its operating system and builds its own boot screen, boot
+                                   sequence and login screen (Sections 5 and 6).
+
+ Technology                        Open stack: any language, framework, runtime or database. Every choice must
+                                   be defended in writing (Section 14).
+
+ AI mandate                        At least two of three system-level AI subsystems. AI must be part of the OS, not
+                                   a chatbot bolted on top of it (Section 12).
+
+ Delivery                          Five phases, from the architecture defence (Week 4) to the final defence (Weeks
+                                   17–18), each closed by a live gate review (Section 13).
+
+ Assessment                        100 marks across six criteria. Team marks are moderated for each member
+                                   using the viva and contribution evidence (Section 16).
+
+
+How to read this document
+
+ Part                        Contents                                               Who must read it closely
+
+ I — Why                     Why web operating systems matter now, what             Everyone, before the first
+                             separates a real OS from an imitation, and why AI      team meeting.
+                             must be a foundation of the system.
+
+ II — The Brief              Team structure, naming your OS, the mandatory          Everyone.
+                             boot screen and boot sequence, and the industry
+                             benchmarks you must surpass.
+
+ III — Specification         Reference architecture, then one section per           Each owner reads their
+                             subsystem: OS primitives, DSA, database, AI.           section closely; everyone
+                                                                                    reads Section 8.
+
+ IV — Delivery               Milestones, the architecture defence, repository       Everyone, and again before
+                             and testing standards, the rubric, the final defence   every gate.
+                             and integrity rules.
+
+
+
+
+Lahore Garrison University — Department of Computer Science                                               Page 2 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                          Fall 2026
+
+
+ Part                        Contents                                                Who must read it closely
+
+ Appendices                  Acceptance checklist, glossary, references and the      QA/DevOps lead, before every
+                             team registration form.                                 gate.
+
+
+Conventions
+Requirement keywords. The words must, should and may follow their usual meaning in engineering
+specifications (RFC 2119). Must is mandatory for passing a gate and for full marks. Should is expected
+unless you justify a different choice in writing. May is optional and earns credit when done well.
+
+Requirement identifiers. Every testable requirement has an identifier. Use these identifiers in your
+test names, pull-request titles and report, for example a test named VFS-06 rejects a write that
+exceeds the quota without partial data.
+
+ Prefix      Area                                 Section       Prefix   Area                            Section
+
+ BOOT        Boot screen & sequence               6             SYS      System calls & terminal         9.6
+
+ PROC        Processes & scheduling               9.1           DSA      Data structures                 10
+
+ MEM         Virtual memory & paging              9.2           DB       Database & integrity            11
+
+ VFS         Virtual file system                  9.3           RAG      Semantic VFS search             12.2
+
+ WM          Window management                    9.4           AGT      Agentic system execution        12.3
+
+ OFF         Offline execution & sync             9.5           PRE      Predictive pre-fetching         12.4
+
+
+Measurement. Numerical targets are measured on a standard laboratory workstation in the Department,
+whose specification is published in Week 2, using the current stable Google Chrome at the time of each gate.
+Your OS name. This document suggests no names. Wherever it shows YourOS, your team's own registered
+name goes.
+
+
+
+
+Lahore Garrison University — Department of Computer Science                                              Page 3 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification      Fall 2026
+
+
+Contents
+Part I: Why This Project Exists
+1     Executive Summary                                                           6
+      1.1    What your team will deliver                                          6
+      1.2    What success looks like                                              7
+2     The Case for a Web Operating System                                         7
+      2.1    The browser has quietly become the computer                          7
+      2.2    What a Web Operating System is, and what it is not                   8
+      2.3    Why WebOS matters now                                                8
+      2.4    Why it is hard: the browser is a hostile host                        9
+      2.5    A short history                                                      9
+3     Artificial Intelligence as an Operating-System Foundation                  10
+      3.1    From application to primitive                                       10
+      3.2    What “AI-native” means in this project                              10
+      3.3    The AI building blocks you will use                                 11
+      3.4    The AI trust boundary                                               11
+
+Part II: The Brief
+4     Project Logistics and Team Organisation                                    13
+      4.1    Team composition and engineering roles                              13
+      4.2    Shared-ownership rules                                              13
+      4.3    Open technology stack, mandatory defence                            14
+      4.4    Team contract                                                       14
+5     Name Your Operating System                                                 14
+      5.1    Naming rules                                                        14
+      5.2    The identity kit                                                    15
+      5.3    Where your name must appear                                         15
+6     The Boot Screen and Boot Sequence                                          16
+      6.1    Why your OS must boot                                               16
+      6.2    What the boot screen looks like                                     16
+      6.3    The boot stages                                                     17
+      6.4    The service dependency graph                                        18
+      6.5    Boot requirements                                                   18
+      6.6    Reference boot log                                                  19
+7     Industry Benchmarks and the Limitations to Overcome                        20
+      7.1    Benchmark 1: Puter                                                  20
+      7.2    Benchmark 2: daedalOS                                               21
+      7.3    Summary and verification                                            21
+
+Part III: Technical Specification
+8     Reference Architecture                                                     22
+      8.1    Walk-through: one command, every layer                              23
+9     Operating-System Primitives                                                24
+      9.1    Process management and scheduling                                   24
+      9.2    Virtual memory and paging                                           26
+      9.3    The virtual file system                                             27
+      9.4    The window management subsystem                                     30
+      9.5    Offline edge execution and synchronisation                          31
+      9.6    The system-call interface and the terminal                          31
+
+
+
+Lahore Garrison University — Department of Computer Science             Page 4 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification      Fall 2026
+
+
+10    Data Structures and Algorithms Blueprint                                   32
+      10.1 Mandatory structures and where they live                              32
+      10.2 Implementation policy                                                 33
+      10.3 Interface sketches                                                    33
+11    Database Architecture and Integrity                                        34
+      11.1   Reference schema                                                    34
+      11.2   Storing a tree in a database                                        35
+      11.3   ACID guarantees for bulk operations                                 35
+      11.4   Index optimisation                                                  36
+      11.5   Database requirements                                               37
+12    Foundational AI Integration                                                37
+      12.1   Choosing your subsystems                                            37
+      12.2   Subsystem A: semantic VFS search (RAG pipeline)                     37
+      12.3   Subsystem B: agentic system execution                               39
+      12.4   Subsystem C: predictive process pre-fetching                        40
+      12.5   The coupling map                                                    41
+      12.6   Models, cost and offline behaviour                                  41
+
+Part IV: Delivery and Assessment
+13    Milestones and Deliverables                                                42
+      13.1 Phase deliverables and gate criteria                                  42
+      13.2 Gate rules                                                            43
+14    The Architecture Defence                                                   44
+      14.1   Structure of STACK_DECISION.md                                      44
+      14.2   Decisions that must be defended                                     44
+      14.3   What a strong justification looks like                              45
+      14.4   The defence session                                                 45
+15    Repository, Documentation and Testing Standards                            45
+      15.1   Repository layout                                                   45
+      15.2   Required documents                                                  46
+      15.3   Testing strategy                                                    46
+      15.4   Commits and collaboration                                           47
+16    Evaluation Rubric                                                          47
+      16.1   Grading criteria and weights                                        47
+      16.2   Performance levels                                                  48
+      16.3   Where the boot screen and identity are assessed                     49
+      16.4   Individual moderation                                               49
+17    The Final Defence                                                          50
+      17.1 Demo Day protocol                                                     50
+      17.2 Final deliverables                                                    50
+18    Academic Integrity and the Use of AI Tools                                 51
+
+Appendices
+A     Consolidated Acceptance Checklist                                          51
+B     Glossary                                                                   52
+C     References and Further Reading                                             54
+D     Team and OS Registration Form                                              55
+
+
+
+
+Lahore Garrison University — Department of Computer Science             Page 5 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                       Fall 2026
+
+
+Part I
+
+Why This Project Exists
+Before writing any code, a team must understand what it is building and why. This part explains why web
+operating systems matter now and what separates a real operating system from an imitation of one. It also
+explains why artificial intelligence must be a foundation of the system rather than a feature placed on top of it.
+
+
+Section 1
+
+Executive Summary
+Your team will design and build a complete Web-Based Operating System (WebOS) that runs natively
+inside a modern browser. It must boot through a genuine initialisation sequence and present a
+multitasking desktop. It must manage a hierarchical UNIX-like file system, schedule background
+processes on Web Workers, page idle application state out of memory, and persist everything with
+ACID guarantees. Most importantly, it must treat artificial intelligence as a subsystem of the operating
+system, not an application running on top of it.
+
+The project is deliberately cross-disciplinary. Operating Systems, Data Structures & Algorithms,
+Database Systems and Artificial Intelligence stop being separate courses and become parts of one
+working system. Each concept you have studied has a mandatory place in this codebase:
+
+   the process control block is a hash map;
+   the scheduler is a heap;
+   the directory hierarchy is a tree;
+   the startup order is a topological sort of a dependency graph;
+   a recursive delete is a database transaction;
+   semantic search is cosine similarity between embeddings of your own files.
+
+The project reproduces real systems-engineering constraints. The browser gives you one main thread
+and a storage quota that it is allowed to evict. It limits memory and will kill your tab if you exceed it,
+and the network can disappear at any moment. Your OS must stay fast within these limits, recover
+from failure and remain useful offline. Those are exactly the areas where the industry systems you
+will study, Puter and daedalOS, fall short.
+
+
+  The brief in one sentence
+  Build an operating system, not a website that looks like one, in which intelligence is a system
+  service.
+
+
+1.1 What your team will deliver
+
+  1. A named, bootable OS                                        2. A real desktop
+  Its own name, logo and version, a truthful boot                A multi-window compositor with focus, z-
+  sequence driven by a service dependency graph, a               ordering, dragging, resizing, minimising and a
+  boot menu with safe and recovery modes, and a                  taskbar, holding 60 frames per second under load.
+  multi-user login screen.
+
+
+
+
+Lahore Garrison University — Department of Computer Science                                              Page 6 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                         Fall 2026
+
+
+
+  3. A UNIX-like file system                                     4. Processes and a scheduler
+  An inode tree with /root, /home, /system and /bin,             A process table and a priority scheduler that runs
+  full path resolution, read/write/execute                       work on a pool of Web Workers, so the interface
+  permissions, soft links, hard quotas and                       never freezes.
+  distributed locking.
+
+
+  5. Virtual memory                                              6. An ACID persistence layer
+  An LRU pager that serialises idle application state            Atomic bulk operations that roll back cleanly
+  and swaps it to local and then cloud storage,                  when they fail midway, indexed metadata
+  restoring it transparently when needed.                        answering in under 10 ms, and a multi-tenant
+                                                                 backend.
+
+
+  7. Foundational AI                                             8. Engineering evidence
+  At least two of: semantic search over the file                 A written architecture defence, a test suite with
+  system, an agent in the shell that runs verified OS            fault injection and performance budgets, a
+  commands, and predictive pre-fetching driven by                production deployment, a technical report and a
+  a local model.                                                 live final defence.
+
+
+1.2 What success looks like
+On Demo Day, an examiner who has never seen your system clones your repository and starts it. They
+boot it with the network disconnected, run a CPU-heavy job while dragging windows, and open more
+applications than memory can hold. They then pull the plug on a recursive delete halfway through
+and ask your OS, in plain language, to reorganise their files. A successful system keeps its frame rate,
+pages memory out and back in without losing a byte, and rolls back the failed delete with no
+orphaned directories. It also shows a plan and asks for confirmation before it touches anything. Each
+of those behaviours is specified precisely in Part III and listed as a checklist in Appendix A.
+
+
+Section 2
+The Case for a Web Operating System
+
+2.1 The browser has quietly become the computer
+For many people, most of the time, the operating system is now simply the thing that starts a browser.
+Email, documents, spreadsheets, design tools, code editors, video calls and a large share of enterprise
+software run as web applications. ChromeOS turned this into a product: a thin operating system
+whose main application is the browser.
+
+Meanwhile, the browser has grown into a genuine runtime platform. It now offers:
+
+   background threads (Web Workers);
+   near-native computation (WebAssembly);
+   GPU computation (WebGPU);
+   a transactional database (IndexedDB) and a fast private file system (the Origin Private File System);
+   offline execution (Service Workers);
+   two-way networking (WebSockets and WebRTC).
+
+
+
+
+Lahore Garrison University — Department of Computer Science                                                Page 7 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                           Fall 2026
+
+
+A platform with threads, storage, a file system, networking and a security sandbox has the raw
+materials of an operating system. What it lacks is organisation: a process model, a scheduler, a
+memory manager, a file hierarchy with permissions, a window manager and a coherent notion of
+users. Providing that organisation is exactly what an operating system does, and it is what your team
+will build.
+
+
+2.2 What a Web Operating System is, and what it is not
+A Web Operating System is a software layer that implements classic operating-system abstractions on
+top of the browser runtime: processes, files, users, permissions, windows and services. Applications
+reach these abstractions through one uniform interface. A WebOS is not a website styled to look like a
+desktop. The difference is the same as the difference between an operating system and a screenshot
+of one:
+
+ Looks like an OS (not acceptable)                   Behaves like an OS (required)
+
+ ✕ Windows are divs whose position lives in          ✓ Windows are entries in a compositor registry, and one
+ scattered component state.                          authority manages their focus, z-order and lifecycle.
+
+ ✕ Files are an array of objects saved to            ✓ Files are inodes in a tree with paths, permissions, links,
+ localStorage.                                       quotas and transactional persistence.
+
+ ✕ “Apps” are UI components rendered                 ✓ Applications are processes with IDs, priorities and memory
+ directly by the page.                               budgets, and a lifecycle the kernel controls.
+
+ ✕ Long tasks run on the main thread and             ✓ Long tasks run on Web Workers under a scheduler, and the
+ freeze the interface.                               interface never blocks.
+
+ ✕ The boot screen is a CSS animation                ✓ The boot screen shows real services starting in dependency
+ driven by a timer.                                  order.
+
+ ✕ AI is a chat panel in a corner of the             ✓ AI is a system service that indexes the file system, issues
+ screen.                                             verified system calls and advises the scheduler.
+
+
+2.3 Why WebOS matters now
+
+  Zero-install, device-independent computing                     Low-cost and shared hardware
+  The whole environment is a URL. Any device with                University labs, schools, offices and homes often
+  a modern browser becomes a workstation, and a                  share modest machines. A WebOS gives every user
+  user's files, windows and settings follow them                 a centrally managed, always-updated personal
+  from machine to machine.                                       desktop on inexpensive hardware, with nothing
+                                                                 installed locally.
+
+
+  Security by construction                                       Collaboration as a default
+  The browser isolates origins in a sandbox, and                 Multi-user state, real-time synchronisation and
+  updates are atomic deployments. Users need no                  shared file systems come naturally on the web but
+  administrator rights. A WebOS inherits these                   are awkward to build into a single-machine OS.
+  guarantees and adds its own permission model on
+  top.
+
+
+
+
+Lahore Garrison University — Department of Computer Science                                                  Page 8 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                          Fall 2026
+
+
+
+  Offline-first edge computing                                   A natural home for AI
+  Service Workers and local storage let a web                    Models, data and users already meet on the web.
+  system keep working without a connection. That                 An OS that can see a user's files (with permission)
+  discipline matters wherever connectivity is                    and act on them is the right place to host an
+  intermittent or expensive.                                     assistant that does real work.
+
+
+2.4 Why it is hard: the browser is a hostile host
+A browser was designed to display documents safely, not to host an operating system. Every classic
+OS responsibility runs into a browser limitation. This project exists to make you engineer around
+those limitations rather than ignore them.
+
+ Browser constraint                Consequence if ignored                 What your OS must do
+
+ One main thread renders           Any task over about 50 ms drops        Run work on Web Workers under a
+ the interface and runs your       frames, and heavy work freezes         scheduler and keep the kernel's main-
+ JavaScript.                       the whole desktop.                     thread share small (§9.1).
+
+ Tab memory is finite. The         Running several heavy                  Active memory paging: LRU eviction of
+ browser may discard or            applications at once crashes the       inactive application state to swap (§9.2).
+ crash a tab under memory          session. This is the daedalOS
+ pressure.                         problem.
+
+ Storage is quota-managed,         Local data is not durable by           Request persistent storage, monitor the
+ and best-effort storage may       default.                               quota, and page out to the backend (§9.2,
+ be evicted by the browser.                                               §11).
+
+ There is no native file           Without real files, the “OS” is only   A virtual file system with inodes, paths,
+ hierarchy, ownership or           a demo.                                permissions and quotas (§9.3).
+ permission model.
+
+ The network is unreliable.        A cloud-dependent system stops         Offline edge execution with a replayable
+                                   working. This is the Puter             operation log (§9.5).
+                                   problem.
+
+ A running JavaScript              Classic pre-emptive scheduling         Time-sliced cooperative yielding, plus
+ function cannot be                cannot be copied literally.            forced termination of runaway processes
+ interrupted from outside.                                                (§9.1).
+
+ Several tabs, devices and         Lost updates and corrupted             Transactions, leases, locks and version
+ users can change the same         directory trees.                       numbers (§9.3, §11).
+ data at the same time.
+
+
+2.5 A short history
+The idea of a network-delivered computer is older than the web. Each generation below solved one
+part of the problem this project asks you to solve as a whole.
+
+ Era                  System or idea                          What it contributed
+
+ 1960s–1970s          Time-sharing systems and                Many users sharing one central computer through
+                      terminals                               thin terminals; the original “cloud”.
+
+ 1990s                Network computers and thin              Diskless machines that load their software and data
+                      clients                                 from a server.
+
+ 2000s                Early web desktops (e.g. eyeOS)         Showed that a desktop, with windows and files, can be
+                      and rich web applications               drawn inside a browser.
+
+
+
+
+Lahore Garrison University — Department of Computer Science                                                 Page 9 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                        Fall 2026
+
+
+ Era                  System or idea                          What it contributed
+
+ 2009–2011            ChromeOS and the first                  Commercial proof that the browser can be the main
+                      Chromebooks                             computing environment.
+
+ 2017                 WebAssembly in all major                Near-native speed in the page, so compilers, emulators
+                      browsers                                and databases can run client-side.
+
+ Late 2010s–          OPFS, WebGPU, in-browser                Real file-system APIs, GPU computation and complete
+ 2020s                runtimes; web desktops such as          open-source web desktops.
+                      Puter and daedalOS
+
+ Today                On-device and cloud language            Intelligence becomes an operating-system service.
+                      models                                  That is the step this project asks you to take.
+
+
+
+Section 3
+Artificial Intelligence as an Operating-System
+Foundation
+
+3.1 From application to primitive
+Operating systems have a long history of absorbing capabilities that started as applications.
+Networking was once an add-on, and TCP/IP now ships in every kernel. Full-text search was once a
+separate program, and file indexing is now an OS service that any application can query. Each time,
+the capability moved into the OS for two reasons. It needed privileged, system-wide access to every
+file, process and event. And every application benefited from sharing one trustworthy
+implementation.
+
+Artificial intelligence is making the same move. Major desktop and mobile platforms now ship
+language models as system services rather than stand-alone apps, and browsers have begun to offer
+on-device models to web pages. The reason is structural: a model is only as useful as the context it can
+see and the actions it can take, and the operating system is where both live.
+
+That is why this specification forbids a cosmetic chatbot. A chat panel that sees only the text you
+paste into it, and replies only with text, is an application. An AI subsystem that is part of the
+operating system does five things:
+
+   it is notified when files change;
+   it indexes them as a background process;
+   it answers questions by searching the file system by meaning;
+   it turns intent into verified system calls;
+   it tells the scheduler what the user is about to need.
+
+
+3.2 What “AI-native” means in this project
+In this project, an AI-native operating system has four properties. Your design must show all four for
+every AI subsystem you build.
+
+
+
+
+Lahore Garrison University — Department of Computer Science                                              Page 10 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                            Fall 2026
+
+
+
+  1. AI sees the system through the kernel                        2. AI acts through system calls, not strings
+  AI services read files through the same system                  An agent produces a structured plan of typed
+  calls as any other process and pass the same                    operations, and the kernel validates the plan
+  permission checks. They never read storage                      before anything runs. Model output is parsed as
+  directly. System events (file writes, process exits,            data. It is never passed to eval or concatenated
+  application launches) reach them on the kernel's                into a shell string.
+  event bus.
+
+
+  3. AI is scheduled by the system                                4. AI informs the system
+  Embedding, indexing, training and inference run                 Predictions feed back into OS decisions: which
+  as processes with IDs, priorities and memory                    applications to pre-load, which memory pages to
+  budgets. They appear in ps and can be killed, and               keep resident, and which background jobs to run
+  the scheduler throttles them while the user is                  first.
+  active.
+
+
+3.3 The AI building blocks you will use
+
+ Building block               What it is                                       Where it lives in your OS
+
+ Embeddings                   A model maps a piece of text to a vector of      The VFS indexer embeds each file chunk
+                              numbers so that texts with similar meaning       when the file is written.
+                              produce nearby vectors.
+
+ Vector similarity            Cosine similarity measures the angle             Semantic search ranks file chunks
+                              between two vectors: cos θ = (a·b) / (‖a‖‖b‖).   against a query (§12.2).
+
+ Retrieval-augmented          Relevant documents are retrieved first and       Answers about the user's own files, with
+ generation (RAG)             given to a language model, so its answer is      citations to paths.
+                              grounded in real sources and can cite them.
+
+ Tool (function) calling      A language model emits structured calls to       Each agent tool is one OS system call
+                              functions described by JSON schemas              with a typed schema (§12.3).
+                              instead of free text.
+
+ Agents                       A loop in which a model plans, a runtime         The shell's natural-language command
+                              validates and executes, and the result is        mode, with confirmation and rollback.
+                              observed before the next step.
+
+ Small predictive             Markov chains, naive Bayes, decision trees       Predicting the next application launch
+ models                       or small neural networks trained on usage        and pre-fetching it (§12.4).
+                              telemetry.
+
+ On-device inference          Running models inside the browser                Embedding and prediction inside Web
+                              through WebAssembly or WebGPU                    Workers, which also keeps AI working
+                              runtimes, with no server round trip.             offline.
+
+
+
+3.4 The AI trust boundary
+An AI that can act on a file system can also destroy one. The rigour that protects the kernel from
+applications must also protect the system from the model. The model is an untrusted user-space
+process: it proposes, and the kernel decides. Every AI subsystem you build must respect these
+principles:
+
+   Least privilege. The agent runs with the invoking user's identity, never as root, and cannot raise its
+   own privileges.
+   Plan before acting. Every multi-step action first produces a plan the user can inspect, and a dry
+   run that lists exactly which files it will affect.
+
+Lahore Garrison University — Department of Computer Science                                                  Page 11 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                              Fall 2026
+
+
+   Confirmation. Destructive or irreversible operations need explicit user confirmation.
+   Atomicity. A confirmed plan runs as one transaction or not at all. A failure rolls everything back.
+   Content is data, never instruction. File contents and file names in the model's context may
+   contain prompt-injection attacks. They must never be able to trigger a tool call on their own
+   authority.
+   Auditability. Every AI-initiated system call is logged with its prompt, plan, user and outcome.
+   Graceful absence. When the model is unavailable (offline, rate-limited or failing), the OS keeps
+   working and AI features degrade with a clear message.
+
+
+  The litmus test
+  Remove your AI module and rebuild. If only a sidebar disappears, your AI is cosmetic and will be
+  graded as such.
+
+  If the scheduler loses its pre-fetch hints, the shell loses natural-language execution and the file
+  system loses semantic search, while everything else keeps working, then your AI is foundational and
+  correctly isolated. That is the target.
+
+
+
+
+Lahore Garrison University — Department of Computer Science                                  Page 12 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                            Fall 2026
+
+
+Part II
+
+The Brief
+Who builds the system and what it is called. How it comes to life when a user opens it, and which existing
+systems it must outperform. This part defines the team, the operating system's identity, the mandatory boot
+screen and boot sequence, and the industry benchmarks your design must answer.
+
+
+Section 4
+
+Project Logistics and Team Organisation
+
+4.1 Team composition and engineering roles
+Each team has exactly five students. Teams of any other size are not accepted without written
+approval from the instructor. Each member holds one of the five engineering roles below as their
+primary ownership. The roles are designed so that every member owns production code in a real
+subsystem; no role is limited to documentation or testing.
+
+                                                                        DSA / DB                 Key evidence
+ Role                    Primary ownership                              responsibility           produced
+
+ 1. Kernel /             Process table and control blocks, the          Binary heap; PCB and     ARCHITECTURE.md;
+ Systems                 scheduler, the Web Worker pool, the            page-table hash          scheduler and paging
+ Architect               system-call and IPC bridge, the                maps; LRU list.          benchmarks.
+                         memory manager and LRU pager.
+
+ 2. VFS / Database       The VFS tree, path resolution,                 N-ary tree; B-tree and   DATABASE.md; fault-
+ Engineer                permissions, links and quotas; the             hash indexes; file-      injection and query
+                         database schema, transactions and              handle table.            benchmarks.
+                         indexing; the sync and distributed-
+                         lock backend.
+
+ 3. Window               Boot, login and desktop screens; the           Window registry; z-      Frame-time
+ Manager / UI            compositor and taskbar; the terminal           order structure; trie.   evidence; UI and
+ Subsystem Lead          interface with autocomplete; built-in                                   accessibility audit.
+                         application interfaces; accessibility
+                         and frame rate.
+
+ 4. AI Pipeline          The embedding pipeline and vector              Vector index;            AI.md; evaluation
+ Specialist              search, the agentic shell (planner,            telemetry model (e.g.    reports; safety test
+                         validator, executor), the pre-fetch            a Markov chain).         results.
+                         model, evaluation sets and AI safety.
+
+ 5. QA / DevOps &        The service manager and boot                   DAG and topological      BOOT.md;
+ Integration             orchestration, offline execution               sort; ring buffer for    TESTING.md; CI
+ Engineer                (Service Worker and operation log),            logs.                    pipeline;
+                         CI/CD, the test and performance                                         deployment.
+                         harness, fault injection, deployment
+                         and observability.
+
+
+4.2 Shared-ownership rules
+   Every subsystem has a primary owner and a named secondary reviewer, so no subsystem
+   depends on a single person.
+
+
+
+
+Lahore Garrison University — Department of Computer Science                                                  Page 13 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                    Fall 2026
+
+
+   Every pull request is reviewed and approved by at least one other member before it is merged.
+   Direct pushes to the main branch are disabled.
+   Every member must author meaningful code in at least two subsystems: their own and one other.
+   Every member is examined on the whole system at each gate and at the final viva, not only on the
+   part they wrote.
+
+
+4.3 Open technology stack, mandatory defence
+You may use any language, framework, runtime or database. That includes React, Next.js, Svelte, Vue,
+plain Web Components, TypeScript, Rust or Go compiled to WebAssembly, Node.js, Deno, Bun, Go,
+Python, PostgreSQL, SQLite, MongoDB, Neo4j, Redis and any vector store.
+
+That freedom comes with a price. Arbitrary technology choices are penalised. Each major choice
+must be defended in writing against the performance and integrity constraints of a WebOS, following
+the procedure in Section 14. “We already knew it” is a legitimate factor in a decision matrix, but it is
+never a justification on its own.
+
+
+4.4 Team contract
+Each team signs a team contract in Week 2 and commits it to the repository as TEAM_CONTRACT.md. It
+must state:
+
+   the role and secondary-review assignments;
+   the team's definition of “done” for a task;
+   the meeting and communication schedule, and how quickly each member commits to reply;
+   how the team makes decisions when members disagree;
+   what the team does, and by when, if a member stops contributing, so the problem is handled early
+   rather than in Week 16;
+   a signed acknowledgement that marks are moderated individually using the viva, commit history
+   and peer assessment (Section 16.4).
+
+
+Section 5
+Name Your Operating System
+Every operating system has an identity: a name, a version, a logo, a boot screen and an About dialog.
+Naming your system is not decoration. It makes the team agree on what the product is, and it gives
+every artefact (the repository, deployment, report and demo) one consistent identity.
+
+Each team must choose a decent, original name for its WebOS and register it using the form in
+Appendix D by the end of Week 2. The name then appears everywhere the system identifies itself.
+
+
+5.1 Naming rules
+
+ Original                          The name must not belong to an existing operating system or major software
+                                   product (for example Windows, macOS, ChromeOS, Linux, Ubuntu, Android,
+                                   Puter or daedalOS). It must not be confusingly similar to a registered
+                                   trademark. The generic term “WebOS” used in this document is not a valid
+                                   name, because webOS is also an existing commercial product.
+
+
+
+
+Lahore Garrison University — Department of Computer Science                                          Page 14 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                            Fall 2026
+
+
+ Decent and professional           The name must be suitable to print on a university report and present to
+                                   industry judges. It must not contain profanity, slurs, innuendo, political,
+                                   sectarian or religious references, or the names of real people.
+
+ Short and pronounceable           3 to 16 characters in the Latin alphabet. It may end in “OS” (for example
+                                   <Name>OS or <Name> OS). Test it by saying it aloud: “Boot into ___ and open the
+                                   terminal.”
+
+ Unique in the cohort              Names are registered first come, first served, and a name already taken by
+                                   another team is rejected. This document deliberately suggests no names:
+                                   choosing one is your team's task.
+
+ Stable                            After Phase 1 the name can be changed only with the instructor's written
+                                   approval.
+
+
+
+  Where good names come from
+  Strong names often come from nature and astronomy (a star, a mountain, a bird), from local heritage
+  and geography (a river, a landmark, a historic city), or from a coined word that hints at what makes
+  your system different. The best names are short, easy to spell after hearing them once, and fit your
+  logo.
+
+
+5.2 The identity kit
+By the Phase 2 gate, your repository must contain an identity kit in /system/branding and in docs/:
+
+ Item                          Requirement
+
+ Name and wordmark             The registered name, written the same way everywhere, with capitalisation and
+                               spacing fixed.
+
+ Logo                          An SVG logo that is legible at 16 px (favicon and taskbar) and at 256 px (boot
+                               screen).
+
+ Version scheme                Semantic versioning (MAJOR.MINOR.PATCH), starting at 0.1.0. Each phase ends with a
+                               tagged release: v0.2.0 at Phase 2, v0.3.0 at Phase 3, v0.4.0 at Phase 4 and v1.0.0 at
+                               the final defence. Release codenames are optional.
+
+ Tagline                       One line that states your system's distinctive idea, for example what it does that
+                               Puter and daedalOS do not.
+
+ Design tokens                 Colours, typography, spacing and motion values in one tokens file, used by every
+                               system screen. Light and dark themes.
+
+ Kernel identifier             The string printed by uname, including the name, version, short build hash and
+                               build date.
+
+
+5.3 Where your name must appear
+
+  Boot and login                            System surfaces                        Artefacts
+  Boot screen, boot menu,                   Settings → About dialog (name,         Repository name, README
+  recovery console and login                version, build hash, build date        header, technical report cover,
+  screen.                                   and team members), browser             slides and demo video title.
+                                            tab title and favicon, installable
+                                            app manifest.
+
+
+
+
+Lahore Garrison University — Department of Computer Science                                               Page 15 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                             Fall 2026
+
+
+  student@your-os:~$ uname -a
+  YourOS 0.3.0 (kernel 0.3.0-a1f93c2, built 2026-11-02) · Chrome 153 · 8 cores ·
+  uid=1001(student)
+  student@your-os:~$ cat /system/release
+  NAME="YourOS"   VERSION="0.3.0"   BUILD="a1f93c2"
+  TEAM="Section D · Team 04"
+
+
+
+
+Section 6
+The Boot Screen and Boot Sequence
+
+6.1 Why your OS must boot
+When a physical computer is switched on, several stages run in order:
+
+1. firmware performs a power-on self-test (POST);
+2. a bootloader selects and loads a kernel;
+3. the kernel initialises its core data structures;
+4. an init system such as systemd starts services in dependency order until the login screen appears.
+
+Each stage exists because something must be ready before something else can run.
+
+Your WebOS needs a boot sequence for the same reason. Before the desktop can appear, several things
+must happen in order:
+
+   the kernel creates the process table and starts the scheduler;
+   storage is opened, and the file system is mounted and checked;
+   the user is authenticated;
+   background services (synchronisation, locking, AI indexing and prediction) start in an order that
+   respects their dependencies.
+
+The boot screen is the visible face of this process. It is mandatory, and it must tell the truth: every
+movement of the progress indicator must correspond to real work finishing.
+
+
+  Not acceptable
+  A progress bar driven by setTimeout or setInterval, a fixed-length animation, or a splash screen that
+  hides a desktop that has already loaded. A boot screen that pretends to load is graded as absent.
+
+
+6.2 What the boot screen looks like
+The visual design of your boot screen is yours to choose: minimal, retro BIOS, cinematic, or
+something new. What is fixed is the information it shows and the honesty of its progress.
+
+
+
+
+Lahore Garrison University — Department of Computer Science                                   Page 16 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                                                          Fall 2026
+
+
+
+                                                                                   YourOS Boot Manager
+
+
+                                                                                       Normal boot
+
+
+                              YourOS                                                   Safe mode: no AI services, no autostart
+
+                         version 0.3.0 · build a1f93c2                                 Recovery: fsck · clear cache · reset session
+
+                                                                                       Verbose boot
+                       vfs: mounting / (12,408 inodes)
+                        Service start · 7 of 13 services
+
+
+                       Esc boot menu      V verbose log                            ↑↓ select   Enter boot    auto-boot in 3 s
+
+
+
+Figure 6.1 — Illustrative boot splash (left) and boot menu (right). The splash must show the name, version,
+truthful progress, the current service and how to reach the boot menu and verbose log. “YourOS” stands for your
+team's registered name.
+
+
+6.3 The boot stages
+
+  1                          2                             3                   4                            5                        6
+
+  Power-on (POST)            Bootloader                    Kernel init         Service start                Login                    Session restore
+  Detect Workers,            Boot menu:                    Process table,      Service DAG in               Choose user;             Desktop, windows,
+  IndexedDB, OPFS,           normal · safe mode            scheduler, memory   topological order;           authenticate; cached     pre-fetched apps;
+  crypto; read quota         · recovery                    manager, IPC bus    levels in parallel           verifier if offline      boot time logged
+
+
+
+
+Boot progress = completed weighted work ÷ total work. It is computed from real events, never from a timer.
+
+Figure 6.2 — The six boot stages. Stages 3 and 4 are driven by the service dependency graph in Figure 6.3. Stage 5
+must still work when the device is offline (BOOT-09).
+
+
+  Stage                   What happens                                         Shown on screen                         If it fails
+
+  1. POST                 Detect required browser capabilities;                Logo; “checking                         “Unsupported browser”
+                          check the Service Worker cache; read                 system”.                                screen listing the missing
+                          the storage estimate and request                                                             capability.
+                          persistent storage.
+
+  2. Bootloader           Read boot flags; show the boot menu                  Boot menu (Figure                       Fall back to safe mode.
+                          if requested (e.g. Esc held); choose                 6.1).
+                          the profile.
+
+  3. Kernel init          Create the process table (PID 1 =                    Progress; verbose log                   Kernel panic screen with
+                          init), start the scheduler and worker                lines.                                  diagnostic details.
+                          pool, arm the memory manager,
+                          open the IPC bus.
+
+  4. Service              Load service manifests, build the                    Current service and                     Critical service: recovery
+  start                   DAG, reject cycles, and start services               count.                                  screen. Non-critical:
+                          level by level.                                                                              continue degraded.
+
+  5. Login                Select a user and authenticate against               Login screen with                       Offer guest or offline
+                          the server, or against a cached                      users.                                  mode.
+                          verifier when offline.
+
+  6. Session              Restore windows and layout, start                    Desktop.                                Start a clean session and
+  restore                 pre-fetched applications, record boot                                                        keep the old one for
+                          timings.                                                                                     recovery.
+
+
+
+Lahore Garrison University — Department of Computer Science                                                                               Page 17 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                                  Fall 2026
+
+
+6.4 The service dependency graph
+Each system service declares its dependencies in a manifest. At boot the service manager:
+
+1. builds a directed graph from the manifests;
+2. rejects cycles;
+3. computes a topological order with Kahn's algorithm;
+4. starts every service in the same level concurrently.
+
+Shutdown runs the same order in reverse. The boot progress bar is the weighted fraction of graph
+nodes that have finished starting.
+
+                                                                                                      Legend
+L0                                                kernel
+
+                                                                                                      Critical: failure halts
+                                                                                                      boot and opens the
+                                                                                                      recovery screen
+L1            sched                                          storage              wm
+
+
+                                                                                                      Degradable: boot
+                                                                                                      continues; retried
+L2          ai.runtime                 mm                      vfs                                    with back-off
+
+
+                                                                                                      A → B: B requires A,
+                                                                                                      so A starts first
+L3         ai.predictor             ai.indexer                 auth
+                                                                                                      Level = longest path
+                                                                                                      from kernel. Services
+                                                                                                      in one level start in
+                                                                                                      parallel.
+L4                                                            sync             desktop
+
+                                                                        ▲ desktop interactive:
+                                                                        boot completes here, while
+L5                                                            lockd     lockd may still be starting
+
+
+
+
+Figure 6.3 — An example service DAG with 13 services in six levels. Your services and edges will differ. What is
+fixed is the mechanism: the order comes from topological sorting, levels run in parallel, cycles are rejected, and
+only critical services can block the desktop.
+
+
+  // /system/services/ai.indexer.json (comments added for illustration)
+  {
+    "name": "ai.indexer",
+    "requires": ["ai.runtime", "vfs"],
+    "critical": false,     // failure degrades instead of halting the boot
+    "weight": 3,           // share of the boot progress bar
+    "timeoutMs": 4000,
+    "priority": 32,        // scheduler priority once running (0 = highest, 39 = lowest)
+    "safeMode": false      // not started in safe mode
+  }
+
+
+
+6.5 Boot requirements
+
+ ID            Requirement                                                              How it is verified
+
+ BOOT-01       Must: The boot screen displays the registered OS name, logo and          Visual inspection at the
+               version.                                                                 Phase 2 gate.
+
+
+
+
+Lahore Garrison University — Department of Computer Science                                                      Page 18 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                           Fall 2026
+
+
+ ID            Requirement                                                               How it is verified
+
+ BOOT-02       Must: Progress is computed from real work finishing (weighted             Code review. On a throttled
+               DAG nodes and asset loading). No timer-driven progress anywhere           network, the progress bar
+               in the boot path.                                                         must slow down in step
+                                                                                         with the network.
+
+ BOOT-03       Must: Services start in the topological order of the service DAG,         bootlog timestamps show
+               and independent services start concurrently.                              levels overlapping.
+
+ BOOT-04       Must: A dependency cycle halts the boot with a kernel-panic               Examiner adds a cycle to a
+               screen that names the cycle.                                              manifest.
+
+ BOOT-05       Must: A verbose mode (toggled by a key) shows a timestamped,              Live demonstration.
+               kernel-style boot log.
+
+ BOOT-06       Must: A boot menu offers Normal, Safe mode (no AI services, no            Live demonstration.
+               autostart apps, default theme) and Recovery (file-system check,
+               clear local cache, reset session).
+
+ BOOT-07       Must: If a non-critical service fails or times out, the boot              AI endpoint or backend
+               continues; the desktop shows which services are degraded; failed          blocked during boot.
+               services are retried with back-off.
+
+ BOOT-08       Must: If a critical service fails, a recovery screen offers retry, safe   Local database version
+               mode and diagnostic details, never a blank page or an endless             corrupted by the examiner.
+               spinner.
+
+ BOOT-09       Must: With the network disabled, the system boots to a usable             Browser set to offline, then
+               desktop from cached assets and local state.                               reload.
+
+ BOOT-10       Must: Warm boot (cached) ≤ 1.5 s and cold boot ≤ 3.0 s to an              Performance trace on the
+               interactive desktop. Large assets such as model weights load only         reference machine.
+               after the desktop is interactive.
+
+ BOOT-11       Must: Per-stage and per-service timings are saved. bootlog prints         Terminal demonstration.
+               them, and bootlog --critical-path shows the chain of services
+               that determined the boot time.
+
+ BOOT-12       Must: Graceful shutdown and restart: dirty pages and pending              shutdown -r now during a
+               writes are flushed, services stop in reverse topological order, and       live session.
+               the session state is saved. Restarting returns to the same session.
+
+ BOOT-13       Must: The boot screen is accessible: it respects prefers-reduced-         Accessibility audit.
+               motion, exposes role="progressbar" with live values, announces
+               status changes to screen readers, and the boot menu works from
+               the keyboard alone.
+
+ BOOT-14       Should: The login screen supports several users and includes a            Live demonstration.
+               guest or demo account for examiners.
+
+
+6.6 Reference boot log
+Your verbose boot log does not have to match this format, but it must contain the same information.
+The example below shows a boot on a flaky network: the sync service is degraded and the desktop
+still comes up.
+
+
+
+
+Lahore Garrison University — Department of Computer Science                                               Page 19 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                         Fall 2026
+
+
+  [    0.000] firmware: YourOS 0.3.0 · POST ok (workers, indexeddb, opfs, crypto) · quota 2.1 GB,
+  persisted
+  [    0.004] loader: profile=normal · service worker active (offline-capable)
+  [    0.011] kernel: process table ready (hash map, cap 1024) · pid 1 = init
+  [    0.013] sched: priority heap + RR · quantum 8 ms · workers 7/8 cores · aging 250 ms
+  [    0.019] mm: memory manager armed · budget 256 MB · swap tiers: idb, cloud
+  [    0.021] svc: 13 manifests · 14 edges · acyclic · 6 levels
+  [    0.087] storage: opened youros-vfs v7 (IndexedDB) in 64 ms
+  [    0.212] vfs: mounted / · 12,408 inodes · 3 users · quotas enforced
+  [    0.215] vfs: fsck clean · 0 orphans · 0 dangling links
+  [    0.341] auth: session restored for uid=1001 (student)
+  [    0.402] sync: WARN backend unreachable · offline mode · outbox holds 3 ops · retry in 2 s
+  [    0.405] lockd: DEGRADED (requires sync) · local advisory locks only
+  [    0.644] ai.indexer: 412 chunks pending · scheduled at priority 32 (background)
+  [    0.651] ai.predictor: model loaded (Markov, 214 transitions) · pre-fetch: Terminal, Files
+  [    0.731] desktop: interactive · 4 windows restored · boot 0.73 s · 2 services degraded
+
+
+
+And the only acceptable response to a dependency cycle:
+
+  [     0.021] svc: 13 manifests · 15 edges
+  [     0.021] svc: KERNEL PANIC: dependency cycle detected: sync → lockd → auth → sync
+               boot halted. [R] recovery console   [S] safe mode   [D] dump diagnostics
+
+
+
+
+Section 7
+Industry Benchmarks and the Limitations to
+Overcome
+You are not building in a vacuum. Two open-source web operating systems set the bar. Your design
+must study both, measure where they fall short, and show how your architecture overcomes each
+limitation.
+
+
+7.1 Benchmark 1: Puter
+Architecture. Puter is a full-featured, browser-based desktop environment. It combines a cloud-
+backed storage layer, hosting for web applications, and a developer API through which applications
+use storage and hosted services, including AI.
+
+  Limitation: centralised cloud coupling                         Your required response
+  Core functions depend on a continuous                          Offline edge execution. The core utilities
+  connection to the remote server. When the                      (terminal, file explorer, text editor, task manager
+  network drops, the environment loses most of its               and settings) must work fully offline against a
+  usefulness.                                                    local-first VFS. Changes queue in an operation log
+                                                                 and are replayed when the connection returns
+                                                                 (§9.5).
+
+
+  Limitation: superficial AI layer                               Your required response
+  AI is offered as a service that applications call, like        AI woven into OS primitives. AI jobs are
+  a widget. It is not part of how the system                     scheduled processes, retrieval is a file-system
+  schedules work, stores files or runs commands.                 capability, and natural language compiles into
+                                                                 validated system calls in the shell (§12).
+
+
+
+Lahore Garrison University — Department of Computer Science                                               Page 20 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                             Fall 2026
+
+
+7.2 Benchmark 2: daedalOS
+Architecture. daedalOS is a client-centric web desktop that recreates the look and feel of a local
+desktop entirely client-side. Its file system is built on BrowserFS, which layers a Node-style file-
+system API over browser storage. It runs applications and emulators directly in the page.
+
+  Limitation: memory bloat                                       Your required response
+  Running heavy applications or emulators at the                 Active memory paging. A memory budget, LRU
+  same time keeps all their state in one tab, which              eviction of inactive application state, and two-tier
+  can exhaust memory and crash the browser.                      swap to local storage and backend cloud storage,
+                                                                 with transparent page-in (§9.2).
+
+
+  Limitation: lack of orchestration                              Your required response
+  There is no robust multi-tenant backend, so there              A multi-tenant backend. Per-user storage and
+  is no distributed file locking and no                          quotas, lease-based distributed file locks,
+  synchronisation between users or devices.                      versioned synchronisation and conflict handling
+                                                                 over WebSockets (§9.3, §9.5, §11).
+
+
+7.3 Summary and verification
+
+                                                                                How it is verified at the final
+ Benchmark          Limitation               Your required response             defence
+
+ Puter              Cloud coupling           Offline edge execution for core    Network disabled; boot; create, edit,
+                                             utilities; local-first VFS with    move and delete files; reconnect;
+                                             replayable log.                    the server state converges with no
+                                                                                lost operations.
+
+ Puter              Superficial AI           AI inside the scheduler, file      AI processes shown in ps; the litmus
+                                             system and shell.                  test of §3.4; agent plans executed
+                                                                                through system calls.
+
+ daedalOS           Memory bloat             LRU paging with local and          Open a workload of twice the
+                                             cloud swap.                        memory budget; memory stays
+                                                                                within budget; restored state
+                                                                                matches its checksum.
+
+ daedalOS           No orchestration         Multi-tenant backend with          Two users on two machines contend
+                                             locking and sync.                  for one file; the lock is honoured;
+                                                                                the lease expires after a crash.
+
+
+
+  Phase 1 task: benchmark analysis
+  Run both systems yourselves. Measure memory use with several applications open (the browser's
+  task manager is enough), observe what happens offline, and record what you find. Submit a two-page
+  benchmark analysis with the Phase 1 dossier, with screenshots and numbers as evidence. Claims
+  copied from websites without measurement earn no credit.
+
+
+
+
+Lahore Garrison University — Department of Computer Science                                                 Page 21 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                             Fall 2026
+
+
+Part III
+
+Technical Specification
+This is the engineering core of the document. It starts with a reference architecture, then specifies each
+subsystem in turn: the operating-system primitives, the mandatory data structures, the database and its
+integrity guarantees, and the foundational AI layer. Every testable requirement has an identifier.
+
+
+Section 8
+
+Reference Architecture
+The architecture below is a reference, not a prescription. You may restructure it, merge or split
+components, or choose different technologies. However, your architecture must keep three
+boundaries:
+
+1. Applications reach OS resources only through the system-call interface. No application,
+   including built-in ones, touches storage, the process table or another application's windows
+   directly.
+2. The main thread only renders and dispatches. Computation runs on workers. The kernel's own
+   work on the main thread is small and bounded.
+3. The client can work alone, and the server is the authority on shared state. The client runs offline
+   from local state. The backend is authoritative for multi-user data, locks and quotas.
+
+
+
+
+Lahore Garrison University — Department of Computer Science                                   Page 22 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                                                             Fall 2026
+
+
+  User space: every application is a process
+
+
+    Boot & login screens                   Desktop shell                        Built-in applications                 AI shell (agent)
+    branding · boot menu · users           wallpaper · taskbar · launcher       Terminal · Files · Editor · Tasks     natural language → syscalls
+
+
+
+
+                          System-call interface: typed messages · permission and capability checks · audit log
+
+
+  Kernel: main thread, kept thin (at most 4 ms of work per frame)
+
+
+    Process manager                                    Scheduler                                          Memory manager
+    PCB table · hash map (pid → PCB)                   binary heap · RR per level · aging                 LRU pager · page tables · swap tiers
+
+
+
+    Window compositor                                  Service manager                                    Virtual file system
+    registry · z-order · focus · taskbar               DAG · topological boot and shutdown                inode tree · paths · rwx · quotas
+
+
+
+
+  Client execution and local persistence
+
+
+    Web Worker pool                        AI runtime (worker)                  IndexedDB / OPFS                      Service Worker
+    process time-slices, off main          embeddings · predictor model         inodes · local swap · outbox          offline shell · versioned cache
+
+
+
+
+                          WebSocket: sync · locks · process and change events         HTTPS: auth · bulk transfer · LLM proxy
+
+
+  Backend: multi-tenant, authoritative for shared state
+
+
+    API gateway & auth                                 Sync engine & lock manager                         ACID database
+    sessions · tenancy · rate limits                   op-log replay · leases · broadcast                 metadata · transactions · B-trees
+
+
+
+    Object storage                                     Vector store                                       LLM gateway
+    file blobs · remote swap pages                     chunk vectors · ACL metadata                       server-side keys · cost and audit
+
+
+
+
+Figure 8.1 — Layered reference architecture. Shaded components belong to the AI subsystem. They appear in
+every layer, from the shell to the kernel's workers to the backend. That is what “woven into the OS” looks like in a
+diagram.
+
+
+8.1 Walk-through: one command, every layer
+To check that your architecture holds together, trace one command through it. Here is rm -r ~/old-
+drafts typed into the terminal:
+
+1. The terminal process parses the command and issues sys.unlink(path, {recursive: true})
+   through the system-call interface.
+2. The kernel resolves the path in the VFS tree and checks write permission on the parent directory
+   and every descendant.
+3. The VFS applies the subtree deletion to the local store in one IndexedDB transaction, and appends
+   one operation, with an idempotency key, to the outbox.
+4. The sync client sends the operation over the WebSocket. The server acquires locks, runs the
+   recursive delete in one database transaction, updates the quota and commits. Any failure rolls
+    back.
+5. The server broadcasts the change to the user's other sessions. The AI indexer, a background
+   process, is notified and removes the deleted files' vectors.
+
+
+Lahore Garrison University — Department of Computer Science                                                                                   Page 23 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                                    Fall 2026
+
+
+6. The terminal prints the result. If the server rejected the operation, the client reverts its local
+   change and shows the reason.
+
+
+Section 9
+
+Operating-System Primitives
+This section specifies the six primitives that make your system an operating system: processes and
+scheduling, virtual memory, the file system, window management, offline execution, and the system-
+call interface with its terminal.
+
+
+9.1 Process management and scheduling
+
+The process model
+Everything that runs is a process: applications, system services, AI jobs and terminal commands. The
+kernel keeps a process table, a hash map from process ID to process control block (PCB). Every
+lookup, insert and removal is O(1) on average.
+
+ PCB field                     Meaning
+
+ pid, ppid                     Process ID and parent process ID. PID 1 is init, which adopts orphaned processes.
+
+ uid, gid                      Owner identity, used for every permission check the process triggers.
+
+ state                         One of NEW, READY, RUNNING, BLOCKED, SUSPENDED (paged out) or TERMINATED
+                               (Figure 9.1).
+
+ priority, nice                Static priority from 0 (highest) to 39 (lowest), adjusted by nice; the effective priority
+                               also includes aging.
+
+ cpuTimeMs, lastRunAt,         Accounting for top, time slices and aging.
+ waitingSince
+
+ worker                        Handle of the Web Worker currently executing the process, if any.
+
+ pageTable, residentBytes      Memory-manager data (§9.2).
+
+ fdTable                       Open file descriptors: a hash map from file descriptor to open-file handle.
+
+ waitingOn, exitCode           The event or resource a blocked process is waiting for, and the exit status.
+
+
+
+
+                                                                                                  exit · kill
+                                                                    dispatch
+                           admit
+            New                               Ready                                Running                      Terminated
+                                                                    preempt
+
+
+                                   page-out                                            wait: I/O, lock,
+                                                                      event done       page fault
+                                     (LRU)
+                                                          page-in
+
+
+                                          Suspended
+                                                                                   Blocked
+                                              paged out
+                                                                    page-out
+
+
+
+Figure 9.1 — Process states. SUSPENDED is the state that links the scheduler to the memory manager: a process
+whose state has been paged out cannot be dispatched until a page-in brings it back to READY.
+
+
+
+Lahore Garrison University — Department of Computer Science                                                          Page 24 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                           Fall 2026
+
+
+The scheduler
+   Ready queue. A binary min-heap that you implement. Its key is (effective priority, arrival sequence
+   number). The sequence number gives FIFO order within a priority level, which produces round-
+   robin within each priority.
+   Aging. A process that waits for longer than a set interval has its effective priority improved step by
+   step. No runnable process starves, and you must state and prove the bound.
+   Time slices. Long-running work is written as resumable steps (generators, chunked loops or
+   explicit state machines). A worker runs one quantum of steps, reports back, and the scheduler re-
+   queues the process.
+   Pre-emptive and non-pre-emptive classes. Interactive and foreground processes pre-empt
+   background ones at the next slice boundary. Non-pre-emptive tasks, such as a transaction commit,
+   run to completion. A process that exceeds its hard limit is forcibly terminated with
+   worker.terminate().
+
+   Multi-core dispatch. The worker pool is sized from navigator.hardwareConcurrency, and the
+   scheduler maps runnable processes onto free workers.
+   Main-thread budget. The kernel's bookkeeping must stay small enough that the interface holds 60
+   FPS, which is a frame budget of 16.7 ms shared with rendering.
+
+
+  Engineering reality: pre-emption in a browser
+  A running JavaScript function cannot be interrupted from outside. You therefore implement pre-
+  emption at two levels. Cooperative time-slicing at yield points handles the normal case. Forced
+  termination handles runaway processes. Explaining this trade-off clearly, and what it costs a process
+  that is terminated mid-slice, is part of your defence.
+
+
+ ID            Requirement                                                              How it is verified
+
+ PROC-01       Must: The process table is a hash map keyed by PID, with O(1)            Code review; unit tests.
+               average lookup, insert and delete.
+
+ PROC-02       Must: The ready queue is your own binary heap with O(log n) push         Unit tests; micro-
+               and pop, and O(log n) priority change through an index map.              benchmark.
+
+ PROC-03       Must: Round-robin among equal priorities with a configurable             Scheduling trace test.
+               quantum.
+
+ PROC-04       Must: Aging guarantees that no runnable process waits longer             Starvation test: 50 high-
+               than a declared bound, whatever its priority.                            priority CPU jobs and 1
+                                                                                        low-priority job.
+
+ PROC-05       Must: All long-running work runs on Web Workers. With a CPU-             Performance trace;
+               bound workload running and 10 windows open, the p95 frame                PerformanceObserver long-
+               time is ≤ 16.7 ms, and no long task over 50 ms comes from OS code.       task log.
+
+ PROC-06       Must: The process lifecycle follows Figure 9.1, and every state          Trace inspection.
+               transition is logged.
+
+ PROC-07       Must: kill terminates the process, frees its worker, closes its file     Integration test.
+               descriptors and releases its locks. Its children are re-parented to
+               init.
+
+ PROC-08       Must: ps, top, kill, nice, renice, jobs, bg, fg and a trailing & work,   Live demonstration.
+               and a graphical Task Manager shows state, CPU share and memory.
+
+
+
+
+Lahore Garrison University — Department of Computer Science                                                 Page 25 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                                                       Fall 2026
+
+
+ ID               Requirement                                                                                   How it is verified
+
+ PROC-09          Should: The process table holds at least 256 concurrent processes                             Load test.
+                  (most of them sleeping) without degrading the interface.
+
+
+9.2 Virtual memory and paging
+Your OS is responsible for the memory of every application it runs. Each process has in-memory
+state: documents, canvases, editor buffers, emulator state and caches. When the total resident state
+exceeds the system's memory budget, the memory manager must reclaim memory in three steps:
+
+1. serialise the least recently used inactive state;
+2. write it to swap;
+3. release it from memory.
+
+When the process is needed again, the state must be paged back in without the user having to do
+anything.
+
+Memory accounting
+Browsers do not report exact memory use per object, so your team must define and document an
+accounting model. A typical model counts:
+
+   the serialised size of each process's state;
+   the declared size of its large assets (blobs, image bitmaps, WebAssembly memory).
+
+Check your model against real measurements, for example the browser task manager or
+performance.measureUserAgentSpecificMemory() where it is available (it requires cross-origin
+isolation), and report the error.
+
+Pages, the page table and LRU replacement
+Each process's state is divided into pages, either fixed-size chunks of serialised state or logical units
+such as one document. A per-process page table maps each page to its location (RESIDENT,
+LOCAL_SWAP or REMOTE_SWAP), with a dirty bit, a last-access time, a size and a checksum.
+Replacement uses a global LRU list, built from a hash map and a doubly linked list so that touching a
+page and evicting a page are both O(1). The focused process and pinned system processes are never
+evicted.
+
+                                            MRU end                                                                               LRU end
+
+       hash map                        Terminal                     Editor                    Files                          Emulator
+                                       pid 12 · 3.1 MB              pid 7 · 18.4 MB           pid 31 · 6.0 MB                pid 4 · 142 MB
+    pid 12 →
+                                       pinned: focused              dirty                     clean                          idle 9 min
+    pid 7 →
+
+    pid 31 →
+                                                                                                                                              evict
+    pid 4 →
+
+
+
+
+               Tier 2: remote swap                                  Tier 1: local swap                                Serialise
+               backend object storage · durable                     IndexedDB / OPFS · fast                           checksum · compress
+
+
+                                                   quota pressure                                     write, verify
+
+Figure 9.2 — LRU replacement and two-tier swap. The hash map finds any page's list node in O(1), and the list
+keeps pages in recency order. Eviction takes the least recently used unpinned entry. A page fault reverses the
+path: the page is read back, its checksum is verified, and it is inserted at the MRU end.
+
+
+
+Lahore Garrison University — Department of Computer Science                                                                          Page 26 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                        Fall 2026
+
+
+Swap tiers, page faults and thrashing
+   Two-tier swap. Tier 1 is local swap in IndexedDB or OPFS: fast, but limited by quota. Tier 2 is
+   remote swap in backend object storage, used under local quota pressure (monitor
+   navigator.storage.estimate()) and for durability. Clean pages that already have a valid swap copy
+   are dropped without being rewritten.
+   Page faults. Touching a non-resident page raises a page fault. The process becomes BLOCKED, the
+   page is read and verified, and the process returns to READY. Its window shows a “restoring” state,
+   not a blank.
+   Thrashing guard. If the page-fault rate stays above a threshold, the OS refuses to start new heavy
+   processes and tells the user, in the spirit of the working-set model.
+   Commands. free, vmstat and pmap <pid> show the budget, resident and swapped bytes, the fault
+   count and the hit ratio.
+
+ ID            Requirement                                                            How it is verified
+
+ MEM-01        Must: A configurable global memory budget (default 256 MB,             Settings; free.
+               measured by your accounting model) and a soft limit for each
+               process.
+
+ MEM-02        Must: LRU eviction using your own hash map and doubly linked           Unit tests; code review.
+               list, with O(1) touch and evict. Focused and pinned processes are
+               never evicted.
+
+ MEM-03        Must: Page-out serialises the state, writes it to swap, verifies the   Checksum comparison
+               checksum and only then releases the memory. Page-in restores a         test.
+               byte-identical state.
+
+ MEM-04        Must: Remote swap to backend storage works, and a remotely             Close the tab, reopen it,
+               swapped state can be paged in from a new browser session.              restore the state.
+
+ MEM-05        Must: For a 5 MB state, page-in p95 is ≤ 300 ms from local swap and    Benchmark report.
+               ≤ 2 s from remote swap.
+
+ MEM-06        Must: With a workload of at least twice the budget open, accounted     Stress script at the final
+               resident memory never exceeds the budget for more than 1 s, and        defence.
+               the tab never crashes.
+
+ MEM-07        Must: Page faults, hit ratio and bytes paged in and out are shown      Live demonstration.
+               for each process in the Task Manager and vmstat.
+
+ MEM-08        May: Memory-mapped files: sys.mmap(path) returns a handle,             Credited under DSA and
+               registered in a hash map, whose pages load on first access and are     OS.
+               flushed by msync.
+
+
+9.3 The virtual file system
+The VFS is a UNIX-like hierarchical file system built as an n-ary tree of inodes. Each directory stores
+its entries in a hash map from name to inode, so looking up a child is O(1) and resolving a path of
+depth d is O(d). The standard hierarchy is created at first boot (mkfs) with the correct owners and
+modes:
+
+
+
+
+Lahore Garrison University — Department of Computer Science                                              Page 27 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                  Fall 2026
+
+
+  PATH                     PURPOSE                                        OWNER            MODE
+  /                        root of the tree                               root:root        rwxr-xr-x
+  ├── bin/                 built-in commands and app manifests            root:root        rwxr-xr-x
+  ├── system/              configuration, services, branding, logs        root:root        rwxr-xr-x
+  │    ├── services/       service manifests (§6.4)
+  │    └── log/            kernel log, audit log, boot log
+  ├── root/                home of the superuser (uid 0)                  root:root        rwx------
+  ├── home/                one home directory per user                    root:root        rwxr-xr-x
+  │    ├── student/        home of uid 1001                               student:users    rwx------
+  │    └── guest/
+  ├── tmp/                 world-writable, sticky bit, cleared on boot    root:root        rwxrwxrwt
+  └── mnt/                 optional mount points (shared or cloud)
+
+
+
+/root, /home, /system and /bin are must. /tmp is should and /mnt is may.
+
+Inodes
+Each inode stores the following fields:
+
+   ino: inode number;
+   type: file, directory or symlink;
+   mode: nine permission bits plus the sticky bit;
+   uid and gid: owner and group;
+   size;
+   nlink: link count;
+   atime, mtime and ctime: access, modification and change times;
+   blob: reference to the content, for example a content hash;
+   target: the target path, for symlinks;
+   version: a counter used for optimistic concurrency control.
+
+Path resolution
+1. Start at / for an absolute path, or at the process's working directory for a relative one. Split the
+    path into components and ignore empty ones, so // is treated as /.
+2. For each component, require execute (search) permission on the current directory. . stays in
+    place, and .. moves to the parent (at / it stays at /).
+3. Look up the child in the directory's hash map. If it is missing, return ENOENT. If a later component
+    follows and the child is not a directory, return ENOTDIR.
+4. If the child is a symlink, and it is not the last component or the call follows links, resolve its target.
+   Relative targets resolve against the link's own directory. Count the hops and return ELOOP after 40.
+5. Return the final inode. Operations that must not follow the last link (lstat, unlink, readlink) stop
+   one step early.
+
+Permissions, links and quotas
+   Permissions. Read, write and execute for owner, group and others. On directories, r lists entries, w
+   creates and removes entries, and x allows traversal. Root (uid 0) bypasses read and write checks.
+   chmod accepts octal and symbolic modes, chown is root-only, and the default umask is 022. The
+   sticky bit on /tmp means only a file's owner can delete it.
+   Soft links. ln -s stores a path. A link may point to nothing (a dangling link), and readlink, stat and
+   lstat behave as they do on UNIX. Hard links are optional (may), but nlink must be maintained
+   correctly either way.
+
+
+
+Lahore Garrison University — Department of Computer Science                                      Page 28 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                          Fall 2026
+
+
+   Hard quotas. Each user has a byte quota and an inode quota, enforced inside the same
+   transaction as the write. A write that would exceed the quota fails with EDQUOT and leaves no
+   partial data. df, du and quota report usage. Root is exempt.
+
+ Error              Returned when                            Error              Returned when
+
+ ENOENT             A path component does not exist          EACCES             A permission check fails
+
+ EEXIST             The target name already exists           EPERM              The operation is reserved for the
+                                                                                owner or root
+
+ ENOTDIR            A directory was expected                 ELOOP              More than 40 symlink hops
+
+ EISDIR             A file operation was applied to a        EDQUOT             The byte or inode quota would be
+                    directory                                                   exceeded
+
+ ENOTEMPTY          rmdir on a non-empty directory           EBUSY              The file is locked by another session
+
+ EINVAL             A directory would move into its          ENAMETOOLONG       Name > 255 bytes or path > 4096
+                    own subtree                                                 bytes
+
+
+Multi-user synchronisation and distributed file locking
+The backend runs a lock manager that supports shared (read) and exclusive (write) locks. Locks are
+leases: each has a time-to-live that the holder renews with heartbeats, so a crashed client cannot hold
+a lock forever. Lock grants and releases are pushed over the WebSocket.
+
+Writes also use optimistic concurrency. Every write carries the inode version it expects to replace. If
+the version does not match, the write is a conflict. Conflicts are never resolved by silently overwriting
+file content. The losing write is kept as a conflicted copy (report (conflict from student, 2026-11-14).md)
+and the user is notified.
+
+ ID            Requirement                                                              How it is verified
+
+ VFS-01        Must: The VFS is your own n-ary tree of inodes, with hash-mapped         Code review; DSA.md.
+               directory entries and O(depth) path resolution.
+
+ VFS-02        Must: The standard hierarchy is created at first boot with the           ls -la /.
+               specified owners and modes.
+
+ VFS-03        Must: Path resolution handles absolute and relative paths, ., ..,        Path-resolution test suite.
+               repeated and trailing slashes, and symlinks, with ELOOP after 40
+               hops.
+
+ VFS-04        Must: Read, write and execute permissions are enforced for owner,        Permission matrix test.
+               group and others on every system call.
+
+ VFS-05        Must: Soft links can be created, read, followed and left dangling;       Unit tests.
+               lstat and stat differ correctly.
+
+ VFS-06        Must: Per-user hard quotas: EDQUOT with no partial write; df, du and     Quota test.
+               quota are accurate.
+
+ VFS-07        Must: Create, read, update and delete, plus cp -r, mv, rm -r, find,      Live demonstration.
+               stat, chmod, chown, ln -s and tree, from both the terminal and the
+               File Explorer. Both are built on system calls.
+
+ VFS-08        Must: At least 32 levels of nesting; names up to 255 bytes; paths up     Boundary tests.
+               to 4096 bytes.
+
+ VFS-09        Must: Lease-based distributed locks: a second writer gets EBUSY or       Two browsers, two users.
+               read-only access, and a crashed holder's lock expires within the
+               lease time.
+
+
+
+Lahore Garrison University — Department of Computer Science                                                Page 29 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                         Fall 2026
+
+
+ ID            Requirement                                                            How it is verified
+
+ VFS-10        Must: Concurrent changes are detected by version numbers;              Concurrency test.
+               conflicted copies are kept; no update is ever silently lost.
+
+ VFS-11        Should: fsck checks the tree's invariants (every inode reachable,      Recovery-mode
+               correct link counts, no directory cycles, quota totals consistent)     demonstration.
+               and reports or repairs problems.
+
+
+9.4 The window management subsystem
+The compositor is the single authority over every window on screen. It keeps a window registry, a
+hash map from window ID to window state:
+
+   the owning process (pid), title and icon;
+   position and size (x, y, w, h) and stacking order z;
+   the window state (normal, minimised, maximised or full-screen) and the rectangle to restore to;
+   whether the window has focus, plus its size limits.
+
+The compositor is responsible for:
+
+   Focus and z-order. Exactly one window has focus. Focusing a window raises it. Z-indices are
+   renumbered 1…n after each change, so they never grow without limit. Background processes cannot
+   steal focus.
+   Coordinates and transforms. Dragging and resizing use pointer events with pointer capture.
+   Movement is applied with compositor-friendly transforms (translate3d) and batched per
+   animation frame, never by re-laying out the page on every event. The compositor supports resize
+   handles on all eight edges and corners, keeps windows within the viewport, and snaps them to
+   screen edges and halves.
+   Minimise, maximise and restore, with animations that respect reduced-motion settings. Double-
+   clicking a title bar maximises the window. Keyboard shortcuts are documented.
+   The taskbar registry. The taskbar shows running applications grouped by app, marks background
+   activity, and lets the user focus or minimise with a click.
+   Window–process coupling. Closing a window sends a termination signal to its process, and killing
+   a process closes its windows. Minimised windows are the first candidates for paging (§9.2), and
+   restoring one triggers a page-in.
+
+ ID            Requirement                                                            How it is verified
+
+ WM-01         Must: The window registry is a hash map with O(1) lookup; the          Code review.
+               compositor is the only code that writes window geometry.
+
+ WM-02         Must: Dynamic z-ordering with renumbering; click to focus and          Live demonstration.
+               raise; focus is always visible.
+
+ WM-03         Must: Dragging and resizing with at least 10 windows open keeps        Performance trace.
+               the p95 frame time ≤ 16.7 ms.
+
+ WM-04         Must: Minimise, maximise, restore, close, snapping and a live          Live demonstration.
+               taskbar.
+
+ WM-05         Must: Window–process coupling as described above, including            Integration test.
+               paging of minimised windows.
+
+ WM-06         Must: Window positions, sizes, states and z-order are restored after   Reboot test.
+               a reboot.
+
+
+
+Lahore Garrison University — Department of Computer Science                                               Page 30 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                            Fall 2026
+
+
+ ID            Requirement                                                                How it is verified
+
+ WM-07         Should: System interface meets WCAG 2.2 AA for contrast and                Accessibility audit.
+               keyboard operation, including a keyboard shortcut to switch
+               windows.
+
+
+9.5 Offline edge execution and synchronisation
+Overcoming Puter's cloud coupling (§7.1) needs a local-first design. The local VFS store is the primary
+source for reads and writes. Each change is also appended to an operation log (outbox) with an
+idempotency key and a logical timestamp. When the connection returns, the outbox is replayed to the
+server in order. The server acknowledges each operation, and conflicts are resolved as described in
+§9.3.
+
+A Service Worker caches the shell with a versioned cache. New releases install in the background and
+activate on the next boot, like an OS update with a “restart to update” notice.
+
+ ID            Requirement                                                                How it is verified
+
+ OFF-01        Must: Boot, login, Terminal, File Explorer, Text Editor, Task              Offline demonstration.
+               Manager and Settings work fully offline.
+
+ OFF-02        Must: Offline changes are queued in a durable outbox and replayed          Offline edits, reconnect,
+               exactly once on reconnection (idempotency keys).                           compare with server state.
+
+ OFF-03        Must: Offline login never stores plain-text passwords. Use a salted        Code and storage
+               verifier or a platform authenticator.                                      inspection.
+
+ OFF-04        Must: The taskbar shows connectivity status and lists degraded             Live demonstration.
+               services.
+
+ OFF-05        Should: Versioned shell updates install in the background and              Deploy a new version
+               activate on the next boot.                                                 during the demo.
+
+
+9.6 The system-call interface and the terminal
+Every application, including your built-in ones, reaches the OS through a typed system-call interface,
+for example open, read, write, close, stat, readdir, mkdir, unlink, rename, symlink, chmod, spawn, kill
+and wait. Calls travel as messages (postMessage or MessageChannel) in the form {id, call, args}, and
+replies come back as {id, ok, value | errno}. The kernel checks permissions for every call.
+
+The terminal is a real shell on top of this interface. It supports quoting, pipes (|), redirection (>, >>, <),
+sequencing (; and &&), background jobs (&), environment variables ($HOME, $PATH, $USER), history, and
+help and man pages.
+
+ Group                Required commands
+
+ Files                ls cd pwd mkdir rmdir touch cat echo cp mv rm ln find tree stat chmod chown du df quota grep
+
+ Processes            ps top kill nice renice jobs bg fg
+
+ Memory               free vmstat pmap
+
+ System               uname whoami id su uptime bootlog fsck lsof shutdown reboot history help man
+
+ AI (§12)             ai (agent), semsearch (semantic search), predict (pre-fetch model), for the subsystems you
+                      implement
+
+
+
+
+Lahore Garrison University — Department of Computer Science                                                  Page 31 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                          Fall 2026
+
+
+ ID             Requirement                                                             How it is verified
+
+ SYS-01         Must: All applications, built-in or not, use only the system-call       Code review; bypass
+                interface; the kernel checks permissions for every call.                attempts.
+
+ SYS-02         Must: The required command set, with pipes, redirection,                Scripted terminal session.
+                background jobs and history.
+
+ SYS-03         Must: Tab completion of commands, paths and flags is backed by          Micro-benchmark; live
+                your own trie, with p95 prefix lookup ≤ 1 ms over at least 10,000       demonstration.
+                entries. The trie is updated incrementally as the VFS changes.
+
+
+
+Section 10
+Data Structures and Algorithms Blueprint
+Using a library without understanding why is penalised. Each structure below has a mandatory place
+in your codebase, because each one is the right structure for that part of an operating system. You are
+graded on whether you used the right structure, implemented it correctly, and can prove its
+complexity.
+
+
+10.1 Mandatory structures and where they live
+
+                                                      Required operations and
+ Structure           Mandatory location(s)            complexity                    Why this structure
+
+ N-ary tree          VFS directory hierarchy          Resolve O(d); add or          It mirrors the hierarchy
+                     (§9.3)                           remove a child O(1)           directly. Moving a directory re-
+                                                      average; walk a subtree       parents one node, whatever the
+                                                      O(k)                          size of its subtree.
+
+ Trie (prefix        Terminal autocomplete            Insert and remove O(L);       Lookup cost depends on the
+ tree)               over commands, paths             complete a prefix O(P + k)    length of the prefix, not on the
+                     and history (§9.6)                                             number of entries, which gives
+                                                                                    sub-millisecond completion.
+
+ Binary heap         Scheduler ready queue            Push and pop O(log n);        The scheduler repeatedly needs
+ (priority           (§9.1); timer and sleep          peek O(1); change priority    the most urgent process, while
+ queue)              queue                            O(log n) with an index map    priorities change as processes
+                                                                                    age.
+
+ Hash maps           Process table; window            Get, put and delete O(1)      Every one of these is a lookup
+                     registry; open-file table;       average                       by key (PID, window ID, file
+                     memory-mapped                                                  descriptor or name) on a hot
+                     handles; page tables;                                          path.
+                     directory entries
+
+ Directed            Service dependencies and         Kahn's topological sort O(V   Start-up order is a partial order.
+ acyclic graph       boot order (§6.4);               + E); cycle detection with    Only a DAG expresses it, and a
+                     application start-up             the cycle path reported;      cycle means the system cannot
+                     dependencies                     levels for parallel start     boot.
+
+ Hash map +          LRU pager (§9.2); inode          Touch, insert and evict       Neither structure alone gives
+ doubly linked       cache                            O(1)                          O(1) recency updates and O(1)
+ list                                                                               lookup.
+
+ B-tree / hash       Database metadata (§11.4)        Point lookup and range        They keep metadata queries
+ indexes                                              scan O(log n)                 under 10 ms at scale.
+
+
+Lahore Garrison University — Department of Computer Science                                                Page 32 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                      Fall 2026
+
+
+Additional structures earn credit when their use is justified: for example a ring buffer for the kernel
+log, a Bloom filter in front of the vector index, or an interval structure for window hit-testing.
+
+
+10.2 Implementation policy
+   The tree, trie, heap, DAG with topological sort, and LRU list must be written by your team from
+   first principles. Importing a package that provides one of them (a heap or priority-queue library, a
+   trie, a graph library, an LRU cache) for these roles scores zero for that item.
+   Built-in hash tables (JavaScript Map and Set, Python dict, Go map, Rust HashMap) are allowed as the
+   hashing primitive. The registries and tables you build on top of them are your own and must be
+   documented. Implementing your own hash table, with a declared collision strategy, for at least one
+   registry is credited as distinction work.
+   Each structure lives in its own module under dsa/, with unit tests that cover the edge cases (empty
+   structure, one element, duplicates, removal of the root or the head).
+   Each structure has a micro-benchmark that demonstrates its claimed complexity. For example,
+   autocomplete time should stay flat as the number of entries grows from 103 to 105.
+   DSA.md maps every structure to its file path, operations, complexity, and the test and benchmark
+   that prove them.
+
+
+10.3 Interface sketches
+These interfaces are written in TypeScript for illustration only. Your language, naming and details are
+your own, but your implementation must offer equivalent operations at the stated complexity.
+
+  interface PriorityQueue<T> {
+    push(item: T, priority: number): void;          // O(log n)
+    pop(): T | undefined;                             // O(log n), most urgent first
+    peek(): T | undefined;                            // O(1)
+    changePriority(item: T, priority: number): void; // O(log n) via item → index map
+  }
+
+  interface Trie {
+    insert(word: string, meta?: Completion): void;      // O(L)
+    remove(word: string): boolean;                     // O(L), prunes empty branches
+    complete(prefix: string, limit: number): Completion[]; // O(P + k)
+  }
+
+  interface LRU<K, V> {
+    get(key: K): V | undefined;  // O(1), moves the entry to the MRU end
+    put(key: K, value: V): void; // O(1)
+    evict(): [K, V] | undefined; // O(1), least recently used unpinned entry
+    pin(key: K): void; unpin(key: K): void;
+  }
+
+  function topoLevels(services: Manifest[]): Manifest[][];              // Kahn; throws CycleError(path)
+
+
+
+
+Lahore Garrison University — Department of Computer Science                                         Page 33 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                        Fall 2026
+
+
+  // Scheduler dispatch loop (pseudocode)
+  on tick():
+      while pool.hasIdleWorker() and not ready.isEmpty():
+          p ← ready.pop()                                 // best (effectivePriority, seq)
+          dispatch(p, pool.idleWorker(), quantumFor(p))
+  on sliceComplete(p, result):
+      if result.done: terminate(p, result.exitCode)
+      else if result.blockedOn: block(p, result.blockedOn)
+      else: p.seq ← nextSeq(); ready.push(p, p.basePriority) // back of its level = round-robin
+  every agingInterval:
+      for p in waitingLongerThan(threshold): ready.changePriority(p, max(0, p.effective − 1))
+
+
+
+
+Section 11
+
+Database Architecture and Integrity
+The database is where your file system becomes durable and shared. Two properties are graded
+above all others. Integrity: bulk operations are atomic, and a failure midway leaves nothing
+corrupted or orphaned. Performance: indexed metadata queries answer in under 10 ms over at least
+10,000 records.
+
+
+11.1 Reference schema
+The relational schema below is a reference. A graph database or a document store is acceptable if you
+defend it (Section 14). For example, a graph model represents the hierarchy and permission
+inheritance naturally, but you must still prove that updates across many nodes are atomic.
+
+ Table                     Key columns                                        Purpose
+
+ users                     uid PK, username UNIQUE, password_hash,            Identity and quota accounting.
+                           quota_bytes, quota_inodes, used_bytes,
+                           used_inodes
+
+ groups, user_groups       gid PK, name; (uid, gid) PK                        Group permissions.
+
+ inodes                    ino PK, type, mode, uid FK, gid FK, size, nlink,   File metadata.
+                           version, blob_id FK, symlink_target, created_at,
+                           modified_at, accessed_at
+
+ dentries                  (parent_ino, name) PK, ino FK                      Directory entries. The tree's edges
+                                                                              are kept apart from the inodes,
+                                                                              which makes hard links possible.
+
+ blobs                     blob_id PK, sha256 UNIQUE, size, storage_key,      Content, stored by hash so
+                           refcount                                           identical files share one copy.
+
+ locks                     ino PK, mode (S/X), holder_uid, session_id,        Distributed file locks.
+                           lease_expires_at
+
+ swap_pages                (session_id, pid, page_id) PK, owner_uid,          Remote swap tier (§9.2).
+                           storage_key, size, checksum
+
+ op_log                    op_id PK (idempotency key), uid, session_id, op,   Outbox replay and audit.
+                           payload, client_ts, applied_at
+
+ file_chunks               chunk_id PK, ino FK, seq, text, content_hash,      Semantic search (§12.2).
+                           embedding VECTOR(d)
+
+ telemetry_events          event_id PK, uid, app_id, kind, ts, context        Pre-fetch model training data
+                                                                              (§12.4), when synced by opt-in.
+
+
+
+Lahore Garrison University — Department of Computer Science                                              Page 34 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                               Fall 2026
+
+
+ Table                     Key columns                                              Purpose
+
+ audit_log                 id PK, uid, actor (user/agent), syscall, args, result,   Accountability for every AI action.
+                           prompt_id, ts
+
+ sessions                  session_id PK, uid, window_layout, updated_at            Session restore after reboot.
+
+
+11.2 Storing a tree in a database
+How you store the hierarchy decides how expensive your bulk operations are. Choose a
+representation, justify it against your workload, and prove that your bulk operations stay atomic with
+the one you choose.
+
+ Representation         Move / rename a directory         Read a subtree                 Verdict for a file system
+
+ Adjacency list         One row updated,                  Recursive query (e.g. WITH     Strong default: cheap
+ (parent_ino)           regardless of subtree size        RECURSIVE)                     writes, and moves are
+                                                                                         trivially atomic.
+
+ Materialised           Every descendant's path           Fast prefix scan on an         Fast reads, but every move
+ path                   rewritten, in bulk                index                          is a bulk write that must be
+                                                                                         atomic.
+
+ Closure table          O(subtree × depth) rows           Simple join, fast              Good for reads and ancestor
+                        deleted and inserted                                             checks, heavy for moves.
+
+ Nested sets            Large parts of the tree           Very fast range scan           Unsuitable for a file system
+                        renumbered                                                       with frequent writes.
+
+
+11.3 ACID guarantees for bulk operations
+These operations must be atomic: recursive delete (rm -r), recursive copy (cp -r), directory moves
+(especially to a new parent), batch renames (for example, 500 files renamed by the agent), recursive
+chmod and chown, and the quota updates that go with all of them. Seven rules apply:
+
+1. One transaction per user-visible operation. The whole subtree changes, or none of it does.
+2. Quota checked inside the transaction. Lock the user's quota row (SELECT … FOR UPDATE or
+    equivalent) so that two concurrent writes cannot both pass the check.
+3. Invariants checked before commit. A directory cannot move into its own subtree (EINVAL). Names
+    are unique within a directory, enforced by a unique index rather than application code.
+4. Any error rolls back. The client receives one clear error code, and the database is exactly as it was
+    before.
+5. The client mirror is also atomic. The local change is one IndexedDB transaction across every
+   affected object store. A half-applied local state is never committed.
+6. Retries are safe. Idempotency keys make sure a retried operation is applied at most once.
+7. The isolation level is declared and justified. For example: SERIALIZABLE with automatic retry on
+   serialisation failure, or READ COMMITTED with explicit row locks. Explain why your choice is
+   safe for tree operations.
+
+
+
+
+Lahore Garrison University — Department of Computer Science                                                  Page 35 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                     Fall 2026
+
+
+  -- Directory move with an adjacency list: one row changes, atomically
+  BEGIN ISOLATION LEVEL SERIALIZABLE;
+    -- 1. lock source and destination entries; check write permission on both parents
+    -- 2. refuse if :dest is inside the subtree of :src (recursive ancestor check) → EINVAL
+    UPDATE dentries SET parent_ino = :dest, name = :new_name
+     WHERE parent_ino = :src_parent AND name = :src_name;
+    INSERT INTO op_log (op_id, uid, op, payload) VALUES (:idempotency_key, :uid, 'mv', :payload);
+  COMMIT;   -- any error ⇒ ROLLBACK: nothing changed
+
+  -- Integrity probes your fault-injection suite runs after every failed operation
+  SELECT i.ino FROM inodes i LEFT JOIN dentries d ON d.ino = i.ino
+   WHERE d.ino IS NULL AND i.ino <> 1;                       -- orphaned inodes: must be empty
+  SELECT d.* FROM dentries d LEFT JOIN inodes p ON p.ino = d.parent_ino
+   WHERE p.ino IS NULL;                                        -- entries with no parent: must be
+  empty
+
+
+
+
+  Mandatory fault-injection harness
+  Your test build must include a hook that throws an error after N of M node operations. The reference
+  test runs rm -r on a 1,000-node tree and fails at node 500. It then checks that the tree's checksum is
+  unchanged, that both orphan probes return nothing, and that the user's quota usage is unchanged.
+  The same test runs for mv, cp -r, batch rename and chmod -R. It is repeated live at the final defence.
+
+
+11.4 Index optimisation
+   A unique B-tree index on dentries(parent_ino, name). It serves every step of path resolution and
+   every directory listing, and it enforces unique names. Mirror it on the client with a compound
+   IndexedDB index on [parent, name].
+   An index on inodes(uid, modified_at) for “my recent files” and quota reports, and a hash index
+   on blobs(sha256) for de-duplication.
+   A name-search index: a B-tree on the lower-cased name with a pattern operator class for prefix
+   search, and optionally a trigram index for substring search.
+   A vector index (HNSW or IVF) on embeddings, once exact search no longer meets the latency
+   target (§12.2).
+
+ Query       Benchmark query (run against ≥ 10,000 inodes; 100,000 recommended)                     Target (p95)
+
+ Q1          Resolve a path of depth 8                                                                   ≤ 10 ms
+
+ Q2          List a directory with 500 entries, sorted by name                                           ≤ 10 ms
+
+ Q3          Prefix search on file name across one user's files                                          ≤ 10 ms
+
+ Q4          A user's files modified in the last 7 days, newest first, limited to 50                     ≤ 10 ms
+
+ Q5          Total size of a 1,000-node subtree (du), using a maintained aggregate or a justified        ≤ 10 ms
+             recursive query
+
+
+The benchmark report must include a reproducible seed script (at least 50 users, with a realistic
+spread of directory depths), p50 and p95 over 1,000 runs before and after indexing, and query plans
+(EXPLAIN ANALYZE or equivalent) proving that the indexes are used.
+
+
+
+
+Lahore Garrison University — Department of Computer Science                                           Page 36 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                           Fall 2026
+
+
+11.5 Database requirements
+
+ ID            Requirement                                                              How it is verified
+
+ DB-01         Must: A documented schema (ERD) with normalisation reasoning;            DATABASE.md; migrations
+               versioned migrations, each with a rollback script; a documented          run from scratch.
+               backup-and-restore procedure.
+
+ DB-02         Must: Every bulk VFS operation is atomic. The fault-injection suite      CI and live test.
+               passes with zero orphans and unchanged checksums.
+
+ DB-03         Must: A declared isolation level with retry logic. Two clients           Concurrency test.
+               moving overlapping subtrees at the same time always leave a
+               consistent tree.
+
+ DB-04         Must: Constraints are enforced by the database: foreign keys,            Schema review; constraint-
+               unique (parent, name), checks on type and mode.                          violation tests.
+
+ DB-05         Must: Indexes as described in §11.4; benchmark queries Q1–Q5             Benchmark report; live
+               meet p95 ≤ 10 ms at ≥ 10,000 records, with query plans as evidence.      query.
+
+
+
+Section 12
+Foundational AI Integration
+AI cannot be a cosmetic chatbot. It must be a system-level subsystem connected to OS primitives.
+Each team must implement at least two of the three subsystems in this section. Depth and coupling
+are graded, not the count: two subsystems built deeply outrank three built superficially.
+
+
+12.1 Choosing your subsystems
+
+                                                                                Primary OS primitives it must
+ Subsystem                        What it adds to the OS                        touch
+
+ A. Semantic VFS search           Find files by meaning, not only by name,      VFS change events, scheduler
+ (RAG)                            and answer questions about them with          (background indexing),
+                                  citations.                                    permissions, database.
+
+ B. Agentic system                Turn natural-language instructions into       Shell, system-call interface,
+ execution                        validated, atomic sequences of system         permissions, transactions, audit
+                                  calls.                                        log.
+
+ C. Predictive pre-               Learn usage patterns locally and load         Scheduler (idle-priority jobs),
+ fetching                         applications before they are opened.          memory manager, telemetry.
+
+
+12.2 Subsystem A: semantic VFS search (RAG pipeline)
+File contents are embedded into a vector store. Users query their file system with natural-language
+concepts, for example “find the document where I discussed the memory leak in the UI component”, and
+results are ranked by cosine similarity.
+
+
+
+
+Lahore Garrison University — Department of Computer Science                                                 Page 37 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                                                       Fall 2026
+
+
+Ingestion: background process, low priority, throttled while the user is active
+
+
+  VFS change event                 Indexer process               Extract & chunk                Embed chunks
+  write · rename · delete          pid 23 · priority 32          ≈400 tokens, overlap           model in a worker
+
+
+
+
+                                                                 Vector store
+                                                                 {chunk, ino, offset, vector, hash, owner, mode}
+
+Query: interactive, permission-filtered
+
+  Natural-language                 Embed query                   Cosine top-k                   Permission filter           Results + citations
+  query: semsearch, Files          same model as ingest          exact or ANN index             current rwx, per user       path · snippet · score
+
+
+
+similarity(q, d) = (q · d) / (‖q‖ ‖d‖)   with unit-length vectors this is simply the dot product q · d
+
+Figure 12.1 — Ingestion and query pipelines. The permission filter uses the current permissions at query time. A
+user must never see a snippet from a file they cannot read, even if the index was built before the permissions
+changed.
+
+
+    Ingestion. The VFS emits change events. A background indexer process extracts text (plain text,
+    Markdown and source code at minimum), splits it into overlapping chunks that respect paragraph
+    and heading boundaries, embeds each chunk, and stores it with its inode, offset, content hash and
+    owner.
+    Incremental updates. The content hash lets the indexer skip unchanged chunks. A rename
+    updates path metadata without re-embedding. A delete removes the file's vectors.
+    Model. A local embedding model running in a worker (for example a small sentence-embedding
+    model through a WebAssembly or WebGPU runtime), or a hosted embedding API called through
+    your backend. Justify the choice on cost, latency, privacy and offline behaviour.
+    Index. Exact brute-force search is acceptable while it meets the latency target; prove this with
+    measurements. Beyond that, use an approximate index (HNSW, IVF) or a vector database such as
+    pgvector or Qdrant.
+    Answering. Optionally, the top chunks go to a language model that writes an answer citing
+    path:line for every claim.
+
+    Evaluation. Build a corpus of at least 200 documents and at least 30 natural-language queries with
+    known relevant files. Report Recall@5 and mean reciprocal rank (MRR). The examiners hold a
+    hidden query set for the final defence.
+
+  ID                Requirement                                                                                    How it is verified
+
+  RAG-01            Must: The indexer is a scheduled background process: visible in                                ps; top during typing.
+                    ps, low priority, throttled while the user is active.
+
+  RAG-02            Must: The index stays consistent with the VFS: create, modify,                                 Timed test.
+                    rename and delete are reflected within 30 s for a 50 KB text file.
+
+  RAG-03            Must: No result ever includes content the querying user cannot                                 Permission test suite: zero
+                    read.                                                                                          leaks allowed.
+
+  RAG-04            Must: Recall@5 ≥ 0.80 on the team's evaluation set, with MRR                                   Evaluation report; hidden
+                    reported.                                                                                      set.
+
+  RAG-05            Must: Retrieval latency p95 ≤ 500 ms over ≥ 10,000 chunks, not                                 Benchmark.
+                    counting optional answer generation.
+
+
+
+
+Lahore Garrison University — Department of Computer Science                                                                           Page 38 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                                              Fall 2026
+
+
+ ID              Requirement                                                                           How it is verified
+
+ RAG-06          Must: Integrated into the shell (semsearch) and the File Explorer.                    Live and offline
+                 When the model is unavailable, search falls back to keyword                           demonstration.
+                 search with a clear notice.
+
+
+12.3 Subsystem B: agentic system execution
+An LLM agent built into the shell turns natural-language prompts into valid OS operations. It resolves
+arguments and runs complex file-manipulation pipelines safely. The model only ever proposes; the
+kernel validates, previews, asks for confirmation, runs and records.
+
+    Model proposes (untrusted)                                            Kernel decides (deterministic)
+
+
+ 1 Prompt           2 Plan             3 Validate            4 Dry run            5 Confirm          6 Execute            7 Audit
+ intent + cwd,      LLM + tool         schema, paths,        affected inodes,     required if        1 transaction,       log · result ·
+ uid, listing       schemas → JSON     perms, quota          blast radius         destructive        as user's uid        undo token
+
+
+
+
+                             Reject with the reason                               Declined           Failure → rollback
+                             nothing executed · no side effects                   nothing runs       tree unchanged · error explained
+
+
+
+Figure 12.2 — The agent pipeline. Steps 3–7 are ordinary, deterministic kernel code. The model's output is data
+that must pass validation. It is never executed as text.
+
+
+  student@your-os:~$ ai "move every PDF I changed last week into a new folder called reports, and
+  make it read-only for others"
+  Plan · 4 steps · 1 transaction
+    1 mkdir    ~/reports                                      create 1 dir
+    2 find     ~ -type f -name "*.pdf" -mtime -7              → 12 files
+    3 mv       <12 files> ~/reports/                          modify 12 entries
+    4 chmod    -R o-w ~/reports                               modify 13 inodes
+  Blast radius: 13 inodes · 0 deletions · 0 overwrites · within quota
+  Proceed? [y/N/e=edit] y
+  ✓ committed in 41 ms · txn 8f2c · undo with: ai undo 8f2c
+
+
+
+ ID              Requirement                                                                           How it is verified
+
+ AGT-01          Must: Tools are typed system calls with JSON schemas. Model                           Code review.
+                 output is parsed as data and never passed to eval or run as a shell
+                 string.
+
+ AGT-02          Must: Invalid plans (unknown command, bad arguments, missing                          Invalid-plan test set.
+                 path, permission denied, quota exceeded) are rejected before
+                 anything runs, with the reason. Zero partial executions.
+
+ AGT-03          Must: Destructive operations (delete, overwrite, chmod or chown, or                   Destructive-prompt test
+                 any plan touching more than 20 inodes) need explicit confirmation                     set.
+                 after the dry run. Zero bypasses.
+
+ AGT-04          Must: The agent runs with the invoking user's privileges. It cannot                   Privilege tests.
+                 escalate, and it cannot modify /system or /bin unless the user is
+                 root and confirms.
+
+ AGT-05          Must: A multi-step plan runs atomically, as one transaction or with                   Fault injection during a
+                 complete compensating rollback.                                                       plan.
+
+
+Lahore Garrison University — Department of Computer Science                                                                 Page 39 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                        Fall 2026
+
+
+ ID            Requirement                                                             How it is verified
+
+ AGT-06        Must: Prompt-injection resistance: file contents and names enter        Injection fixtures.
+               the model's context marked as untrusted data. An instruction
+               hidden in a file (fixture supplied by the examiners) must cause no
+               tool call the user did not ask for.
+
+ AGT-07        Must: ≥ 16 of 20 instructions from the examiners' benchmark are         Hidden benchmark at the
+               completed correctly. The benchmark includes multi-step                  final defence.
+               pipelines, relative dates, glob patterns and ambiguous requests
+               that need a clarifying question.
+
+ AGT-08        Must: Every agent system call is written to the audit log with the      Audit inspection.
+               prompt, plan, confirmation and result, and can be viewed with ai
+               log.
+
+ AGT-09        Must: The agent is a real process: visible in ps, and killable in the   Kill during execution.
+               middle of a plan, which rolls the transaction back.
+
+ AGT-10        May: ai undo <txn> reverses a committed plan using the operation        Credited under AI depth.
+               log.
+
+
+12.4 Subsystem C: predictive process pre-fetching
+A local machine-learning model analyses the user's telemetry to predict which applications they will
+use next. It loads their assets into memory before they are opened, so that launch feels instant.
+
+   Telemetry. Application launch, focus and close events, with time of day, day of week, the previous
+   application and the position in the session. Events are stored locally in a bounded ring buffer. The
+   user can view and clear them in Settings → Privacy. Nothing leaves the device without opt-in.
+   Model. It must train and run locally, inside a worker. Acceptable choices include a first- or second-
+   order Markov chain over launch sequences conditioned on time of day, naive Bayes, a small
+   decision tree or logistic regression, k-nearest neighbours over context vectors, or a tiny neural
+   network. Justify any model more complex than a Markov chain by showing that it beats one.
+   Pre-fetch policy. When a prediction's confidence passes a threshold and the system is idle and
+   there is free memory, the scheduler starts a pre-fetch process at the lowest priority. It loads the
+   application's code, warms its caches and pages in its last state. Pre-fetched pages are marked
+   speculative and are the first to be evicted.
+   Learning. The model updates incrementally after each launch. Until it has enough data, it falls
+   back to most-frequently-used.
+   Evaluation. Replay a recorded trace of at least 500 launch events, split chronologically into
+   training and test sets so the model cannot see the future. Report top-1 and top-3 accuracy against
+   the most-frequently-used (MFU) and most-recently-used (MRU) baselines, launch latency with and
+   without pre-fetch, and wasted pre-fetch bytes.
+
+ ID            Requirement                                                             How it is verified
+
+ PRE-01        Must: The model trains and runs locally in a worker; one                Benchmark.
+               prediction takes ≤ 5 ms.
+
+ PRE-02        Must: Top-3 accuracy beats the better of the MFU and MRU                Evaluation report.
+               baselines on the held-out trace.
+
+ PRE-03        Must: For correctly predicted launches, pre-fetching cuts median        Latency comparison.
+               launch latency by ≥ 30%.
+
+
+
+
+Lahore Garrison University — Department of Computer Science                                              Page 40 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                              Fall 2026
+
+
+ ID             Requirement                                                                  How it is verified
+
+ PRE-04         Must: Pre-fetching never slows the foreground: it runs only when             Frame-time trace during
+                idle, at the lowest priority, within free memory, and its pages are          pre-fetch.
+                evicted first.
+
+ PRE-05         Must: Telemetry stays on the device by default and can be viewed             Settings demonstration.
+                and cleared; syncing it requires opt-in.
+
+ PRE-06         Must: Predictions are visible: predict and the Task Manager show             Live demonstration.
+                current predictions with confidence, and pre-fetch processes
+                appear in ps.
+
+
+12.5 The coupling map
+Include this table, completed for your own system, in AI.md. Examiners use it to judge whether your
+AI is foundational.
+
+                  Scheduler        Memory           VFS                 Shell        Database             Security
+
+ A. RAG           Indexer is a     Model and        Subscribes          semsearch;   file_chunks with     Permission
+                  niced            index pages      to change           Files        vector index         filter at query
+                  background       can be           events;             search                            time
+                  process          evicted          reads via
+                                                    system calls
+
+ B. Agent         Agent is a       —                Acts only           ai           Plan runs as one     User's uid;
+                  killable                          through             command      transaction; audit   confirmation;
+                  process                           system calls                     log                  injection
+                                                                                                          defence
+
+ C. Pre-fetch     Emits idle-      Pages state      Warms               predict      Optional             Local-only
+                  priority pre-    in;              recently                         telemetry_events     telemetry by
+                  fetch jobs       speculative      used files                                            default
+                                   pages
+                                   evicted first
+
+
+12.6 Models, cost and offline behaviour
+   Choice of model. Hosted APIs or local models (on your backend, or in the browser through
+   WebAssembly or WebGPU runtimes) are both acceptable. Justify the choice on quality, latency,
+   cost, privacy and offline behaviour.
+   Keys stay on the server. API keys never appear in the client bundle or the repository. Every model
+   call goes through your backend, with per-user rate limits.
+   Cost accounting. Log tokens and cost for every request, set a budget cap, and report the total cost
+   of development and the demonstration.
+   Graceful degradation. Offline or when the model fails: semantic search falls back to keyword
+   search, the agent falls back to the plain terminal with an explanation, and a local pre-fetch model
+   is unaffected.
+   Reproducible tests. Benchmarks use fixed seeds and temperature 0. CI uses recorded model
+   responses so that tests do not depend on a live model.
+
+
+
+
+Lahore Garrison University — Department of Computer Science                                                   Page 41 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                                                Fall 2026
+
+
+Part IV
+
+Delivery and Assessment
+How the work is delivered, defended and graded: the phase plan and its gates, the written architecture defence,
+the engineering standards your repository must meet, the rubric, the protocol for the final defence, and the
+rules on integrity and AI assistance.
+
+
+Section 13
+
+Milestones and Deliverables
+The project is delivered in five phases. Each phase ends with a gate: a live review in which the phase's
+criteria must be demonstrated on the tagged release. Weeks below are indicative. Exact dates are
+announced on Google Classroom.
+
+                                    1       2     3     4     5     6     7      8       9    10    11   12     13   14   15   16   17   18
+
+Team & OS name registration
+
+Phase 1 · Architecture & Defence
+
+Phase 2 · VFS & Window Manager
+
+Phase 3 · Scheduler & Persistence
+
+Phase 4 · Foundational AI Layer
+
+Hardening & feature freeze
+
+Phase 5 · Final Defence
+
+                                                                              mid-term
+                                        gate: live review on a tagged release                examination week
+
+Figure 13.1 — The 18-week plan. Each phase is a vertical slice of working software, not a stack of documents.
+Phase 3 spans the mid-term examination week, so plan your capacity for it.
+
+
+13.1 Phase deliverables and gate criteria
+
+ Phase and
+ week                     Deliverables                                                             Gate: must be demonstrable
+
+ Registration             Team registration form (Appendix D); OS name and                         Five members confirmed; name
+ Week 2                   tagline; roles and secondary reviewers;                                  approved as unique and
+                          TEAM_CONTRACT.md; repository created with a CI                           appropriate; repository reachable;
+                          skeleton; instructor added as a collaborator.                            CI runs on a pull request.
+
+ Phase 1                  System architecture diagrams (context, containers,                       15-minute architecture defence plus
+ Architecture &           components); formal technology-stack                                     10 minutes of questions. Every
+ Defence                  justification (STACK_DECISION.md, Section 14);                           member presents. The stack is
+ Week 4                   database schema (ERD, DDL and chosen tree                                approved or returned for revision
+                          representation); DSA blueprint mapping (DSA.md                           within one week.
+                          draft); boot design (service list, DAG, critical and
+                          degradable services); two-page benchmark
+                          analysis of Puter and daedalOS; work breakdown
+                          with an owner for every task; risk register.
+
+
+
+
+Lahore Garrison University — Department of Computer Science                                                                     Page 42 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                      Fall 2026
+
+
+ Phase and
+ week                 Deliverables                                           Gate: must be demonstrable
+
+ Phase 2              Boot screen v1 with identity kit, truthful progress    VFS test suite green; 10 windows
+ VFS & Window         for asset loading and kernel initialisation, and a     dragged at 60 FPS; the permission
+ Manager              login screen; a working desktop; the multi-window      and quota tests run live; the
+ Week 7 · v0.2.0      compositor (WM-01 to WM-06); the tree-based VFS        deployed URL boots.
+                      with full create, read, update and delete, path
+                      resolution, permissions, soft links and quotas
+                      (VFS-01 to VFS-08); terminal with file commands
+                      and trie autocomplete (SYS-03); File Explorer;
+                      public deployment.
+
+ Phase 3              Process table, heap scheduler, Web Worker pool,        Frame time held under CPU load;
+ Scheduler &          process commands and Task Manager (PROC-*);            paging shown with a 2× workload; a
+ Persistence          LRU paging with local and remote swap (MEM-*);         fault-injected rm -r rolls back live;
+ Week 11 ·            atomic database persistence with the fault-            offline boot; two users contend for a
+ v0.3.0               injection suite, indexes and benchmark (DB-*);         lock.
+                      distributed locks and multi-user sync (VFS-09, VFS-
+                      10); offline execution (OFF-*); boot v2: DAG-driven,
+                      verbose log, boot menu, degraded and offline boot
+                      (BOOT-*).
+
+ Phase 4              At least two AI subsystems integrated (RAG-*, AGT-     Live AI demonstration on examiner
+ Foundational         *, PRE-*); evaluation reports; AI safety results       prompts; the litmus test (§3.4); the
+ AI Layer             (permission leaks, injection fixtures, destructive     safety tests run live.
+ Week 14 ·            confirmations); AI.md with the coupling map;
+ v0.4.0               model cost report.
+
+ Feature freeze       Release candidate tagged; all documentation            Rehearsal passed. After the freeze,
+ Week 16 ·            complete; a full rehearsal of the final defence.       only bug fixes are merged.
+ v1.0.0-rc
+
+ Phase 5              Production deployment; comprehensive technical         The Demo Day protocol.
+ Final Defence &      report; test suite with coverage report; end-to-end
+ Codebase             system demonstration; demonstration video;
+ Weeks 17–18 ·        individual viva (Section 17).
+ v1.0.0
+
+
+13.2 Gate rules
+   A gate is passed only by a live demonstration on the tagged release. Slides, screenshots and
+   recorded videos do not pass a gate.
+   A missed gate leads to a mandatory meeting with the instructor and a written recovery plan within
+   one week.
+   If a gate is still unmet at the next phase, the project mark is capped at 80%. If two gates are unmet,
+   it is capped at 70%.
+   Features merged after the feature freeze are reverted before judging.
+   A member who is absent from the final defence without prior approval scores zero for the project.
+
+
+
+
+Lahore Garrison University — Department of Computer Science                                            Page 43 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                          Fall 2026
+
+
+Section 14
+The Architecture Defence
+Because the stack is open, your reasoning is part of what is graded. The technology-stack justification
+carries 10% of the marks directly, and it affects every other criterion, because a weak choice made in
+Week 4 becomes a weak system in Week 18.
+
+
+14.1 Structure of STACK_DECISION.md
+Write one decision record for each major decision, and keep them all in STACK_DECISION.md. Each
+record contains:
+
+1. Context and constraints. The WebOS constraints this decision affects, ranked. For example: main-
+   thread responsiveness, offline operation, atomicity of tree operations, multi-user consistency,
+    cost, team skills.
+2. Options. At least three genuine candidates, including one you expected to lose.
+3. Criteria and weights, declared before scoring. A weighted decision matrix whose criteria are not
+   reverse-engineered from the winner.
+4. Evidence. A prototype, a measurement or a cited benchmark for each claim that affects the
+   outcome. Opinions are not evidence.
+5. Decision and consequences. What you chose, what you gave up, and the risks you accept, with
+   how you will mitigate them.
+6. Reversal trigger. The observation that would make you revisit the decision, for example “if lock-
+   grant latency exceeds 200 ms under 50 clients”.
+
+
+14.2 Decisions that must be defended
+
+ Decision               Typical options                           What your defence must address
+
+ UI framework           React, Svelte, Vue, Solid, plain Web      The rendering cost of many windows; isolating
+                        Components                                updates so one window's change does not re-
+                                                                  render others; bundle size against the boot budget.
+
+ Kernel and DSA         TypeScript; Rust or Go compiled to        Raw performance against the cost of crossing the
+ language               WebAssembly                               JavaScript–WebAssembly boundary; debugging;
+                                                                  team skills.
+
+ Backend                Node.js, Deno, Bun, Go, Rust,             The concurrency model for thousands of long-
+ runtime                Python                                    lived WebSocket connections; the library
+                                                                  ecosystem; memory per connection.
+
+ Real-time              WebSockets, Server-Sent Events,           Two-way process and lock events; latency; idle
+ transport              long polling, short polling,              cost; reconnection and message ordering.
+                        WebRTC data channels
+
+ Primary                PostgreSQL, MySQL, SQLite,                ACID guarantees for bulk tree operations;
+ database               MongoDB, a graph database                 recursive queries; indexing; how permissions are
+                                                                  modelled.
+
+ Client storage         IndexedDB, OPFS, Cache API                Transactions against raw throughput; quota and
+                                                                  eviction behaviour; use from workers.
+
+ Vector store           pgvector, Qdrant, Chroma, your            Scale and latency; keeping vectors next to
+                        own index                                 metadata so permissions can be filtered.
+
+
+
+Lahore Garrison University — Department of Computer Science                                                Page 44 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                            Fall 2026
+
+
+ Decision               Typical options                           What your defence must address
+
+ AI models              Hosted or local; choice of                Quality, cost per request, latency, privacy, offline
+                        embedding model and LLM                   behaviour.
+
+ Deployment             Docker Compose on a VPS, a                WebSocket support, cost, reproducibility, and
+                        platform service, managed                 bring-up in a few commands.
+                        databases
+
+
+14.3 What a strong justification looks like
+
+  Weak (earns little or nothing)
+  “We chose WebSockets because they are fast and modern, and we chose MongoDB because it is
+  flexible and popular.”
+
+
+
+  Strong (the standard expected)
+  Process-state changes, lock grants and sync acknowledgements are initiated by the server, and arrive
+  at up to about 20 per second per client during bulk operations.
+
+  Polling every second would add up to a second of latency to every lock grant and cost about 3,600
+  requests per hour per idle client. Long polling reduces the latency but still opens a new request for
+  every event.
+
+  A WebSocket gives one full-duplex connection with server push. Our prototype measured a median
+  lock-grant latency of 38 ms, against 510 ms with one-second polling.
+
+  Risk: some networks drop idle sockets. We mitigate this with 25-second heartbeats and resumable
+  sessions using sequence numbers. We will revisit the decision if we need to support clients behind
+  proxies that block WebSocket upgrades.
+
+  The figures here are illustrative. Yours must come from your own measurements.
+
+
+14.4 The defence session
+The Phase 1 defence is 15 minutes of presentation and 10 minutes of questions. Every member
+presents part of the architecture, and the examiners may ask any member about any decision. A
+decision that only one member can explain is treated as undefended. If the defence is not accepted,
+the team revises and re-presents within one week. The stack is then frozen; changing it later needs a
+new decision record and the instructor's approval.
+
+
+Section 15
+Repository, Documentation and Testing Standards
+
+15.1 Repository layout
+The layout below is recommended. You may adapt it, but the subsystem boundaries must be visible in
+the directory structure.
+
+
+
+
+Lahore Garrison University — Department of Computer Science                                                  Page 45 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                           Fall 2026
+
+
+  <your-os-name>/
+  ├── apps/       built-in applications: files, terminal, editor, task manager, settings
+  ├── kernel/     process table, scheduler, worker pool, memory manager, system calls, IPC
+  ├── vfs/        inode tree, path resolver, permissions, quotas, lock client, sync client
+  ├── wm/         compositor, taskbar, boot, login and desktop screens
+  ├── ai/         indexer, vector search, agent, predictor, eval/ (datasets and harnesses)
+  ├── dsa/        heap, trie, tree, dag, lru, each with tests/ and bench/
+  ├── services/   service manifests and the service manager (boot DAG)
+  ├── server/     API, sync engine, lock manager, swap storage, LLM gateway
+  ├── db/         migrations (up and down), seed scripts, benchmark queries
+  ├── tests/      unit, integration, e2e, performance, fault-injection
+  ├── docs/       diagrams, decision records, identity kit
+  └── README.md ARCHITECTURE.md STACK_DECISION.md DSA.md DATABASE.md AI.md
+      BOOT.md TESTING.md SECURITY.md AI_USAGE.md TEAM_CONTRACT.md CHANGELOG.md
+
+
+
+15.2 Required documents
+ Document                   Contents
+
+ README.md                  What the system is, its name and tagline, the live URL, bring-up in three commands or
+                            fewer, what works, and known limitations stated honestly.
+
+ ARCHITECTURE.md            Diagrams, module boundaries, the system-call protocol, data flows, and the two decisions
+                            you would reverse with hindsight.
+
+ STACK_DECISION.md          The decision records of Section 14.
+
+ DSA.md                     Every mandatory structure: location, operations, complexity, proving test and
+                            benchmark.
+
+ DATABASE.md                ERD, tree representation, transaction design, isolation level, indexes, benchmark results
+                            with query plans.
+
+ AI.md                      Subsystems chosen, models and why, the coupling map (§12.5), evaluation results, safety
+                            controls, cost report.
+
+ BOOT.md                    Boot stages, the service DAG, critical and degradable services, boot-time budget and the
+                            measured critical path.
+
+ TESTING.md                 Test strategy, how to run each suite, coverage, performance budgets, fault-injection
+                            design.
+
+ SECURITY.md                Threat model, permission model, agent trust boundary, prompt-injection defences, secret
+                            handling.
+
+ AI_USAGE.md                Disclosure of AI coding assistance (Section 18).
+
+
+15.3 Testing strategy
+
+ Level                What it must cover                                          Runs
+
+ Unit                 Every DSA structure with its edge cases; the path           Every pull request
+                      resolver; the permission matrix; the shell parser; the
+                      scheduler's ordering and aging.
+
+ Property-based       Should. Random sequences of VFS operations always           Every pull request
+                      leave fsck clean; heap invariants hold after random
+                      pushes, pops and priority changes.
+
+ Integration          System calls against the database; fault injection for      Every pull request
+                      every bulk operation; concurrent clients; lock leases;
+                      outbox replay.
+
+
+
+
+Lahore Garrison University — Department of Computer Science                                                 Page 46 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                           Fall 2026
+
+
+ Level                What it must cover                                            Runs
+
+ End-to-end           Browser automation: boot → login → open the                   Main branch, and each release
+                      terminal → file operations → reboot → session
+                      restored; the offline boot path.
+
+ Performance          Boot time, frame time under load, query p95,                  Nightly, and each release
+                      autocomplete latency, page-in latency, each with a
+                      budget that fails the build when exceeded.
+
+ AI evaluation        Recall@5 and MRR, the agent benchmark, injection              Each release
+                      fixtures, prediction accuracy, using recorded model
+                      responses in CI.
+
+
+Coverage targets: at least 70% line coverage overall and at least 85% on dsa/, vfs/ and kernel/.
+Coverage is reported by CI on every pull request. A high coverage number from shallow tests is worth
+less than a smaller number from tests that check behaviour; examiners read the tests.
+
+
+15.4 Commits and collaboration
+   Small, focused commits with meaningful messages (a convention such as feat:, fix:, test:, docs:
+   is recommended). Reference requirement IDs where relevant.
+   All work arrives through pull requests that are reviewed by another member. Review comments
+   are part of the evidence of engineering process.
+   The main branch is protected: no force pushes, and CI must pass before merge.
+   Work is tracked on an issue board with an owner for every issue.
+   Commit authorship must be genuine. Pair-programmed work is credited with co-author trailers.
+   Rewriting history to misrepresent contributions is misconduct.
+
+
+Section 16
+Evaluation Rubric
+
+16.1 Grading criteria and weights
+
+ Criterion                     Weight      What is assessed                             Primary evidence
+
+ OS & Process                      25%     Robustness of Web Worker scheduling,         BOOT, PROC, MEM, VFS,
+ Engineering                               efficiency of memory paging, UNIX-like       WM, OFF and SYS tests; live
+                                           VFS behaviour, window management,            stress tests.
+                                           the boot sequence and offline
+                                           execution.
+
+ DSA Rigour                        20%     Explicit, optimal use of trees, tries,       DSA.md; unit tests;
+                                           heaps, DAGs, hash structures and the         benchmarks; code review.
+                                           LRU, written by the team without
+                                           leaning on abstraction libraries.
+
+ AI Integration Depth              20%     How deeply the AI is coupled to the          RAG, AGT and PRE tests;
+                                           system. Does it act as an integral OS        coupling map; litmus test;
+                                           controller or a superficial add-on?          hidden benchmarks.
+
+ Database Architecture             15%     Schema scalability, strict ACID              DB tests; fault-injection
+                                           guarantees during bulk operations, and       results; query plans;
+                                           indexing strategy.                           benchmark report.
+
+
+Lahore Garrison University — Department of Computer Science                                                 Page 47 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                          Fall 2026
+
+
+ Criterion                     Weight      What is assessed                             Primary evidence
+
+ Tech Stack                        10%     The technical reasoning behind the           STACK_DECISION.md; Phase
+ Justification                             chosen languages, runtimes and               1 defence; viva answers.
+                                           distributed architecture.
+
+ Code Quality & Equity             10%     Commit history, clean architecture and       Repository history; pull-
+                                           naming, and verifiable equal                 request reviews; CI; peer
+                                           distribution of work across all five         assessment.
+                                           members.
+
+ Total                           100%
+
+
+16.2 Performance levels
+                                                                        Developing (50–          Beginning (below
+ Criterion         Exemplary (90–100%)        Proficient (70–89%)       69%)                     50%)
+
+ OS & Process      Scheduler with aging       All primitives work,      Scheduler exists but     Process table is
+ (25%)             and a worker pool          with minor gaps: e.g.     some heavy work          cosmetic. No paging.
+                   keeps p95 ≤ 16.7 ms        aging bound not           runs on the main         Flat or localStorage
+                   under load. LRU            proven, slow remote       thread. Paging is        file storage. Timer-
+                   paging with both swap      swap, limited             partial or manual.       driven boot screen.
+                   tiers restores byte-       recovery options.         VFS lacks
+                   identical state. Full                                permissions or links.
+                   UNIX-like VFS                                        Boot partly
+                   semantics, including                                 simulated.
+                   links, quotas and
+                   locks. Truthful DAG-
+                   driven boot with safe
+                   mode, recovery and
+                   offline boot.
+
+ DSA (20%)         Every mandatory            All present and           One or two replaced      Structures missing,
+                   structure written by       correct, with tests;      by libraries or sub-     or present but not
+                   the team, optimal,         benchmarks limited.       optimal (e.g. a sorted   actually used by the
+                   tested and                                           array as the queue,      system.
+                   benchmarked, with                                    linear-scan
+                   complexity shown                                     autocomplete).
+                   empirically, and used
+                   where the problem
+                   demands it.
+
+ AI depth          At least two               Two subsystems            One solid subsystem      A chatbot widget; AI
+ (20%)             subsystems deeply          working and               and one shallow one;     not connected to OS
+                   coupled to the             integrated with at        AI bypasses system       primitives.
+                   scheduler, VFS and         least the shell and       calls or permission
+                   shell. Evaluation          VFS; most targets met;    checks in places.
+                   targets met. Robust        safety controls
+                   safety: confirmation,      present.
+                   atomic plans,
+                   injection resistance,
+                   permission-safe
+                   retrieval. Graceful
+                   offline behaviour.
+
+
+
+
+Lahore Garrison University — Department of Computer Science                                                Page 48 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                           Fall 2026
+
+
+                                                                        Developing (50–         Beginning (below
+ Criterion         Exemplary (90–100%)        Proficient (70–89%)       69%)                    50%)
+
+ Database          Well-justified,            Atomic bulk               Some bulk               No transactions;
+ (15%)             normalised schema.         operations; targets       operations non-         orphans possible; no
+                   All bulk operations        met at 10,000 records;    atomic or untested;     indexing strategy.
+                   atomic under fault         minor schema              indexing ad hoc;
+                   injection and              weaknesses.               targets missed.
+                   concurrency. Indexes
+                   proven with query
+                   plans; p95 ≤ 10 ms at
+                   100,000 records.
+
+ Stack (10%)       Every major decision       Decisions justified       Justification mostly    Popularity or
+                   has criteria set in        against criteria;         general statements      familiarity only;
+                   advance, at least three    evidence limited.         with little evidence.   reasoning worked
+                   alternatives,                                                                backwards from the
+                   measured evidence,                                                           choice.
+                   honest risks and
+                   reversal triggers, and
+                   every member can
+                   defend it.
+
+ Quality &         Clean modular code,        Mostly clean; reviews     Inconsistent quality;   Large unreviewed
+ equity (10%)      consistent naming,         usually present;          large unreviewed        code dumps; one
+                   reviewed pull              contributions             commits; one or two     member wrote most
+                   requests, CI green,        reasonably balanced.      members dominate.       of the code; no tests.
+                   coverage met, and
+                   contributions evenly
+                   spread and verifiable
+                   across all five
+                   members.
+
+
+16.3 Where the boot screen and identity are assessed
+The boot sequence (Section 6) is assessed under OS & Process Engineering, and its service DAG also
+counts under DSA Rigour. The OS name and identity kit (Section 5) are entry requirements: a
+submission without a registered name, or without a working boot screen, does not pass the Phase 2
+gate.
+
+
+16.4 Individual moderation
+The team mark is the starting point for each member. It is moderated individually using three sources
+of evidence:
+
+   viva performance across the whole system;
+   contribution evidence from commits, pull requests and reviews;
+   confidential peer assessment, collected twice in the semester.
+
+A member who cannot explain code they submitted, or the parts of the system they are asked about,
+receives a reduced mark whatever the team's result. A member with strong evidence of carrying the
+team is recognised as well.
+
+
+
+
+Lahore Garrison University — Department of Computer Science                                                Page 49 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                         Fall 2026
+
+
+Section 17
+The Final Defence
+Demo Day tests the system, not the slides. Each team has 30 minutes, run to the protocol below on a
+machine the team does not control.
+
+
+17.1 Demo Day protocol
+
+ Time               Segment                    What happens
+
+ 0:00–0:05          Clean bring-up             An examiner clones the repository and starts the system with your
+                                               documented commands (three or fewer, finishing within five
+                                               minutes), then opens the production URL. This is scored before you
+                                               speak.
+
+ 0:05–0:08          Boot                       Cold boot in verbose mode; bootlog --critical-path; the network
+                                               is disconnected and the system rebooted to show offline boot and
+                                               the core utilities.
+
+ 0:08–0:18          System under test          Examiner-driven checks against Appendix A:
+                                                 a CPU-bound process while windows are dragged, with a frame
+                                                 meter visible;
+                                                 a workload of twice the memory budget, with paging shown in
+                                                 the Task Manager;
+                                                 a fault-injected recursive delete that rolls back;
+                                                 two users contending for a lock;
+                                                 hidden AI prompts: a semantic query, an agent instruction
+                                                 including a destructive confirmation, and a pre-fetch
+                                                 demonstration.
+
+
+ 0:18–0:26          Individual viva            Each of the five members is questioned on a subsystem chosen by
+                                               the examiners, not necessarily their own.
+
+ 0:26–0:30          Judges' questions          Architecture, trade-offs, limitations, and what you would do
+                                               differently.
+
+
+17.2 Final deliverables
+   The repository tagged v1.0.0, with every document from §15.2 up to date with the code.
+   A production deployment reachable at a public URL, with a demo account for examiners.
+   A test and coverage report generated by CI for the tagged release.
+   A 5–7 minute demonstration video that makes sense without narration.
+   The slides used on Demo Day.
+   A technical report of 20–30 pages, containing:
+    1. introduction and motivation;                              6. database design, integrity and indexing
+    2. the OS identity and its distinctive idea;                    results;
+    3. architecture;                                             7. AI subsystems with evaluation and safety;
+    4. a chapter for each subsystem (boot,                       8. testing;
+       processes and scheduling, memory, VFS,                    9. limitations and future work;
+       window manager, offline and sync);                       10. an individual contribution statement signed
+    5. DSA analysis with benchmarks;                                by all five members.
+
+
+
+
+Lahore Garrison University — Department of Computer Science                                             Page 50 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                   Fall 2026
+
+
+Section 18
+Academic Integrity and the Use of AI Tools
+   AI coding assistants are permitted, with disclosure. AI_USAGE.md records which tools were used,
+   what they were asked, what was accepted, and what was rejected and why. The last part carries the
+   most weight, because judging AI output is the skill being assessed.
+   Everything you submit must be defensible in the viva. A member who cannot explain, justify or
+   modify any part of their own submission when asked loses the marks for it, whether or not it
+   works. Undisclosed AI use is an integrity violation.
+   Study other systems; do not copy them. Studying Puter, daedalOS and other open-source systems
+   is encouraged. Copying their code, or another team's code, is prohibited.
+   Third-party code needs a licence and attribution. Any third-party code or library must have a
+   compatible licence and be listed in THIRD_PARTY.md. It may never stand in for a mandatory DSA
+   structure (§10.2).
+   Secrets never go in the repository. API keys, database credentials and tokens do not belong in the
+   repository or the client bundle. A leaked key must be revoked at once and reported in SECURITY.md.
+   Contribution records must be authentic. Fabricated commit history, contributions attributed to
+   the wrong person, or an agreement to “carry” a member who does not contribute are treated as
+   misconduct under university policy.
+
+
+  A final word
+  Few student projects touch as many layers of computer science at once as this one. Build it as
+  engineers: measure before you claim, defend every choice, and make the system tell the truth, from
+  the first frame of the boot screen to the last line of the audit log.
+
+  Give it a name you are proud of. It is your operating system.
+
+
+
+Appendix A
+
+Consolidated Acceptance Checklist
+Run this checklist before every gate. Each line is verified live at the final defence on the reference
+machine. The full requirement text is in the section shown.
+
+ Area             Criterion                                                      Target      Ref.        Done
+
+ Team             Registered team of exactly five students                  5 members        §4.1
+
+ Identity         Registered OS name, logo and version on boot,                 present      §5
+                  login, About and uname
+
+ Boot             Progress driven by real work; no timers in the               0 timers      BOOT-02
+                  boot path
+
+ Boot             Warm boot / cold boot to an interactive desktop        ≤ 1.5 s / ≤ 3.0 s   BOOT-10
+
+ Boot             Cycle in a service manifest halts boot and names        panic screen       BOOT-04
+                  the cycle
+
+ Boot             Boots to a usable desktop with the network                         yes     BOOT-09
+                  disabled
+
+
+
+
+Lahore Garrison University — Department of Computer Science                                         Page 51 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                              Fall 2026
+
+
+ Area             Criterion                                                                Target     Ref.          Done
+
+ Boot             Safe mode and recovery console reachable from                               both    BOOT-06
+                  the boot menu
+
+ Scheduler        p95 frame time with a CPU-bound process and 10                         ≤ 16.7 ms    PROC-05
+                  windows
+
+ Scheduler        Longest wait for a low-priority process under load            ≤ declared bound      PROC-04
+
+ Memory           Resident memory with a 2× budget workload                              ≤ budget     MEM-06
+
+ Memory           Page-in of a 5 MB state, local / remote (p95)                    ≤ 300 ms / ≤ 2 s   MEM-05
+
+ Memory           State after page-out and page-in                                  byte-identical    MEM-03
+
+ VFS              Symlink loop detection                                        ELOOP at 40 hops      VFS-03
+
+ VFS              Write beyond quota                                     EDQUOT, no partial data      VFS-06
+
+ VFS              Directory nesting depth                                               ≥ 32 levels   VFS-08
+
+ VFS              Crashed lock holder's lease expires                           within lease time     VFS-09
+
+ Windows          p95 frame time while dragging with 10 windows                          ≤ 16.7 ms    WM-03
+                  open
+
+ Offline          Core utilities offline; outbox replayed exactly              0 lost, 0 duplicated   OFF-01/02
+                  once
+
+ Terminal         Trie autocomplete over ≥ 10,000 entries (p95)                             ≤ 1 ms    SYS-03
+
+ Database         Fault-injected bulk operations: orphans after                                  0    DB-02
+                  rollback
+
+ Database         Metadata queries Q1–Q5 at ≥ 10,000 records (p95)                         ≤ 10 ms    DB-05
+
+ AI: RAG          Recall@5 on the evaluation set                                            ≥ 0.80    RAG-04
+
+ AI: RAG          Results the user is not allowed to read                                        0    RAG-03
+
+ AI: RAG          Retrieval latency over ≥ 10,000 chunks (p95)                           ≤ 500 ms     RAG-05
+
+ AI: Agent        Benchmark instructions completed correctly                             ≥ 16 of 20   AGT-07
+
+ AI: Agent        Destructive actions run without confirmation                           0, always    AGT-03
+
+ AI: Agent        Tool calls triggered by injected file content                                  0    AGT-06
+
+ AI: Pre-         Top-3 accuracy against the best MFU/MRU                                  higher     PRE-02
+ fetch            baseline
+
+ AI: Pre-         Median launch latency reduction on correct                                ≥ 30%     PRE-03
+ fetch            predictions
+
+ Delivery         Clean clone to a running system                          ≤ 3 commands, ≤ 5 min      §17.1
+
+ Delivery         Line coverage overall / on dsa, vfs, kernel                       ≥ 70% / ≥ 85%     §15.3
+
+
+
+
+Appendix B
+
+Glossary
+ Term                         Meaning in this project
+
+ ACID                         Atomicity, Consistency, Isolation, Durability: the guarantees a transaction gives. Here,
+                              above all, that a bulk operation happens completely or not at all.
+
+
+
+
+Lahore Garrison University — Department of Computer Science                                                    Page 52 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                                Fall 2026
+
+
+ Term                        Meaning in this project
+
+ Aging                       Gradually raising the priority of a process the longer it waits, so that low-priority work
+                             never starves.
+
+ Blast radius                The set of files and inodes an operation will create, modify or delete, shown to the user
+                             before an agent's plan runs.
+
+ Cosine similarity           (a·b)/(‖a‖‖b‖), the cosine of the angle between two vectors; 1 means the same direction, 0
+                             means unrelated.
+
+ DAG                         Directed acyclic graph. Here, the graph of service dependencies whose topological order
+                             is the boot order.
+
+ Embedding                   A vector produced by a model to represent the meaning of a piece of text.
+
+ Idempotency key             A unique ID attached to an operation so that retrying it never applies it twice.
+
+ Inode                       The record describing a file, directory or link: type, owner, mode, size, times and where
+                             its content is stored.
+
+ Kahn's algorithm            A topological sort that repeatedly removes nodes with no remaining incoming edges. If
+                             nodes remain at the end, the graph has a cycle.
+
+ Lease                       A lock that expires unless renewed, so that a crashed client cannot hold a resource
+                             forever.
+
+ LRU                         Least Recently Used: the replacement policy that evicts the entry that has gone unused
+                             the longest.
+
+ OPFS                        Origin Private File System: a fast, private file-system storage area that the browser
+                             provides to each origin.
+
+ Outbox / operation          A durable queue of local changes, replayed to the server in order when connectivity
+ log                         returns.
+
+ p95                         The 95th percentile: 95% of measurements are at or below this value. Targets use p95 so
+                             that averages cannot hide slow cases.
+
+ Page fault                  An access to state that is not resident in memory, which makes the memory manager
+                             page it in.
+
+ PCB                         Process control block: the kernel's record for one process.
+
+ Prompt injection            An attack in which text the model reads, such as a file's contents, contains instructions
+                             meant to hijack its behaviour.
+
+ Quantum                     The time slice a process may run before the scheduler reconsiders which process runs
+                             next.
+
+ RAG                         Retrieval-augmented generation: retrieve relevant documents first, then generate an
+                             answer grounded in and citing them.
+
+ Recall@5 / MRR              Retrieval metrics: the fraction of queries whose relevant file appears in the top five, and
+                             the average of 1/rank of the first relevant result.
+
+ Service Worker              A browser script that intercepts network requests, making offline operation and cached
+                             shell updates possible.
+
+ Topological sort            An ordering of a DAG's nodes in which every node comes after all of the nodes it depends
+                             on.
+
+ Trie                        A tree in which each edge is a character, so all words sharing a prefix share a path, which
+                             makes prefix completion fast.
+
+ Web Worker                  A background thread in the browser that runs JavaScript off the main (UI) thread and
+                             talks to it by messages.
+
+
+
+
+Lahore Garrison University — Department of Computer Science                                                     Page 53 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                              Fall 2026
+
+
+Appendix C
+References and Further Reading
+Benchmarks
+   Puter, the open-source web desktop: github.com/HeyPuter/puter
+   daedalOS, a desktop environment in the browser: github.com/DustinBrett/daedalOS
+
+Operating systems
+   R. H. Arpaci-Dusseau and A. C. Arpaci-Dusseau, Operating Systems: Three Easy Pieces, free online at
+   pages.cs.wisc.edu/~remzi/OSTEP/. See especially the chapters on scheduling (MLFQ), paging and
+   swapping policies, and file-system implementation.
+   A. Silberschatz, P. B. Galvin and G. Gagne, Operating System Concepts, Wiley. Process management,
+   CPU scheduling, virtual memory and file systems.
+
+Data structures and algorithms
+   T. H. Cormen, C. E. Leiserson, R. L. Rivest and C. Stein, Introduction to Algorithms, MIT Press. Heaps,
+   hash tables, B-trees, elementary graph algorithms and topological sort.
+
+Databases
+   PostgreSQL documentation: transaction isolation (postgresql.org/docs/current/transaction-
+   iso.html) and index types (postgresql.org/docs/current/indexes-types.html).
+   pgvector, vector similarity search for PostgreSQL: github.com/pgvector/pgvector
+
+Browser platform
+   MDN Web Docs: Web Workers API, IndexedDB API, File System API (Origin Private File System),
+   Storage API, Service Worker API and WebSockets API. developer.mozilla.org
+   web.dev: rendering performance, long tasks and offline-first patterns. web.dev
+
+Artificial intelligence
+   P. Lewis et al., “Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks”, NeurIPS
+   2020.
+   N. Reimers and I. Gurevych, “Sentence-BERT: Sentence Embeddings using Siamese BERT-
+   Networks”, EMNLP 2019.
+   Transformers.js, running models in the browser: huggingface.co/docs/transformers.js
+   OWASP Top 10 for Large Language Model Applications, especially prompt injection and excessive
+   agency: owasp.org
+
+
+
+
+Lahore Garrison University — Department of Computer Science                                    Page 54 of 55
+AI-Native Web-Based Operating System — Capstone Project Specification                                          Fall 2026
+
+
+Appendix D
+Team and OS Registration Form
+Submit this form, completed and signed by all five members, by the end of Week 2. Commit a
+scanned copy to docs/registration.pdf. Names are allocated first come, first served.
+
+Operating system identity
+Proposed OS name
+
+
+Alternative name (if the first is taken)
+
+
+Tagline (one line)
+
+
+Meaning or origin of the name
+
+
+Repository URL                                                                          Section
+
+
+Team members and roles (exactly five)
+
+ #     Name                            Roll number         Primary role                 Reviews      Signature
+
+                                                           Kernel / Systems
+ 1
+                                                           Architect
+
+
+ 2                                                         VFS / Database Engineer
+
+
+                                                           Window Manager / UI
+ 3
+                                                           Lead
+
+
+ 4                                                         AI Pipeline Specialist
+
+
+ 5                                                         QA / DevOps & Integration
+
+
+
+Intended AI subsystems (at least two)
+     A. Semantic VFS search (RAG)          B. Agentic system execution        C. Predictive pre-fetching
+
+Declaration
+We confirm that our team has exactly five members; that the name above is original and appropriate under
+Section 5.1; that we have read this specification in full; that every member will be examined on the whole
+system; and that our marks will be moderated individually using the viva, the contribution evidence and
+peer assessment (Section 16.4). We have signed the team contract (Section 4.4).
+
+
+Date                                     Instructor approval
+
+
+Name registered as                                                                   Team code
+
+
+
+
+Lahore Garrison University — Department of Computer Science                                                Page 55 of 55
+

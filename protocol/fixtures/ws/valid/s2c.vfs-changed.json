@@ -1,0 +1,46 @@
+{
+  "v": 1,
+  "t": "vfs.changed",
+  "id": 6,
+  "body": {
+    "ownerUid": 1002,
+    "seq": 77,
+    "opId": "0192f0c1-8a3b-7c4d-8e5f-0123456789ab",
+    "commitTime": "2026-09-24T10:00:00.000Z",
+    "lamport": 905,
+    "redacted": false,
+    "changes": [
+      {
+        "kind": "upsert",
+        "ino": "0192f0c1-8a3b-7c4d-8e5f-0123456789ab",
+        "version": 2,
+        "parentIno": "00000000-0000-7000-8000-000000000008",
+        "name": "shared.md",
+        "type": "f",
+        "mode": 420,
+        "uid": 1002,
+        "gid": 200,
+        "size": 5,
+        "nlink": 1,
+        "blob": "abababababababababababababababababababababababababababababababab",
+        "mtime": 1790000000000,
+        "ctime": 1790000000000
+      },
+      {
+        "kind": "move",
+        "ino": "0192f0c1-8a3b-7c4d-9e5f-0123456789ac",
+        "version": 1,
+        "parentIno": "00000000-0000-7000-8000-000000000008",
+        "name": "b.md",
+        "fromParentIno": "00000000-0000-7000-8000-000000000008",
+        "fromName": "a.md"
+      },
+      {
+        "kind": "unlink",
+        "ino": "0192f0c1-8a3b-7c4d-9e5f-0123456789ac",
+        "version": 1,
+        "subtree": true
+      }
+    ]
+  }
+}

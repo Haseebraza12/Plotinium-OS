@@ -1,0 +1,380 @@
+/*
+ * Notification cards, Notification Centre and banners (WMD-18). Cards in the centre use the
+ * popover tint without a live blur (the centre sits beside Control Centre, and a screen should
+ * show at most four live-blur regions, visual-language-macos.md §3.4); banners, at most three,
+ * add the live blur. Only transform and opacity animate.
+ */
+.card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: var(--pl-space-2) var(--pl-space-3);
+  padding: var(--pl-space-3) var(--pl-space-3) var(--pl-space-3) var(--pl-space-3);
+  border-radius: var(--pl-radius-sheet);
+  background: var(--pl-glass-popover-bg);
+  box-shadow:
+    var(--pl-shadow-pop),
+    var(--pl-glass-specular),
+    inset 0 0 0 var(--pl-hairline-width) var(--pl-hairline);
+  color: var(--pl-text);
+  font: var(--pl-type-body);
+  text-align: left;
+  cursor: default;
+  transition: transform var(--pl-motion-fast) var(--pl-ease);
+}
+.card:hover {
+  transform: translateY(-1px);
+}
+.card:focus-visible {
+  outline: var(--pl-focus-ring);
+  outline-offset: var(--pl-focus-offset);
+}
+.banner {
+  -webkit-backdrop-filter: var(--pl-glass-popover-filter);
+  backdrop-filter: var(--pl-glass-popover-filter);
+}
+
+.appIcon {
+  display: block;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--pl-radius-md);
+  box-shadow: var(--pl-shadow-1);
+}
+.appIcon svg {
+  display: block;
+}
+.levelTile {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--pl-accent-subtle);
+  color: var(--pl-accent-text);
+}
+/* A notification with no source app shows its level as the tile (UI-151). */
+.levelTile[data-level='success'] {
+  background: var(--pl-success-subtle);
+  color: var(--pl-success);
+}
+.levelTile[data-level='warning'] {
+  background: var(--pl-warning-subtle);
+  color: var(--pl-warning);
+}
+.levelTile[data-level='error'] {
+  background: var(--pl-danger-subtle);
+  color: var(--pl-danger);
+}
+/* "×3": identical notifications merged into one card (UI-080). */
+.count {
+  padding: 0 var(--pl-space-1);
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-control-bg);
+  color: var(--pl-text-muted);
+  font-weight: var(--pl-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--pl-space-2);
+}
+.title {
+  min-width: 0;
+  font-weight: var(--pl-weight-semibold);
+  line-height: var(--pl-leading-tight);
+}
+.meta {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--pl-space-1);
+  color: var(--pl-text-tertiary);
+  font: var(--pl-type-caption);
+  white-space: nowrap;
+}
+.unreadDot {
+  width: var(--pl-status-dot);
+  height: var(--pl-status-dot);
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-accent);
+  box-shadow: 0 0 6px var(--pl-accent-glow);
+}
+.levelGlyph {
+  display: inline-grid;
+  place-items: center;
+}
+.levelGlyph:empty {
+  display: none;
+}
+.card[data-level='success'] .levelGlyph {
+  color: var(--pl-success);
+}
+.card[data-level='warning'] .levelGlyph {
+  color: var(--pl-warning);
+}
+.card[data-level='error'] .levelGlyph {
+  color: var(--pl-danger);
+}
+.time {
+  font-variant-numeric: tabular-nums;
+}
+
+.body {
+  margin: var(--pl-space-half) 0 0;
+  color: var(--pl-text-muted);
+  font: var(--pl-type-caption);
+  overflow-wrap: anywhere;
+}
+.code {
+  color: var(--pl-text);
+  font-family: var(--pl-font-mono);
+  font-size: var(--pl-text-xs);
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--pl-space-2);
+  margin-top: var(--pl-space-1);
+}
+.link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pl-space-half);
+  min-height: var(--pl-target-min);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--pl-accent-text);
+  font: var(--pl-type-caption);
+  font-weight: var(--pl-weight-semibold);
+  cursor: pointer;
+}
+.link:hover {
+  text-decoration: underline;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--pl-space-2);
+  margin-top: var(--pl-space-2);
+}
+
+.close {
+  position: absolute;
+  top: calc(-1 * var(--pl-space-2));
+  left: calc(-1 * var(--pl-space-2));
+  display: grid;
+  place-items: center;
+  width: var(--pl-target-min);
+  height: var(--pl-target-min);
+  padding: 0;
+  border: 0;
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-surface-3);
+  box-shadow:
+    var(--pl-shadow-1),
+    inset 0 0 0 var(--pl-hairline-width) var(--pl-border-subtle);
+  color: var(--pl-text);
+  opacity: 0;
+  transform: scale(0.8);
+  transition:
+    opacity var(--pl-motion-fast) var(--pl-ease),
+    transform var(--pl-motion-fast) var(--pl-ease);
+}
+.card:hover .close,
+.card:focus-within .close {
+  opacity: 1;
+  transform: none;
+}
+
+/* ---------- Notification Centre ---------- */
+.centre {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pl-space-2);
+  width: var(--pl-popover-max-w);
+  max-width: 100%;
+  max-height: 100%;
+  /* Room below and beside the cards so the scroller does not cut their shadows (UI-151). */
+  padding: var(--pl-space-2) var(--pl-space-2) var(--pl-space-5);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  color: var(--pl-text);
+}
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--pl-space-2);
+  padding: 0 var(--pl-space-1);
+}
+.heading {
+  margin: 0;
+  font: var(--pl-type-headline);
+  font-size: var(--pl-text-lg);
+  font-weight: var(--pl-weight-bold);
+  letter-spacing: var(--pl-tracking-tight);
+  text-shadow: 0 1px 8px var(--pl-scrim);
+}
+.headActions {
+  display: flex;
+  gap: var(--pl-space-1);
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pl-space-1);
+  height: var(--pl-target-min);
+  padding: 0 var(--pl-space-2);
+  border: 0;
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-glass-popover-bg);
+  box-shadow: inset 0 0 0 var(--pl-hairline-width) var(--pl-hairline);
+  color: var(--pl-text);
+  font: var(--pl-type-caption);
+  font-weight: var(--pl-weight-semibold);
+  cursor: default;
+}
+.chip[aria-disabled='true'] {
+  color: var(--pl-text-disabled);
+}
+.chevron {
+  display: inline-grid;
+  place-items: center;
+  transition: transform var(--pl-motion-med) var(--pl-ease-spring);
+}
+.chevron[data-open='true'] {
+  transform: rotate(180deg);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pl-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.item {
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(-16px) scale(0.98);
+  }
+}
+.enter {
+  animation: card-in var(--pl-motion-slow) var(--pl-ease-spring) both;
+  animation-delay: calc(var(--pl-stagger-index, 0) * 40ms * var(--pl-k));
+}
+
+/* A collapsed group: the newest card over two receding slabs (.pl-notification-stack). */
+.stack {
+  position: relative;
+  isolation: isolate;
+  margin-bottom: var(--pl-space-4);
+}
+.slab {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: var(--pl-radius-sheet);
+  background: var(--pl-glass-popover-bg);
+  box-shadow:
+    var(--pl-shadow-1),
+    inset 0 0 0 var(--pl-hairline-width) var(--pl-hairline);
+  transform-origin: 50% 100%;
+}
+.slab[data-stack='1'] {
+  --pl-stack-index: 1;
+}
+.slab[data-stack='2'] {
+  --pl-stack-index: 2;
+}
+/* Above the receding slabs, which reach under it, so it can be clicked (UI-079). */
+.more {
+  position: relative;
+  z-index: 1;
+  align-self: flex-end;
+  min-height: var(--pl-target-min);
+  margin-top: calc(-1 * var(--pl-space-3));
+  padding: 0 var(--pl-space-2);
+  border: 0;
+  border-radius: var(--pl-radius-pill);
+  background: none;
+  color: var(--pl-text-muted);
+  font: var(--pl-type-caption);
+  font-weight: var(--pl-weight-semibold);
+  cursor: default;
+}
+.more:hover {
+  color: var(--pl-text);
+}
+
+.empty {
+  padding: var(--pl-space-6) var(--pl-space-4);
+  border-radius: var(--pl-radius-sheet);
+  background: var(--pl-glass-popover-bg);
+}
+
+/* ---------- banners ---------- */
+.toasts {
+  position: fixed;
+  top: calc(var(--pl-menubar-h) + var(--pl-space-2));
+  right: var(--pl-space-3);
+  z-index: var(--pl-z-notify);
+  width: var(--pl-popover-max-w);
+  max-width: calc(100vw - 2 * var(--pl-space-3));
+  pointer-events: none;
+}
+.toastsInline {
+  position: relative;
+  top: auto;
+  right: auto;
+}
+.toastList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pl-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.toastItem {
+  pointer-events: auto;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (forced-colors: active) {
+  .card,
+  .chip,
+  .slab {
+    border: 1px solid CanvasText;
+  }
+  .unreadDot {
+    background: Highlight;
+  }
+}

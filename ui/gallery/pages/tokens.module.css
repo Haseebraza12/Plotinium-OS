@@ -1,0 +1,169 @@
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--pl-space-2);
+}
+.swatch {
+  display: flex;
+  align-items: center;
+  gap: var(--pl-space-2);
+  min-width: 0;
+}
+.chip {
+  flex: none;
+  width: var(--pl-control-h);
+  height: var(--pl-control-h);
+  border-radius: var(--pl-radius-sm);
+  box-shadow: inset 0 0 0 var(--pl-hairline-width) var(--pl-hairline);
+}
+.chipOnSurface {
+  background: var(--pl-surface);
+}
+.swatchName {
+  overflow: hidden;
+  font: var(--pl-type-mono);
+  font-size: var(--pl-text-xs);
+  color: var(--pl-text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.groupLabel {
+  font: var(--pl-type-section);
+  color: var(--pl-text-tertiary);
+}
+.materials {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--pl-space-5);
+}
+.material {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: var(--pl-space-1);
+  min-height: 120px;
+  padding: var(--pl-space-3);
+  color: var(--pl-text);
+}
+.materialName {
+  font: var(--pl-type-headline);
+}
+.materialRecipe {
+  font: var(--pl-type-mono);
+  font-size: var(--pl-text-xs);
+  color: var(--pl-text-muted);
+}
+.menubar {
+  border-radius: var(--pl-radius-sm);
+  background: var(--pl-glass-menubar-bg);
+  -webkit-backdrop-filter: var(--pl-glass-menubar-filter);
+  backdrop-filter: var(--pl-glass-menubar-filter);
+  box-shadow: var(--pl-glass-specular);
+}
+.dock {
+  border-radius: var(--pl-radius-dock);
+  background: var(--pl-glass-dock-bg);
+  -webkit-backdrop-filter: var(--pl-glass-dock-filter);
+  backdrop-filter: var(--pl-glass-dock-filter);
+  box-shadow: var(--pl-shadow-dock), var(--pl-glass-dock-edge);
+}
+.window {
+  border-radius: var(--pl-radius-win);
+  background: var(--pl-glass-window-bg);
+  box-shadow: var(--pl-shadow-win-focus), var(--pl-glass-specular);
+}
+.sidebar {
+  border-radius: var(--pl-radius-md);
+  background: var(--pl-glass-sidebar-bg);
+  box-shadow: var(--pl-glass-sidebar-edge);
+}
+.popover {
+  border-radius: var(--pl-radius-lg);
+  background: var(--pl-glass-popover-bg);
+  -webkit-backdrop-filter: var(--pl-glass-popover-filter);
+  backdrop-filter: var(--pl-glass-popover-filter);
+  box-shadow: var(--pl-shadow-pop), var(--pl-glass-specular);
+}
+.sheet {
+  border-radius: var(--pl-radius-sheet);
+  background: var(--pl-glass-sheet-bg);
+  -webkit-backdrop-filter: var(--pl-glass-sheet-filter);
+  backdrop-filter: var(--pl-glass-sheet-filter);
+  box-shadow: var(--pl-shadow-dialog), var(--pl-glass-specular);
+}
+.hud {
+  border-radius: var(--pl-radius-lg);
+  background: var(--pl-glass-hud-bg);
+  -webkit-backdrop-filter: var(--pl-glass-hud-filter);
+  backdrop-filter: var(--pl-glass-hud-filter);
+  box-shadow: var(--pl-shadow-pop), var(--pl-glass-specular);
+}
+.card {
+  border-radius: var(--pl-radius-md);
+  background: var(--pl-glass-card-bg);
+  box-shadow: inset 0 0 0 var(--pl-hairline-width) var(--pl-hairline);
+}
+.boxes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--pl-space-5);
+}
+.box {
+  display: grid;
+  place-items: center;
+  width: 96px;
+  height: 72px;
+  background: var(--pl-surface);
+  box-shadow: inset 0 0 0 1px var(--pl-border-subtle);
+  font: var(--pl-type-mono);
+  font-size: var(--pl-text-xs);
+  color: var(--pl-text-muted);
+}
+.shadowBox {
+  display: grid;
+  place-items: center;
+  width: 150px;
+  height: 96px;
+  border-radius: var(--pl-radius-win);
+  background: var(--pl-glass-window-bg);
+  font: var(--pl-type-mono);
+  font-size: var(--pl-text-xs);
+  text-align: center;
+  color: var(--pl-text-muted);
+}
+.space {
+  display: grid;
+  grid-template-columns: 120px auto;
+  align-items: center;
+  gap: var(--pl-space-1) var(--pl-space-3);
+}
+.spaceBar {
+  height: var(--pl-space-3);
+  border-radius: var(--pl-radius-xs);
+  background: var(--pl-accent);
+}
+.typeRow {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  align-items: baseline;
+  gap: var(--pl-space-4);
+  padding: var(--pl-space-2) 0;
+  border-bottom: var(--pl-hairline-width) solid var(--pl-separator);
+}
+.typeSample {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.iconRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--pl-space-5);
+}
+.iconCell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--pl-space-1);
+}

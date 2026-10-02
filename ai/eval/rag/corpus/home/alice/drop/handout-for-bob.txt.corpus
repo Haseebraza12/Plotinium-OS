@@ -1,0 +1,5 @@
+bob - here are the compositor numbers you asked for (drop folder: you can open this if you know the name, but you can't list the folder)
+
+drag p95 frame time 9.8 ms with 10 windows, 12.4 ms with 20.
+overview (F3) open: 180 ms first time, 60 ms after snapshots are cached.
+dock magnification: 0.6 ms per frame.

@@ -1,0 +1,9 @@
+DB assignment 2 feedback (got 17/20)
+
+- ER diagram: good. cardinality on the "supervises" relationship should be 1..* not 0..*.
+- schema: missing a CHECK on grade (0..100). -1
+- query 4 used NOT IN with a nullable column, returns empty set if any NULL. -1. use NOT EXISTS.
+- query 6 correct but slow; add an index on enrolment(course_id). -1
+- nice use of window functions in query 7.
+
+TA said the final project demo needs EXPLAIN ANALYZE output for our main queries.

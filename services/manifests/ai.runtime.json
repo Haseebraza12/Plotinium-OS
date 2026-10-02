@@ -1,0 +1,11 @@
+{
+  "name": "ai.runtime",
+  "description": "AI syscall table and FsSemanticSearch seam registered; ai.search spawned",
+  "requires": ["sched", "mm"],
+  "critical": false,
+  "weight": 1,
+  "timeoutMs": 4000,
+  "priority": 32,
+  "safeMode": false,
+  "runsIn": "kernel+executor"
+}

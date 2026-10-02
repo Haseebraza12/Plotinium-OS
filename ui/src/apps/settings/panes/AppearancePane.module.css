@@ -1,0 +1,243 @@
+/*
+ * Settings › Appearance. The theme thumbnails are tiny desktops drawn with the real tokens:
+ * each carries data-theme, so the light and dark previews always match the themes.
+ */
+.pane {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pl-space-5);
+}
+.themeRow,
+.accentRow {
+  padding: var(--pl-space-4);
+}
+.themes {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--pl-space-6);
+}
+.themeCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--pl-space-2);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--pl-text);
+  font: var(--pl-type-callout);
+  cursor: default;
+}
+.thumb {
+  position: relative;
+  display: block;
+  width: calc(var(--pl-space-12) * 2 + var(--pl-space-4));
+  height: calc(var(--pl-space-12) + var(--pl-space-6));
+  padding: var(--pl-space-half);
+  border-radius: var(--pl-radius-md);
+  box-shadow: 0 0 0 1px var(--pl-border-subtle);
+  transition: transform var(--pl-motion-med) var(--pl-ease-spring-soft);
+}
+.themeCard:hover .thumb {
+  transform: translateY(-2px);
+}
+.themeCard:active .thumb {
+  transform: scale(var(--pl-press-scale));
+}
+.themeCard[aria-checked='true'] .thumb {
+  box-shadow:
+    0 0 0 2px var(--pl-accent),
+    0 0 0 5px var(--pl-accent-subtle);
+}
+.themeCard:focus-visible {
+  outline: none;
+}
+.themeCard:focus-visible .thumb {
+  outline: var(--pl-focus-ring);
+  outline-offset: var(--pl-space-1);
+}
+.themeLabel {
+  color: var(--pl-text-muted);
+}
+.themeCard[aria-checked='true'] .themeLabel {
+  color: var(--pl-text);
+  font-weight: var(--pl-weight-semibold);
+}
+.preview {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: calc(var(--pl-radius-md) - 2px);
+  background: var(--pl-wallpaper);
+}
+.split {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.half {
+  position: absolute;
+  inset: 0;
+}
+.halfDark {
+  clip-path: polygon(55% 0, 100% 0, 100% 100%, 45% 100%);
+}
+.previewBar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: var(--pl-space-1);
+  background: var(--pl-glass-menubar-bg);
+}
+.previewWindow {
+  position: absolute;
+  top: calc(var(--pl-space-2) + var(--pl-space-half));
+  left: var(--pl-space-3);
+  right: var(--pl-space-5);
+  bottom: var(--pl-space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--pl-space-1);
+  padding: var(--pl-space-1);
+  border-radius: var(--pl-radius-xs);
+  background: var(--pl-glass-window-bg);
+  box-shadow: var(--pl-shadow-1);
+}
+.previewLights {
+  display: flex;
+  gap: 2px;
+}
+.previewLights > span {
+  width: 3px;
+  height: 3px;
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-traffic-close);
+}
+.previewLights > span:nth-child(2) {
+  background: var(--pl-traffic-minimise);
+}
+.previewLights > span:nth-child(3) {
+  background: var(--pl-traffic-zoom);
+}
+.previewLine {
+  display: block;
+  height: 3px;
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-accent);
+}
+.previewShort {
+  width: 55%;
+  background: var(--pl-text-disabled);
+}
+.previewDock {
+  position: absolute;
+  bottom: var(--pl-space-1);
+  left: 30%;
+  right: 30%;
+  height: var(--pl-space-2);
+  border-radius: var(--pl-radius-xs);
+  background: var(--pl-glass-dock-bg);
+  box-shadow: var(--pl-glass-dock-edge);
+}
+.accentRow {
+  display: flex;
+  align-items: center;
+  gap: var(--pl-space-4);
+}
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--pl-space-2);
+}
+.swatch {
+  --pl-swatch: var(--pl-tint-indigo);
+  display: inline-grid;
+  place-items: center;
+  width: var(--pl-target-min);
+  height: var(--pl-target-min);
+  padding: 0;
+  border: 0;
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-swatch);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--pl-text) 18%, transparent),
+    var(--pl-glass-specular);
+  color: var(--pl-on-tint);
+  cursor: default;
+  transition: transform var(--pl-motion-med) var(--pl-ease-spring-bouncy);
+}
+.swatch:hover {
+  transform: scale(1.1);
+}
+.swatch:active {
+  transform: scale(0.92);
+}
+.swatch[aria-checked='true'] {
+  box-shadow:
+    0 0 0 2px var(--pl-bg),
+    0 0 0 4px var(--pl-swatch);
+}
+.swatchCheck {
+  animation: pl-app-check calc(200ms * var(--pl-k)) var(--pl-ease-spring-bouncy) both;
+}
+@keyframes pl-app-check {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+}
+.swatch-violet {
+  --pl-swatch: var(--pl-tint-indigo);
+}
+.swatch-blue {
+  --pl-swatch: var(--pl-tint-blue);
+}
+.swatch-purple {
+  --pl-swatch: var(--pl-tint-purple);
+}
+.swatch-pink {
+  --pl-swatch: var(--pl-tint-pink);
+}
+.swatch-red {
+  --pl-swatch: var(--pl-tint-red);
+}
+.swatch-orange {
+  --pl-swatch: var(--pl-tint-orange);
+}
+.swatch-yellow {
+  --pl-swatch: var(--pl-tint-yellow);
+}
+.swatch-green {
+  --pl-swatch: var(--pl-tint-green);
+}
+.swatch-graphite {
+  --pl-swatch: var(--pl-tint-gray);
+}
+.accentName {
+  font: var(--pl-type-callout);
+  color: var(--pl-text-muted);
+}
+@media (prefers-reduced-motion: reduce) {
+  .thumb,
+  .swatch {
+    transition: none;
+  }
+  .themeCard:hover .thumb,
+  .swatch:hover {
+    transform: none;
+  }
+  .swatchCheck {
+    animation: none;
+  }
+}
+@media (forced-colors: active) {
+  .themeCard[aria-checked='true'] .thumb,
+  .swatch[aria-checked='true'] {
+    outline: 2px solid Highlight;
+  }
+}

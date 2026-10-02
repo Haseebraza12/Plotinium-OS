@@ -1,0 +1,11 @@
+// protocol/ tests may import vitest, fast-check and node: built-ins (ESLint-enforced), so they
+// type-check with Node types; the package source keeps `types: []` (../tsconfig.json).
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "types": ["node"]
+  },
+  "include": ["**/*.ts", "../src/**/*.ts"],
+  "exclude": ["node_modules"]
+}

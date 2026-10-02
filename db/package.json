@@ -1,0 +1,18 @@
+{
+  "name": "@plotinium/db",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PostgreSQL 18 + pgvector schema: dbmate migrations (up and down), schema.sql, seed, benchmark queries, integrity probes.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run --root .. --project db"
+  },
+  "dependencies": {
+    "@plotinium/protocol": "workspace:*"
+  }
+}

@@ -1,0 +1,99 @@
+{
+ "files_changed": [
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/src/_sys.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/shell/README.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/shell/lexer.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/shell/parser.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/shell/glob.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/shell/print.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/shell/state.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/shell/vars.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/shell/env.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/shell/expand.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/shell/lookup.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/shell/redir.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/shell/exec.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/shell/jobs.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/shell/wait.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/shell/history.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/shell/keys.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/shell/editor.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/shell/wcwidth.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/shell/prompt.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/shell/complete.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/shell/repl.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/shell/proc.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/shell/builtins/index.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/shell/builtins/names.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/shell/builtins/common.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/shell/builtins/dir.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/shell/builtins/echo.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/shell/builtins/vars.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/shell/builtins/jobctl.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/shell/builtins/kill.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/shell/builtins/misc.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/shell/builtins/help.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/shell/tests/fake-kernel.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/shell/tests/screen.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/shell/tests/programs.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/shell/tests/session.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/shell/tests/parser.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/shell/tests/expand.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/shell/tests/exec.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/shell/tests/jobs.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/shell/tests/history.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/shell/tests/builtins.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/shell/tests/editor.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/shell/tests/complete.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/shell/tests/session.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/shell/tests/tty.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/apps/terminal/tty.ts"
+ ],
+ "verification": [
+  {
+   "command": "pnpm exec tsc -p apps/tsconfig.json --noEmit",
+   "outcome": "My paths have 0 errors. The only 3 errors are in another agent's in-progress files: apps/coreutils/tests/procs.test.ts(460) and apps/coreutils/tests/system.test.ts(448) x2."
+  },
+  {
+   "command": "pnpm exec vitest run --project apps apps/shell",
+   "outcome": "PASS: 10 files, 222 tests. This includes the 10,000-run fast-check test that parses, prints and re-parses programs."
+  },
+  {
+   "command": "pnpm exec vitest run --project apps",
+   "outcome": "PASS: 15 files, 354 tests (the whole apps project, including coreutils)"
+  },
+  {
+   "command": "pnpm exec vitest run --project apps apps/shell --coverage --coverage.include='**/shell/**' --coverage.include='**/terminal/tty.ts' --coverage.include='**/src/_sys.ts' --coverage.exclude='**/tests/**'",
+   "outcome": "Lines 96.51%, statements 94.02%, branches 85.12%, functions 98.29%. The lowest files by lines are wait.ts at 88.3% and exec.ts at 90.3%. Includes with the default repo-relative paths reported 0/0, apparently because the repo path contains a space (vitest shows it URL-encoded as %20), so I used ** globs."
+  },
+  {
+   "command": "pnpm exec eslint apps/shell apps/terminal/tty.ts apps/src/_sys.ts --max-warnings 0",
+   "outcome": "clean (0 errors, 0 warnings)"
+  },
+  {
+   "command": "pnpm exec prettier --check apps/shell apps/terminal/tty.ts apps/src/_sys.ts",
+   "outcome": "All matched files use Prettier code style"
+  }
+ ],
+ "problems": [
+  "@plotinium/kernel/sys is still a placeholder. The shell (and coreutils) keep using the shared stand-in apps/src/_sys.ts (Sys, Program, ProgramContext, SysError, writeText and readAllText), which carries TODO(R1).",
+  "The complete.query, complete.hist.load, complete.hist.add and complete.hist.clear calls are not in protocol/src/sys/names.ts. They are declared locally as ExtraCalls in apps/src/_sys.ts. Until they land the kernel answers ENOSYS: completion falls back to a directory scan (SHL-17) and history seeding is silently skipped.",
+  "Race until spawn gets an fg option: protocol SpawnArgs has no `fg` option (it is a strictObject, so the field cannot be passed). The shell therefore sets cooked mode before spawning and calls tcsetpgrp right after the first spawn. There is still a small window where the first process could read the TTY before it is the foreground group and get SIGTTIN (TODO(R1) in exec.ts).",
+  "Protocol and shell spec disagree in five places; I followed the protocol. (1) TTY attribute calls are tty.getattr/tty.setattr, not tcgetattr/tcsetattr. (2) tty.input is limited to 4,096 bytes, not the 16 KiB chunks in \u00a73.2. (3) argv plus env is limited to 60 KiB, not the 128 KiB in \u00a76. (4) There is no tty.ack or seq on tty.out; tty.ts serialises writes and reports a local sequence (TODO). (5) WaitStatus has no exitReason, so 'Killed (watchdog)' and 'Killed (collateral\u2026)' cannot be told apart from plain 'Killed' yet.",
+  "Protocol strerror texts for EBUSY ('Device or resource busy') and ETIMEDOUT ('Operation timed out') differ from the shell spec \u00a73.13 ('Resource busy', 'Timed out'). _sys.ts now has errnoText/errText with the shell-spec wording for terminal output. coreutils/lib/errors.ts has its own copy of the same override.",
+  "The spec lists the line editor at apps/shell/editor.ts and the line discipline in the kernel (kernel/core/tty). The editing, history keys and completion hook requested for 'tty' therefore live in apps/shell/{keys,editor,complete,repl}.ts. apps/terminal/tty.ts is the view-side device adapter: input chunking with EAGAIN retry per frame, and serialised output batches acknowledged after parsing.",
+  "The completion service's 200 ms timeout (\u00a73.10) needs kernel support and is not enforced by the shell. `type` does not resolve names that contain '/'.",
+  "Other agents' paths, not blocking me: apps/coreutils/tests/{procs,system}.test.ts do not typecheck under `tsc -p apps/tsconfig.json` (3 errors). The apps vitest project still passes."
+ ],
+ "todos_for_team": [
+  "R1 (protocol owner): add complete.query, complete.hist.load, complete.hist.add, complete.hist.clear (plus complete.stats and complete.bench) with the shapes of shell-and-terminal.md \u00a74.5. Then delete ExtraCalls in apps/src/_sys.ts.",
+  "R1: add a `fg` option to spawn, so the kernel hands the terminal over atomically, then drop the tcsetpgrp-after-first-spawn workaround in apps/shell/exec.ts. Also add exitReason to the wait result, for 'Killed (watchdog)' and 'Killed (collateral: executor restarted)', and add tty.ack({seq}) with seq on the tty.out push, for SHL-03.",
+  "R1: when @plotinium/kernel/sys exports the program model and the sys client, point apps/src/_sys.ts at it (or re-export from it), keeping the call(name, args) generator shape that shell and coreutils use.",
+  "R3 (apps entry, not my path): export the shell program from apps/src/index.ts (`export { default as shell } from '../shell/proc.ts'`) so the executor's program registry can load /bin/sh.json.",
+  "R3/R5 (VFS seed and manifests): add apps/bin/sh.json for the shell, plus man pages for the builtins that tools/manpages.ts expects: cd, pwd, echo, export, unset, exit, history, jobs, fg, bg, wait, kill, help, type, true, false.",
+  "R3 (Terminal view, not my path): wire apps/terminal/tty.ts into apps/terminal/view.tsx. xterm onData goes to InputPump (with the view port's tty.input and requestAnimationFrame); tty.out pushes go to OutputPump (with xterm.write(data, callback)).",
+  "R4/R1 reviewers: the shell catches SIGINT instead of ignoring it (\u00a73.4 step 1), so that Ctrl-C can interrupt the `wait` builtin as \u00a73.8 requires. The reason is documented in apps/shell/proc.ts.",
+  "Spec owners: reconcile the shell spec with the protocol on the 16 KiB vs 4 KiB tty.input chunk, the 128 KiB vs 60 KiB argv+env limit, and the EBUSY/ETIMEDOUT texts."
+ ],
+ "deps_requested": []
+}

@@ -1,0 +1,16 @@
+# Context switch
+
+Steps on a timer interrupt:
+1. the CPU saves the user PC and a few registers on the kernel stack;
+2. the handler saves the rest into the current task's PCB;
+3. the scheduler picks the next task;
+4. switch the kernel stack and, for a different process, the page table base register (CR3);
+5. restore the next task's registers and return to user mode.
+
+Direct cost: a few microseconds. Indirect cost is bigger: cold caches, TLB misses (unless PCID), branch predictor state.
+
+Thread switch within one process skips the page-table change, so it's cheaper.
+
+Measured in the lab with two processes ping-ponging over a pipe: about 2.1 µs per switch on the lab PCs, 1.4 µs pinned to one core.
+
+Our web OS: a "context switch" is the kernel resuming a different generator on an executor worker; the cost is a message round trip, around 30–80 µs, which is why quanta are milliseconds, not microseconds.

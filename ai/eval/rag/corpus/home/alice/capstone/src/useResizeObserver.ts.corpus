@@ -1,0 +1,31 @@
+import { createSignal, onCleanup, type Accessor } from 'solid-js';
+
+/**
+ * Track an element's content box size. The observer is disconnected when the owning component
+ * is disposed; callbacks are coalesced to one update per animation frame.
+ */
+export function useResizeObserver(el: Accessor<HTMLElement | undefined>) {
+  const [size, setSize] = createSignal({ width: 0, height: 0 });
+  let frame = 0;
+  let latest: DOMRectReadOnly | undefined;
+
+  const observer = new ResizeObserver((entries) => {
+    latest = entries[entries.length - 1]?.contentRect;
+    frame ||= requestAnimationFrame(() => {
+      frame = 0;
+      if (latest) setSize({ width: latest.width, height: latest.height });
+    });
+  });
+
+  queueMicrotask(() => {
+    const node = el();
+    if (node) observer.observe(node);
+  });
+
+  onCleanup(() => {
+    observer.disconnect();
+    if (frame) cancelAnimationFrame(frame);
+  });
+
+  return size;
+}

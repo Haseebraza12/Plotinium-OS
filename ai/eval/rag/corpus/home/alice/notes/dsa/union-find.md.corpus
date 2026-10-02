@@ -1,0 +1,15 @@
+# Disjoint set union (union-find)
+
+Maintains a partition of elements into sets with two operations: `find(x)` returns the representative of x's set, `union(a, b)` merges two sets.
+
+Array `parent[]`, initially parent[i] = i.
+
+Optimisations:
+- **Union by rank/size:** attach the smaller tree under the larger root.
+- **Path compression:** during find, point every visited node directly at the root.
+
+With both, m operations take O(m α(n)), where α is the inverse Ackermann function, below 5 for any n that fits in the universe.
+
+Uses: Kruskal's minimum spanning tree, connected components in an image, detecting a cycle in an undirected graph while adding edges, grouping equivalent variables in a type checker.
+
+Watch out: path compression makes find mutate the structure, so it isn't safe to call concurrently without care.

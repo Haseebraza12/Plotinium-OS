@@ -1,0 +1,192 @@
+/*
+ * End Process split button and the Renice popover. The confirmation grows out of the button as
+ * a solid danger layer (scaleX + opacity) while the two labels crossfade; both labels share one
+ * grid cell, so the button never changes width and nothing animates layout.
+ */
+.split {
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: stretch;
+  height: var(--pl-control-h);
+  border-radius: var(--pl-radius-ctl);
+  background: var(--pl-control-bg);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pl-danger) 55%, transparent);
+  color: var(--pl-danger);
+  font: var(--pl-type-callout);
+}
+.splitDisabled {
+  color: var(--pl-text-disabled);
+  box-shadow: inset 0 0 0 1px var(--pl-border-subtle);
+}
+.main,
+.chevron {
+  position: relative;
+  isolation: isolate;
+  display: inline-grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: default;
+  transition: transform var(--pl-motion-med) var(--pl-ease-spring-soft);
+}
+.main {
+  padding: 0 var(--pl-space-3);
+  border-radius: var(--pl-radius-ctl) 0 0 var(--pl-radius-ctl);
+  overflow: hidden;
+}
+.chevron {
+  width: calc(var(--pl-control-h) + var(--pl-space-half));
+  border-left: 1px solid color-mix(in srgb, currentColor 35%, transparent);
+  border-radius: 0 var(--pl-radius-ctl) var(--pl-radius-ctl) 0;
+}
+.main::before,
+.chevron::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  border-radius: inherit;
+  background: var(--pl-danger-subtle);
+  opacity: 0;
+  transition: opacity var(--pl-motion-fast) var(--pl-ease);
+}
+.split:not(.splitDisabled) .main:hover::before,
+.split:not(.splitDisabled) .chevron:hover::before,
+.chevron[aria-expanded='true']::before {
+  opacity: 1;
+}
+.split:not(.splitDisabled) .main:active,
+.split:not(.splitDisabled) .chevron:active {
+  transform: scale(var(--pl-press-scale));
+  transition-duration: var(--pl-motion-press);
+}
+.main:focus-visible,
+.chevron:focus-visible {
+  outline: var(--pl-focus-ring);
+  outline-offset: var(--pl-focus-offset);
+  z-index: 1;
+}
+.confirmLayer {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--pl-danger-fill);
+  opacity: 0;
+  transform: scaleX(0.82);
+  transform-origin: left center;
+  transition:
+    opacity var(--pl-motion-med) var(--pl-ease),
+    transform var(--pl-motion-slow) var(--pl-ease-spring);
+}
+.labels {
+  display: grid;
+}
+.idle,
+.confirm {
+  grid-area: 1 / 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--pl-space-1);
+  white-space: nowrap;
+  transition:
+    opacity var(--pl-motion-fast) var(--pl-ease),
+    transform var(--pl-motion-med) var(--pl-ease-spring);
+}
+.confirm {
+  opacity: 0;
+  transform: translateY(6px);
+  font-weight: var(--pl-weight-semibold);
+}
+.split[data-confirming='true'] .main {
+  color: var(--pl-on-accent);
+}
+.split[data-confirming='true'] .confirmLayer {
+  opacity: 1;
+  transform: none;
+}
+.split[data-confirming='true'] .idle {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+.split[data-confirming='true'] .confirm {
+  opacity: 1;
+  transform: none;
+}
+
+/* ---------- Renice popover ---------- */
+.renice {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pl-space-2);
+  width: calc(var(--pl-popover-max-w) - var(--pl-space-12));
+}
+.reniceHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--pl-space-2);
+}
+.reniceTitle {
+  font: var(--pl-type-headline);
+}
+.dim {
+  color: var(--pl-text-muted);
+  font-weight: var(--pl-weight-regular);
+  font-variant-numeric: tabular-nums;
+}
+.reniceValue {
+  font: var(--pl-type-mono);
+  font-weight: var(--pl-weight-bold);
+  color: var(--pl-accent-text);
+}
+.scale {
+  display: flex;
+  justify-content: space-between;
+  font: var(--pl-type-caption);
+  color: var(--pl-text-tertiary);
+}
+.reniceInfo {
+  margin: 0;
+  font: var(--pl-type-caption);
+  color: var(--pl-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.reniceInfo strong {
+  color: var(--pl-text);
+}
+.reniceError {
+  margin: 0;
+  padding: var(--pl-space-1) var(--pl-space-2);
+  border-radius: var(--pl-radius-sm);
+  background: var(--pl-danger-subtle);
+  color: var(--pl-danger);
+  font: var(--pl-type-caption);
+  font-family: var(--pl-font-mono);
+}
+.reniceActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--pl-space-2);
+  margin-top: var(--pl-space-1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .main,
+  .chevron,
+  .confirmLayer,
+  .idle,
+  .confirm {
+    transition: none;
+  }
+}
+@media (forced-colors: active) {
+  .split {
+    border: 1px solid ButtonText;
+  }
+  .split[data-confirming='true'] .confirmLayer {
+    background: Highlight;
+  }
+}

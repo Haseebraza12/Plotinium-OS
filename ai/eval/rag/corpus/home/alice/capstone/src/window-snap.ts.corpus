@@ -1,0 +1,23 @@
+/** Which snap zone (if any) a window should preview while being moved. */
+export type SnapZone = 'left' | 'right' | 'maximize' | null;
+
+const EDGE = 12; // px from the screen edge that activates a zone
+
+export function snapZone(x: number, y: number, screenW: number): SnapZone {
+  if (y <= EDGE) return 'maximize';
+  if (x <= EDGE) return 'left';
+  if (x >= screenW - EDGE) return 'right';
+  return null;
+}
+
+export function snapRect(zone: Exclude<SnapZone, null>, screenW: number, screenH: number, menuBar = 28) {
+  const h = screenH - menuBar;
+  switch (zone) {
+    case 'left':
+      return { x: 0, y: menuBar, w: Math.floor(screenW / 2), h };
+    case 'right':
+      return { x: Math.ceil(screenW / 2), y: menuBar, w: Math.floor(screenW / 2), h };
+    case 'maximize':
+      return { x: 0, y: menuBar, w: screenW, h };
+  }
+}

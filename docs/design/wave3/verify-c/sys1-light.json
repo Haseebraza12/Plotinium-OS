@@ -1,0 +1,63 @@
+{
+  "version": {
+    "name": "Plotinium",
+    "version": "0.1.0-dev.0",
+    "build": "6df55c0",
+    "buildDate": "2026-09-30",
+    "codename": null,
+    "abi": 1
+  },
+  "readyz": {
+    "status": "ready",
+    "build": {
+      "name": "Plotinium",
+      "version": "0.1.0-dev.0",
+      "build": "6df55c0",
+      "date": "2026-09-30"
+    },
+    "migrations": {
+      "version": "20260924100500",
+      "expected": "20260924100500"
+    },
+    "checks": {
+      "db": "ok",
+      "migrations": "ok",
+      "blobStore": "ok",
+      "disk": "ok"
+    },
+    "ai": {
+      "enabled": true,
+      "llm": "no-key"
+    },
+    "faultInjection": true
+  },
+  "sw": [
+    {
+      "scope": "http://localhost:4718/",
+      "active": "activated",
+      "waiting": null
+    }
+  ],
+  "swController": null,
+  "ws": [
+    {
+      "url": "ws://localhost:4718/ws",
+      "closed": false,
+      "sent": 2,
+      "recv": 4,
+      "first": [
+        "> {\"v\":1,\"t\":\"hello\",\"id\":1,\"body\":{\"proto\":1,\"build\":{\"name\":\"Plotinium\",\"version\":\"0.1.0-dev.0\",\"build\":\"6df55c0\",\"date\":\"2026-09-30\"},\"osSessionId\":\"01a0f2fd-0",
+        "< {\"v\":1,\"t\":\"hello.ok\",\"id\":1,\"body\":{\"proto\":1,\"osSessionId\":\"01a0f2fd-0df7-70db-94c5-d574e1e5c991\",\"server\":{\"name\":\"Plotinium\",\"version\":\"0.1.0-dev.0\",\"build\"",
+        "< {\"v\":1,\"t\":\"resume.done\",\"id\":2,\"body\":{\"ownerUid\":0,\"headSeq\":0}}",
+        "< {\"v\":1,\"t\":\"resume.done\",\"id\":3,\"body\":{\"ownerUid\":1201,\"headSeq\":0}}"
+      ]
+    }
+  ],
+  "menubar": "Plotinium\nFile\nGo\nWindow\nHelp\nAI\n128 KB/256 MB\nWed 30 Sep\n20:44\nSync: Online, all changes synced",
+  "term": "examiner2\nuid=1201(examiner2) gid=100(users) groups=100(users),300(examiners)\nPlotinium 0.1.0-dev.0 (kernel 0.1.0-dev.0-6df55c0, built 2026-09-30) · Chrome 153 · \n12 cores · uid=1201(examiner2)\nexaminer2@plotinium:~$ bootlog --list\n#1  2026-09-30 20:44  normal  0.46 s  ok  (this boot)\nexaminer2@plotinium:~$  \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+  "svc": "SERVICE       LEVEL  CRIT  STATE    ATTEMPTS  NEXT RETRY  PID\nkernel            -  yes   running         0  -             1\nsched             -  yes   running         0  -             2\nstorage           -  yes   running         0  -             3\nwm                -  yes   running         0  -             4\nmm                -  yes   running         0  -             7\nvfs               -  yes   running         0  -             5\nai.runtime        -  no    running         0  -             8\nlogin             -  yes   running         0  -             6\nsession           -  yes   running         0  -             9\nauth              -  no    running         0  -            10\nai.predictor      -  no    running         0  -            11\ndesktop           -  yes   running         0  -            13\nai.indexer        -  no    running         0  -            14\nsync              -  no    running         1  -            16\ncomplete          -  no    running         0  -            19\nupdate            -  no    running         0  -            20\nlockd             -  no    running         0  -            17\nai.agent          -  no    running         0  -            18\nexaminer2@plotinium:~$  \n\n\n\n",
+  "csp": [],
+  "errors": [],
+  "warnings": [],
+  "failed": []
+}

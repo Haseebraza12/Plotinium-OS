@@ -1,0 +1,24 @@
+{
+  "name": "@plotinium/vfs",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Virtual file system: inode tree, path resolution, permissions, links, quotas, IndexedDB store, fsck; syncd and lockd clients.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./path": "./src/path.ts",
+    "./perm": "./src/perm.ts",
+    "./sync": "./src/sync/index.ts",
+    "./locks": "./src/locks/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run --root .. --project vfs"
+  },
+  "dependencies": {
+    "@plotinium/dsa": "workspace:*",
+    "@plotinium/protocol": "workspace:*",
+    "idb": "catalog:"
+  }
+}

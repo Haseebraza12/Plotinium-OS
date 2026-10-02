@@ -1,0 +1,12 @@
+import { chromium } from 'playwright-core';
+import { spawn } from 'node:child_process';
+const mode = process.argv[2];
+const port = mode === 'dev' ? 5190 : 5191;
+const p = spawn('npx', mode === 'dev' ? ['vite', '--port', String(port), '--strictPort'] : ['vite', 'preview', '--port', String(port), '--strictPort'], { stdio: 'ignore' });
+await new Promise(r => setTimeout(r, 2500));
+const b = await chromium.launch({ executablePath: '/usr/bin/google-chrome', headless: true });
+const pg = await b.newPage(); pg.on('pageerror', e => console.error('ERR', e.message)); pg.on('console', m => console.error('LOG', m.text()));
+await pg.goto(`http://localhost:${port}/`);
+await pg.waitForFunction(() => window.__done, null, { timeout: 15000 }).catch(e => console.error('timeout'));
+console.log(mode, JSON.stringify(await pg.evaluate(() => ({ pageCOI: crossOriginIsolated, R: window.__R }))));
+await b.close(); p.kill();

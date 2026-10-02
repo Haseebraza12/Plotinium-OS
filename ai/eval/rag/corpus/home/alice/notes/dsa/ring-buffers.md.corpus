@@ -1,0 +1,11 @@
+# Ring buffers
+
+A fixed-size array used as a queue with head and tail indices that wrap around. O(1) push and pop, no allocation after creation.
+
+Full vs empty ambiguity when head == tail. Options: keep a count, waste one slot, or use free-running counters and mask with capacity − 1 when capacity is a power of two.
+
+Overwrite mode: when full, the newest item replaces the oldest. Good for logs and "last N events" (our kernel keeps the last 256 syscalls this way, and the predictor keeps recent app launches).
+
+Single-producer single-consumer ring buffers can be lock-free with only acquire/release ordering on head and tail, which is how audio callbacks and the Linux io_uring queues avoid locks.
+
+Our terminal's scrollback should have been one of these; it was a growing array and that caused a problem (see the scrollback report).

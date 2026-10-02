@@ -1,0 +1,9 @@
+# OS midterm — Bob's review list
+
+- processes: states, PCB, fork/exec/wait, zombie vs orphan
+- scheduling: FCFS, SJF, SRTF, RR, priority + aging, MLFQ. do the Gantt charts!
+- sync: critical section, Peterson, semaphores, monitors, producer-consumer, readers-writers
+- deadlock: 4 conditions, RAG, Banker's
+- memory: paging, TLB EAT, multi-level tables
+
+Room 204, Monday 9 am. One handwritten A4 sheet allowed.

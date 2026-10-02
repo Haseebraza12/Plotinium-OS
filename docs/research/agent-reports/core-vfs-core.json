@@ -1,0 +1,110 @@
+{
+ "files_changed": [
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/README.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/index.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/path.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/perm.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/names.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/digest.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/limits.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/errors.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/view.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/content.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/events.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/fault.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/mkfs.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/quota/quota.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/ops/plan.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/ops/overlay.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/ops/common.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/ops/create.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/ops/write.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/ops/unlink.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/ops/rename.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/ops/link.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/ops/copy.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/ops/attr.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/ops/batch.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/ops/commit.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/ops/read.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/tree/vfs-tree.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/oft/session.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/oft/table.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/store/records.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/store/store.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/store/schema.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/store/migrations/001_init.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/store/idb-store.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/store/apply.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/store/load.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/fsck/state.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/fsck/check.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/fsck/repair.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/fsck/fsck.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/tests/doubles/tree.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/tests/doubles/fake-idb.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/tests/doubles/world.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/tests/path.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/tests/perm.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/tests/links.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/tests/ops.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/tests/quota.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/tests/conflict.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/tests/fsck.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/tests/events.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/tests/oft.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/tests/store.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/tests/invariants.prop.test.ts"
+ ],
+ "verification": [
+  {
+   "command": "pnpm exec tsc -p vfs/tsconfig.json --noEmit",
+   "outcome": "exit 0 (src and tests)"
+  },
+  {
+   "command": "pnpm exec vitest run --project vfs",
+   "outcome": "11 files and 127 tests pass. Covered: VFS-01/02/03/04/05/06/07/08/09 (EBUSY)/10/11, DB-02 client (1,000-node rm -r fault at node 500, plus mv, cp -r, a 500-op batch rename, chmod -R and chown -R), DB-04, OFF-02, PVFS-01/03/09/10/11/12/14/18, AGT-03/05/08, RAG-02/03, SYS-03. The fast-check property runs 200 per PR over 5\u201330 random ops as root, alice, bob or carol."
+  },
+  {
+   "command": "pnpm exec vitest run --project vfs --coverage --coverage.include='src/**'",
+   "outcome": "vfs/src: 97.92% lines, 94.51% statements, 88.14% branches, 96.9% functions (target 85% lines). The root config's include ('vfs/**/*.ts') matched no files when run per project, so --coverage.include='src/**' was passed on the command line."
+  },
+  {
+   "command": "pnpm exec eslint vfs --max-warnings 0",
+   "outcome": "exit 0 (package boundaries, no-await-in-idb-builder, no-yieldless-loop-in-generator and type-checked rules)"
+  },
+  {
+   "command": "pnpm exec prettier --check vfs",
+   "outcome": "All matched files use Prettier code style (after prettier --write on vfs/ only)"
+  }
+ ],
+ "problems": [
+  "Protocol gap: the wire op model in protocol/src/ws/ops.ts cannot express several VFS spec \u00a74.4 bodies, so workarounds are in place. (a) `mkdir -p` goes out as an OpBatch of OpCreates, because OpCreate has no items list. (b) OpChmod has no umask field, so perm.ts toWireMode rewrites clauses without a who part into explicit clauses under the caller's umask; a test shows they evaluate identically. (c) OpCopy has no overwrites or noClobber fields, so the server must redo the same merge. (d) OpWrite has no conflictIno, so conflicted copies use deriveIno(opId, ino).",
+  "Protocol id collision: `cp -r` derives new ids as deriveIno(opId, srcIno), so two hard links of one source inode would get the same id. copy.ts gives the second link deriveIno(opId, previousDerivedId), and the server must match this.",
+  "Batch limits disagree: protocol BATCH_MAX_OPS is 1000 (the syscall schema), while the VFS spec and the ws OpBatch allow 2000. vfs uses VFS_BATCH_MAX_OPS = 2000. The protocol BatchOp also lacks the `link` op of VFS spec \u00a74.3.",
+  "Events: the protocol's EVENT_PAYLOADS (syscall-abi \u00a74.6) are one item per event and have no vfs.link, vfs.utimes, vfs.load or vfs.revert topics. vfs emits the \u00a74.5 item arrays internally, and events.ts toBusEvents projects them to the ABI shapes (tested against the protocol schemas). Topics with no ABI entry are not projected.",
+  "Outbox spec conflict: the VFS spec keys the outbox by an autoIncrement `seq`; offline-and-sync \u00a74.8 keys it by [osSessionId, cseq]. Migration 001 keeps `seq` and adds a unique index `by_session_cseq`. Coalescing of pending writes (VFS \u00a73.14.2) is not implemented, because offline-and-sync \u00a73.4 says only session.layout records are coalesced.",
+  "Spec conflicts with database.md: (a) its tree checksum uses nameHex/targetHex/octal mode, while digest.ts follows VFS \u00a75.6; (b) it bumps the version on nlink changes, while the planners follow VFS \u00a73.2 (no bump). syscall-abi \u00a73.6 allows `link` only for the owner or root, while perm.ts follows VFS \u00a73.7.2 (owner, or both r and w). The VFS spec was followed in all three cases.",
+  "Package boundaries: boundaries.js lets the server import only vfs/path and vfs/perm, but PVFS-16 wants names.ts and digest.ts isomorphic as well. The chmod parser and evaluator therefore live in perm.ts (there is no modeparse.ts), so the server can import them.",
+  "dsa/tree: createTree returns a root that is already loaded with an empty children map. VfsTree unloads it at construction so that `/` is loaded from the store like any directory; the dsa/tree owner should confirm that unloading the root is allowed. All tests run on the test-only double in vfs/tests/doubles/tree.ts (the real tree is IMPLEMENTED = false).",
+  "No spec-conformant IndexedDB exists in Node. The store tests run IdbStore against a hand-written double (vfs/tests/doubles/fake-idb.ts: ordered requests, autocommit, rollback on abort, ConstraintError, unique indexes, key order). The atomicity and durability claims still need the real-Chrome tests listed under todos_for_team.",
+  "Not implemented, because none of these was in this assignment: intent locks (\u00a75.7), the dcache on dsa/lru, the syncd and lockd clients (src/sync and src/locks are still just READMEs), the find/du chunked scanners and glob matcher (\u00a75.10), and the ack and revert transactions (the sync side; UndoRec provides everything they need)."
+ ],
+ "deps_requested": [
+  "fake-indexeddb (devDependency of vfs, optional): a spec-conformant IndexedDB for Node, so the store tests do not rely only on the hand-written double",
+  "@vitest/browser + playwright provider (root, owner of the browser project): to run the real-Chrome IndexedDB suite listed in todos_for_team"
+ ],
+ "todos_for_team": [
+  "Kernel agent, mutation pipeline: new PlanBuilder(tree, ctx) \u2192 planner \u2192 build(label, call) \u2192 quotaCheck \u2192 prepareCommit \u2192 applyCommit(store, commit, {epoch, now, fault: faultHook.take(call, now), hooks, change}) \u2192 tree.apply(plan.writes) \u2192 EventStamper.stamp(plan.events) \u2192 filterEvent/toBusEvents per subscriber.",
+  "Kernel agent, loading and wiring: on Outcome {ok: 'load', dir}, call DirLoader.ensureLoaded(dir) and plan again. Use the ops/read.ts helpers (statPath, readlink, realpath, access, readdir) for the read-only calls. Write meta.fencingEpoch when taking the Web Lock, and run applyMkfs/clearTmpfs at boot.",
+  "Kernel agent, missing pieces: add intent locks (\u00a75.7) around planning and the dcache (dsa/lru, PVFS-17). Adapt the protocol OpenArgs flags ('r'|'w'|'rw'|'a', follow) to oft/table.ts OpenFlags. Compute each write's headroom from the users mirror or the tmpfs counters and pass it to OpenFileTable.write.",
+  "R2 (dsa owner): implement dsa/tree from first principles; VfsTree already codes against NaryTree. Also confirm that unloading the root and calling setLoaded on a detached directory are allowed.",
+  "Protocol owner: decide the wire gaps (umask or explicit clauses for chmod, multi-item create, copy overwrites, conflictIno). Add `link` to BatchOp, reconcile BATCH_MAX_OPS (1000 vs 2000), and register the vfs.link, vfs.utimes, vfs.load and vfs.revert topics (X-ABI-2).",
+  "db+server agent: adopt digest.ts subtreeDigest and treeChecksum, or agree a single format with VFS \u00a75.6. Apply the VFS version rule (X-DB-1), derive cp -r ids with the chain rule for repeated source inodes, and evaluate chmod with the isomorphic perm.ts (parseModeSpec + applyModeSpec with umask 0o777 on the wire form).",
+  "R5 (sync owner): build the ack and revert transactions on UndoRec (delete created rows, restore pre-images, reverse the users deltas, release pins). Settle the outbox key ([osSessionId, cseq] versus seq; migration 001 serves both orders) and the coalescing rule.",
+  "Tools/root-config owner: the vitest.config.ts coverage include ('vfs/**/*.ts' and the like) matched no files in per-project runs (protocol reported 0/0 as well); patterns relative to the project root work ('src/**'). Also consider allowing server imports of vfs/names and vfs/digest in boundaries.js (PVFS-16).",
+  "Real-Chrome IndexedDB tests to add (browser project; launchPersistentContext for storage; LevelDB and SQLite backends), part 1: (1) DB-02 client rm -r of 1,000 nodes aborted at the 500th inode write leaves checksum, orphan probes and quota unchanged, 20 runs, with the positive run alongside. (2) The same fault matrix for mv, cp -r, a 500-op batch rename, chmod -R and chown -R. (3) DB-02 client a renderer crash (CDP) during commit leaves the store all-before or all-after, fsck is clean and I10 holds. (4) DB-04 client a duplicate [parent, name] add raises ConstraintError, and the whole transaction becomes EEXIST.",
+  "Real-Chrome IndexedDB tests to add, part 2: (5) VFS-06 two overlapping readwrite transactions cannot both pass the quota check. (6) VFS-06 a real QuotaExceededError (small origin quota) becomes EDQUOT device-full with no partial data. (7) PVFS-03 a two-tab Web Lock steal: the old kernel's next transaction fails with EIO fencing. (8) PVFS-03 an await inside a builder gives TransactionInactiveError, mapped to EIO abort (a negative control for the lint rule). (9) PVFS-14 mkdir p95 stays at or under 10 ms during a 10k-entry chunked scan. (10) OFF-02 the outbox op and undo record survive a reload, with strict durability for synced changes and relaxed for tmpfs.",
+  "Real-Chrome IndexedDB tests to add, part 3: (11) PVFS-01 migration 001 on a fresh profile, and a newer stored version (VersionError) opens the recovery screen. (12) VFS-01 ensureLoaded of an unloaded 500-entry directory is one shared load with p95 at or under 30 ms. (13) PVFS-10 /tmp is cleared at boot in one transaction and tmpfsUsage is reset. (14) VFS-02 mkfs is idempotent across reloads and writes no outbox op."
+ ]
+}

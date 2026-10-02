@@ -1,0 +1,23 @@
+{
+  "id": "AGT40-A06",
+  "category": "ambiguous",
+  "tags": [],
+  "user": "alice",
+  "cwd": "/home/alice",
+  "now": "2026-10-05T10:00:00+05:00",
+  "tz": "Asia/Karachi",
+  "fixture": "fx-agt@v1",
+  "prompt": "back up my stuff",
+  "clarificationAnswer": "Documents into backup",
+  "expect": {
+    "kind": "clarify"
+  },
+  "reference": {
+    "tool": "ask_clarification",
+    "input": {
+      "question": "Which folders should be backed up, and where to?",
+      "options": ["Documents", "notes", "src"],
+      "reason": "ambiguous_scope"
+    }
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "scheme": "light",
+  "bootFonts": {
+    "word": null,
+    "interLoaded": true
+  },
+  "loginFonts": {
+    "time": {
+      "ff": "\"Inter Variable\", Inter, system-ui, \"Segoe UI\", Roboto, Ubuntu, \"Noto Sans\", sans-serif",
+      "fs": "120px",
+      "text": "10:41"
+    },
+    "footer": {
+      "ff": "\"Inter Variable\", Inter, system-ui, \"Segoe UI\", Roboto, Ubuntu, \"Noto Sans\", sans-serif",
+      "fs": "13px",
+      "text": "PlotiniumPlotinium 0.1.0-dev.0build 0000"
+    },
+    "build": {
+      "ff": "\"Geist Mono Variable\", \"Geist Mono\", ui-monospace, \"Cascadia Mono\", Consolas, \"DejaVu Sans",
+      "fs": "11px",
+      "text": "build 0000000"
+    },
+    "inter": true,
+    "geist": true
+  },
+  "loginConsole": [],
+  "theme1": null,
+  "logoBox1": {
+    "x": 16,
+    "y": 5.5,
+    "w": 17,
+    "h": 17,
+    "filter": "drop-shadow(rgba(88, 86, 214, 0.35) 0px 0px 3px)"
+  },
+  "terminal": {
+    "ff": "\"Geist Mono Variable\", \"Geist Mono\", ui-monospace, \"Cascadia Mono\", Consolas, \"D",
+    "fs": "14px",
+    "vpBg": "rgba(0, 0, 0, 0)",
+    "vp": [80, 178, 688, 360],
+    "screen": [80, 178, 706, 357],
+    "host": [64, 170, 720, 376]
+  },
+  "filesPerm": null,
+  "errors1": [
+    "Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-N4O1jjcc+piUlNHPA2COwiugu9OEo2htOz0",
+    "Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-N4O1jjcc+piUlNHPA2COwiugu9OEo2htOz0",
+    "Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-N4O1jjcc+piUlNHPA2COwiugu9OEo2htOz0",
+    "Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-N4O1jjcc+piUlNHPA2COwiugu9OEo2htOz0",
+    "Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-N4O1jjcc+piUlNHPA2COwiugu9OEo2htOz0",
+    "Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-N4O1jjcc+piUlNHPA2COwiugu9OEo2htOz0",
+    "Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-N4O1jjcc+piUlNHPA2COwiugu9OEo2htOz0",
+    "Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-N4O1jjcc+piUlNHPA2COwiugu9OEo2htOz0",
+    "Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-N4O1jjcc+piUlNHPA2COwiugu9OEo2htOz0",
+    "Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-N4O1jjcc+piUlNHPA2COwiugu9OEo2htOz0",
+    "Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-N4O1jjcc+piUlNHPA2COwiugu9OEo2htOz0",
+    "Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-N4O1jjcc+piUlNHPA2COwiugu9OEo2htOz0",
+    "Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-N4O1jjcc+piUlNHPA2COwiugu9OEo2htOz0",
+    "Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-N4O1jjcc+piUlNHPA2COwiugu9OEo2htOz0",
+    "Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-N4O1jjcc+piUlNHPA2COwiugu9OEo2htOz0"
+  ],
+  "errorCount1": 15,
+  "theme2": null,
+  "logoBox2": {
+    "x": 16,
+    "y": 5.5,
+    "w": 17,
+    "h": 17,
+    "filter": "drop-shadow(rgba(88, 86, 214, 0.35) 0px 0px 3px)"
+  },
+  "errors2": [],
+  "errorCount2": 0
+}

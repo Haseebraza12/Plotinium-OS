@@ -1,0 +1,12 @@
+[
+  {
+    "id": "UI-074 Retry now does not stick at \"Retrying…\"",
+    "ok": true,
+    "detail": ["", "Retry now"]
+  },
+  {
+    "id": "UI-028 Log Out <user>… ends the session and shows the login screen",
+    "ok": true,
+    "detail": "Log Out guest-kh25…"
+  }
+]

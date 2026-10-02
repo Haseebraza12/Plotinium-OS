@@ -1,0 +1,90 @@
+{
+  "which": "guest403",
+  "console": [],
+  "pageErrors": [],
+  "failed": ["401 GET /api/auth/me", "403 POST /api/auth/guest", "403 POST /api/auth/guest"],
+  "guestSelected": {
+    "state": "idle",
+    "hint": "Sunday, 27 September | Guest files are deleted when you log out.",
+    "alert": [],
+    "pwDisabled": null,
+    "guestBtn": "Continue as Guest",
+    "guestDisabled": false
+  },
+  "seq": [
+    {
+      "state": "error",
+      "hint": "Sunday, 27 September | Guest files are deleted when you log out.",
+      "alert": [],
+      "pwDisabled": null,
+      "guestBtn": "Continue as Guest",
+      "guestDisabled": false
+    },
+    {
+      "state": "error",
+      "hint": "Sunday, 27 September | Guest files are deleted when you log out.",
+      "alert": [],
+      "pwDisabled": null,
+      "guestBtn": "Continue as Guest",
+      "guestDisabled": false
+    },
+    {
+      "state": "error",
+      "hint": "Sunday, 27 September | Guest files are deleted when you log out.",
+      "alert": [],
+      "pwDisabled": null,
+      "guestBtn": "Continue as Guest",
+      "guestDisabled": false
+    },
+    {
+      "state": "error",
+      "hint": "Sunday, 27 September | Guest files are deleted when you log out.",
+      "alert": [],
+      "pwDisabled": null,
+      "guestBtn": "Continue as Guest",
+      "guestDisabled": false
+    },
+    {
+      "state": "error",
+      "hint": "Sunday, 27 September | Guest files are deleted when you log out.",
+      "alert": [],
+      "pwDisabled": null,
+      "guestBtn": "Continue as Guest",
+      "guestDisabled": false
+    },
+    {
+      "state": "error",
+      "hint": "Sunday, 27 September | Guest files are deleted when you log out.",
+      "alert": [],
+      "pwDisabled": null,
+      "guestBtn": "Continue as Guest",
+      "guestDisabled": false
+    },
+    {
+      "state": "error",
+      "hint": "Sunday, 27 September | Guest files are deleted when you log out.",
+      "alert": [],
+      "pwDisabled": null,
+      "guestBtn": "Continue as Guest",
+      "guestDisabled": false
+    },
+    {
+      "state": "error",
+      "hint": "Sunday, 27 September | Guest files are deleted when you log out.",
+      "alert": [],
+      "pwDisabled": null,
+      "guestBtn": "Continue as Guest",
+      "guestDisabled": false
+    }
+  ],
+  "afterSecondClick": {
+    "state": "error",
+    "hint": "Sunday, 27 September | Guest files are deleted when you log out.",
+    "alert": [],
+    "pwDisabled": null,
+    "guestBtn": "Continue as Guest",
+    "guestDisabled": false
+  },
+  "hits2": ["guest POST", "guest POST"],
+  "hits": ["guest POST", "guest POST"]
+}

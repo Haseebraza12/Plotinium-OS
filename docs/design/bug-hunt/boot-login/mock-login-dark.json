@@ -1,0 +1,73 @@
+{
+  "which": "login",
+  "console": [],
+  "pageErrors": [],
+  "failed": ["401 GET /api/auth/me", "429 POST /api/auth/login"],
+  "seq": [
+    {
+      "state": "rate-limited",
+      "hint": "Sunday, 27 September | Too many attempts. Try again in 30 s",
+      "alert": ["Too many attempts. Try again in 30 s"],
+      "pwDisabled": true,
+      "guestBtn": null,
+      "guestDisabled": null
+    },
+    {
+      "state": "rate-limited",
+      "hint": "Sunday, 27 September | Too many attempts. Try again in 30 s",
+      "alert": ["Too many attempts. Try again in 30 s"],
+      "pwDisabled": true,
+      "guestBtn": null,
+      "guestDisabled": null
+    },
+    {
+      "state": "rate-limited",
+      "hint": "Sunday, 27 September | Too many attempts. Try again in 29 s",
+      "alert": ["Too many attempts. Try again in 29 s"],
+      "pwDisabled": true,
+      "guestBtn": null,
+      "guestDisabled": null
+    },
+    {
+      "state": "rate-limited",
+      "hint": "Sunday, 27 September | Too many attempts. Try again in 29 s",
+      "alert": ["Too many attempts. Try again in 29 s"],
+      "pwDisabled": true,
+      "guestBtn": null,
+      "guestDisabled": null
+    },
+    {
+      "state": "rate-limited",
+      "hint": "Sunday, 27 September | Too many attempts. Try again in 28 s",
+      "alert": ["Too many attempts. Try again in 28 s"],
+      "pwDisabled": true,
+      "guestBtn": null,
+      "guestDisabled": null
+    },
+    {
+      "state": "rate-limited",
+      "hint": "Sunday, 27 September | Too many attempts. Try again in 28 s",
+      "alert": ["Too many attempts. Try again in 28 s"],
+      "pwDisabled": true,
+      "guestBtn": null,
+      "guestDisabled": null
+    },
+    {
+      "state": "rate-limited",
+      "hint": "Sunday, 27 September | Too many attempts. Try again in 27 s",
+      "alert": ["Too many attempts. Try again in 27 s"],
+      "pwDisabled": true,
+      "guestBtn": null,
+      "guestDisabled": null
+    },
+    {
+      "state": "rate-limited",
+      "hint": "Sunday, 27 September | Too many attempts. Try again in 27 s",
+      "alert": ["Too many attempts. Try again in 27 s"],
+      "pwDisabled": true,
+      "guestBtn": null,
+      "guestDisabled": null
+    }
+  ],
+  "hits": ["login POST"]
+}

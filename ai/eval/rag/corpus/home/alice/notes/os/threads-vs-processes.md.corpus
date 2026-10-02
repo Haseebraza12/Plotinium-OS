@@ -1,0 +1,24 @@
+# Threads vs processes
+
+| | Process | Thread |
+|---|---|---|
+| Address space | own | shared with its process |
+| Creation cost | higher (new page tables, fd table copy) | low |
+| Communication | pipes, sockets, shared memory | plain memory (needs synchronisation) |
+| Crash isolation | one crash doesn't kill others | one bad pointer kills every thread |
+
+Each thread has its own stack, registers and program counter; everything else is shared.
+
+## User vs kernel threads
+
+- Many-to-one (green threads): cheap switches, but one blocking syscall blocks all, and no parallelism.
+- One-to-one (Linux, Windows): each user thread is a kernel thread.
+- Many-to-many: M user threads on N kernel threads; complicated, mostly abandoned (Solaris dropped it).
+
+## Linux detail
+
+`clone()` with flags decides what is shared; a "thread" is a task that shares the mm, files and signal handlers. `fork` is clone with nothing shared (copy-on-write).
+
+## Browsers
+
+Chrome uses processes per site for isolation and threads inside each. Web workers are closest to threads without shared memory (unless you use SharedArrayBuffer, which needs cross-origin isolation).

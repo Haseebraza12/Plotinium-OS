@@ -1,0 +1,25 @@
+# Sentence embeddings
+
+An embedding model maps a piece of text to a fixed-length list of numbers (384 or 768 floats for the small models we looked at). The training objective pushes paraphrases towards the same point and unrelated text apart, so **geometry stands in for meaning**: "my laptop won't turn on" and "the notebook computer doesn't boot" end up neighbours even though they share almost no words.
+
+## How the small models are trained
+
+- start from a BERT-style encoder;
+- pool the token outputs (mean pooling, or the [CLS] token);
+- fine-tune with a contrastive loss on (query, relevant passage) pairs with in-batch negatives: the correct pair should score higher than every other passage in the batch.
+
+## Measuring closeness
+
+Cosine similarity, or plain dot product when the vectors are normalised to length 1. Retrieval = embed the query, return the passages with the highest scores.
+
+## Asymmetric retrieval
+
+Queries are short, passages are long. Several models (bge, leaf) want a prefix on the **query only**, e.g. "Represent this sentence for searching relevant passages: ".
+
+## Matryoshka (MRL) training
+
+Some models are trained so the first 256 or 384 dimensions already work on their own. You can cut the vector and re-normalise to save memory with a small quality loss.
+
+## Limits
+
+Numbers, negation and rare names are weak spots; a keyword method still wins for exact identifiers like `ERR_CONNECTION_RESET`. That's why hybrid search exists.

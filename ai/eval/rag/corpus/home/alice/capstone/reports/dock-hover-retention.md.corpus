@@ -1,0 +1,31 @@
+# Why the desktop slowed down after an hour (dock hover handlers)
+
+**Reported by:** Bob, 9 Oct. **Investigated by:** Alice and Bob, 12 Oct. **Status:** fixed in PR #212.
+
+## Symptom
+
+After the desktop had been open for 45–60 minutes, the magnification animation in the dock stuttered and every window drag felt heavy. A reload fixed it for another hour.
+
+## Investigation
+
+We took three heap snapshots in Chrome DevTools: right after login, after 20 minutes of normal use and after 60 minutes. Comparing them:
+- the JS heap grew by about 40 MB per hour and never came back down after a forced GC;
+- the "Detached" filter showed ~9,000 detached `<button class="dock-icon">` elements;
+- each was kept alive by a `pointermove` closure registered on `window`.
+
+## Cause
+
+The dock re-renders its icon list whenever an app opens or closes (the running-indicator dots). Every render attached a fresh `pointermove` handler to `window` for the magnification effect, and nothing ever removed the old ones. So each open/close added another handler, the handlers kept their stale icon elements reachable, and every mouse move ran all of them. Listeners were leaking at a rate proportional to how many apps you opened.
+
+## Fix
+
+- One magnification handler for the whole dock, registered once when the dock mounts and removed in the component's cleanup (`onCleanup`), using an `AbortController` signal so all related listeners go away together.
+- Icons read the pointer position from a shared signal instead of each owning a handler.
+
+## Verification
+
+3-hour soak test (Esha's script opens and closes apps every 10 s): heap flat at 61–64 MB, zero detached dock buttons.
+
+## Lesson
+
+Any component that registers on `window` or `document` must unregister in its cleanup. Added a lint-style review checklist item.

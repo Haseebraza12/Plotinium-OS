@@ -1,0 +1,10 @@
+# Security review notes (internal, Phase 3)
+
+- Apps can only reach the kernel through typed messages; no direct IndexedDB access (lint rule + runtime check).
+- No `innerHTML` anywhere; file names are rendered as text nodes. Lint rule `no-html-sinks`.
+- Terminal output escapes control characters from file names and search snippets, so a crafted name can't inject escape sequences.
+- Server: sessions are HttpOnly, SameSite=Strict cookies; CSRF token on state-changing routes.
+- The LLM key lives only on the server; the client bundle is scanned in CI for key patterns.
+- Rate limits on login and on the LLM routes.
+
+Open: the server verify endpoint for search should cap the number of items per request (50) to avoid it being used as an oracle for scanning.

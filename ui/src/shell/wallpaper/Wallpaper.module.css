@@ -1,0 +1,98 @@
+/*
+ * The desktop wallpaper: a luminous gradient field (the --pl-wallpaper token) under two soft
+ * aurora layers. It is decorative (aria-hidden) and static by default. The optional drift is one
+ * slow transform-only loop on the aurora layers, which are larger than the field so their edges
+ * never show; it pauses under reduced motion (the OS setting and [data-motion='reduce']).
+ */
+.wallpaper {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  z-index: var(--pl-z-desktop);
+  background: var(--pl-wallpaper);
+  contain: strict;
+  pointer-events: none;
+}
+
+.aurora,
+.bloom {
+  position: absolute;
+  inset: -12%;
+  pointer-events: none;
+}
+
+.aurora {
+  background:
+    radial-gradient(38% 22% at 30% 38%, var(--pl-accent-glow), transparent 70%),
+    radial-gradient(30% 18% at 68% 58%, var(--pl-accent-subtle), transparent 72%);
+  opacity: 0.55;
+}
+
+.bloom {
+  background:
+    radial-gradient(26% 20% at 82% 84%, var(--pl-accent-subtle), transparent 70%),
+    radial-gradient(22% 16% at 18% 12%, var(--pl-info-subtle), transparent 70%);
+  opacity: 0.7;
+}
+
+/* A faint grain of light points keeps large gradients from banding. */
+.grain {
+  position: absolute;
+  inset: 0;
+  opacity: 0.35;
+  background:
+    radial-gradient(1.5px 1.5px at 30% 40%, var(--pl-glass-card-bg), transparent 60%),
+    radial-gradient(1.5px 1.5px at 70% 70%, var(--pl-glass-card-bg), transparent 60%),
+    radial-gradient(1.5px 1.5px at 12% 18%, var(--pl-glass-card-bg), transparent 60%);
+}
+
+@keyframes drift-a {
+  from {
+    transform: translate3d(-2%, -1%, 0) scale(1);
+  }
+  to {
+    transform: translate3d(2%, 1.5%, 0) scale(1.06);
+  }
+}
+
+@keyframes drift-b {
+  from {
+    transform: translate3d(1.5%, 1%, 0) rotate(0deg);
+  }
+  to {
+    transform: translate3d(-1.5%, -1%, 0) rotate(4deg);
+  }
+}
+
+.animated .aurora {
+  animation: drift-a 48s var(--pl-ease) infinite alternate;
+}
+
+.animated .bloom {
+  animation: drift-b 64s var(--pl-ease) infinite alternate;
+}
+
+.paused .aurora,
+.paused .bloom {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animated .aurora,
+  .animated .bloom {
+    animation-play-state: paused;
+  }
+}
+
+:global(:root[data-motion='reduce']) .animated .aurora,
+:global(:root[data-motion='reduce']) .animated .bloom {
+  animation-play-state: paused;
+}
+
+@media (forced-colors: active) {
+  .aurora,
+  .bloom,
+  .grain {
+    display: none;
+  }
+}

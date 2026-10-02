@@ -1,0 +1,10 @@
+Lecture 7 - virtual memory (typed from my handwritten notes, might have typos)
+
+- demand paging: nothing loaded until touched. first touch -> fault -> kernel finds a frame, reads from disk/zero fills, updates PTE, restarts the instruction.
+- the instruction restart is the subtle part: the CPU must be able to redo an instruction that faulted halfway (block move on old CISC).
+- major fault = needs disk. minor fault = page is somewhere in memory already (page cache, shared lib) just not mapped.
+- copy on write: fork shares pages read-only, first write faults and copies. see copy-on-write.md.
+- memory mapped files: mmap a file, the page cache IS the file contents, dirty pages written back by the kernel.
+- overcommit: linux happily promises more than it has. OOM killer picks a victim by badness score when the promise cannot be kept.
+- Sir drew: virtual pages on the left, physical frames in the middle, swap on the right. arrows. every exam since 2019 has the same diagram.
+- reminder: EAT with page faults. p = fault rate, fault service 8 ms, memory 200 ns. EAT = (1-p)*200 + p*8,000,000 ns. even p=0.001 gives ~8.2 us. 40x slowdown. faults must be very rare.

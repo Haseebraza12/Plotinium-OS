@@ -1,0 +1,118 @@
+{
+ "files_changed": [
+  "/home/haseeb-raza/Desktop/Plotinium OS/protocol/src/vfs.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/protocol/src/complete.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/protocol/src/index.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/protocol/tests/vfs-complete.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/README.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/src/index.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/src/_shared/mem.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/src/tree/README.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/src/trie/index.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/src/trie/README.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/src/heap/index.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/src/heap/README.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/src/dag/index.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/src/dag/README.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/src/lru/index.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/src/lru/README.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/src/hashtable/index.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/src/hashtable/README.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/src/ringbuffer/index.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/src/ringbuffer/README.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/src/bloom/index.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/src/bloom/README.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/src/zorder/index.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/src/zorder/README.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/tests/tree.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/tests/tree.prop.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/tests/trie.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/tests/trie.prop.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/tests/heap.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/tests/heap.prop.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/tests/dag.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/tests/dag.prop.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/tests/lru.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/tests/lru.prop.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/tests/hashtable.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/tests/hashtable.prop.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/tests/ringbuffer.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/tests/ringbuffer.prop.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/tests/bloom.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/tests/bloom.prop.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/tests/zorder.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/tests/zorder.prop.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/tests/scaffold.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/tests/shared.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/tests/harness.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/bench/harness.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/bench/tree.bench.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/bench/trie.bench.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/bench/heap.bench.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/bench/dag.bench.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/bench/lru.bench.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/bench/hashtable.bench.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/bench/ringbuffer.bench.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/bench/bloom.bench.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/bench/zorder.bench.ts"
+ ],
+ "verification": [
+  {
+   "command": "pnpm exec tsc -p protocol/tsconfig.json --noEmit",
+   "outcome": "exit 0"
+  },
+  {
+   "command": "pnpm exec tsc -p protocol/tests/tsconfig.json --noEmit",
+   "outcome": "exit 0"
+  },
+  {
+   "command": "pnpm exec vitest run --project protocol",
+   "outcome": "11 files, 483 tests passed (473 pre-existing spec-table conformance tests + 10 new for vfs.ts/complete.ts). STATUS: protocol checklist complete (ABI_VERSION, errno, envelope, every catalogue syscall with args/ret, events, WS v1 + close codes, op-log/outbox, agent tools, well-known UUIDs, 18 manifests, limits, UUIDv7)."
+  },
+  {
+   "command": "pnpm exec tsc -p dsa/tsconfig.json --noEmit",
+   "outcome": "exit 0"
+  },
+  {
+   "command": "pnpm exec vitest run --project dsa",
+   "outcome": "3 files / 21 tests passed (scaffold contract, shared helpers, bench harness); 18 files / 158 tests skipped via describe.runIf(IMPLEMENTED) as intended. STATUS: all 9 structures scaffolded with IMPLEMENTED = false; none implemented (C16)."
+  },
+  {
+   "command": "pnpm exec vitest bench --run --project 'dsa (bench)'",
+   "outcome": "9 bench files / 23 benchmarks collected and skipped (gated)."
+  },
+  {
+   "command": "pnpm exec eslint protocol dsa --max-warnings 0",
+   "outcome": "exit 0, no warnings"
+  },
+  {
+   "command": "vitest coverage via a scratch config (root config reports 0/0, see problems)",
+   "outcome": "dsa 99.23% lines (src + bench/harness.ts); protocol 99.59% lines"
+  },
+  {
+   "command": "Gated dsa suites vs throwaway reference implementations in the scratchpad (deleted afterwards, never in the repo), PLT_PROP_RUNS=1000",
+   "outcome": "158/158 gated tests passed; bench files ran end to end at PR sizes and wrote valid \u00a77.3 JSONL. Mutation check with deliberately broken references (heap remove without sift-up, hashtable delete without backward shift, DAG cycle not rotated, trie remove without merge): all caught by both unit and property suites."
+  }
+ ],
+ "problems": [
+  "Root vitest.config.ts coverage reports 0/0 files for every project (protocol and dsa alike), even with --coverage.include overridden; likely include-glob resolution with project roots and/or the space in the repo path. Not edited (root config). Must be fixed before GATED_PACKAGES is populated.",
+  "Root `tsc -p tsconfig.json` has 3 errors, all in the coreutils agent's in-progress tests (apps/coreutils/tests/procs.test.ts:460, system.test.ts:449 x2). One is a test-local noUncheckedIndexedAccess typing issue; two come from the unregistered swap.* calls. None are in protocol/ or dsa/.",
+  "Deviation from the task wording, following the normative spec (\u00a73.4, \u00a78): property tests live in tests/<name>.prop.test.ts next to tests/<name>.test.ts, not in the same file. Memory measurement (bytes/entry) is folded into bench/<name>.bench.ts via src/_shared/mem.ts rather than separate bench/<name>.mem.ts scripts.",
+  "The requested shell/coreutils syscalls (complete.*, swap.stat/ctl/bench, svc.control, debug.status/clear, shutdown.cancel, ai.status/log, tcgetattr, tcsetattr, tty.hangup/winsize/ack, quota.get, fsck.server) are NOT registered in protocol CALLS, because syscall-abi.md \u00a74.4 (normative) does not list them and the registry conformance test compares against it. protocol/src/complete.ts fixes the complete.* shapes (shell spec \u00a74.5) without registering them.",
+  "Spec ambiguity in S1: `unload` is O(1) but `size` must count loaded nodes (T6). The tree tests deliberately do not assert size after unload; the team should settle it.",
+  "S10 interval tree (MAY) is not scaffolded; spec \u00a79.1 defers the decision to W13. The `_shared/grow.ts` helper listed in spec \u00a73.4 is left to the owners."
+ ],
+ "todos_for_team": [
+  "Owners implement their structures from first principles, flip IMPLEMENTED, pass the gated suites and commit a bench run (PLT_BENCH_OUT=docs/evidence/dsa). Assignments: S1 tree R2, S2 trie R3, S3 heap R1, S4 dag R5, S5 lru R1, S6 hashtable R1, S7 ringbuffer R5, S8 bloom R4, S9 zorder R3. Due: v0.2.0 for S1-S4, S6, S7, S9; v0.3.0 for S5; v0.4.0 for S8. Each src/<name>/README.md has steps, complexity table and a pre-filled DSA.md entry.",
+  "The first owner to flip a flag adds 'dsa' to GATED_PACKAGES in vitest.config.ts (85% gate); fix the root coverage 0/0 issue first (R5).",
+  "R1 (DSA.md editor): copy the per-structure DSA.md entry templates into DSA.md.",
+  "Record in AI_USAGE.md that the dsa interfaces, tests and benchmarks were drafted with AI assistance from the spec (spec \u00a73.1 rule 5).",
+  "tools/dsa-status.ts (tools/ owner) can read the new `STRUCTURES` export (id, owner, reviewer, flag, dueTag) or statically parse `export const IMPLEMENTED = false`.",
+  "R1: accept or reject the requested calls in syscall-abi.md \u00a74.4, then register them in protocol/src/sys/registry.ts; the complete.* shapes already exist in protocol/src/complete.ts.",
+  "vfs agent: replace the local FsId/PermSubject/VfsDetail in vfs/src/store/records.ts with imports from @plotinium/protocol (now exported).",
+  "apps/shell agent: import CompleteQuery/CompleteItem/CompleteResult etc. from @plotinium/protocol instead of the local copies in apps/src/_sys.ts.",
+  "CI/nightly (R5): run `vitest bench --project 'dsa (bench)'` with PLT_BENCH_SIZES=1000,10000 on PRs and all sizes nightly. Add --expose-gc via execArgv so bytesPerEntryMeasured is populated. PLT_PROP_RUNS=10000 nightly; PLT_BLOOM_TRIALS=1000000 for the nightly FPR band.",
+  "Team decisions: dsa layout (src/<name>/ as exported vs the spec's dsa/<name>/{src,tests,bench}); S1 unload vs size semantics; S10 interval tree go/no-go by W13."
+ ],
+ "deps_requested": []
+}

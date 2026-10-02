@@ -1,0 +1,261 @@
+# Production deploy: one released tag, by image digest, after environment approval (OPS-08).
+# Spec: specs/14-devops/deployment-and-ci.md §3.9 (secrets), §3.11 (deploy, rollback, OFF-05),
+# §5.1 (deploy state machine), D-5 (production runs only digests from a published images.lock.json).
+# Runbook: ops/RUNBOOK.md §5 (first deploy), §6 (rollback). Owner: R5 QA/DevOps. Reviewer: R1.
+#
+# Triggers:
+#   - workflow_dispatch: deploy or roll back to any released tag (a rollback is a deploy of the
+#     previous tag, usually with backup unticked right after a failed deploy);
+#   - workflow_call from release.yml after the GitHub Release exists.
+# Both wait for the `production` environment's required reviewer. Configure that environment with
+# "Required reviewers" (the other members) and "Prevent self-review" on, so a member other than
+# the tagger approves (OPS-08, OFF-05 demo step 2). Environment secrets:
+#   VPS_HOST         the VPS address (IP or DNS name)
+#   VPS_USER         deploy
+#   VPS_SSH_KEY      private key of the CI deploy key pair (its .pub is in the deploy user's
+#                    authorized_keys; RUNBOOK §3)
+#   VPS_KNOWN_HOSTS  optional but strongly recommended: the VPS's pinned host key line(s)
+#                    (`ssh-keyscan -t ed25519 <host>` checked against the Hetzner console). Without
+#                    it the job trusts the key it sees on first use and says so in a warning.
+# Environment variable: PLOTINIUM_DOMAIN (the production domain, used by the smoke check).
+#
+# The job copies nothing but the tag name to the VPS: ops/deploy.sh downloads the tag's
+# images.lock.json itself, writes .env.images, takes the pre-deploy backup, pulls, recreates with
+# `up -d --wait`, smoke-tests and rolls back to the previous good tag on failure. This workflow
+# resolves the same digests independently and checks that the VPS ended up on exactly them.
+
+name: deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Released tag to deploy (vX.Y.Z or vX.Y.Z-rc.N); for a rollback, the previous tag'
+        required: true
+        type: string
+      backup:
+        description: 'Take the pre-deploy backup first (untick only for a rollback right after a failed deploy)'
+        required: false
+        type: boolean
+        default: true
+  workflow_call:
+    inputs:
+      tag:
+        required: true
+        type: string
+      backup:
+        required: false
+        type: boolean
+        default: true
+    secrets:
+      VPS_HOST:
+        required: true
+      VPS_USER:
+        required: true
+      VPS_SSH_KEY:
+        required: true
+      VPS_KNOWN_HOSTS:
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  resolve:
+    name: resolve the release digests (D-5)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.lock.outputs.version }}
+      web: ${{ steps.lock.outputs.web }}
+      app: ${{ steps.lock.outputs.app }}
+      db: ${{ steps.lock.outputs.db }}
+    steps:
+      - name: Read images.lock.json from the tag's GitHub Release
+        id: lock
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?$ ]]; then
+            echo "::error::'${TAG}' is not a release tag (vX.Y.Z or vX.Y.Z-rc.N); production deploys only released tags (OPS-08)"
+            exit 1
+          fi
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern images.lock.json --dir lock
+          version="$(jq -r .version lock/images.lock.json)"
+          if [[ "v${version}" != "$TAG" ]]; then
+            echo "::error::images.lock.json of ${TAG} says version ${version}"
+            exit 1
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          {
+            echo "## Deploy ${TAG}"
+            echo ""
+            echo "| Image | Reference (by digest) |"
+            echo "|---|---|"
+          } >> "$GITHUB_STEP_SUMMARY"
+          for t in web app db; do
+            ref="$(jq -r --arg t "$t" '.images[$t].ref + "@" + .images[$t].digest' lock/images.lock.json)"
+            if [[ ! "$ref" =~ ^ghcr\.io/[a-z0-9._/-]+@sha256:[0-9a-f]{64}$ ]]; then
+              echo "::error::${t} is not a GHCR reference by digest: ${ref}"
+              exit 1
+            fi
+            echo "${t}=${ref}" >> "$GITHUB_OUTPUT"
+            echo "| ${t} | \`${ref}\` |" >> "$GITHUB_STEP_SUMMARY"
+          done
+
+  deploy:
+    name: deploy ${{ inputs.tag }} to production
+    needs: resolve
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment:
+      name: production
+      url: https://${{ vars.PLOTINIUM_DOMAIN }}
+    permissions:
+      contents: read
+      actions: read # the approver's login, for /srv/plotinium/deploys.log
+    env:
+      TAG: ${{ inputs.tag }}
+      BACKUP: ${{ inputs.backup }}
+      DOMAIN: ${{ vars.PLOTINIUM_DOMAIN }}
+      EXPECT_WEB: ${{ needs.resolve.outputs.web }}
+      EXPECT_APP: ${{ needs.resolve.outputs.app }}
+      EXPECT_DB: ${{ needs.resolve.outputs.db }}
+      VERSION: ${{ needs.resolve.outputs.version }}
+    steps:
+      - name: Preconditions
+        run: |
+          if [[ -z "$DOMAIN" ]]; then
+            echo "::error::set the variable PLOTINIUM_DOMAIN on the production environment (RUNBOOK §3)"
+            exit 1
+          fi
+
+      - name: SSH client with a pinned host key
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          install -d -m 0700 ~/.ssh
+          umask 077
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/plotinium_deploy
+          if [[ -n "$VPS_KNOWN_HOSTS" ]]; then
+            printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          else
+            ssh-keyscan -T 15 -t ed25519 "$VPS_HOST" > ~/.ssh/known_hosts 2> /dev/null
+            fp="$(ssh-keygen -lf ~/.ssh/known_hosts | awk '{print $2}')"
+            echo "::warning::VPS_KNOWN_HOSTS is not set; trusting the host key seen now (${fp}). Pin it (RUNBOOK §3)."
+          fi
+          cat > ~/.ssh/config <<EOF
+          Host plotinium-vps
+            HostName ${VPS_HOST}
+            User ${VPS_USER}
+            IdentityFile ~/.ssh/plotinium_deploy
+            IdentitiesOnly yes
+            StrictHostKeyChecking yes
+            BatchMode yes
+            ConnectTimeout 20
+            ServerAliveInterval 15
+            ServerAliveCountMax 8
+          EOF
+          ssh plotinium-vps true < /dev/null
+
+      - name: Who approved this deployment
+        id: who
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          approver="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/approvals" \
+            --jq '[.[] | select(.state == "approved") | .user.login] | last // empty' 2> /dev/null || true)"
+          echo "approver=${approver:-unknown}" >> "$GITHUB_OUTPUT"
+
+      - name: Run ops/deploy.sh on the VPS (backup, pull, up --wait, smoke, rollback on failure)
+        env:
+          ACTOR: ${{ github.triggering_actor }}
+          APPROVER: ${{ steps.who.outputs.approver }}
+        run: |
+          set -euo pipefail
+          # The tag's own copy of deploy.sh runs: check the tag out first, so deploy.sh's own
+          # `git checkout --detach <tag>` (step 1 of spec §3.11.1) changes nothing under it.
+          ssh plotinium-vps bash -s -- "$TAG" "$BACKUP" "$GITHUB_REPOSITORY" "$ACTOR" "$APPROVER" <<'REMOTE'
+          set -euo pipefail
+          tag="$1" backup="$2" repo="$3" actor="$4" approver="$5"
+          cd /srv/plotinium
+          git fetch --tags --force --quiet origin < /dev/null
+          git checkout --quiet --detach "$tag" < /dev/null
+          set -a
+          # shellcheck disable=SC1091
+          [ -r /etc/plotinium/backup.env ] && . /etc/plotinium/backup.env
+          set +a
+          args=("$tag" --project prod)
+          [ "$backup" = true ] || args+=(--no-backup)
+          PLOTINIUM_REPO="$repo" GITHUB_ACTOR="$actor" DEPLOY_APPROVER="$approver" \
+            ops/deploy.sh "${args[@]}" < /dev/null
+          REMOTE
+
+      - name: The VPS runs exactly the released digests (D-5)
+        run: |
+          set -euo pipefail
+          remote="$(ssh plotinium-vps 'cat /srv/plotinium/.env.images' < /dev/null)"
+          for pair in "WEB=${EXPECT_WEB}" "APP=${EXPECT_APP}" "DB=${EXPECT_DB}"; do
+            name="${pair%%=*}" expected="${pair#*=}"
+            if ! grep -qxF "PLOTINIUM_${name}_IMAGE=${expected}" <<<"$remote"; then
+              echo "::error::PLOTINIUM_${name}_IMAGE on the VPS is not ${expected}"
+              echo "$remote"
+              exit 1
+            fi
+          done
+          ssh plotinium-vps 'cd /srv/plotinium && docker compose -p plotinium ps --format "table {{.Service}}\t{{.Status}}"' < /dev/null
+
+      - name: Smoke check from outside (/api/readyz, /version.json, headers)
+        run: |
+          set -euo pipefail
+          base="https://${DOMAIN}"
+          ready=""
+          for _ in $(seq 1 30); do
+            if body="$(curl -fsS --max-time 10 "${base}/api/readyz")" && [[ "$(jq -r .status <<<"$body")" == ready ]]; then
+              ready=yes
+              break
+            fi
+            sleep 5
+          done
+          if [[ -z "$ready" ]]; then
+            echo "::error::${base}/api/readyz is not 200 with status ready"
+            curl -sS --max-time 10 "${base}/api/readyz" || true
+            exit 1
+          fi
+          served="$(curl -fsS --max-time 10 "${base}/version.json" | jq -r .version)"
+          if [[ "$served" != "$VERSION" ]]; then
+            echo "::error::/version.json says ${served}, expected ${VERSION}"
+            exit 1
+          fi
+          headers="$(curl -fsSI --max-time 10 "${base}/")"
+          for h in 'cross-origin-opener-policy: same-origin' 'cross-origin-embedder-policy: require-corp' \
+                   'strict-transport-security:' 'content-security-policy:'; do
+            grep -qi "^${h}" <<<"$headers" || { echo "::error::missing header ${h}"; exit 1; }
+          done
+          {
+            echo ""
+            echo "Deployed **${TAG}** to ${base}: readyz ready, version.json ${served}, isolation headers and HSTS present."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Deploy log on failure
+        if: failure()
+        run: |
+          ssh plotinium-vps 'tail -n 3 /srv/plotinium/deploys.log; cd /srv/plotinium && docker compose -p plotinium logs --no-color --tail 100 app' < /dev/null || true
+
+      - name: Remove the key from the runner
+        if: always()
+        run: rm -f ~/.ssh/plotinium_deploy

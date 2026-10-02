@@ -1,0 +1,38 @@
+{
+  "frame": {
+    "v": 1,
+    "t": "op.submit",
+    "id": 2,
+    "body": {
+      "opId": "0192f0c1-8a3b-7c4d-8e5f-0123456789ab",
+      "osSessionId": "0192f0c1-9000-7000-8000-000000000001",
+      "cseq": 7,
+      "lamport": 42,
+      "principal": 1001,
+      "clientTime": "2026-09-24T10:00:00.000Z",
+      "op": {
+        "kind": "create",
+        "parentIno": "00000000-0000-7000-8000-000000000008",
+        "name": "a/b",
+        "ino": "0192f0c1-8a3b-7c4d-9e5f-0123456789ac",
+        "type": "f",
+        "mode": 420,
+        "blob": "abababababababababababababababababababababababababababababababab",
+        "size": 12,
+        "mtime": 1790000000000
+      },
+      "base": {
+        "kind": "versions",
+        "entries": []
+      },
+      "blobs": ["abababababababababababababababababababababababababababababababab"]
+    },
+    "ack": [
+      {
+        "ownerUid": 1001,
+        "seq": 121
+      }
+    ]
+  },
+  "issue": "body.op.name"
+}

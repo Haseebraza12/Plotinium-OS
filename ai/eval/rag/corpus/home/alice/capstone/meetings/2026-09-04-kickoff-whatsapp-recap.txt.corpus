@@ -1,0 +1,12 @@
+[recap I posted in the group after the kickoff, 4 Sep]
+
+ok summary of today:
+roles -> Dan kernel, Carol vfs/db, Bob wm/ui, me AI, Esha qa/devops
+for the next two weeks:
+ Dan: boot the kernel worker + process table + simple RR scheduler
+ Carol: inodes/dentries in indexeddb, mkdir ls cat
+ Bob: desktop mockup, dock, one window you can drag
+ me: try 2 embedding models on ~60 docs for the defence numbers
+ Esha: repo + CI (lint, types, tests) on PRs
+rules: 1 review from outside your area, daily standup here by 10pm, sync every friday 2pm
+shout if I forgot anything

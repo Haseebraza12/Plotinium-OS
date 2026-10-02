@@ -1,0 +1,55 @@
+{
+ "files_changed": [
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/src/ringbuffer/index.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/src/ringbuffer/README.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/tests/ringbuffer.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/tests/ringbuffer.prop.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/bench/ringbuffer.bench.ts"
+ ],
+ "verification": [
+  {
+   "command": "pnpm exec tsc -p dsa/tsconfig.json --noEmit",
+   "outcome": "Passed: exit 0, no errors."
+  },
+  {
+   "command": "pnpm exec vitest run --project dsa dsa/tests/ringbuffer.test.ts dsa/tests/ringbuffer.prop.test.ts",
+   "outcome": "Passed: 16 of 16 (14 edge-case tests: the 12 original plus 2 added; 2 properties: the original plus 1 added). The scaffold test still passes and switches itself off for ringbuffer."
+  },
+  {
+   "command": "PLT_PROP_RUNS=10000 pnpm exec vitest run --project dsa dsa/tests/ringbuffer.prop.test.ts",
+   "outcome": "Passed at nightly scale: 2 of 2 in about 30 s, no counterexample. This needed the per-test timeout added to the file; the 5 s default timed out."
+  },
+  {
+   "command": "pnpm exec vitest run --project dsa --coverage (include dsa/src/ringbuffer/*.ts)",
+   "outcome": "index.ts coverage: lines 93.9%, statements 94.3%, branches 91.4%, functions 97.9%. The only uncovered lines are the RB1-RB4 violation throws; the ring contract has no corruption hook to reach them."
+  },
+  {
+   "command": "pnpm exec vitest bench --run --project 'dsa (bench)' dsa/bench/ringbuffer.bench.ts",
+   "outcome": "Passed 2 of 2 on 15 consecutive runs after the bench fix (and on the final code), with every shape ratio at or under 2. `--project dsa` does not work for benchmarks: the project is named 'dsa (bench)'. One run before the fix failed with a ratio of 3.03 while the machine was under load."
+  },
+  {
+   "command": "pnpm exec eslint dsa/src/ringbuffer dsa/tests dsa/bench --max-warnings 0",
+   "outcome": "Passed: exit 0, no warnings."
+  },
+  {
+   "command": "pnpm exec prettier --check (the 5 changed files)",
+   "outcome": "Passed: all 5 files match the Prettier style."
+  },
+  {
+   "command": "pnpm exec vitest run --project dsa (whole package, for information)",
+   "outcome": "180 passed, 4 failed. The failures are other agents' property tests (heap, tree, trie, zorder), each taking 5.3 to 7.4 s against the 5 s default timeout while the full parallel run competes for CPU. Run alone, all 4 files pass (9 of 9). No ringbuffer failure."
+  }
+ ],
+ "benchmark": "Dev machine (AMD Ryzen 5 7530U, Linux 7.0, Node 24.13.1, V8 13.6), medians of 15 runs at load average 4 to 6. These numbers must be re-run on the lab machine. Values are ns per operation, measured in batches of 1,000.\n- push+shift (half full), mean / p50 / p95: n=10^3 (capacity 1,024): 5.06 / 4.66 / 8.67; n=10^4 (16,384): 5.85 / 5.42 / 9.59; n=10^5 (131,072): 6.08 / 5.36 / 10.42. The ratio t(10^5)/t(10^3) has a median of 1.12 and a worst of 1.61 against the 2.0 limit.\n- push when full (overwrite), mean: 4.97, 5.13 and 4.58 at 10^3, 10^4 and 10^5. Ratio median 0.94, worst 1.36.\n- The curve is flat, as expected for O(1): about 5 ns from 10^3 to 10^5.\n- Budgets: 6 ns per push/shift pair against \u2264 50 ns (pass). ByteRing with 4 KiB chunks has a median of 15,343 MB/s (range 1,867 to 22,492; final run 2,549) against \u2265 500 MB/s (pass).\n- Bytes per entry (allocated / used from stats(), measured with --expose-gc): 10^3: 8.19 / 8.00, measured 8.78; 10^4: 13.11 / 8.00, measured 13.31; 10^5: 10.49 / 8.00, measured 10.54. Used is exactly 8 B/entry. The extra allocated space comes only from rounding the capacity up to a power of two.\n- Float64Ring percentile(0.95) over 1,024 values takes about 27 \u00b5s.\nThe full table, proofs and the filled DSA.md entry are in dsa/src/ringbuffer/README.md.",
+ "test_changes": "No existing assertion was changed or removed.\n(1) dsa/bench/ringbuffer.bench.ts: the two timed loops now read BATCH from a local constant set outside the timed closure. Under Vitest's module runner every read of an imported binding is a getter call. Vitest warned \"accessed module export getters too many times\", and that getter cost about 25 ns per iteration against a real ring cost of 5 to 7 ns (30 ns reported vs about 5 ns in plain Node), which also flattened the curve. The shape limits (\u2264 2) and budgets are unchanged.\n(2) dsa/tests/ringbuffer.prop.test.ts: both properties get an explicit timeout, PROP_TIMEOUT_MS = 10 s + 30 ms \u00d7 PROP.numRuns. The spec's nightly PLT_PROP_RUNS=10000 takes about 25 s and always failed Vitest's 5 s default, and 1,000 runs under coverage took 4.6 s. The ring accounts for only about 24 ms of each 1,000 runs; the rest is fast-check and deep toEqual. I also added the property \"DSA-RING-01 Float64Ring matches RingBuffer<number> on random push, tryPush, shift, at and clear in both modes\", a differential test with arbitrary doubles including -0, NaN and \u00b1\u221e.\n(3) dsa/tests/ringbuffer.test.ts: 2 tests added. \"DSA-RING-01 Float64Ring supports the whole Ring API in reject mode, iteration follows toArray after a wrap, and stats() is exact\" also checks that an unknown mode throws INVALID. \"DSA-RING-01 Float64Ring nearest-rank percentile is exact where q\u00b7n rounds past an integer\": 0.3\u00b710 = 3.0000000000000004, so a plain ceil would pick the wrong rank.\n(4) All 4 files were formatted with the repo's Prettier config.",
+ "problems": [
+  "AI_USAGE.md contradicts the 2026-09-25 decision. Rule 1 (line 9) and the 'Written only by the team' list (line 26) still say the dsa/ implementations, the ring buffer included, are written only by the team. I did not edit AI_USAGE.md (out of scope), but it needs an entry disclosing that Claude wrote S7, or the disclosure is incomplete. The README's 'Written by' field says Claude wrote it and leaves PR/entry placeholders.",
+  "DSA.md still lists S7 as 'interface + tests; not implemented' (line 26) with 'Written by TODO(R5)' (line 235). The filled entry is ready to copy from dsa/src/ringbuffer/README.md; I did not edit DSA.md because it is outside my scope.",
+  "vitest.config.ts: the contract says the first structure to flip IMPLEMENTED adds 'dsa' to GATED_PACKAGES. I did not change it, because root configs are out of scope. The orchestrator or team should do it once.",
+  "This affects all dsa property tests, not just S7: they run at or near Vitest's 5 s default timeout. In the full parallel `vitest run --project dsa`, the heap, tree, trie and zorder properties timed out (5.3 to 7.4 s) and passed when run alone. The spec's nightly PLT_PROP_RUNS=10000 will time out everywhere. I fixed only the ringbuffer file; a shared fix (a testTimeout in the dsa project or a helper in tests/helpers.ts) belongs to whoever owns the shared config.",
+  "This also affects the other structures' benchmarks: every dsa bench that loops `for (i < BATCH)` on the imported BATCH pays a module-runner getter on each iteration (about 25 ns here), which inflates ns/op and hides the shape. The other bench files should read BATCH into a local, as ringbuffer.bench.ts now does.",
+  "`pnpm exec vitest bench --run --project dsa` fails with 'No projects matched the filter'. The benchmark project is named 'dsa (bench)'.",
+  "The repo is already not Prettier-clean in files I did not touch, e.g. dsa/bench/harness.ts, dsa/bench/heap.bench.ts and dsa/src/zorder/index.ts, so `pnpm format:check` in `pnpm ci` fails for reasons unrelated to S7.",
+  "Benchmark numbers come from a dev machine while about 25 parallel agents were running (load average 4 to 6). ByteRing throughput varied from 1.9 to 22 GB/s across runs, always far above the 500 MB/s target. Re-run on the lab machine with PLT_BENCH_RUNNER=lab PLT_BENCH_OUT=docs/evidence/dsa; no JSON evidence was committed under docs/evidence."
+ ]
+}

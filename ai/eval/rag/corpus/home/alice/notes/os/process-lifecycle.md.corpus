@@ -1,0 +1,23 @@
+# Process lifecycle
+
+States: new → ready → running → (blocked ↔ ready) → terminated.
+
+## Creation on Unix
+
+`fork()` duplicates the caller. It returns 0 in the child and the child's PID in the parent (−1 on error). With copy-on-write the duplicate is cheap until someone writes.
+
+`exec*()` replaces the program image but keeps the PID and open descriptors (unless close-on-exec is set).
+
+## Ending
+
+A process that exits becomes a **zombie** until its parent collects the exit status with `wait()` or `waitpid()`. If the parent dies first, the orphan is re-parented to init (PID 1) or a subreaper, which reaps it.
+
+`waitpid(pid, &status, 0)` then `WIFEXITED(status)` and `WEXITSTATUS(status)` to read the code.
+
+## PCB contents
+
+PID, state, saved registers and program counter, scheduling info, memory maps, open file table, credentials (uid, gid), accounting.
+
+## Why it matters for our OS project
+
+Our web OS has the same states in its process table even though "processes" are generators on a worker. `ps` shows them, `kill` moves them to terminated, and the parent gets a status like a real `waitpid`.

@@ -1,0 +1,12 @@
+# Markov chains (for the predictor)
+
+A process where the next state depends only on the current state (first order) or the last k states (order k).
+
+Estimating transition probabilities from a sequence: count how often state j follows state i and divide by how often i appears. With little data many counts are zero, so we need **smoothing**:
+- add-one (Laplace): too much mass to unseen events;
+- Witten–Bell: the probability of a novel event depends on how many distinct successors a context has seen;
+- back-off / interpolation: mix order-2, order-1 and order-0 estimates.
+
+Evaluation: top-k accuracy on held-out data, predicting each event from the history before it (prequential), compared with baselines such as "most frequently used" and "most recently used".
+
+For app launch prediction, order 2 captures routines like "terminal after editor after files". The model is tiny: a hash map from (a, b) to counts of the next app.

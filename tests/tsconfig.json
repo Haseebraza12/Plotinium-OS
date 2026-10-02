@@ -1,0 +1,10 @@
+// Cross-package suites: e2e (Playwright), integration, fault injection, property, performance, a11y.
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "types": ["node"]
+  },
+  "include": ["**/*.ts"],
+  "exclude": ["node_modules"]
+}

@@ -1,0 +1,50 @@
+{
+ "files_changed": [
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/src/trie/radix-trie.ts (new: RadixTrie, the struct-of-arrays radix trie, 7 parallel typed arrays = 21 B/node plus a Uint16Array label pool, free list through `next`, split/merge/prune, auto-compaction when garbage > poolLen/2, checkInvariants R1-R5/R7/R8, debugCorrupt; no recursion)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/src/trie/namespaced.ts (new: NamespacedRadixTrie with four RadixTrie instances cmd/path/flag/hist; addPath and removePath are exactly one insert/remove; the helpers strip the namespace part of each key)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/src/trie/index.ts (IMPLEMENTED = true; stub classes replaced by re-exports from radix-trie.ts and namespaced.ts; interface types unchanged; the TrieCorruption 'unary-node' doc now says the root is skipped, because R1 does not apply to it)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/src/trie/README.md (rewritten: viva-oriented explanation, complexity with proof sketches, invariants, dev-machine benchmark and memory tables, filled DSA.md entry template, known limits)",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/bench/trie.bench.ts (memory test only: pre-flattens the template-literal corpus keys before measureBytesPerEntry; assertions unchanged)"
+ ],
+ "verification": [
+  {
+   "command": "pnpm exec tsc -p dsa/tsconfig.json --noEmit",
+   "outcome": "pass, no errors"
+  },
+  {
+   "command": "pnpm exec vitest run --project dsa dsa/tests/trie.test.ts dsa/tests/trie.prop.test.ts dsa/tests/scaffold.test.ts",
+   "outcome": "3 files passed; 28 tests passed, 9 skipped (the scaffold rows of other structures). trie.test.ts 24/24, trie.prop.test.ts 2/2 at 1,000 runs"
+  },
+  {
+   "command": "PLT_PROP_RUNS=10000 PLT_PROP_SEED={1,7,42,1234} pnpm exec vitest run --project dsa --testTimeout 300000 dsa/tests/trie.prop.test.ts",
+   "outcome": "pass for all 4 seeds (about 22-31 s each). Without --testTimeout, 10k runs exceed vitest's default 5 s timeout; that is a timeout, not a wrong result"
+  },
+  {
+   "command": "NODE_OPTIONS=--expose-gc pnpm exec vitest bench --run --project 'dsa (bench)' dsa/bench/trie.bench.ts",
+   "outcome": "4/4 pass: SYS-03 p95 budget in all 4 namespaces, p95 shape <= 3x, insert/remove shape <= 3x, memory <= 32 MB. (`--project dsa` fails with 'No projects matched the filter'; the bench project is named 'dsa (bench)')"
+  },
+  {
+   "command": "pnpm exec eslint dsa/src/trie dsa/tests dsa/bench --max-warnings 0",
+   "outcome": "pass, 0 problems"
+  },
+  {
+   "command": "pnpm exec prettier --check dsa/src/trie/",
+   "outcome": "pass"
+  },
+  {
+   "command": "node scratchpad/longkeys.ts (scratch differential outside the repo: keys up to 3*65,535+5 units, split points near multiples of 65,535, model Set, checkInvariants after every op)",
+   "outcome": "pass, 3,600 operations checked; this exercises the long-label chain path the property tests never reach"
+  }
+ ],
+ "benchmark": "Dev machine (AMD Ryzen 5 7530U, Node v24.13.1, load average about 6 from parallel agents); must be re-run on the lab machine. Times are ns/op for n = 10^3 / 10^4 / 10^5.\n\ncomplete(prefix, 20) p95, hard limit 1,000,000 ns:\n- path: 3,947 / 6,302 / 7,765 (mean 1,594 / 2,680 / 3,915)\n- cmd: 3,186 / 4,187 / 4,909\n- flag: 6,522 / 5,491 / 8,305\n- hist: 4,899 / 5,370 / 7,163\nAll pass SYS-03 with about 120x headroom and sit under the 100 \u00b5s target.\n\nFlat curve (path shape test): trie p95 3,307 / 3,657 / 4,329, a 1.31x ratio against a limit of 3 (mean ratio 1.89). The linear-scan baseline p95 is 267,438 / 2,316,078 / 23,619,238 (88x). At 10^5 the trie is about 5,500x faster at p95. The mean rises a little because the mean result count k per query grows with n (6.8 / 11.7 / 12.3), as O(P+k) predicts.\n\ninsert+remove pair (path keys of about 50 units): mean 584 / 637 / 850 ns, ratio 1.46.\n\nMemory, bytes/entry allocated per stats() (used), for 10^3 / 10^4 / 10^5:\n- path: 60.5 / 47.6 / 48.5 (36.9 used at 10^5); 4.6 MB at 10^5\n- cmd: 38.0 at 10^5; 3.6 MB\n- flag: 76.0 at 10^5; 7.3 MB\n- hist: 65.5 at 10^5; 6.3 MB\nMeasured with a settled async gc probe, 10^5 values match allocated within 1% (path 49.0). The real addPath usage with {kind} metadata is 74.7 B/entry, 7.1 MB at 10^5, about 5x under the ~24 MB target and 4.5x under the 32 MB limit. Nodes per key: 1.16-1.65.\n\nAcross 7 runs of the final code under load 6-19, the p95 shape ratio was 0.99-1.42, with one outlier of 3.30 during a load spike.",
+ "problems": [
+  "Shared harness: measureBytesPerEntry in dsa/src/_shared/mem.ts (not mine, left untouched) takes its snapshots synchronously. V8 sweeps dead objects and frees ArrayBuffer backing stores concurrently, so the measured column can be too low or negative. A synchronous probe stayed off by up to about 160 B/entry however many gc() calls it made; an async probe that awaited 30 ms between three gc() calls matched allocated within 1%. Recommendation for the harness owner: make it async, or await a macrotask between gc() calls. My bench now pre-flattens its ConsString keys, which removed the largest negative bias, but some runs still record noisy measured values (for example path at 10^5 about -5 to -10 B/entry).",
+  "Property tests at nightly size (PLT_PROP_RUNS=10000) take about 22 s and exceed vitest's default 5 s testTimeout. The nightly job needs --testTimeout or a per-test timeout. All four seeds I tried pass.",
+  "`pnpm exec vitest bench --run --project dsa` fails ('No projects matched the filter'); the working command is `--project 'dsa (bench)'`.",
+  "Benchmark shape assertions are sensitive to CPU contention: 1 of 7 runs failed the p95 shape test (3.30x against a limit of 3) while about 25 agents ran in parallel (load average 12-19). All other runs gave 0.99-1.42x. Judge it on the lab runner.",
+  "Contract interpretation 1: R1 as written cannot hold for keys longer than 65,535 units, because lblLen is Uint16 and the spec says such labels are split. The implementation exempts exactly the unary nodes that cannot merge (lblLen[n] + lblLen[child] > 65,535). This is documented in the code, the README and the DSA.md template; it needs keys far beyond Plotinium's 4,133-unit maximum.",
+  "Contract interpretation 2: debugCorrupt('unary-node') skips the root, because clearing a unary root would not break R1. The TrieCorruption doc comment in index.ts was updated to say so.",
+  "Outside my allowed edit scope, left for the orchestrator or owner: the AI_USAGE.md entry for this implementation; copying the filled DSA.md entry from dsa/src/trie/README.md into DSA.md; committing a JSONL run to docs/evidence/dsa (PLT_BENCH_OUT); and adding 'dsa' to GATED_PACKAGES in vitest.config.ts. The trie README says the first structure to flip does this last step, but root configs were off-limits. The project folder is not a git repository, so nothing was committed."
+ ],
+ "test_changes": "No test files changed; trie.test.ts and trie.prop.test.ts pass unmodified. One change in dsa/bench/trie.bench.ts, in the DSA-TRIE-03 memory test only: `for (const k of keys) k.charCodeAt(0);` runs before measureBytesPerEntry, with a comment. Reason: the corpus keys are template-literal V8 ConsStrings, and insert's first charCodeAt flattens each one. The freed cons cells were subtracted from the trie's heap growth, so measured bytes/entry for path and hist came out negative (-28 to -30 at 10^4 and 10^5). Flattening first makes the probe count only the trie. The assertions are unchanged, and the change can only make them stricter, since a negative measured value passed trivially before."
+}

@@ -1,0 +1,124 @@
+{
+  "console": [],
+  "pageErrors": [],
+  "failed": ["401 GET /api/auth/me"],
+  "early": {
+    ".plb-word": {
+      "fonts": "Inter(web) x20",
+      "size": "36px",
+      "weight": "600",
+      "family": "\"Inter Variable\", Inter, system-ui, \"Segoe UI\", Roboto, Ubun"
+    },
+    ".plb-ver": {
+      "fonts": "Inter(web) x45",
+      "size": "13px",
+      "weight": "400",
+      "family": "\"Inter Variable\", Inter, system-ui, \"Segoe UI\", Roboto, Ubun"
+    },
+    ".plb-step [data-on]": {
+      "fonts": "Inter(web) x15",
+      "size": "13px",
+      "weight": "400",
+      "family": "\"Inter Variable\", Inter, system-ui, \"Segoe UI\", Roboto, Ubun"
+    },
+    ".plb-chip kbd": {
+      "fonts": "Inter(web) x3",
+      "size": "12px",
+      "weight": "600",
+      "family": "\"Inter Variable\", Inter, system-ui, \"Segoe UI\", Roboto, Ubun"
+    },
+    "loadedFaces": ["Inter Variable 100 900", "JetBrains Mono 400", "JetBrains Mono 700"]
+  },
+  "mid": {
+    ".plb-word": {
+      "fonts": "Inter(web) x20",
+      "size": "36px",
+      "weight": "600",
+      "family": "\"Inter Variable\", Inter, system-ui, \"Segoe UI\", Roboto, Ubun"
+    },
+    ".plb-ver": {
+      "fonts": "Inter(web) x45",
+      "size": "13px",
+      "weight": "400",
+      "family": "\"Inter Variable\", Inter, system-ui, \"Segoe UI\", Roboto, Ubun"
+    },
+    ".plb-step [data-on]": {
+      "fonts": "Inter(web) x27",
+      "size": "13px",
+      "weight": "400",
+      "family": "\"Inter Variable\", Inter, system-ui, \"Segoe UI\", Roboto, Ubun"
+    },
+    ".plb-count": {
+      "fonts": "Inter(web) x22",
+      "size": "12px",
+      "weight": "400",
+      "family": "\"Inter Variable\", Inter, system-ui, \"Segoe UI\", Roboto, Ubun"
+    }
+  },
+  "login": {
+    "date": {
+      "fonts": "Inter(web) x20",
+      "size": "20px",
+      "weight": "500",
+      "family": "\"Inter Variable\", Inter, system-ui, \"Segoe UI\", Roboto, Ubun"
+    },
+    "time": {
+      "fonts": "Inter(web) x1",
+      "size": "120px",
+      "weight": "200",
+      "family": "\"Inter Variable\", Inter, system-ui, \"Segoe UI\", Roboto, Ubun"
+    },
+    "userName": {
+      "fonts": "Inter(web) x4",
+      "size": "18px",
+      "weight": "600",
+      "family": "\"Inter Variable\", Inter, system-ui, \"Segoe UI\", Roboto, Ubun"
+    },
+    "avatarInitial": {
+      "fonts": "Inter(web) x1",
+      "size": "48px",
+      "weight": "400",
+      "family": "\"Inter Variable\", Inter, system-ui, \"Segoe UI\", Roboto, Ubun"
+    },
+    "input": {
+      "fonts": "Inter(web) x14",
+      "size": "15px",
+      "weight": "400",
+      "family": "\"Inter Variable\", Inter, system-ui, \"Segoe UI\", Roboto, Ubun"
+    },
+    "hint": {
+      "fonts": "Inter(web) x22",
+      "size": "12px",
+      "weight": "400",
+      "family": "\"Inter Variable\", Inter, system-ui, \"Segoe UI\", Roboto, Ubun"
+    },
+    "powerLabel": {
+      "fonts": "Inter(web) x5",
+      "size": "12px",
+      "weight": "500",
+      "family": "\"Inter Variable\", Inter, system-ui, \"Segoe UI\", Roboto, Ubun"
+    },
+    "brandName": {
+      "fonts": "Inter(web) x21",
+      "size": "12px",
+      "weight": "600",
+      "family": "\"Inter Variable\", Inter, system-ui, \"Segoe UI\", Roboto, Ubun"
+    },
+    "brandBuild": {
+      "fonts": "JetBrains Mono(web) x13",
+      "size": "11px",
+      "weight": "400",
+      "family": "\"JetBrains Mono\", ui-monospace, \"Cascadia Mono\", Consolas, \""
+    },
+    "loadedFaces": [
+      "Inter Variable 100 900 U+0-FF, U+131, U+152",
+      "JetBrains Mono 400 U+0-10FFFF",
+      "JetBrains Mono 700 U+0-10FFFF"
+    ],
+    "fontSheets": [
+      "http://localhost:4718/assets/SearchField-ghqodqMM.css",
+      "http://localhost:4718/assets/IconButton-ClBo9vtn.css",
+      "http://localhost:4718/assets/host-CyQRmfe0.css"
+    ]
+  }
+}

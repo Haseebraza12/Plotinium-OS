@@ -1,0 +1,11 @@
+import { chromium } from 'playwright-core';
+const browser = await chromium.launch({ executablePath: '/usr/bin/google-chrome', headless: true });
+const ctx = await browser.newContext(); const page = await ctx.newPage();
+await page.goto('http://127.0.0.1:4173/'); await page.waitForFunction(() => window.state.wsOpen === true);
+const probe = async (label) => { await page.evaluate(() => { window.state.echo = null; window.ws.send('x' + Date.now()); }); await page.waitForTimeout(2000);
+  console.log(label, await page.evaluate(() => ({ echo: window.state.echo, open: window.state.wsOpen, readyState: window.ws.readyState }))); };
+await probe('online          :');
+await ctx.setOffline(true); await probe('offline (2s)    :');
+await page.waitForTimeout(5000); await probe('offline (+7s)   :');
+await ctx.setOffline(false); await probe('back online     :');
+await browser.close();

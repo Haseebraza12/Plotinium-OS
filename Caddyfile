@@ -1,0 +1,93 @@
+# Caddyfile: baked into the `web` image with the built shell at /srv (Dockerfile target `web`).
+# Spec: specs/14-devops/deployment-and-ci.md §3.2 (OPS-06); security-model.md §3.9, §4.1 (C9, C10, C11).
+#
+# Caddy serves the static shell and sets EVERY security header, on every response (the shell,
+# /api/*, /ws, /models/*, /ort/*); Fastify serves only /api/* and /ws and sets none of them.
+# One origin serves everything, which keeps cross-origin isolation, connect-src 'self' and the
+# host-only __Host- cookie simple.
+{
+	# Admin API on localhost inside the container only (never published): a header hot-fix is
+	#   docker compose exec web caddy reload --config /etc/caddy/Caddyfile
+	# No trusted_proxies: nothing sits in front of Caddy, so a client's X-Forwarded-For is never trusted.
+	admin localhost:2019
+}
+
+(isolation_headers) {
+	# The header set of security-model.md §4.1, exactly.
+	header {
+		Cross-Origin-Opener-Policy "same-origin"
+		Cross-Origin-Embedder-Policy "require-corp"
+		Cross-Origin-Resource-Policy "same-origin"
+		Content-Security-Policy-Report-Only "require-trusted-types-for 'script'"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+		-Server
+	}
+	# Content-Security-Policy, generated at build time by ops/caddy/csp-hash.ts with the SHA-256 of
+	# every inline <script> and <style> of the built index.html (security-model.md §3.9). Baked in.
+	import /etc/caddy/csp.caddy
+	# Production-only headers (Strict-Transport-Security). compose.prod.yaml mounts ops/caddy/prod.d;
+	# locally the glob matches nothing, which Caddy accepts ("an empty glob pattern is not an error").
+	import /etc/caddy/prod.d/*.caddy
+}
+
+{$SITE_ADDRESS::4717} {
+	import isolation_headers
+	# Model weights and tokenizers are never compressed on the fly (UI-165): they are mostly
+	# incompressible, and an encoded response drops Content-Length, which the embedding worker's
+	# download progress needs.
+	@compressible not path /models/*
+	encode @compressible zstd gzip
+
+	# Backend: exactly /api/* and /ws (OPS-06). /metrics is on another listener and never routed.
+	handle /ws {
+		reverse_proxy app:3000 {
+			lb_try_duration 15s # hold the upgrade while app restarts during a deploy
+			lb_try_interval 250ms
+			stream_close_delay 5m # keep WebSockets open across a config reload
+		}
+	}
+	handle /api/* {
+		reverse_proxy app:3000 {
+			lb_try_duration 15s
+			lb_try_interval 250ms
+		}
+	}
+
+	# Immutable assets: hashed file names under /assets; /models/<lock-id>/... and /ort/<ort-version>/...
+	# carry the model revision and the ORT version in the path (security-model.md §3.9).
+	# Never fall back to index.html for these.
+	@immutable path /assets/* /models/* /ort/*
+	handle @immutable {
+		header Cache-Control "public, max-age=31536000, immutable"
+		root * /srv
+		file_server {
+			precompressed br gzip
+		}
+	}
+
+	# Files that must be revalidated on every boot (OFF-05, identity check).
+	@fresh path / /index.html /sw.js /version.json /boot-manifest.json /manifest.webmanifest
+	header @fresh Cache-Control "no-cache"
+
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server {
+			precompressed br gzip
+		}
+	}
+}
+
+# Container health (not published; OPS-02). /health: Caddy is up. /shell: the baked web root is the
+# real Plotinium shell (the boot screen and the Service Worker exist), not a placeholder; compose's
+# web healthcheck asks for both.
+:8081 {
+	respond /health "ok" 200
+	handle /shell {
+		root * /srv
+		rewrite * /index.html
+		file_server
+	}
+}

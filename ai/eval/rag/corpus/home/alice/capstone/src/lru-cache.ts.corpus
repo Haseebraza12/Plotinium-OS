@@ -1,0 +1,58 @@
+/**
+ * Fixed-capacity cache that evicts the entry that has gone longest without being read or written.
+ *
+ * A Map remembers insertion order, so "touching" a key = delete + set moves it to the end; the
+ * first key in iteration order is always the stalest one. O(1) get/set.
+ *
+ * Used by the Files app for thumbnails (capacity 200) and by the kernel for resolved paths.
+ */
+export class LruCache<K, V> {
+  private readonly map = new Map<K, V>();
+  private hits = 0;
+  private misses = 0;
+
+  constructor(
+    private readonly capacity: number,
+    private readonly onEvict?: (key: K, value: V) => void,
+  ) {
+    if (!Number.isInteger(capacity) || capacity < 1) throw new RangeError('capacity must be >= 1');
+  }
+
+  get(key: K): V | undefined {
+    const value = this.map.get(key);
+    if (value === undefined) {
+      this.misses++;
+      return undefined;
+    }
+    this.hits++;
+    this.map.delete(key);
+    this.map.set(key, value);
+    return value;
+  }
+
+  set(key: K, value: V): void {
+    if (this.map.has(key)) this.map.delete(key);
+    this.map.set(key, value);
+    if (this.map.size > this.capacity) {
+      const oldest = this.map.keys().next();
+      if (!oldest.done) {
+        const evicted = this.map.get(oldest.value) as V;
+        this.map.delete(oldest.value);
+        this.onEvict?.(oldest.value, evicted);
+      }
+    }
+  }
+
+  delete(key: K): boolean {
+    return this.map.delete(key);
+  }
+
+  get size(): number {
+    return this.map.size;
+  }
+
+  get hitRate(): number {
+    const total = this.hits + this.misses;
+    return total === 0 ? 0 : this.hits / total;
+  }
+}

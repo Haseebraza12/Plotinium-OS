@@ -1,0 +1,48 @@
+/*
+ * The activity indicator: twelve spokes whose opacity steps round as the whole glyph rotates
+ * in 12 discrete steps (transform only). Under reduced motion it stops; the label still says
+ * what is happening. Not for the boot path or system screens (DSN-07): use ProgressBar there.
+ */
+.root {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pl-space-2);
+  color: var(--pl-text-muted);
+  font: var(--pl-type-caption);
+}
+.glyph {
+  flex: none;
+  width: var(--pl-spinner-size);
+  height: var(--pl-spinner-size);
+  animation: spin calc(1000ms * var(--pl-k)) steps(12, end) infinite;
+}
+.sm {
+  --pl-spinner-size: var(--pl-spinner-sm);
+}
+.md {
+  --pl-spinner-size: var(--pl-spinner-md);
+}
+.lg {
+  --pl-spinner-size: var(--pl-spinner-lg);
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .glyph {
+    animation: none;
+  }
+}
+:global(:root[data-motion='reduce']) .glyph {
+  animation: none;
+}
+.hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

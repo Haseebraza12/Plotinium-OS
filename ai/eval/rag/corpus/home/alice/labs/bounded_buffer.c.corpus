@@ -1,0 +1,60 @@
+/* Producer/consumer with a fixed-size circular buffer.
+ * Producers block while the buffer is full, consumers while it is empty.
+ * build: gcc -Wall -pthread bounded_buffer.c -o bb
+ */
+#include <pthread.h>
+#include <stdio.h>
+
+#define SIZE 8
+#define ITEMS 100
+
+static int buf[SIZE];
+static int head = 0, tail = 0, count = 0;
+static pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t not_full = PTHREAD_COND_INITIALIZER;
+static pthread_cond_t not_empty = PTHREAD_COND_INITIALIZER;
+
+static void put(int x) {
+    pthread_mutex_lock(&m);
+    while (count == SIZE) pthread_cond_wait(&not_full, &m);
+    buf[tail] = x;
+    tail = (tail + 1) % SIZE;
+    count++;
+    pthread_cond_signal(&not_empty);
+    pthread_mutex_unlock(&m);
+}
+
+static int get(void) {
+    pthread_mutex_lock(&m);
+    while (count == 0) pthread_cond_wait(&not_empty, &m);
+    int x = buf[head];
+    head = (head + 1) % SIZE;
+    count--;
+    pthread_cond_signal(&not_full);
+    pthread_mutex_unlock(&m);
+    return x;
+}
+
+static void *producer(void *arg) {
+    (void)arg;
+    for (int i = 1; i <= ITEMS; i++) put(i);
+    return NULL;
+}
+
+static void *consumer(void *arg) {
+    long sum = 0;
+    for (int i = 0; i < ITEMS; i++) sum += get();
+    *(long *)arg = sum;
+    return NULL;
+}
+
+int main(void) {
+    pthread_t p, c;
+    long sum = 0;
+    pthread_create(&p, NULL, producer, NULL);
+    pthread_create(&c, NULL, consumer, &sum);
+    pthread_join(p, NULL);
+    pthread_join(c, NULL);
+    printf("sum = %ld (expected %d)\n", sum, ITEMS * (ITEMS + 1) / 2);
+    return 0;
+}

@@ -1,0 +1,69 @@
+"""Tiny next-app predictor for the launcher experiment.
+
+Reads a log of app launches (one app id per line, oldest first) and learns how often each app
+follows the two apps before it. Predicts the top-k next apps with Witten-Bell style back-off
+to the one-app context and then to overall popularity.
+
+usage: python markov_predict.py launches.txt --k 3
+"""
+from collections import Counter, defaultdict
+import argparse
+
+
+class SecondOrderModel:
+    def __init__(self):
+        self.ctx2 = defaultdict(Counter)   # (a, b) -> Counter(next)
+        self.ctx1 = defaultdict(Counter)   # b -> Counter(next)
+        self.unigram = Counter()
+
+    def fit(self, launches):
+        for i, app in enumerate(launches):
+            self.unigram[app] += 1
+            if i >= 1:
+                self.ctx1[launches[i - 1]][app] += 1
+            if i >= 2:
+                self.ctx2[(launches[i - 2], launches[i - 1])][app] += 1
+        return self
+
+    @staticmethod
+    def _wb(counter, lower):
+        total = sum(counter.values())
+        distinct = len(counter)
+        if total == 0:
+            return lower
+        lam = total / (total + distinct)
+        apps = set(counter) | set(lower)
+        return {a: lam * counter[a] / total + (1 - lam) * lower.get(a, 0.0) for a in apps}
+
+    def predict(self, prev2, prev1, k=3):
+        total = sum(self.unigram.values()) or 1
+        p0 = {a: c / total for a, c in self.unigram.items()}
+        p1 = self._wb(self.ctx1.get(prev1, Counter()), p0)
+        p2 = self._wb(self.ctx2.get((prev2, prev1), Counter()), p1)
+        return [a for a, _ in sorted(p2.items(), key=lambda kv: (-kv[1], kv[0]))[:k]]
+
+
+def top_k_accuracy(launches, k=3, warmup=20):
+    model = SecondOrderModel()
+    hits = trials = 0
+    for i in range(len(launches)):
+        if i >= max(2, warmup):
+            trials += 1
+            hits += launches[i] in model.predict(launches[i - 2], launches[i - 1], k)
+        # learn from launch i only after predicting it (prequential)
+        model.unigram[launches[i]] += 1
+        if i >= 1:
+            model.ctx1[launches[i - 1]][launches[i]] += 1
+        if i >= 2:
+            model.ctx2[(launches[i - 2], launches[i - 1])][launches[i]] += 1
+    return hits / trials if trials else 0.0
+
+
+if __name__ == "__main__":
+    ap = argparse.ArgumentParser()
+    ap.add_argument("log")
+    ap.add_argument("--k", type=int, default=3)
+    args = ap.parse_args()
+    with open(args.log) as f:
+        launches = [line.strip() for line in f if line.strip()]
+    print(f"top-{args.k} accuracy (prequential): {top_k_accuracy(launches, args.k):.3f}")

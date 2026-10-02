@@ -1,0 +1,45 @@
+{
+  "regs": 1,
+  "offline": {
+    "reached": "login",
+    "ms": 580,
+    "controller": "http://localhost:4718/sw.js",
+    "text": "Wednesday, 30 September 2 0 : 5 5 D demo A alice B bob E examiner2 Guest Press Enter to sign in · Forgot password? Offline — using cached verifier Restart Shut Down Plotinium 0.1.0-dev.0 build 6df55c0",
+    "csp": [],
+    "errors": []
+  },
+  "verbose": {
+    "storageWarn": 0,
+    "predictorDown": 0,
+    "svcLine": "",
+    "warnLines": []
+  },
+  "recovery": {
+    "f": "fsck: checked 111 inodes, 110 entries, 97 blobs · 14 invariants [ 1.919] fsck: fsck: clean ↑ ↓ choose · Enter run · letter keys run directly · repairs are local-only until next login Check file system",
+    "l": " recovery: this boot: profile recovery · cold · flags url:recovery · outcome recovery [ 4.929] bootlog: bootlog: 1 boot records, newest first [ 4.929] bootlog: bootlog: #1 2026-09-30 15:55 · recovery · recovery · build 6df55c0 ↑ ↓ choose · Enter run · letter keys run directly · repairs are local-only until next login Boot log",
+    "m": "og: 1 boot records, newest first [ 4.929] bootlog: bootlog: #1 2026-09-30 15:55 · recovery · recovery · build 6df55c0 ↑ ↓ choose · Enter run · letter keys run directly · repairs are local-only until next login Restore default service manifests",
+    "s": "lt service manifests",
+    "y": "lt service manifests",
+    "c": "lt service manifests"
+  },
+  "autosafe": "Plotinium is starting dev build version 0.1.0-dev.0 · build 6df55c0 Loading kernel · 673 of 673 KB Starting kernel verbose boot [ 0.000] firmware: Plotinium 0.1.0-dev.0 · POST ok (workers, indexeddb, crypto, isolated) [ 0.057] loader: kernel image 673 KB Esc Boot menu V Verbose log auto-boot in 5 seconds Plotinium Boot Manager 0.1.0-dev.0 · 6df55c0 The last 2 boots failed. Safe mode is selected. Normal boot Start Plotinium and restore your session ▶ Safe mode No AI services · no autostart apps ·",
+  "recoveryCsp": [],
+  "recoveryErrors": [],
+  "slow": [
+    {
+      "run": 1,
+      "outcome": "login",
+      "ms": 3727
+    },
+    {
+      "run": 2,
+      "outcome": "login",
+      "ms": 3642
+    },
+    {
+      "run": 3,
+      "outcome": "login",
+      "ms": 3643
+    }
+  ]
+}

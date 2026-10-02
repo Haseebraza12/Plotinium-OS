@@ -1,0 +1,45 @@
+{
+ "files_changed": [
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/src/heap/index.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/src/heap/binary-heap.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/src/heap/priority-queue.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/src/heap/bounded-top-k.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/src/heap/README.md"
+ ],
+ "verification": [
+  {
+   "command": "pnpm exec tsc -p dsa/tsconfig.json --noEmit",
+   "outcome": "PASS (exit 0)"
+  },
+  {
+   "command": "pnpm exec vitest run --project dsa dsa/tests/heap.test.ts dsa/tests/heap.prop.test.ts dsa/tests/scaffold.test.ts",
+   "outcome": "PASS: 3 files passed. All 23 heap tests pass (20 edge-case tests and 3 fast-check properties at 1,000 runs). The scaffold suite still passes, and its heap row now skips itself because IMPLEMENTED = true."
+  },
+  {
+   "command": "PLT_PROP_RUNS=10000 pnpm exec vitest run --project dsa dsa/tests/heap.prop.test.ts --testTimeout=300000",
+   "outcome": "PASS: 3/3 properties at the nightly scale of 10,000 runs, about 31 s. Without --testTimeout, the model-based property hits Vitest's default 5 s per-test timeout at 10,000 runs. That is a timeout, not a counterexample (see problems)."
+  },
+  {
+   "command": "NODE_OPTIONS=--expose-gc pnpm exec vitest bench --run --project 'dsa (bench)' dsa/bench/heap.bench.ts",
+   "outcome": "PASS: 4/4 bench tests, including the three shape assertions (ratio \u2264 3) and the check that the baseline ratio exceeds the heap ratio. Run 3 times. The task's form `--project dsa` fails with 'No projects matched', because Vitest 5 names the bench project 'dsa (bench)', as harness.ts documents."
+  },
+  {
+   "command": "pnpm exec eslint dsa/src/heap dsa/tests dsa/bench --max-warnings 0",
+   "outcome": "PASS (exit 0, no warnings)"
+  },
+  {
+   "command": "pnpm exec prettier --check dsa/src/heap",
+   "outcome": "PASS: all heap source files and the README use Prettier style"
+  }
+ ],
+ "benchmark": "Dev machine: AMD Ryzen 5 7530U, Node v24.13.1, seed 42. These numbers must be re-run on the lab machine. Values are mean ns/op (p95), from the steadier second of two recorded runs; the first run agreed within 2\u00d7 and still carried JIT warm-up.\n\n- pop+push: 54.1 (78.4) at 10^3, 68.5 (82.3) at 10^4, 80.5 (107.9) at 10^5. Ratio 1.49, log-shaped (the ideal log2 ratio is about 1.67).\n- remove+push: 60.7, 81.7, 90.9. Ratio 1.50, log-shaped.\n- changePriority with a uniform random new key: 43.6, 35.1, 34.5. Ratio 0.79, flat. That is expected for random keys: the average move is O(1) levels and only the worst case walks log n levels. The README explains this.\n- push+pop in batches of 100: 25.1, 31.8, 41.8. Ratio 1.67.\n- Sorted-array baseline: 174, 1,306, 26,764. Ratio about 154, linear.\n- pop+push at the scheduler size n = 256: 52.4 ns.\n\nAll three shape ratios are \u2264 3. At 10^5 the absolute times are 34\u201391 ns, 11\u201329\u00d7 under the 1 \u00b5s budget.\n\nMemory in bytes/entry (measured \u0394(heapUsed + arrayBuffers) with --expose-gc, then allocated/used from stats()):\n- 10^3: 15.04 measured, 16.00/16.00\n- 10^4: 15.96 measured, 16.00/16.00\n- 10^5: 16.01 measured, 16.00/16.00\n\nThis matches the 16 B/entry target. dsa/src/heap/README.md records the full tables, an ASCII curve, the proofs and the filled-in DSA.md entry.",
+ "problems": [
+  "AI_USAGE.md (root; outside my edit scope) still says the dsa/ implementations are 'Written only by the team' (line 26) and 'written by their owners' (line 9). The 2026-09-25 decision that Claude writes these structures has not been disclosed there yet. For academic integrity, the coordinator must add that entry. My README's DSA.md template points to it.",
+  "The heap README's step 4 asks the first structure to flip its flag to add 'dsa' to GATED_PACKAGES in the root vitest.config.ts, and to commit a benchmark JSON run to docs/evidence/dsa/heap/. Both are outside my allowed files, so I did neither. The coordinator should do them: run with PLT_BENCH_OUT=docs/evidence/dsa. DSA.md (root) still says 'not implemented' for S3; paste in the filled entry from dsa/src/heap/README.md.",
+  "At the nightly scale PLT_PROP_RUNS=10000, the model-based heap property takes about 25 s. That is more than Vitest's default 5 s testTimeout, so the nightly job needs --testTimeout, or a timeout in the shared PROP/test config. With a longer timeout it passes. The per-PR default of 1,000 runs takes about 1.7 s. This probably affects the other structures' property tests too. I did not change any test.",
+  "The task's bench command `vitest bench --run --project dsa` fails with 'No projects matched'. The working form is `--project 'dsa (bench)'`, as documented in dsa/bench/harness.ts.",
+  "The DSA.md template's 'Written by' field still has placeholders for the R1 owner's name and the PR number, for the owner to fill in.",
+  "Design choices beyond the contract text:\n- BinaryHeap's constructor throws RANGE for a non-integer or negative initialCapacity; 0 is allowed and allocates 1 slot.\n- push and replaceTop throw RANGE for handles above 2^31 \u2212 1 (int32 storage).\n- BoundedTopKHeap.offer throws RANGE for a handle that is not a safe integer \u2265 0. It does not check that caller ids are distinct, because that would need memory beyond O(k).\n- checkInvariants throws DsaError code INVALID with the invariant id in the message.\n- debugCorrupt('index-map') throws INVALID when the heap has fewer than 2 entries."
+ ],
+ "test_changes": "None. No test or bench file was modified, and the existing suite passes unchanged."
+}

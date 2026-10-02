@@ -1,0 +1,196 @@
+/* Predictions aside (task-manager-memory, right column): an accent-tinted glass card. */
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pl-space-2);
+  min-width: 0;
+  padding: var(--pl-space-3);
+  border-radius: var(--pl-radius-lg);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--pl-accent) 16%, transparent),
+    color-mix(in srgb, var(--pl-accent) 6%, transparent)
+  );
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pl-accent) 38%, transparent);
+}
+.head {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--pl-space-2);
+}
+.title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pl-space-2);
+  margin: 0;
+  font: var(--pl-type-headline);
+  font-size: var(--pl-text-lg);
+}
+.titleIcon {
+  color: var(--pl-accent-text);
+}
+.modelChip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pl-space-1);
+  height: var(--pl-badge-h);
+  padding: 0 var(--pl-space-2);
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-accent-subtle);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pl-accent-text) 45%, transparent);
+  /* The chip sits on the panel's accent tint too: pull its text towards --pl-text (UI-145). */
+  color: color-mix(in srgb, var(--pl-accent-text) 78%, var(--pl-text));
+  font: var(--pl-type-caption);
+  font-weight: var(--pl-weight-semibold);
+}
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pl-space-2);
+}
+.caption {
+  margin: 0;
+  font: var(--pl-type-section);
+  letter-spacing: var(--pl-tracking-caps);
+  text-transform: uppercase;
+  color: var(--pl-text-muted);
+}
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pl-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--pl-space-2);
+  animation: pl-pred-in calc(260ms * var(--pl-k)) var(--pl-ease-spring) both;
+  animation-delay: calc(var(--pl-stagger-index, 0) * 40ms * var(--pl-k));
+}
+@keyframes pl-pred-in {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+}
+.appIcon {
+  flex: none;
+}
+.rowMain {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pl-space-1);
+  min-width: 0;
+}
+.rowName {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pl-space-2);
+  font: var(--pl-type-callout);
+}
+.prefetched {
+  padding: 1px var(--pl-space-1);
+  border-radius: var(--pl-radius-xs);
+  background: var(--pl-warning-subtle);
+  color: var(--pl-warning);
+  font-size: calc(var(--pl-text-xs) - 2px);
+  font-weight: var(--pl-weight-bold);
+  letter-spacing: var(--pl-tracking-caps);
+  text-transform: uppercase;
+}
+.meter {
+  display: block;
+  height: var(--pl-progress-h-sm);
+  overflow: hidden;
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-progress-track);
+}
+.fill {
+  --pl-fill: 0;
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--pl-accent);
+  transform: scaleX(var(--pl-fill));
+  transform-origin: left center;
+  transition: transform calc(420ms * var(--pl-k)) var(--pl-ease-spring);
+}
+.pct {
+  min-width: var(--pl-space-8);
+  text-align: end;
+  font: var(--pl-type-headline);
+  font-variant-numeric: tabular-nums;
+}
+.reason {
+  margin: 0;
+  padding: var(--pl-space-2) var(--pl-space-3);
+  border-radius: var(--pl-radius-sm);
+  background: var(--pl-control-bg);
+  box-shadow: inset 0 0 0 var(--pl-hairline-width) var(--pl-hairline);
+  font: var(--pl-type-mono);
+  font-size: var(--pl-text-xs);
+  color: var(--pl-text-muted);
+}
+.reasonLabel {
+  font-family: var(--pl-font-ui);
+  color: var(--pl-text);
+}
+.facts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pl-space-1);
+  margin: 0;
+  font: var(--pl-type-caption);
+}
+.facts > div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--pl-space-2);
+}
+.facts dt {
+  color: var(--pl-text-muted);
+}
+.facts dd {
+  margin: 0;
+  font-weight: var(--pl-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+.state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--pl-space-2);
+}
+.stateTitle {
+  margin: 0;
+  font: var(--pl-type-headline);
+}
+.stateText {
+  margin: 0;
+  font: var(--pl-type-caption);
+  color: var(--pl-text-muted);
+}
+.state .meter {
+  width: 100%;
+}
+.foot {
+  display: flex;
+  align-items: center;
+  gap: var(--pl-space-1);
+  margin: auto 0 0;
+  font: var(--pl-type-caption);
+  color: var(--pl-text-tertiary);
+}
+@media (prefers-reduced-motion: reduce) {
+  .row {
+    animation: none;
+  }
+  .fill {
+    transition: none;
+  }
+}

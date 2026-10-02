@@ -1,0 +1,162 @@
+/*
+ * Demo app views for the dev harness only (the real views live in apps/ and reach the shell
+ * through the host's registry). Tokens only, so they follow both themes.
+ */
+@layer apps {
+  .split {
+    display: grid;
+    grid-template-columns: var(--pl-sidebar-w) minmax(0, 1fr);
+    height: 100%;
+    min-height: 0;
+  }
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    padding: calc(var(--pl-toolbar-h) + var(--pl-space-1)) var(--pl-space-2) var(--pl-space-2);
+    border-right: var(--pl-hairline-width) solid var(--pl-hairline);
+    background: var(--pl-glass-sidebar-bg);
+  }
+  .sidebar > * {
+    flex: 1 1 auto;
+  }
+  .main {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+  }
+  /* UI-091: were static style={{…}} literals, which Solid inlines into the template (CSP). */
+  .fill {
+    height: 100%;
+  }
+  .nameCell {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--pl-space-2);
+  }
+  .toolbar {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: var(--pl-space-3);
+    height: var(--pl-toolbar-h);
+    padding: 0 var(--pl-space-4);
+    border-bottom: var(--pl-hairline-width) solid var(--pl-hairline);
+  }
+  .toolbarPad {
+    padding-left: calc(var(--pl-space-5) + var(--pl-target-min) * 3 + var(--pl-space-4));
+  }
+  .crumb {
+    display: grid;
+    min-width: 0;
+  }
+  .crumbTitle {
+    font: var(--pl-type-headline);
+    white-space: nowrap;
+  }
+  .crumbPath {
+    overflow: hidden;
+    color: var(--pl-text-muted);
+    font: var(--pl-type-caption);
+    font-family: var(--pl-font-mono);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .spacer {
+    flex: 1 1 auto;
+  }
+  .scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    padding: var(--pl-space-2);
+  }
+  .status {
+    display: flex;
+    flex: none;
+    gap: var(--pl-space-2);
+    padding: var(--pl-space-2) var(--pl-space-4);
+    border-top: var(--pl-hairline-width) solid var(--pl-hairline);
+    color: var(--pl-text-muted);
+    font: var(--pl-type-caption);
+  }
+  .ok {
+    color: var(--pl-success);
+  }
+  .term {
+    height: 100%;
+    margin: 0;
+    padding: var(--pl-space-3) var(--pl-space-4);
+    overflow: auto;
+    background: var(--pl-surface);
+    color: var(--pl-text);
+    font: var(--pl-type-mono);
+    white-space: pre;
+  }
+  .prompt {
+    color: var(--pl-accent-text);
+  }
+  .muted {
+    color: var(--pl-text-muted);
+  }
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--pl-space-3);
+    padding: var(--pl-space-3) var(--pl-space-4) 0;
+  }
+  .card {
+    display: grid;
+    gap: var(--pl-space-1);
+    padding: var(--pl-space-3);
+    border: var(--pl-hairline-width) solid var(--pl-hairline);
+    border-radius: var(--pl-radius-md);
+    background: var(--pl-glass-card-bg);
+  }
+  .cardLabel {
+    color: var(--pl-text-muted);
+    font: var(--pl-type-caption);
+    letter-spacing: var(--pl-tracking-caps);
+    text-transform: uppercase;
+  }
+  .cardValue {
+    font: var(--pl-type-title);
+  }
+  .editor {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    height: 100%;
+  }
+  .code {
+    margin: 0;
+    padding: var(--pl-space-3) var(--pl-space-4);
+    overflow: auto;
+    border-right: var(--pl-hairline-width) solid var(--pl-hairline);
+    font: var(--pl-type-mono);
+    white-space: pre-wrap;
+  }
+  .preview {
+    padding: var(--pl-space-3) var(--pl-space-5);
+    overflow: auto;
+  }
+  .about {
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    gap: var(--pl-space-2);
+    height: 100%;
+    padding: var(--pl-space-6);
+    text-align: center;
+  }
+  .aboutTitle {
+    margin: 0;
+    font: var(--pl-type-large-title);
+  }
+  .pane {
+    display: grid;
+    align-content: start;
+    gap: var(--pl-space-3);
+    padding: calc(var(--pl-toolbar-h) + var(--pl-space-1)) var(--pl-space-5) var(--pl-space-5);
+  }
+}

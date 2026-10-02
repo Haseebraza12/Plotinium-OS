@@ -1,0 +1,15 @@
+# Design review: window manager — 30 Oct 2026
+
+Bob walked through the compositor.
+
+- Windows move with transforms during interaction; layout properties are written once at the end.
+- Pointer capture is used on title bars, which fixed the problem where fast drags lost the window.
+- Focus and z-order are one ordered list; clicking moves the window to the end.
+- The dock uses a single rAF loop for magnification instead of one per icon.
+
+Review comments:
+- Dan: the compositor should not import any app code (boundary rule) — agreed.
+- Esha: add a frame-time assertion to the e2e drag test (p95 ≤ 16.7 ms).
+- Alice: Exposé thumbnails should be static snapshots, not live DOM clones, to save memory.
+
+Outcome: approved with the two follow-ups.

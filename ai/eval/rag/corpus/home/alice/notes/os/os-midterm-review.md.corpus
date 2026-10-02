@@ -1,0 +1,17 @@
+# OS midterm review (everything in one place)
+
+**Processes:** states, PCB, fork/exec/wait, zombies and orphans.
+
+**Threads:** what is shared, user vs kernel threads.
+
+**Scheduling:** FCFS, SJF (optimal average waiting time for a known set), SRTF, RR (quantum vs context switch overhead), priority with aging, MLFQ rules. Practise Gantt charts; waiting time = turnaround − burst.
+
+**Synchronisation:** race conditions, critical section requirements, Peterson, test-and-set, semaphores, monitors, bounded buffer, readers–writers, dining philosophers.
+
+**Deadlock:** the four necessary conditions, resource allocation graphs, Banker's safety algorithm, recovery.
+
+**Memory:** paging, TLB effective access time, multi-level tables, segmentation.
+
+Weak spots for me: SRTF when two jobs arrive at the same time (tie → FCFS), and forgetting that RR with a huge quantum is FCFS.
+
+Formula sheet allowed: one A4 page, handwritten. Exam is Monday 9 am, room 204.

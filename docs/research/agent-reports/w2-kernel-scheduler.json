@@ -1,0 +1,66 @@
+{
+ "files_changed": [
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/sched/params.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/sched/types.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/sched/control-block.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/sched/timers.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/sched/interactive.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/sched/tokens.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/sched/placement.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/sched/sections.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/sched/bound.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/sched/watchdog.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/sched/scheduler.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/sched/kill.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/sched/index.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/sched/tests/model-heap.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/sched/tests/sim.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/sched/starvation.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/sched/scheduler.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/sched/placement.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/sched/watchdog.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/sched/kill.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/sched/timers.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/sched/interactive.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/sched/control-block.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/kernel/src/core/sched/params.test.ts"
+ ],
+ "verification": [
+  {
+   "command": "pnpm exec vitest run --project kernel src/core/sched",
+   "outcome": "PASS: 9 files, 91 tests, 0 skipped. The 2 tests gated on dsa/heap IMPLEMENTED also ran against the real BinaryHeap and passed."
+  },
+  {
+   "command": "pnpm exec vitest run --project kernel src/core/sched/starvation -t \"declared 5450\" --reporter=verbose",
+   "outcome": "PASS. Logged: N=51, RUN_TOKENS=2, 23,089 slices, 0 slices longer than L=21 ms, max W(P)=4004 ms. The spec predicts 3900..4021 ms and the declared bound is 5450 ms. The corollary run (N=6, E=2, all exclusive) stays within 4463 ms."
+  },
+  {
+   "command": "pnpm exec eslint kernel/src/core/sched --max-warnings 0",
+   "outcome": "PASS (exit 0, no warnings)"
+  },
+  {
+   "command": "pnpm exec tsc -p kernel/tsconfig.json --noEmit",
+   "outcome": "0 errors in kernel/src/core/sched. There are 6 errors in other agents' in-progress files (kernel/src/blkio/compress.ts, kernel/src/core/mm/{codec,remote,swap}.test.ts). They are unrelated and do not block this work."
+  },
+  {
+   "command": "pnpm exec vitest run --project kernel src/core/sched --coverage --coverage.include='**/core/sched/**'",
+   "outcome": "Production files: 98.5% lines, 88.6% branches, 98.1% functions. Every module is at 100% lines except scheduler.ts at 98.9%. This is above the 85% target."
+  }
+ ],
+ "problems": [
+  "dsa/src/heap, hashtable, bloom and zorder now have IMPLEMENTED = true, which goes against the DSA rule (spec \u00a710.2) given to agents that these bodies stay TODO for the team. Another workflow changed them, not this one. My production code only codes against the IndexedMinHeap interface, and my tests use a test-only linear-scan double (tests/model-heap.ts). The two describe.runIf(HEAP_READY) tests now run against the real heap and pass.",
+  "The assignment says the watchdog limit is max(20*quantum, 250 ms). specs/03-kernel/processes-and-scheduling.md \u00a73.1 fixes HARD_LIMIT_MS = max(250, 10\u00d7Q), which is 250 ms by default, and explicitly rejects max(20\u00d7quantum, 250) because it would break H_kill = 400. I implemented the spec.",
+  "The spec is inconsistent on the placement-failure reason: processes-and-scheduling.md \u00a73.14/\u00a74.5 says EAGAIN 'no-executor', but the ABI (which wins on errnos and reasons) registers 'executors-exhausted'. I used 'executors-exhausted'.",
+  "The seq renumber threshold also differs between specs: processes \u00a73.8 says 'when the counter would pass 2^32\u22121', while the data-structures \u00a79.3 cross-request says 2^32\u22122^20. I implemented the processes-spec rule (it owns process semantics)."
+ ],
+ "integration_notes": "All code is in kernel/src/core/sched (barrel: index.ts). It is pure: it receives `now` and does its side effects through injected interfaces.\n\n1) SchedulableProcess \u2194 PCB. The field names are exactly the PCB's in kernel/src/core/proc/pcb.ts: pid, isolation, state, priority, nice, base, effPrio, band, boosted, preemptRequested, seq, cpuTimeMs, lastRunAt, waitingSince, sliceStartedAt, slices, overruns, maxStepUs, worker, exclusive, checkpointable. The PCB satisfies it with no adapter; scheduler.test.ts has a compile-time check `(p: PCB): SchedulableProcess => p`. ProcLookup is `{get(pid)}`, so the proc table/PidTable plugs in directly.\n\n2) SchedHost, to be implemented by the kernel host/executor layer:\n- dispatch(e, p, sliceSeq, quantumMs): post {t:'dispatch', pid, sliceSeq, quantumMs, reply: p.pendingReply, pendingSigs}, clear pendingReply, and call writeSliceSeq(ctl[e], sliceSeq).\n- setPreempt(e, level): call control-block setPreempt(ctl, level), or send {t:'preempt', level} without SAB. The executor must never downgrade 2\u21921.\n- transition(p, from, to, reason, now): klog + proc.state event ONLY. The scheduler has already set p.state. Its edges (NEW/RUNNING/BLOCKED/SUSPENDED\u2192READY, READY\u2192RUNNING) are all allowed by proc/lifecycle.ts.\n\n3) Executor frame handling. On every frame:\n- Call sched.checkFrame(e, pid, sliceSeq). 'stale': ignore the frame. 'mismatch': reply ESRCH, write the security audit 'identity-mismatch', then SuspectTracker.mismatch(e). 'suspect' sets CTL_FLAG.SUSPECT; 'terminate' calls killPath.terminateExecutor(e, now, restorable, 'identity-mismatch') and then pool.respawn.\n- yield \u2192 sched.onSliceEnd(e, 'yield', {cpuMs, steps, maxStepUs}, now).\n- F syscall \u2192 dispatcher.handle, then sched.onFastCall(e, report, now). 'resume': post {t:'resume', sliceSeq, quantumLeftMs}. 'requeue': store the reply in pendingReply, unless killPending, in which case discard it.\n- T/B/X/R syscall \u2192 onSliceEnd(e, 'block'), then proc block(waitingOn), then dispatcher.handle.\n- exit \u2192 onSliceEnd(e, 'exit'), then the exit path and pool.evict.\n- killed \u2192 onSliceEnd(e, 'killed'), then killPath.finish(pid) if res.killPending, else killPath.finishWatchdogKill(p).\n- error \u2192 onSliceEnd(e, 'error'), then exit 1 'crash'.\n- Always call watchdog.clear(e) when a slice ends. If res.killPending, call killPath.finish(pid).\n- If res.overrun: pool.onOverrun(p, desktopInteractive); for any result other than 'none', set p.exclusive = true; for 'migrate', checkpoint with release and then pool.move.\n\n4) Timers (KPS-13):\n- timers = new TimerHeap(defaultHeapFactory). Set timers.onEarliestChange = re-arm the ONE platform setTimeout, whose callback calls timers.runDue(now).\n- Call sched.attachTimers(timers, now); this arms the aging tick and the interactive-pause boundaries.\n- Arm a periodic watchdog timer (WATCHDOG_PERIOD_MS) that runs watchdog.check(now, sched.runningSlices(), e => ctl[e] ?? null). Handle its actions: 'preempt-kill' \u2192 sched.preemptKill(e) plus the klog watchdog record {pid, sliceMs, steps, maxStepUs}. 'terminate' \u2192 worker.terminate(), then killPath.terminateExecutor(e, now, restorable, 'watchdog'), then pool.respawn(e, isolation, now) and suspects.reset(e).\n- A realm 'error' event \u2192 terminateExecutor(e, now, restorable, 'crash').\n- `restorable` should be isRestorable({checkpointable, checkpointAfterLastSlice, dirtyPagesSwapped, pendingCallRestartable}) using mm/proc facts.\n- Sleep, close-grace, service and lease timers should use timers.arm(deadline, fn, {pid}) so that the kill path's timers.cancelAllOf(pid) covers them.\n\n5) Admission: call pool.startFirst(0) at stage 3. For each admission, call pool.placeProcess(p, now, desktopInteractive). On 'fail', spawn returns EAGAIN with reason 'executors-exhausted'. Otherwise the host performs the named worker op (existing, bind-spare, spawn, or recycle = terminate + fresh worker). If pool.needsSpare(), start a spare worker and call pool.spawnSpare. Then call sched.makeReady(p, 'admit', now). Wake, cont and page-in also go through sched.makeReady.\n\n6) RUN_TOKENS: keep EmbedActivity (setResident/jobRan). When currentRunTokens(hwc, embed, now) changes, call sched.setRunTokens; arm a timer at embed.nextChangeAt.\n\n7) Router, compositor and sysctl:\n- input {wid} \u2192 sched.onInput(pid, now).\n- interactive {active} \u2192 sched.setInteractive(active, now).\n- Focus change \u2192 sched.setPriority(old, {boosted: false}) and sched.setPriority(new, {boosted: true}), plus pool.focus(p, desktopInteractive) to migrate.\n- setpriority/renice \u2192 sched.setPriority(p, {nice or priority}, now).\n- sysctl.set \u2192 applySysctl(params, key, value); on success call sched.setParams and watchdog.setParams.\n- Idle (PRE-04) \u2192 a periodic check calls hooks.scheduler.onIdle(sched.idleMs(now)) when sched.isIdle(now).\n\n8) Kill path. KillHooks is implemented by the owning modules:\n- proc: audit, reparentChildren, zombie, log (the lifecycle record), suspendLost (SUSPENDED 'executor-lost').\n- mm: leaveWaitQueues, freeMemory.\n- vfs: closeFds.\n- lockd: releaseLocks.\n- wm: closeWindows.\n- executor host: dropResident (post {t:'drop'}).\n- cancelPendingCall drops B/R call ids. T/X kernel sections go through NonPreemptiveSections.begin/end; `end` returns discardReply. Pass nonPreemptible: pid => sections.isOpen(pid) to the Scheduler.\n- The `kill` syscall calls killPath.begin(p, `signal:${n}`, callerPid, now).\n\n9) `sched` command: `sched bound` = formatBound(boundInputFromParams(params, p, n, e), exclusive); `sched.info` uses pool.info(e => sched.sliceOf(e)?.pid ?? null) plus the scheduler counters.\n\n10) TODO(protocol):\n- TransitionReason and ExitReason are declared locally in sched/types.ts. proc/lifecycle.ts duplicates TransitionReason. Both should move to protocol/src/proc/records.ts (spec \u00a74.6).\n- CTL slot constants (spec \u00a74.3, protocol/src/host/executor.ts) are defined in sched/control-block.ts. Protocol should export CTL and control-block.ts should import it.\n\n11) Spec edits requested:\n- processes \u00a73.14/\u00a74.5/\u00a76: use 'executors-exhausted' instead of 'no-executor'.\n- processes \u00a73.15/\u00a76: record the realm-crash rule. The running process on a crashed realm exits 137 'collateral', not 'watchdog'; that is how terminateExecutor's cause parameter behaves.\n- processes \u00a73.15.1: record the SAB hardening 'lost-slice'. A slice whose block never shows its pid and that sends no frame for HARD_LIMIT+KILL_GRACE+2\u00b7WATCHDOG_PERIOD is terminated.\n- vitest.config.ts: kernel can be added to GATED_PACKAGES for its 85% gate.",
+ "deps_requested": [],
+ "todos_for_team": [
+  "R1: review kernel/src/core/sched and wire it into the kernel host per integration_notes items 2\u20139 (executor frame handler, timer heap and platform timer, watchdog tick, placement at spawn, run-token recomputation, router hints, KillHooks implementations).",
+  "R1/R5: add the real-executor perf versions tests/performance/sched/starvation.spec.ts (spec \u00a73.12.5) and the PROC-05 browser placement test. The unit-level virtual-clock simulations here already assert the same declared values (5450 ms; 4463 ms for E=2).",
+  "R1 (spec \u00a79.1 Q3): measure \u03b4 (dispatch overhead p99) on the lab machine; if it exceeds 0.5 ms, raise DELTA_MS in params.ts and the declared values.",
+  "Protocol owner: add TransitionReason, ExitReason and CTL to protocol, then switch sched/types.ts, sched/control-block.ts and proc/lifecycle.ts to import them.",
+  "Spec owners: reconcile 'no-executor' vs 'executors-exhausted', the realm-crash exit reason, the seq-renumber threshold (processes \u00a73.8 vs dsa \u00a79.3), and the assignment's max(20\u00d7quantum, 250) vs the spec's max(250, 10\u00d7Q).",
+  "Orchestrator: dsa heap, hashtable, bloom and zorder were flipped to IMPLEMENTED = true by another workflow, which conflicts with the 'DSA bodies stay TODO for the team' rule. Decide whether to keep or revert."
+ ]
+}

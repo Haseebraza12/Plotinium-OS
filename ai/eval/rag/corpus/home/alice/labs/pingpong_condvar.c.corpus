@@ -1,0 +1,38 @@
+/* Lab 5, part B: two threads print "ping" and "pong" strictly alternately, 10 times each.
+ * A shared turn variable + one mutex + one pthread condition; each thread sleeps until it is
+ * its turn instead of spinning.
+ * build: gcc -Wall -pthread pingpong_condvar.c -o pingpong
+ */
+#include <pthread.h>
+#include <stdio.h>
+
+#define ROUNDS 10
+
+static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t changed = PTHREAD_COND_INITIALIZER;
+static int turn = 0; /* 0 = ping's turn, 1 = pong's turn */
+
+static void *player(void *arg) {
+    int me = *(int *)arg;
+    const char *word = me == 0 ? "ping" : "pong";
+    for (int i = 0; i < ROUNDS; i++) {
+        pthread_mutex_lock(&lock);
+        while (turn != me)                  /* re-check after every wakeup */
+            pthread_cond_wait(&changed, &lock);
+        printf("%s %d\n", word, i);
+        turn = 1 - me;
+        pthread_cond_broadcast(&changed);   /* wake the other player */
+        pthread_mutex_unlock(&lock);
+    }
+    return NULL;
+}
+
+int main(void) {
+    pthread_t a, b;
+    int ida = 0, idb = 1;
+    pthread_create(&a, NULL, player, &ida);
+    pthread_create(&b, NULL, player, &idb);
+    pthread_join(a, NULL);
+    pthread_join(b, NULL);
+    return 0;
+}

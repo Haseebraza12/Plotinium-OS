@@ -1,0 +1,11 @@
+{
+  "name": "vfs",
+  "description": "Root, home and cwd loaded lazily; quick invariants checked; /tmp cleared",
+  "requires": ["storage"],
+  "critical": true,
+  "weight": 5,
+  "timeoutMs": 3000,
+  "priority": 4,
+  "safeMode": true,
+  "recovery": true
+}

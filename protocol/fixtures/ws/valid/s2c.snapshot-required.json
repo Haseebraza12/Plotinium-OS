@@ -1,0 +1,11 @@
+{
+  "v": 1,
+  "t": "snapshot.required",
+  "id": 9,
+  "body": {
+    "ownerUid": 1002,
+    "reason": "horizon",
+    "headSeq": 900,
+    "url": "/api/sync/snapshot?scope=owner&owner=1002"
+  }
+}

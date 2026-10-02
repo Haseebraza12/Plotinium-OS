@@ -1,0 +1,24 @@
+# Journaling file systems
+
+Problem: updating a file touches several blocks (data, inode, bitmap). A crash between writes leaves the disk inconsistent. `fsck` scanned the whole disk to repair it, which took hours on big disks.
+
+## Journaling
+
+Before touching the real locations, write a description of the update to a journal:
+1. write TxBegin + the blocks + TxEnd;
+2. once the transaction is safely in the journal, **checkpoint**: write the blocks to their final locations;
+3. free the journal space.
+
+On reboot, replay committed transactions; ignore incomplete ones.
+
+## Modes (ext4)
+
+- `journal`: data and metadata go through the journal (safe, slow, everything written twice).
+- `ordered` (default): only metadata is journalled, but data blocks are forced to disk before the metadata commit, so an inode never points at garbage.
+- `writeback`: metadata only, no ordering; a crash can expose old data in a file.
+
+## Alternatives
+
+Copy-on-write file systems (ZFS, Btrfs) never overwrite live blocks; the new tree becomes visible with one atomic root pointer switch. Log-structured file systems write everything sequentially.
+
+Compare with databases: the same "describe the change first, apply later" principle.

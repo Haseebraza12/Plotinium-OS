@@ -1,0 +1,19 @@
+{
+  "name": "@plotinium/protocol",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Valibot schemas for syscalls, errno, events, WebSocket protocol v1, op log and agent tools; ABI_VERSION; well-known inode UUIDs. Pure: no DOM, no Node.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json && tsc -p tests/tsconfig.json",
+    "test": "vitest run --root .. --project protocol"
+  },
+  "dependencies": {
+    "valibot": "catalog:"
+  }
+}

@@ -1,0 +1,378 @@
+{
+  "set": "rag-queries@v1",
+  "corpus": "rag-corpus@v1",
+  "user": "alice",
+  "grading": "relevant = grade 2 (the query is about this file; Recall@5 and MRR use these); partial = grade 1 (related, answers part of it; used by nDCG@10 only). Every other file is grade 0.",
+  "queries": [
+    {
+      "id": "RQ01",
+      "query": "find the document where I discussed the memory leak in the UI component",
+      "kind": "paraphrase",
+      "author": "agent:rag-eval-corpus",
+      "relevant": ["/home/alice/capstone/reports/dock-hover-retention.md"],
+      "partial": [
+        "/home/alice/capstone/meetings/2026-10-09-weekly-sync.md",
+        "/home/alice/capstone/meetings/2026-10-16-weekly-sync.md",
+        "/home/alice/capstone/reports/terminal-scrollback-growth.md",
+        "/home/alice/capstone/src/dock-magnify.ts",
+        "/home/bob/meetings/2026-10-09-sync-bob-notes.md"
+      ]
+    },
+    {
+      "id": "RQ02",
+      "query": "how can a background thread holding a mutex make the most important thread miss its deadline?",
+      "kind": "question",
+      "author": "agent:rag-eval-corpus",
+      "relevant": [
+        "/home/alice/notes/os/priority-inversion.md",
+        "/home/alice/notes/os/priority-inversion-draft.txt"
+      ],
+      "partial": [
+        "/home/alice/notes/os/rtos-notes.txt",
+        "/home/alice/notes/os/mutex-vs-semaphore.md"
+      ]
+    },
+    {
+      "id": "RQ03",
+      "query": "how the kernel chooses what to kick out of physical memory when there is no room left",
+      "kind": "paraphrase",
+      "author": "agent:rag-eval-corpus",
+      "relevant": ["/home/alice/notes/os/page-replacement.md"],
+      "partial": ["/home/alice/labs/clock-sim.py", "/home/alice/labs/lru_sim.c"]
+    },
+    {
+      "id": "RQ04",
+      "query": "the C program where two threads take turns using a condition variable",
+      "kind": "code",
+      "author": "agent:rag-eval-corpus",
+      "relevant": ["/home/alice/labs/pingpong_condvar.c"],
+      "partial": [
+        "/home/alice/labs/pingpong_busywait.c",
+        "/home/alice/labs/bounded_buffer.c",
+        "/home/alice/notes/os/condition-variables.md"
+      ]
+    },
+    {
+      "id": "RQ05",
+      "query": "which vector model did the team settle on for search, and what is the backup plan?",
+      "kind": "question",
+      "author": "agent:rag-eval-corpus",
+      "relevant": [
+        "/home/alice/capstone/meetings/2026-09-18-model-bakeoff.md",
+        "/home/alice/capstone/reports/embedding-decision.md"
+      ],
+      "partial": ["/home/alice/notes/capstone/stack-decision-summary.md"]
+    },
+    {
+      "id": "RQ06",
+      "query": "my grandmother's recipe for the lentil soup",
+      "kind": "paraphrase",
+      "author": "agent:rag-eval-corpus",
+      "relevant": ["/home/alice/personal/recipes/masoor-daal.md"],
+      "partial": ["/home/alice/personal/recipes/masoor-daal-quick.md"]
+    },
+    {
+      "id": "RQ07",
+      "query": "what I have to buy for the seven-year-old's celebration",
+      "kind": "paraphrase",
+      "author": "agent:rag-eval-corpus",
+      "relevant": ["/home/alice/personal/party-supplies.txt"],
+      "partial": ["/home/alice/personal/party-supplies-last-year.txt"]
+    },
+    {
+      "id": "RQ08",
+      "query": "preventing duplicate OS instances when the user has the site open in several windows",
+      "kind": "question",
+      "author": "agent:rag-eval-corpus",
+      "relevant": ["/home/alice/notes/capstone/single-kernel-per-origin.md"],
+      "partial": []
+    },
+    {
+      "id": "RQ09",
+      "query": "summary of the meeting where the team split up the work for the first sprint",
+      "kind": "paraphrase",
+      "author": "agent:rag-eval-corpus",
+      "relevant": [
+        "/home/alice/capstone/meetings/2026-09-04-kickoff.md",
+        "/home/alice/capstone/meetings/2026-09-04-kickoff-whatsapp-recap.txt"
+      ],
+      "partial": ["/home/alice/capstone/reports/sprint1-plan.md"]
+    },
+    {
+      "id": "RQ10",
+      "query": "python script that counts how often each word appears in a text file",
+      "kind": "code",
+      "author": "agent:rag-eval-corpus",
+      "relevant": ["/home/alice/labs/word_freq.py", "/home/alice/labs/word_freq_v2.py"],
+      "partial": []
+    },
+    {
+      "id": "RQ11",
+      "query": "the space-saving lookup trick that sometimes lies about having seen something but never about not having seen it",
+      "kind": "paraphrase",
+      "author": "agent:rag-eval-corpus",
+      "relevant": ["/home/alice/notes/dsa/bloom-filters.md"],
+      "partial": ["/home/alice/capstone/src/bloom.ts"]
+    },
+    {
+      "id": "RQ12",
+      "query": "what has to be true at the same time for a group of programs to freeze up waiting on one another?",
+      "kind": "question",
+      "author": "agent:rag-eval-corpus",
+      "relevant": ["/home/alice/notes/os/deadlock.md"],
+      "partial": [
+        "/home/bob/notes/deadlock-summary.md",
+        "/home/alice/notes/os/os-midterm-review.md",
+        "/home/alice/notes/os/dining-philosophers.md",
+        "/home/alice/notes/os/deadlock-avoidance-bankers.md"
+      ]
+    },
+    {
+      "id": "RQ13",
+      "query": "what the repair shop said was wrong with the car in August",
+      "kind": "paraphrase",
+      "author": "agent:rag-eval-corpus",
+      "relevant": ["/home/alice/personal/car/service-2026-08.md"],
+      "partial": ["/home/alice/personal/budget-2026-08.md"]
+    },
+    {
+      "id": "RQ14",
+      "query": "TypeScript function that debounces calls so autosave doesn't fire on every keystroke",
+      "kind": "code",
+      "author": "agent:rag-eval-corpus",
+      "relevant": ["/home/alice/capstone/src/debounce.ts"],
+      "partial": ["/home/alice/capstone/src/throttle.ts"]
+    },
+    {
+      "id": "RQ15",
+      "query": "how does the database get back to a consistent state after the power goes out in the middle of a transaction?",
+      "kind": "question",
+      "author": "agent:rag-eval-corpus",
+      "relevant": ["/home/alice/notes/db/wal-and-recovery.md"],
+      "partial": [
+        "/home/carol/notes/wal-summary.md",
+        "/home/alice/notes/os/journaling-filesystems.md"
+      ]
+    },
+    {
+      "id": "RQ16",
+      "query": "notes comparing ways to hand out CPU time fairly in proportion to shares",
+      "kind": "paraphrase",
+      "author": "agent:rag-eval-corpus",
+      "relevant": ["/home/alice/notes/os/lottery-and-stride-scheduling.md"],
+      "partial": ["/home/alice/notes/os/cfs-notes.md"]
+    },
+    {
+      "id": "RQ17",
+      "query": "which of my pots can go a fortnight without a drink?",
+      "kind": "question",
+      "author": "agent:rag-eval-corpus",
+      "relevant": ["/home/alice/personal/plants/snake-plant-care.txt"],
+      "partial": ["/home/alice/personal/plants/watering-schedule.md"]
+    },
+    {
+      "id": "RQ18",
+      "query": "bug report about the window jumping around when you drag it quickly",
+      "kind": "paraphrase",
+      "author": "agent:rag-eval-corpus",
+      "relevant": ["/home/alice/capstone/reports/window-drag-jitter.md"],
+      "partial": [
+        "/home/alice/capstone/meetings/2026-10-30-design-review-wm.md",
+        "/home/alice/notes/capstone/window-manager-ideas.md"
+      ]
+    },
+    {
+      "id": "RQ19",
+      "query": "C code for a program that makes a child process and waits for it to finish",
+      "kind": "code",
+      "author": "agent:rag-eval-corpus",
+      "relevant": ["/home/alice/labs/fork_wait.c"],
+      "partial": [
+        "/home/alice/labs/fork_exec_pipe.c",
+        "/home/alice/labs/shell_mini.c",
+        "/home/alice/notes/os/process-lifecycle.md"
+      ]
+    },
+    {
+      "id": "RQ20",
+      "query": "what's the difference between a mutex and a binary semaphore?",
+      "kind": "question",
+      "author": "agent:rag-eval-corpus",
+      "relevant": ["/home/alice/notes/os/mutex-vs-semaphore.md"],
+      "partial": ["/home/alice/notes/os/os-quiz-3-mistakes.txt"]
+    },
+    {
+      "id": "RQ21",
+      "query": "my honest look back at our disastrous presentation in front of the examiners",
+      "kind": "paraphrase",
+      "author": "agent:rag-eval-corpus",
+      "relevant": ["/home/alice/capstone/reports/retro-week6-demo.md"],
+      "partial": [
+        "/home/alice/private/journal-2026-10-15.txt",
+        "/home/alice/capstone/meetings/2026-10-16-weekly-sync.md",
+        "/home/alice/capstone/meetings/2026-10-23-weekly-sync.md"
+      ]
+    },
+    {
+      "id": "RQ22",
+      "query": "how much did I spend on groceries and fuel in September?",
+      "kind": "question",
+      "author": "agent:rag-eval-corpus",
+      "relevant": ["/home/alice/personal/budget-2026-09.md"],
+      "partial": ["/home/alice/personal/car/fuel-log.txt", "/home/alice/personal/budget-2026-08.md"]
+    },
+    {
+      "id": "RQ23",
+      "query": "why two differently worded sentences can land next to each other in a model's coordinate space",
+      "kind": "paraphrase",
+      "author": "agent:rag-eval-corpus",
+      "relevant": ["/home/alice/notes/ai/sentence-embeddings.md"],
+      "partial": ["/home/alice/notes/ai/word2vec.md"]
+    },
+    {
+      "id": "RQ24",
+      "query": "python code that trains a tiny next-app predictor from a list of past launches",
+      "kind": "code",
+      "author": "agent:rag-eval-corpus",
+      "relevant": ["/home/alice/capstone/src/markov_predict.py"],
+      "partial": ["/home/alice/notes/ai/markov-chains.md"]
+    },
+    {
+      "id": "RQ25",
+      "query": "why did the build fail on CI last Tuesday?",
+      "kind": "question",
+      "author": "agent:rag-eval-corpus",
+      "relevant": ["/home/alice/capstone/reports/ci-failure-lockfile.md"],
+      "partial": ["/home/alice/capstone/meetings/2026-10-23-weekly-sync.md"]
+    },
+    {
+      "id": "RQ26",
+      "query": "notes about keeping files usable without internet and reconciling edits later",
+      "kind": "paraphrase",
+      "author": "agent:rag-eval-corpus",
+      "relevant": ["/home/alice/notes/capstone/offline-sync-design.md"],
+      "partial": [
+        "/home/alice/capstone/src/outbox-replay.ts",
+        "/home/alice/notes/dsa/crdt-reading.md"
+      ]
+    },
+    {
+      "id": "RQ27",
+      "query": "what is the time complexity of building a heap from an unsorted array?",
+      "kind": "question",
+      "author": "agent:rag-eval-corpus",
+      "relevant": ["/home/alice/notes/dsa/heaps.md"],
+      "partial": ["/home/alice/capstone/src/heap.ts", "/home/alice/notes/dsa/sorting.md"]
+    },
+    {
+      "id": "RQ28",
+      "query": "Belady anomaly FIFO",
+      "kind": "keyword",
+      "author": "agent:rag-eval-corpus",
+      "relevant": ["/home/alice/notes/os/page-replacement.md"],
+      "partial": ["/home/alice/labs/clock-sim.py"]
+    },
+    {
+      "id": "RQ29",
+      "query": "B+ tree leaf split",
+      "kind": "keyword",
+      "author": "agent:rag-eval-corpus",
+      "relevant": ["/home/alice/notes/db/btree-indexes.md"],
+      "partial": ["/home/carol/notes/db-indexing.md"]
+    },
+    {
+      "id": "RQ30",
+      "query": "where we are staying each night on the December holiday up north",
+      "kind": "paraphrase",
+      "author": "agent:rag-eval-corpus",
+      "relevant": ["/home/alice/personal/travel/hunza-trip-plan.md"],
+      "partial": ["/home/alice/personal/travel/hunza-packing-list.txt"]
+    },
+    {
+      "id": "RQ31",
+      "query": "how does the shell connect the output of one command to the input of the next?",
+      "kind": "question",
+      "author": "agent:rag-eval-corpus",
+      "relevant": ["/home/alice/notes/os/pipes-and-redirection.md"],
+      "partial": ["/home/alice/labs/fork_exec_pipe.c", "/home/alice/notes/os/file-descriptors.txt"]
+    },
+    {
+      "id": "RQ32",
+      "query": "what the examiners told us to fix after we presented our tech choices",
+      "kind": "paraphrase",
+      "author": "agent:rag-eval-corpus",
+      "relevant": ["/home/alice/capstone/meetings/2026-09-25-w4-defence-feedback.md"],
+      "partial": ["/home/alice/capstone/meetings/2026-10-02-weekly-sync.md"]
+    },
+    {
+      "id": "RQ33",
+      "query": "a TypeScript class that keeps the most recently used items and drops the oldest when full",
+      "kind": "code",
+      "author": "agent:rag-eval-corpus",
+      "relevant": ["/home/alice/capstone/src/lru-cache.ts"],
+      "partial": ["/home/alice/capstone/src/lru-cache.test.ts", "/home/alice/labs/lru_sim.c"]
+    },
+    {
+      "id": "RQ34",
+      "query": "what is thrashing and how can the system detect it?",
+      "kind": "question",
+      "author": "agent:rag-eval-corpus",
+      "relevant": ["/home/alice/notes/os/working-set-thrashing.md"],
+      "partial": []
+    },
+    {
+      "id": "RQ35",
+      "query": "how we stop malicious text planted in documents from hijacking the assistant",
+      "kind": "paraphrase",
+      "author": "agent:rag-eval-corpus",
+      "relevant": ["/home/alice/notes/ai/prompt-injection.md"],
+      "partial": [
+        "/home/alice/capstone/reports/inj20-results.md",
+        "/home/alice/capstone/reports/security-review-notes.md"
+      ]
+    },
+    {
+      "id": "RQ36",
+      "query": "which book did I say I'd lend to Sara?",
+      "kind": "question",
+      "author": "agent:rag-eval-corpus",
+      "relevant": ["/home/alice/personal/reading-list.md"],
+      "partial": []
+    },
+    {
+      "id": "RQ37",
+      "query": "how do I make tea the way my mother likes it?",
+      "kind": "paraphrase",
+      "author": "agent:rag-eval-corpus",
+      "relevant": ["/home/alice/personal/recipes/chai.md"],
+      "partial": []
+    },
+    {
+      "id": "RQ38",
+      "query": "the short test where I dropped points for silly errors",
+      "kind": "paraphrase",
+      "author": "agent:rag-eval-corpus",
+      "relevant": ["/home/alice/notes/os/os-quiz-3-mistakes.txt"],
+      "partial": ["/home/alice/notes/db/db-assignment-2-feedback.txt"]
+    },
+    {
+      "id": "RQ39",
+      "query": "what did the plumber fix under the kitchen sink?",
+      "kind": "question",
+      "author": "agent:rag-eval-corpus",
+      "relevant": ["/home/alice/personal/plumber-visit.txt"],
+      "partial": []
+    },
+    {
+      "id": "RQ40",
+      "query": "why startup took nine seconds at the checkpoint and what we changed to make it faster",
+      "kind": "question",
+      "author": "agent:rag-eval-corpus",
+      "relevant": ["/home/alice/capstone/reports/boot-time-measurements.md"],
+      "partial": [
+        "/home/alice/capstone/reports/retro-week6-demo.md",
+        "/home/alice/capstone/meetings/2026-10-23-weekly-sync.md"
+      ]
+    }
+  ]
+}

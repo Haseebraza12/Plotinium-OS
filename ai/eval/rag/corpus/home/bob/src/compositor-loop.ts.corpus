@@ -1,0 +1,20 @@
+/** The compositor's single animation loop: every animated thing registers a step function. */
+type Step = (now: number) => boolean; // return false when finished
+
+const steps = new Set<Step>();
+let running = false;
+
+function tick(now: number): void {
+  for (const step of [...steps]) if (!step(now)) steps.delete(step);
+  if (steps.size > 0) requestAnimationFrame(tick);
+  else running = false;
+}
+
+export function animate(step: Step): () => void {
+  steps.add(step);
+  if (!running) {
+    running = true;
+    requestAnimationFrame(tick);
+  }
+  return () => steps.delete(step);
+}

@@ -1,0 +1,70 @@
+{
+  "console": [],
+  "pageErrors": [],
+  "failed": ["401 GET /api/auth/me"],
+  "samples": [
+    {
+      "verbose": true,
+      "exit": null,
+      "colTop": 14,
+      "colTransform": "matrix(0.785768, 0, 0, 0.785768, 0, -290.893)",
+      "scroll": [102, 664, 538],
+      "newPill": "↓ 0 new lines",
+      "rows": 32
+    },
+    {
+      "verbose": true,
+      "exit": null,
+      "colTop": 6,
+      "colTransform": "matrix(0.779992, 0, 0, 0.779992, 0, -300.012)",
+      "scroll": [102, 664, 538],
+      "newPill": "↓ 0 new lines",
+      "rows": 32
+    },
+    {
+      "verbose": true,
+      "exit": null,
+      "colTop": 6,
+      "colTransform": "matrix(0.78, 0, 0, 0.78, 0, -300)",
+      "scroll": [102, 664, 538],
+      "newPill": "↓ 0 new lines",
+      "rows": 32
+    },
+    {
+      "verbose": true,
+      "exit": "desktop",
+      "colTop": 6,
+      "colTransform": "matrix(0.78, 0, 0, 0.78, 0, -300)",
+      "scroll": [602, 1164, 538],
+      "newPill": "↓ 0 new lines",
+      "rows": 35
+    },
+    {
+      "verbose": true,
+      "exit": "desktop",
+      "colTop": 261,
+      "colTransform": "matrix(1.04, 0, 0, 1.04, 0, 0)",
+      "scroll": [602, 1164, 538],
+      "newPill": "↓ 0 new lines",
+      "rows": 35
+    },
+    {
+      "verbose": true,
+      "exit": "desktop",
+      "colTop": 261,
+      "colTransform": "matrix(1.04, 0, 0, 1.04, 0, 0)",
+      "scroll": [602, 1164, 538],
+      "newPill": "↓ 0 new lines",
+      "rows": 35
+    },
+    {
+      "verbose": true,
+      "exit": "desktop",
+      "colTop": 261,
+      "colTransform": "matrix(1.04, 0, 0, 1.04, 0, 0)",
+      "scroll": [602, 1164, 538],
+      "newPill": "↓ 0 new lines",
+      "rows": 35
+    }
+  ]
+}

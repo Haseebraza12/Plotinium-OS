@@ -1,0 +1,19 @@
+# Unix signals
+
+Asynchronous notifications to a process. Each has a default action: terminate, core dump, ignore, stop or continue.
+
+| Signal | Default | Typical cause |
+|---|---|---|
+| SIGINT (2) | terminate | Ctrl-C |
+| SIGKILL (9) | terminate | `kill -9`; cannot be caught or ignored |
+| SIGSEGV (11) | core | invalid memory access |
+| SIGTERM (15) | terminate | polite shutdown request |
+| SIGCHLD | ignore | a child stopped or exited |
+| SIGSTOP / SIGCONT | stop / continue | job control |
+| SIGPIPE | terminate | write to a pipe with no reader |
+
+Handlers: install with `sigaction` (not `signal`, which is unportable). Only async-signal-safe functions inside a handler; set a `volatile sig_atomic_t` flag and handle it in the main loop.
+
+Masks: `sigprocmask` blocks delivery; pending signals are delivered when unblocked. Standard signals don't queue; two SIGCHLDs may arrive as one, so reap in a loop with `WNOHANG`.
+
+Our web OS `kill` supports TERM, KILL, STOP and CONT with the same meanings.

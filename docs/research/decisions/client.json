@@ -1,0 +1,826 @@
+{
+ "key": "client",
+ "title": "Client storage, offline shell & local-first engine",
+ "record": {
+  "decision_title": "D-06 Client storage, offline shell and local-first engine (Plotinium OS)",
+  "context_constraints_ranked": [
+   "1. Atomic client mirror (DB s11.3 rule 5, DB-02, VFS-06, OFF-02). Each user-visible VFS operation, such as rm -r, cp -r, mv, chmod -R or a 500-file agent rename, must be ONE local transaction covering every affected store: inodes, dentries, blobs, the quota row, the undo record and the outbox op. The fault-injection harness (throw after N of M node ops) must leave the tree checksum, the orphan probes and the quota unchanged. The mirror also needs a unique compound [parent, name] index.",
+   "2. Boot budget (BOOT-10 warm <=1.5 s and cold <=3.0 s to an interactive desktop on the modest lab machine; BOOT-09 offline boot; BOOT-02 progress must track real work). Every KB of JS/WASM and every ms of storage-open and metadata-load sits on the critical path of the 'storage' and 'vfs' services, which are both critical.",
+   "3. Offline-first durability with exactly-once replay (OFF-01, OFF-02, OFF-04). The outbox must survive a tab or browser crash, and eviction must be prevented or at least detected.",
+   "4. Tier-1 local swap throughput (MEM-03 write, verify checksum, then release; MEM-05: a 5 MB page-in at p95 <=300 ms locally; MEM-06: a 2x-budget workload without a tab crash).",
+   "5. Worker-only execution (architecture boundary 2, PROC-05: no long task >50 ms from OS code). Storage must be usable from the kernel's dedicated worker, and the main thread must never touch storage (boundary 1, SYS-01).",
+   "6. DSA rule and viva defensibility (s10, s14.4). The hand-written n-ary tree, hash-mapped dentries and LRU must stay the real path-resolution and cache engine, so storage must not quietly replace them. Every member must be able to explain the storage layer.",
+   "7. Multi-tab behaviour: exclusive OPFS access handles, single-connection WASM databases, IndexedDB versionchange during upgrades, and Web Locks/BroadcastChannel coordination.",
+   "8. Offline login without plaintext passwords (OFF-03), and background versioned shell updates that activate on the next boot (OFF-05).",
+   "9. Cost, licence and maintenance: free and OSS only, a student budget in Pakistan, and a Chrome-only target."
+  ],
+  "options": [
+   {
+    "name": "A. Native IndexedDB via idb (thin promise wrapper) for ALL durable client state (metadata, outbox, content blobs, swap in a separate IDB database); OPFS held in reserve",
+    "current_version": "idb 8.0.3 (ISC, published 2025-05-07) over IndexedDB in Chrome 153/154. Since Chrome 150, new IDB stores use Chromium's SQLite backend.",
+    "summary": "One storage API, available in every worker. It gives multi-store ACID transactions with per-transaction durability ('strict' or 'relaxed') and a compound primary key [parent, name]. The kernel's hand-written tree does all the querying. Content blobs are content-addressed (sha256) chunks inside the same transaction as the metadata. Swap pages go to a separate IDB database, so 5 MB writes never contend with metadata commits.",
+    "status_notes": "idb is tiny: 4.65 KB minified / 1.59 KB gzip, measured. It is stable but releases rarely. Raw IndexedDB is the same option without the wrapper, and the store layer drops to raw requests (idb.unwrap) for the callback-driven fault-injection path. Chosen."
+   },
+   {
+    "name": "A2. idb for metadata and outbox + OPFS FileSystemSyncAccessHandle for content blobs and swap pages",
+    "current_version": "idb 8.0.3 + OPFS sync access handles (sync methods since Chrome 108; 'readwrite-unsafe' mode since Chrome 121)",
+    "summary": "The textbook split: transactions for metadata, raw file I/O for bulk bytes. Blobs would be written first, then published by an IDB transaction, with GC for unreferenced files. Swap would use tmp-file, flush, verify, then move. It needs a dedicated 'blkio' worker, because sync handles block the thread and exist only in dedicated workers.",
+    "status_notes": "We expected this to win on throughput. Our interleaved measurement on Chrome 153 showed 5 MB page-in parity with IndexedDB, so the extra worker, extra failure modes and the non-atomic byte path do not earn their place. This is the reversal target for swap."
+   },
+   {
+    "name": "B. Dexie 4 over IndexedDB (bytes also in IDB)",
+    "current_version": "dexie 4.4.6 (Apache-2.0, published 2026-09-10); dist/dexie.min.js is 96 KB raw / 30.8 KB gzip (measured)",
+    "summary": "The most ergonomic IndexedDB wrapper. It offers a declarative schema, compound indexes, db.transaction('rw', tables...) across tables, liveQuery and bulk ops. The storage semantics are identical to A.",
+    "status_notes": "Active project. Durability is only a database-wide option (chromeTransactionDurability), not per transaction. Promise 'zones' hide IDB's auto-commit rules: awaiting a non-Dexie promise inside a transaction raises TransactionInactiveError or PrematureCommitError. Runner-up by score, with the lowest switching cost (same IDB schema)."
+   },
+   {
+    "name": "C. SQLite compiled to WASM (official build) with the opfs-sahpool VFS in the kernel worker",
+    "current_version": "@sqlite.org/sqlite-wasm 3.53.4-build1 (Apache-2.0 wrapper, public-domain SQLite, published 2026-09-08); sqlite3.wasm is 849 KB raw / 393 KB gz and index.mjs is 628 KB / 170 KB gz (measured)",
+    "summary": "A real SQL engine on the client: FKs, CHECK constraints, UNIQUE (parent, name), recursive CTEs, and the same relational schema as the server. It measured about 2x faster than IndexedDB on 1,000-node bulk operations.",
+    "status_notes": "It runs only in a worker. opfs-sahpool gives the best OPFS performance and needs no COOP/COEP, but it does not support multiple simultaneous connections (pauseVfs since 3.50). About 564 KB gz must be downloaded plus 116-387 ms of init and open (measured) before the first query. Performance fallback in the reversal trigger."
+   },
+   {
+    "name": "D. PGlite (Postgres compiled to WASM) with the OPFS-AHP or IndexedDB filesystem",
+    "current_version": "@electric-sql/pglite 0.5.8 (Apache-2.0 / PostgreSQL licence, published 2026-08-26; pre-1.0). pglite.wasm is 3.40 MB gz, pglite.data 1.87 MB gz and initdb.wasm 0.14 MB gz (measured)",
+    "summary": "The same SQL dialect as a Postgres server, so migrations and queries could in theory be shared between client and server.",
+    "status_notes": "Expected to lose. About 5.4 MB gz on the critical path exceeds the whole cold-boot budget on a typical 10 Mbps link. It uses a single connection and needs a multi-tab leader-election worker."
+   },
+   {
+    "name": "E. RxDB (reactive NoSQL local-first database, free Dexie-based storage)",
+    "current_version": "rxdb 17.5.0 (Apache-2.0 core). The IndexedDB and OPFS RxStorages are premium, and paid plans start at about $239/month per the vendor's pricing page (not independently verified).",
+    "summary": "A local-first database with built-in replication and revision-based conflict handling. It is attractive for OFF-02 on paper.",
+    "status_notes": "Expected to lose, and disqualified by rule 5. RxDB has no ACID transactions: 'A single write operation to a document is the only atomic thing you can do in RxDatabase'. An atomic multi-node rm -r or a quota update in the same transaction is impossible."
+   }
+  ],
+  "criteria": [
+   {
+    "name": "Atomic multi-store transactions & integrity",
+    "weight": 25,
+    "why": "DB s11.3 rule 5 and DB-02 are graded 'above all' in s11. VFS-06 needs the quota inside the same transaction, OFF-02 needs the outbox op in the same commit, and the fault-injection harness is repeated live at the final defence."
+   },
+   {
+    "name": "Boot-path cost",
+    "weight": 20,
+    "why": "BOOT-10 (warm <=1.5 s / cold <=3.0 s on the modest lab machine) and BOOT-09. 'storage' and 'vfs' are critical services on the critical path, so their download, WASM compile, open and metadata load add directly to the boot time."
+   },
+   {
+    "name": "Bulk-op & swap performance",
+    "weight": 10,
+    "why": "MEM-05 (5 MB page-in at p95 <=300 ms locally), MEM-06 paging throughput, and the interactive latency of rm -r / cp -r / batch rename on 1,000-node trees."
+   },
+   {
+    "name": "Worker & multi-tab behaviour",
+    "weight": 10,
+    "why": "Boundary 2 and PROC-05 put storage in workers. OPFS exclusive handles, single-connection WASM databases and IDB versionchange must not break the kernel's single-writer model."
+   },
+   {
+    "name": "Durability & eviction control",
+    "weight": 10,
+    "why": "OFF-02 needs a durable outbox. Chrome has defaulted to relaxed IDB durability since 121. Best-effort storage can be evicted, so strict flushing must be controllable per transaction, and persist() behaviour matters."
+   },
+   {
+    "name": "Explainability & DSA-rule fit",
+    "weight": 10,
+    "why": "s10: using a library without understanding why is penalised, and the tree, LRU and trie must be hand-written and actually used. s14.4: a decision only one member can explain is undefended."
+   },
+   {
+    "name": "Team skill fit",
+    "weight": 5,
+    "why": "The team knows JS/TS and some SQL. The legitimate factor 'we already know it' carries a low weight."
+   },
+   {
+    "name": "Licence, cost & maintenance",
+    "weight": 5,
+    "why": "Student budget, THIRD_PARTY.md attribution, and the risk of an abandoned or paywalled dependency within the 18 weeks."
+   },
+   {
+    "name": "Testability",
+    "weight": 5,
+    "why": "s15.3 requires unit tests on every PR (fast, in Node), integration and fault-injection tests, and performance budgets that fail the build in real Chrome."
+   }
+  ],
+  "scores": [
+   {
+    "option": "A. Native IndexedDB via idb",
+    "per_criterion": [
+     {
+      "criterion": "Atomic multi-store transactions & integrity",
+      "score": 4,
+      "reason": "One readwrite transaction spans all 5 stores. The measured fault injection at node 500 of a 1,000-node rm -r left counts, dentries and quota unchanged in 80/80 runs, and the 80/80 positive checks deleted exactly 1,000. There are no FKs or CHECKs, so invariants are enforced in the store layer, by fsck and by the server's DB-04 constraints."
+     },
+     {
+      "criterion": "Boot-path cost",
+      "score": 5,
+      "reason": "1.6 KB gz and no WASM. Opening the DB and lazily loading 3 directory levels (130 entries) took p50 3.7-6.4 ms and p95 8.9-15.1 ms."
+     },
+     {
+      "criterion": "Bulk-op & swap performance",
+      "score": 4,
+      "reason": "rm -r of 1,000 nodes with strict durability: p50 50-83 ms, p95 57-102 ms (calm runs). 5 MB page-in including SHA-256 verify and JSON.parse: p95 27-44 ms, far under the 300 ms target. SQLite is about 2x faster on bulk operations."
+     },
+     {
+      "criterion": "Worker & multi-tab behaviour",
+      "score": 5,
+      "reason": "Available in dedicated workers, shared workers and the main thread. Multiple connections are safe, and transactions serialise across tabs automatically."
+     },
+     {
+      "criterion": "Durability & eviction control",
+      "score": 5,
+      "reason": "durability:'strict' can be set per transaction. For a small inode+outbox transaction the cost was unmeasurable (p50 0.4 ms for both modes; p95 0.9-1.7 ms strict vs 1.1-1.2 ms relaxed)."
+     },
+     {
+      "criterion": "Explainability & DSA-rule fit",
+      "score": 5,
+      "reason": "A thin wrapper with no query engine. Path resolution, listing and search stay in the team's own tree, trie and LRU."
+     },
+     {
+      "criterion": "Team skill fit",
+      "score": 4,
+      "reason": "JS-native, but the event-driven API and the auto-commit rule must be learned. idb softens both."
+     },
+     {
+      "criterion": "Licence, cost & maintenance",
+      "score": 4,
+      "reason": "ISC, free, and small enough to vendor. It releases rarely (last release May 2025), so a wrapper that goes unmaintained would be a low-impact problem."
+     },
+     {
+      "criterion": "Testability",
+      "score": 5,
+      "reason": "fake-indexeddb 6.2.5 runs the store layer in Node/Vitest on every PR. Playwright covers real-Chrome durability and performance."
+     }
+    ],
+    "weighted_total": 4.55
+   },
+   {
+    "option": "B. Dexie 4 over IndexedDB",
+    "per_criterion": [
+     {
+      "criterion": "Atomic multi-store transactions & integrity",
+      "score": 4,
+      "reason": "Same IDB transactions as A. Zone semantics add a failure mode (PrematureCommitError) inside the atomic path."
+     },
+     {
+      "criterion": "Boot-path cost",
+      "score": 4,
+      "reason": "30.8 KB gz measured, about 19x A's footprint, but still small."
+     },
+     {
+      "criterion": "Bulk-op & swap performance",
+      "score": 4,
+      "reason": "Same engine as A. bulkDelete and bulkPut remove some per-request overhead."
+     },
+     {
+      "criterion": "Worker & multi-tab behaviour",
+      "score": 5,
+      "reason": "Same as A, plus cross-tab liveQuery."
+     },
+     {
+      "criterion": "Durability & eviction control",
+      "score": 4,
+      "reason": "chromeTransactionDurability is a database-wide constructor option, not per transaction."
+     },
+     {
+      "criterion": "Explainability & DSA-rule fit",
+      "score": 3,
+      "reason": "PSD zones, liveQuery and a query builder hide the transaction lifetime that examiners will ask about. It also tempts the team to query Dexie tables instead of the mandated tree."
+     },
+     {
+      "criterion": "Team skill fit",
+      "score": 5,
+      "reason": "The friendliest API with the most tutorials."
+     },
+     {
+      "criterion": "Licence, cost & maintenance",
+      "score": 5,
+      "reason": "Apache-2.0, very active (4.4.6 released 2026-09-10)."
+     },
+     {
+      "criterion": "Testability",
+      "score": 5,
+      "reason": "Works with fake-indexeddb, so the same testing story as A."
+     }
+    ],
+    "weighted_total": 4.15
+   },
+   {
+    "option": "A2. idb metadata + OPFS for blobs and swap",
+    "per_criterion": [
+     {
+      "criterion": "Atomic multi-store transactions & integrity",
+      "score": 3,
+      "reason": "Metadata is atomic, but bytes go through a two-phase write-then-publish with orphan GC. It is correct, but there are more crash windows to test, and a swap page and its page-table row cannot commit together."
+     },
+     {
+      "criterion": "Boot-path cost",
+      "score": 5,
+      "reason": "Same boot path as A. OPFS is only touched when paging."
+     },
+     {
+      "criterion": "Bulk-op & swap performance",
+      "score": 4,
+      "reason": "5 MB page-in p95 25-33 ms vs IDB 27-34 ms in the calm interleaved runs, which is parity within noise."
+     },
+     {
+      "criterion": "Worker & multi-tab behaviour",
+      "score": 3,
+      "reason": "Sync handles exist only in dedicated workers and block the thread, so an extra blkio worker is needed. A readwrite handle is exclusive, and a second one throws NoModificationAllowedError."
+     },
+     {
+      "criterion": "Durability & eviction control",
+      "score": 4,
+      "reason": "flush() gives explicit durability, but MDN confirms the whole origin (IDB and OPFS) is evicted together, so there is no eviction benefit."
+     },
+     {
+      "criterion": "Explainability & DSA-rule fit",
+      "score": 4,
+      "reason": "A second storage API, a second worker and a GC process to explain."
+     },
+     {
+      "criterion": "Team skill fit",
+      "score": 4,
+      "reason": "The file API is simple, but the sync-handle constraints are unfamiliar."
+     },
+     {
+      "criterion": "Licence, cost & maintenance",
+      "score": 4,
+      "reason": "Browser API plus idb."
+     },
+     {
+      "criterion": "Testability",
+      "score": 3,
+      "reason": "OPFS does not exist in Node or fake-indexeddb, so the byte path is testable only in real Chrome."
+     }
+    ],
+    "weighted_total": 3.8
+   },
+   {
+    "option": "C. SQLite-WASM (opfs-sahpool)",
+    "per_criterion": [
+     {
+      "criterion": "Atomic multi-store transactions & integrity",
+      "score": 5,
+      "reason": "Full ACID with FK ON DELETE CASCADE, CHECK and UNIQUE (parent, name). The recursive-CTE rm -r left 0 leftovers in our run."
+     },
+     {
+      "criterion": "Boot-path cost",
+      "score": 2,
+      "reason": "About 564 KB gz to download on a cold boot. Measured 88-254 ms WASM init plus 28-133 ms sahpool install and open before the first query (localhost, no network). The RxDB benchmark on Chrome 128 reports 504-535 ms init."
+     },
+     {
+      "criterion": "Bulk-op & swap performance",
+      "score": 5,
+      "reason": "rm -r of 1,000 nodes: p50 24-40 ms, p95 30-60 ms. Seeding 1,000 nodes: p50 33-56 ms. About 2x faster than IDB."
+     },
+     {
+      "criterion": "Worker & multi-tab behaviour",
+      "score": 2,
+      "reason": "Worker-only and single-connection (sahpool), so it needs pauseVfs or leader election. The 'opfs' VFS alternative requires COOP/COEP."
+     },
+     {
+      "criterion": "Durability & eviction control",
+      "score": 4,
+      "reason": "Journal plus synchronous=FULL gives strong durability. Eviction behaves the same as A."
+     },
+     {
+      "criterion": "Explainability & DSA-rule fit",
+      "score": 3,
+      "reason": "SQL is explainable, but it duplicates the VFS tree and invites path resolution by recursive CTE, which scores zero for the tree requirement if it replaces it."
+     },
+     {
+      "criterion": "Team skill fit",
+      "score": 4,
+      "reason": "The team knows SQL. The WASM/OPFS setup and VFS choice are new."
+     },
+     {
+      "criterion": "Licence, cost & maintenance",
+      "score": 5,
+      "reason": "Official SQLite project, public domain, released 2026-09-08."
+     },
+     {
+      "criterion": "Testability",
+      "score": 4,
+      "reason": "The Node build exists for logic tests, but OPFS persistence is testable only in a browser."
+     }
+    ],
+    "weighted_total": 3.7
+   },
+   {
+    "option": "D. PGlite",
+    "per_criterion": [
+     {
+      "criterion": "Atomic multi-store transactions & integrity",
+      "score": 5,
+      "reason": "Full Postgres semantics."
+     },
+     {
+      "criterion": "Boot-path cost",
+      "score": 1,
+      "reason": "About 5.4 MB gz measured (wasm, data and initdb): about 4.3 s at 10 Mbps before init, which alone breaks the 3.0 s cold budget."
+     },
+     {
+      "criterion": "Bulk-op & swap performance",
+      "score": 3,
+      "reason": "Vendor benchmarks: OPFS-AHP CRUD 0.08-4 ms, IDB filesystem 14-24 ms per operation."
+     },
+     {
+      "criterion": "Worker & multi-tab behaviour",
+      "score": 2,
+      "reason": "Single connection, with multi-tab support through a leader-election worker."
+     },
+     {
+      "criterion": "Durability & eviction control",
+      "score": 3,
+      "reason": "Depends on the filesystem adapter. The IDB filesystem flushes whole files."
+     },
+     {
+      "criterion": "Explainability & DSA-rule fit",
+      "score": 2,
+      "reason": "A full DBMS inside the client OS, even further from the hand-written structures."
+     },
+     {
+      "criterion": "Team skill fit",
+      "score": 4,
+      "reason": "The Postgres dialect is familiar."
+     },
+     {
+      "criterion": "Licence, cost & maintenance",
+      "score": 4,
+      "reason": "Open source and active, but still pre-1.0 (0.5.x)."
+     },
+     {
+      "criterion": "Testability",
+      "score": 4,
+      "reason": "Runs in Node."
+     }
+    ],
+    "weighted_total": 3.05
+   },
+   {
+    "option": "E. RxDB",
+    "per_criterion": [
+     {
+      "criterion": "Atomic multi-store transactions & integrity",
+      "score": 1,
+      "reason": "No cross-document transactions, which violates rule 5 by design."
+     },
+     {
+      "criterion": "Boot-path cost",
+      "score": 3,
+      "reason": "Core plus RxJS plus Dexie storage: a larger JS footprint than A or B (not measured)."
+     },
+     {
+      "criterion": "Bulk-op & swap performance",
+      "score": 3,
+      "reason": "Adequate, but not designed for large binary pages."
+     },
+     {
+      "criterion": "Worker & multi-tab behaviour",
+      "score": 4,
+      "reason": "Built-in multi-tab support. The worker storages are premium."
+     },
+     {
+      "criterion": "Durability & eviction control",
+      "score": 3,
+      "reason": "Delegated to the underlying storage."
+     },
+     {
+      "criterion": "Explainability & DSA-rule fit",
+      "score": 2,
+      "reason": "A replication and revision framework that would replace the team's own outbox, sync and conflict logic, which is itself graded work."
+     },
+     {
+      "criterion": "Team skill fit",
+      "score": 3,
+      "reason": "RxJS observables and a NoSQL schema model."
+     },
+     {
+      "criterion": "Licence, cost & maintenance",
+      "score": 2,
+      "reason": "The useful storages are paid (premium)."
+     },
+     {
+      "criterion": "Testability",
+      "score": 4,
+      "reason": "The memory storage suits tests."
+     }
+    ],
+    "weighted_total": 2.5
+   }
+  ],
+  "evidence": [
+   {
+    "claim": "Our prototype, one IDB transaction over inodes/dentries/users/undo/outbox with strict durability: rm -r of a 1,000-node subtree failing at node 500 left inode count, dentry count and quota unchanged in 80/80 runs, and the successful rm -r removed exactly 1,000 inodes in 80/80 runs.",
+    "source": "Local measurement: headless Google Chrome 153.0.8010.52, fresh profile per run, AMD Ryzen 5 7530U (12 threads), 32 GB RAM, Linux. Harness: /tmp/claude-1000/-home-haseeb-raza-Desktop-Plotinium-OS/6bdb43c3-e62e-4f77-88ef-40bcd9948f85/scratchpad/bench/worker2.mjs (4 runs x 20). Results in r2_1..r2_4.json.",
+    "verified": true
+   },
+   {
+    "claim": "5 MB process-state page-in (read + SHA-256 verify + JSON.parse), interleaved IDB vs OPFS, 60 iterations per run. Calm runs (load avg 6.8-8.4): IDB p50 21-25 / p95 27-34 ms; OPFS sync handle p50 20.5-24 / p95 25-33 ms. Raw read only: IDB p95 14-18 ms, OPFS p95 13-16 ms. Under heavy machine load (avg 14-21): IDB p95 44-147 ms, OPFS p95 38-154 ms. Both pass MEM-05 (<=300 ms) and are at parity.",
+    "source": "Local measurement, same machine and harness (swapInterleaved in worker2.mjs). Non-interleaved round-1 runs swung 3x in either direction because of background load, so only the interleaved figures are used.",
+    "verified": true
+   },
+   {
+    "claim": "Boot metadata load: a full getAll of 10,000 inodes + dentries rebuilt into Maps took p50 106-196 / p95 118-242 ms. A lazy load of 3 levels (130 entries) took p50 3.7-6.4 / p95 8.9-15.1 ms. Conclusion: load lazily per directory, never the whole tree, on the boot critical path.",
+    "source": "Local measurement (bulkOps in worker2.mjs), 12 runs per variant x 4 runs.",
+    "verified": true
+   },
+   {
+    "claim": "Bulk ops at 1,000 nodes. IDB planned rm -r (strict): p50 50-83 / p95 57-102 ms in calm runs. IDB 1,000-node insert (cp -r analogue): p50 55-91 ms. SQLite-WASM (opfs-sahpool, FK cascade, recursive CTE): rm -r p50 24-40 / p95 30-60 ms, insert p50 33-56 ms. Small inode+outbox transaction: p50 0.4 ms with strict and relaxed alike.",
+    "source": "Local measurement (worker.mjs and worker2.mjs).",
+    "verified": true
+   },
+   {
+    "claim": "SQLite-WASM start-up measured before the first query: WASM init 88-254 ms + installOpfsSAHPoolVfs/open 28-133 ms, served from localhost with no network cost. PBKDF2-HMAC-SHA256 at 600,000 iterations through WebCrypto in a worker: p50 88-155 ms, p95 103-172 ms.",
+    "source": "Local measurement (worker.mjs, rounds 1-3).",
+    "verified": true
+   },
+   {
+    "claim": "Measured package sizes (gzip -9). idb 8.0.3: 4.65 KB minified / 1.59 KB gz. dexie 4.4.6: 96 KB / 30.8 KB gz. sqlite3.wasm: 868,907 B / 402,491 B gz, plus index.mjs 642,742 B / 174,497 B gz. PGlite 0.5.8: pglite.wasm 10.1 MB / 3.40 MB gz, pglite.data 6.30 MB / 1.87 MB gz, initdb.wasm 0.145 MB gz. workbox-window 7.4.1 prod: 3.3 KB / 1.36 KB gz.",
+    "source": "npm pack of each package plus local gzip (and terser for idb); versions and dates from registry.npmjs.org",
+    "verified": true
+   },
+   {
+    "claim": "Prototype lesson: idb-wrapped stores return Promises, not IDBRequests. Attaching onsuccess to them silently committed an EMPTY transaction, and the fault-injection 'unchanged' probe still passed 15/15. Only a positive assertion (the tree actually shrank) exposed the bug, which was fixed with idb's unwrap(). The harness must assert both outcomes.",
+    "source": "Local prototype run (result.json vs r2_*.json); idb README https://github.com/jakearchibald/idb",
+    "verified": true
+   },
+   {
+    "claim": "Chrome changed the default IndexedDB durability from strict to relaxed in Chrome 121. Strict can be requested per transaction via db.transaction(stores, 'readwrite', {durability:'strict'}). Relaxed fires complete before the data reaches disk, while strict flushes first.",
+    "source": "https://developer.chrome.com/blog/indexeddb-durability-mode-now-defaults-to-relaxed",
+    "verified": true
+   },
+   {
+    "claim": "Chromium's IndexedDB is being re-implemented on SQLite. It ships for new data stores in Chrome 150 (PSA posted 2026-04-25), and existing LevelDB stores migrate later. Performance characteristics will change, so pre-2026 IDB benchmarks are stale. Current stable is Chrome 154.",
+    "source": "https://groups.google.com/a/chromium.org/g/blink-dev/c/jS0khnC5IWA ; https://chromestatus.com/feature/5161589557821440 ; https://chromiumdash.appspot.com/fetch_releases?channel=Stable&platform=Linux",
+    "verified": true
+   },
+   {
+    "claim": "createSyncAccessHandle is available only in dedicated workers. In 'readwrite' mode only one handle can be open, and a second throws NoModificationAllowedError. 'readwrite-unsafe' allows several handles.",
+    "source": "https://developer.mozilla.org/en-US/docs/Web/API/FileSystemFileHandle/createSyncAccessHandle",
+    "verified": true
+   },
+   {
+    "claim": "OPFS is subject to the same quota as IndexedDB and is deleted when site data is cleared. When an origin is evicted, all of its storage (IDB, Cache API and the rest) is deleted together. Chrome allows an origin up to 60% of total disk, eviction is LRU by origin, and persistent origins are skipped.",
+    "source": "https://developer.mozilla.org/en-US/docs/Web/API/File_System_API/Origin_private_file_system ; https://developer.mozilla.org/en-US/docs/Web/API/Storage_API/Storage_quotas_and_eviction_criteria",
+    "verified": true
+   },
+   {
+    "claim": "Chrome grants navigator.storage.persist() silently, without a prompt, based on site engagement, whether the site is installed or bookmarked, and notification permission.",
+    "source": "https://web.dev/articles/persistent-storage",
+    "verified": true
+   },
+   {
+    "claim": "The opfs-sahpool VFS needs no COOP/COEP, is 'easily the highest OPFS performance', does not support multiple simultaneous connections, and gained pauseVfs() for cooperative hand-over in 3.50. Both OPFS VFSes work only in Worker threads.",
+    "source": "https://sqlite.org/wasm/doc/trunk/persistence.md",
+    "verified": true
+   },
+   {
+    "claim": "RxDB: 'A single write operation to a document is the only atomic thing you can do in RxDatabase.' It has no relational ACID transactions.",
+    "source": "https://rxdb.info/transactions-conflicts-revisions.html",
+    "verified": true
+   },
+   {
+    "claim": "RxDB's IndexedDB and OPFS RxStorages are premium, with paid plans reported to start around $239/month.",
+    "source": "https://rxdb.info/premium/ (via search-result summary, page not fetched directly)",
+    "verified": false
+   },
+   {
+    "claim": "RxDB's cross-storage benchmark (Chrome 128) reports initialisation of IndexedDB 46 ms vs WASM SQLite 504-535 ms, and a small-write latency of IndexedDB 0.17 ms vs OPFS 1.46-1.54 ms. This supports keeping many small records in IDB rather than one OPFS file each.",
+    "source": "https://rxdb.info/articles/localstorage-indexeddb-cookies-opfs-sqlite-wasm.html",
+    "verified": true
+   },
+   {
+    "claim": "PGlite's own benchmarks: OPFS-AHP CRUD 0.076-4.03 ms and the IndexedDB filesystem 14.49-23.75 ms per operation. PGlite uses a single connection, with multi-tab support through a leader-elected worker.",
+    "source": "https://pglite.dev/benchmarks ; https://pglite.dev/docs/multi-tab-worker",
+    "verified": true
+   },
+   {
+    "claim": "Dexie: you 'MUST NOT call any other async API' (or wait for it) inside a transaction scope, or TransactionInactiveError is thrown; PrematureCommitError also exists. Durability is a constructor-wide chromeTransactionDurability option.",
+    "source": "https://dexie.org/docs/Dexie/Dexie.transaction() ; https://github.com/dexie/Dexie.js/pull/1367",
+    "verified": true
+   },
+   {
+    "claim": "The idb README says an IDB transaction auto-closes once it has nothing left to do after microtasks. So never await fetch or crypto between the start and the end of a transaction.",
+    "source": "https://github.com/jakearchibald/idb",
+    "verified": true
+   },
+   {
+    "claim": "In vite-plugin-pwa's injectManifest strategy, a custom service worker receives self.__WB_MANIFEST via workbox-precaching. registerType 'prompt' plus a SKIP_WAITING message gives user-controlled activation, and cleanupOutdatedCaches() removes old versions. vite-plugin-pwa 1.3.0 (2026-05-05) has a peer dependency on vite ^8 and workbox 7.4.1.",
+    "source": "https://vite-pwa-org.netlify.app/guide/inject-manifest.html ; https://registry.npmjs.org/vite-plugin-pwa/1.3.0",
+    "verified": true
+   },
+   {
+    "claim": "Workbox releases are infrequent but ongoing: 7.3.0 on 2024-10-29, 7.4.0 on 2025-11-19, 7.4.1 on 2026-05-04. workbox-precaching adds new revisions during install and removes stale entries on activate, and it does not skipWaiting by default.",
+    "source": "https://registry.npmjs.org/workbox-build ; https://developer.chrome.com/docs/workbox/modules/workbox-precaching",
+    "verified": true
+   },
+   {
+    "claim": "OWASP recommends PBKDF2-HMAC-SHA256 with 600,000 iterations. Its Argon2id minimum is m=19 MiB, t=2, p=1.",
+    "source": "https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html",
+    "verified": true
+   },
+   {
+    "claim": "Argon2 appears only in the WICG 'Modern Algorithms in WebCrypto' draft. Chrome's 2026 WebCrypto intent covers ML-KEM, ML-DSA and ChaCha20-Poly1305, not Argon2, so Argon2id in the browser would need a WASM library such as hash-wasm 4.12.0 (MIT).",
+    "source": "https://wicg.github.io/webcrypto-modern-algos/ ; http://www.mail-archive.com/blink-dev@chromium.org/msg17349.html",
+    "verified": false
+   },
+   {
+    "claim": "Storage Buckets shipped in Chromium 122 with per-bucket persisted and durability settings. Chrome's own doc says only IndexedDB is fully implemented per bucket. Because IDB transactions cannot span databases or buckets, the outbox must stay in the same database as the inodes.",
+    "source": "https://developer.chrome.com/docs/web-platform/storage-buckets",
+    "verified": true
+   },
+   {
+    "claim": "PowerSync's May 2026 survey recommends OPFSCoopSyncVFS for SQLite on the web, notes that 'readwrite-unsafe' access handles and JSPI are Chrome-only, and says SharedWorkers cannot access OPFS sync handles.",
+    "source": "https://powersync.com/blog/sqlite-persistence-on-the-web",
+    "verified": true
+   },
+   {
+    "claim": "The Web Locks API is available in workers and supports exclusive or shared modes plus the ifAvailable and steal options, for coordinating tabs of one origin.",
+    "source": "https://developer.mozilla.org/en-US/docs/Web/API/Web_Locks_API",
+    "verified": true
+   }
+  ],
+  "recommendation": "Adopt option A: native IndexedDB, accessed only from the kernel's dedicated worker through idb 8.0.3, holds ALL durable client state for v1:\n- Metadata DB 'plotinium': inodes, dentries keyed by the compound primary key [parent, name], content-addressed blob chunks, the users quota mirror, the outbox, undo records, sessions, credentials, the telemetry ring and bootlog.\n- Swap DB 'plotinium-swap': 5 MB pages plus their index.\n\nEvery user-visible VFS mutation is exactly one readwrite transaction over every affected store, with durability 'strict'. That transaction includes the quota row, the undo snapshot and the outbox op, which satisfies s11.3 rule 5 literally. The in-memory n-ary tree is updated only after the transaction commits, so an injected fault can never leave the tree half-applied.\n\nMetadata loads lazily per directory, never as a whole-tree scan at boot. The storage layer costs 1.6 KB gz and about 15 ms p95 to open and load the session's directories, leaving the boot budget to the UI.\n\nOPFS is not used in v1. It was the expected winner for bulk bytes, but our interleaved Chrome 153 measurement showed 5 MB page-in parity (p95 25-33 ms for OPFS vs 27-34 ms for IDB). OPFS stays wired into POST detection as the reversal path for swap. The Cache API is used only by the Service Worker's versioned shell cache (and for model weights if the AI decision chooses it).\n\nOffline shell: vite-plugin-pwa 1.3.0 in injectManifest mode with a hand-written sw.ts that uses only workbox-precaching and workbox-routing 7.4.1. It has no skipWaiting on install, so a new release waits and activates on the next 'reboot' ('Restart to update', OFF-05).\n\nOffline login: a PBKDF2-HMAC-SHA256 verifier (600,000 iterations, 16-byte salt, via native WebCrypto; measured 88-155 ms p50) stored in the 'credentials' store. The password and the server hash are never stored. An offline login grants only a local session, and server-authoritative actions wait for online re-authentication (OFF-03).\n\nMulti-tab: one kernel per origin, enforced by a Web Locks exclusive lock, with a BroadcastChannel hand-over and graceful shutdown.\n\nWhat we give up:\n- Client-side SQL, FKs and CHECKs. These are enforced in the store layer, by fsck and by the server.\n- About 2x faster bulk operations from SQLite-WASM.\n- Dexie's ergonomics and liveQuery.\n- OPFS partial-file I/O.",
+  "runner_up": "Dexie 4.4.6 (weighted 4.15 vs 4.55). It is the lowest-cost switch because the IndexedDB schema, the transactions and the outbox format are identical, and only the store-layer calls change. It lost on per-transaction durability control and on explainability (Promise zones hide the auto-commit rule). SQLite-WASM with opfs-sahpool (3.70) is the named fallback if IndexedDB misses the performance or integrity triggers below.",
+  "chat_reason": "We keep all offline data (files, the queue of pending changes, swap pages, login verifier) in the browser's built-in IndexedDB. It can save many related records in one all-or-nothing transaction, which the spec requires for rm -r and quotas, and it adds almost nothing to boot time. We tested the alternatives. SQLite-in-WASM is about 2x faster on bulk deletes but adds about 0.5 MB and 100-400 ms to boot, and the OPFS file API was no faster than IndexedDB for 5 MB swap pages on current Chrome. The offline shell uses vite-plugin-pwa with our own service worker, so updates install quietly and apply on the next reboot.",
+  "gave_up": "These limits affect how the numbers can be used:\n- None of the numbers come from the Week-2 lab workstation. All measurements ran on one developer laptop (Ryzen 5 7530U, 12 threads, 32 GB) in headless Chrome 153 while other jobs loaded the machine (load average 6.8-21). Only the interleaved, repeated runs are cited, and they are indicative, not the team's evidence.\n- Only fresh profiles were measured, which use the SQLite-backed IndexedDB. LevelDB-backed IDB stores from before Chrome 150 were not measured.\n- Not measured: cold boot over a throttled network, Service Worker precache install time, 100,000-inode trees, cp -r with real blob content, Argon2id-in-WASM login latency, Dexie on the same harness, and RxDB bundle size.\n- Storage Buckets were not tested with OPFS, and Chrome's doc contradicts the spec on per-bucket OPFS.\n- RxDB premium pricing and the Chrome WebCrypto Argon2 status come from search summaries, not primary pages.",
+  "risks": [
+   {
+    "risk": "IDB auto-commit: awaiting a non-IDB promise (crypto.subtle.digest, fetch, postMessage round-trips) inside a transaction closes it, which leaves either a TransactionInactiveError or a transaction that commits less than intended.",
+    "mitigation": "Build the plan, compute hashes and check permissions BEFORE opening the transaction. store.tx(scope, durability, build) accepts only a synchronous builder that issues requests. An ESLint rule bans 'await' inside builders. A unit test with fake-indexeddb asserts that a builder awaiting crypto fails loudly."
+   },
+   {
+    "risk": "Mixing idb promise calls with raw request callbacks silently commits an empty transaction. We hit this in our own prototype, and the 'unchanged after fault' probe still passed.",
+    "mitigation": "The store layer uses one style per function (raw via unwrap() on the fault-injection path). Every fault-injection test asserts BOTH the negative outcome (checksum, orphans and quota unchanged on fault) and the positive one (exact node and quota delta on success)."
+   },
+   {
+    "risk": "No FKs, CHECKs or cascades in IndexedDB, so a store-layer bug could create orphans or duplicate names.",
+    "mitigation": "Dentry uniqueness comes from the [parent, name] primary key used with add() (ConstraintError maps to EEXIST). Invariants are checked before commit (no move into own subtree gives EINVAL; types and modes are validated). The client runs the spec's orphan probes and fsck (VFS-11). Property-based tests (fast-check style random op sequences) keep fsck clean on every PR. The server DB enforces DB-04 authoritatively."
+   },
+   {
+    "risk": "Chrome evicts the origin under storage pressure when persist() was denied, and the unsynced outbox is lost.",
+    "mitigation": "POST calls navigator.storage.persist() and shows 'storage: best-effort' as a degraded flag in the taskbar (OFF-04). The installable manifest raises the grant odds. The sync client replays promptly when online. Recovery mode exports the pending outbox to a downloadable JSON before any 'reset local cache'. The server stays the source of truth for re-sync."
+   },
+   {
+    "risk": "Relaxed durability (Chrome's default since 121) loses the last seconds of writes on an OS crash or power loss, which breaks the OFF-02 durable outbox.",
+    "mitigation": "durability:'strict' on every transaction that appends to the outbox or writes credentials. Its cost was unmeasurable on small transactions (p50 0.4 ms). Relaxed is used only for swap, session-layout autosave, telemetry and bootlog."
+   },
+   {
+    "risk": "Whole-tree metadata load grows linearly: 106-242 ms p95 at 10k inodes under load, so 100k would blow BOOT-10.",
+    "mitigation": "Directories load lazily through a [parent, name] key-range getAll the first time the tree touches them (measured p95 <=15 ms for the session's first 3 levels). A hand-written LRU inode/dentry cache sits in front. The full trie build runs as a low-priority process after the desktop is interactive."
+   },
+   {
+    "risk": "Chromium's move to the SQLite IDB backend (Chrome 150+ new stores, with later migration of old LevelDB stores) changes performance between gates.",
+    "mitigation": "Nightly and per-release Playwright performance jobs on current Chrome stable run the M1-M3 budgets (rm -r, page-in, boot storage stage) and fail the build on regression. The reversal triggers below are checked at every gate."
+   },
+   {
+    "risk": "Two tabs of the same origin run two kernels against one store, producing stale in-memory trees and racing outbox replays.",
+    "mitigation": "An exclusive Web Locks lock 'plotinium.kernel' is held for the session. A second tab shows a 'running in another tab' screen, and hand-over goes via BroadcastChannel: the old tab shuts down gracefully (BOOT-12 flush) and releases the lock, with steal after 5 s only if the old tab is frozen. Outbox replay additionally runs under a 'plotinium.outbox' lock."
+   },
+   {
+    "risk": "IDB swap pages are whole-value reads, with no partial page-in, and 5 MB structured clones could contend with metadata commits.",
+    "mitigation": "Swap lives in a separate IDB database, 'plotinium-swap', so it never shares a transaction queue with metadata. The pager caps a page at 8 MB. Reversal: move swap to OPFS if the lab-machine p95 exceeds 150 ms."
+   },
+   {
+    "risk": "Workbox releases are slow (7.4.1 in May 2026), or vite-plugin-pwa lags a Vite major, which would break the build or the update flow.",
+    "mitigation": "Only workbox-precaching and workbox-routing are used, inside our own sw.ts. The fallback is a fully hand-written SW that reads Vite's build manifest, which touches only the manifest-injection step. The e2e test 'deploy v(n+1), still v(n) until reboot' runs per release."
+   },
+   {
+    "risk": "A stolen browser profile yields the PBKDF2 verifier for offline GPU cracking, which would then allow logging in to the server account.",
+    "mitigation": "600,000 iterations (OWASP), a random 16-byte salt per user, verifier expiry after 30 days without an online login, and a lockout with exponential back-off after 5 failures. An offline session cannot take server-authoritative actions, and the server re-authorises every replayed op. SECURITY.md documents the browser profile as the device trust boundary. Upgrade path: Argon2id via hash-wasm if a measured login cost of <=500 ms holds on the lab machine."
+   },
+   {
+    "risk": "QuotaExceededError in the middle of a transaction.",
+    "mitigation": "IDB aborts the whole transaction (atomic). The store layer maps it to EDQUOT ('device storage full') with no partial data. The pager checks estimate() before admitting pages to local swap and sends them to remote swap under pressure."
+   }
+  ],
+  "reversal_trigger": "We will revisit this decision if any of the following is measured on the published lab workstation in current Chrome stable, fresh profile, p95 over 100 runs:\n- (1) Swap moves to OPFS sync handles in a blkio worker (option A2) if IDB 5 MB page-in exceeds 150 ms (half the MEM-05 budget), or exceeds OPFS by more than 25%.\n- (2) Metadata moves to SQLite-WASM with opfs-sahpool (option C, same outbox format) if an IDB atomic rm -r, cp -r or batch rename of 1,000 nodes exceeds 500 ms. The same applies if the agent's 500-file batch rename exceeds 1 s, or if the storage+vfs boot stages exceed 250 ms warm.\n- (3) We switch to Dexie if the fault-injection suite shows any partial local commit that traces back to idb or raw-API misuse more than twice in a phase.\n- (4) We switch to a hand-written Service Worker if vite-plugin-pwa cannot keep a new version waiting until the next reboot in the OFF-05 e2e test.",
+  "team_prototype": "Owners: Role 2 (VFS/DB) and Role 5 (QA/DevOps), with Role 1 on the swap measurements. Due before the Week-4 defence. Start from the harness this record used (worker.mjs and worker2.mjs in the scratchpad bench folder) and move it to tests/performance/client-storage/. Run it with Playwright (@playwright/test 1.63.0) against Chrome stable on the published lab workstation. Use a fresh profile per run, and repeat each measurement with CDP Emulation.setCPUThrottlingRate(4) to model a slower machine. Interleave the variants, do 100 iterations each, and report p50/p95 plus the machine's load.\n\n- M1 Swap (MEM-05): 5 MB and 8 MB process-state page-out/page-in (serialise, SHA-256, write, read back and verify, then release). Compare IDB relaxed (separate DB) against an OPFS sync handle in a dedicated worker. Pass: IDB p95 <=150 ms.\n- M2 Atomic bulk ops (DB-02 mirror):\n  - rm -r, cp -r, mv, chmod -R and a 500-file batch rename over a 1,000-node subtree, inside a 10,000-inode store, in one strict transaction over every store.\n  - Fault injection at node 500 x100: checksum, orphan probes and quota unchanged.\n  - Positive assertion on success.\n  - Pass: p95 <=500 ms and 100/100 on both assertions.\n- M3 Boot storage stage (BOOT-10):\n  - Time from worker start to 'storage ready' and 'vfs ready' for 10k and 100k inodes, eager versus lazy.\n  - Add a throttled cold boot ('Fast 4G' profile) to record the download share.\n  - Also run the SQLite-WASM variant to log the rejected option's cost.\n  - Pass: storage+vfs <=250 ms warm.\n- M4 Outbox (OFF-02): 1,000 offline ops. Kill the tab at a random point during replay 20 times, then compare the server op_log count with the ops issued (exactly-once).\n- M5 Durability cost: strict vs relaxed on 1-op and 1,000-op transactions.\n- M6 Quota and eviction:\n  - Record persist() and estimate() in a normal tab versus the installed PWA.\n  - Fill storage until QuotaExceededError and verify an EDQUOT with zero partial writes.\n- M7 Multi-tab: open a second tab, check the Web Locks hand-over (graceful shutdown then boot), and check that the outbox replay runs once.\n- M8 Login: PBKDF2 at 600k on the lab machine (budget <=500 ms). Optionally compare Argon2id through hash-wasm.\n- M9 SW update: deploy v0.1.1 while v0.1.0 is open. The new SW must stay 'waiting' until 'reboot', and an offline reload must still boot (BOOT-09).\n\nPut the numbers in STACK_DECISION.md with the raw JSON committed under docs/benchmarks/.",
+  "requirement_ids_served": [
+   "DB-02",
+   "DB-04",
+   "VFS-06",
+   "VFS-07",
+   "VFS-08",
+   "VFS-10",
+   "VFS-11",
+   "OFF-01",
+   "OFF-02",
+   "OFF-03",
+   "OFF-04",
+   "OFF-05",
+   "BOOT-02",
+   "BOOT-08",
+   "BOOT-09",
+   "BOOT-10",
+   "BOOT-11",
+   "BOOT-12",
+   "MEM-03",
+   "MEM-05",
+   "MEM-06",
+   "WM-06",
+   "SYS-01",
+   "PROC-05",
+   "PRE-05",
+   "RAG-06"
+  ],
+  "packages": [
+   {
+    "name": "idb",
+    "version": "8.0.3",
+    "licence": "ISC",
+    "purpose": "Promise wrapper over IndexedDB, used only inside the kernel worker's store layer. unwrap() gives raw requests on the fault-injection path."
+   },
+   {
+    "name": "vite-plugin-pwa",
+    "version": "1.3.0",
+    "licence": "MIT",
+    "purpose": "Build-time only, in the injectManifest strategy. It injects the revisioned precache list into our hand-written sw.ts and generates the installable web app manifest required by the identity kit. It assumes Vite; the current vite is 8.3.0, and vite-plugin-pwa's peer range includes ^8."
+   },
+   {
+    "name": "workbox-precaching",
+    "version": "7.4.1",
+    "licence": "MIT",
+    "purpose": "Inside sw.ts: precacheAndRoute(self.__WB_MANIFEST) and cleanupOutdatedCaches() for the versioned shell cache (OFF-05, BOOT-09)."
+   },
+   {
+    "name": "workbox-routing",
+    "version": "7.4.1",
+    "licence": "MIT",
+    "purpose": "Inside sw.ts: a NavigationRoute to the cached index.html for offline boot, with /api and /ws on the denylist."
+   },
+   {
+    "name": "workbox-window",
+    "version": "7.4.1",
+    "licence": "MIT",
+    "purpose": "Pulled in by virtual:pwa-register (1.36 KB gz) to detect a waiting SW and send SKIP_WAITING on 'reboot'."
+   },
+   {
+    "name": "fake-indexeddb",
+    "version": "6.2.5",
+    "licence": "Apache-2.0",
+    "purpose": "Dev-only. Runs the store layer's unit and property tests in Node/Vitest on every PR. Performance and durability tests run in real Chrome."
+   },
+   {
+    "name": "@playwright/test",
+    "version": "1.63.0",
+    "licence": "Apache-2.0",
+    "purpose": "Dev-only. Real-Chrome integration, offline-boot e2e, fault-injection and performance-budget runs (M1-M9)."
+   },
+   {
+    "name": "vitest",
+    "version": "5.0.1",
+    "licence": "MIT",
+    "purpose": "Dev-only. Unit test runner (shared with the rest of the repo if chosen there)."
+   },
+   {
+    "name": "(browser APIs, no package)",
+    "version": "Chrome 153/154 stable",
+    "licence": "n/a",
+    "purpose": "IndexedDB, StorageManager persist()/estimate(), Web Locks, BroadcastChannel, WebCrypto (PBKDF2, SHA-256, randomUUID), and Service Worker + Cache API. OPFS is detected at POST but reserved for the reversal path."
+   },
+   {
+    "name": "(evaluated, not adopted) dexie / @sqlite.org/sqlite-wasm / @electric-sql/pglite / rxdb / hash-wasm",
+    "version": "4.4.6 / 3.53.4-build1 / 0.5.8 / 17.5.0 / 4.12.0",
+    "licence": "Apache-2.0 / Apache-2.0 + public domain / Apache-2.0 + PostgreSQL / Apache-2.0 core (premium storages paid) / MIT",
+    "purpose": "Alternatives scored in this record. hash-wasm is the Argon2id upgrade path for the offline verifier."
+   }
+  ],
+  "design_notes": "1. THREADS\n- Main thread: rendering only. It never opens IDB and never touches the outbox, credentials or the VFS (boundary 1, SYS-01).\n- Kernel dedicated worker: owns\n  - the hand-written n-ary inode tree (dsa/tree), the dentry hash maps and the LRU inode/dentry cache (dsa/lru);\n  - the single IDB connection to 'plotinium', plus the one to 'plotinium-swap';\n  - the outbox sender.\n  Every mutating syscall ends in one store.tx().\n- Process workers: serialise their own state into an ArrayBuffer and transfer it zero-copy to the kernel for page-out.\n- Service Worker: touches only Cache API caches, never IDB.\n\n2. INDEXEDDB SCHEMA: 'plotinium' v1 (client/migrations/001_init.ts)\n- inodes: key 'ino'. Value {ino, type 'file'|'dir'|'symlink', mode (9 bits + sticky), uid, gid, size, nlink, version, blob (sha256|null), target, atime, mtime, ctime}. Index by_uid_mtime ['uid','mtime'], an offline mirror of the server inodes(uid, modified_at) for 'recent files'.\n- dentries: key ['parent','name']. This compound primary key is the spec's unique [parent, name] index, clustered, so 'ls' is a single key-range getAll(bound([p,''],[p,MAX])). Value {parent, name, ino}. Index by_ino 'ino', for reverse lookup, hard-link nlink checks, fsck and lsof. Create with add(), never put(), so a duplicate raises ConstraintError, which maps to EEXIST. Rename is delete(old key) + add(new key) in the same transaction.\n- blobs: key 'sha' (sha256 hex). Value {sha, size, refcount, nchunks, uploaded: boolean}.\n- blob_chunks: key ['sha','idx']. Value ArrayBuffer of <=1 MiB (tuned in M1). It gives read(fd, off, len) without loading the whole file, and bounds each structured clone.\n- users: key 'uid'. Value {uid, username, quotaBytes, quotaInodes, usedBytes, usedInodes}. This is the local quota row, read and written inside every mutating transaction (the client-side analogue of SELECT ... FOR UPDATE; IDB readwrite scopes serialise).\n- groups: key 'gid'. Value {gid, name, members[]}.\n- outbox: key 'seq' (autoIncrement, the local replay order). Unique index by_op 'opId'; index by_state 'state'.\n- undo: key 'opId'. Value {opId, nodes[], dentries[], quotaDelta}: the inverse used to revert if the server rejects.\n- meta: key 'k'. Holds schema, deviceId, lamport, serverCursor, persistGranted, failedLogins, and mkfs:done.\n- sessions: key 'sessionId'. Value {uid, windowLayout, openProcs, pageTable snapshot, cwd} (WM-06, BOOT-12).\n- credentials: key 'username'. The offline verifier (section 8).\n- telemetry: key 'slot' (0..N-1). A persisted, hand-written ring buffer (dsa/ring) whose head lives in meta; PRE-05, clearable in Settings, Privacy.\n- bootlog: key 'bootId'. The last 20 boots with per-stage and per-service timings (BOOT-11), also exposed as /system/log/boot.log.\nDurability: 'strict' for any transaction touching outbox, credentials or users; 'relaxed' for sessions autosave, telemetry and bootlog.\nClient migrations: the IDB version number equals the migration index. The 'rollback' is the recovery flow: export the outbox JSON, deleteDatabase, re-create, re-sync from the server, re-import the outbox. The server keeps real up and down SQL migrations (DB-01).\n\n'plotinium-swap' v1:\n- pages: key ['sessionId','pid','pageId']. Value {bytes: ArrayBuffer, checksum, size, createdAt}.\n- A separate database, so 5 MB writes never queue behind metadata commits and swap can be dropped wholesale.\nPage-out: process worker serialises and transfers -> kernel computes SHA-256 (before the transaction) -> put (relaxed) -> get and verify checksum -> mark LOCAL_SWAP in the in-memory page table -> tell the process to release (MEM-03).\nTier-2 remote swap: taken when estimate().usage/quota > 0.8 or local swap exceeds its cap (default min(2 GB, 25% of quota)). The page goes by HTTPS PUT to object storage and the local copy is deleted.\nBoot sweep: deletes pages whose sessionId is not the restored session.\n\n3. OUTBOX RECORD AND PROTOCOL\nRecord: {seq, opId: crypto.randomUUID() (the idempotency key, equal to server op_log.op_id PK), uid, sessionId, deviceId, lts: [lamportCounter, deviceId], call: 'write'|'mkdir'|'unlink'|'rename'|'symlink'|'chmod'|'chown'|'batch', args (ino-based plus a path for logs), pre: [{ino, version}] (optimistic-concurrency preconditions, VFS-10), blobs: [sha] (content that must exist on the server first), state: 'pending'|'sent', attempts, lastError, createdAt}. The Lamport counter lives in meta and is bumped in the same transaction.\nReplay:\n- On WS open after auth, the client takes the 'plotinium.outbox' Web Lock, ensures blobs are uploaded (idempotent HTTPS PUT /api/blobs/:sha, server verifies the hash), then sends ops in seq order with a window of 16 in flight.\n- The server applies each session's ops strictly in order, in one DB transaction per op.\n- Server replies:\n  - {type:'ack', opId, status:'applied'|'duplicate', versions:{ino:v}, serverSeq}. 'duplicate' means op_log already holds that opId and is treated as applied, giving exactly-once.\n  - {type:'nack', opId, errno}.\n- Ack: one transaction deletes the outbox and undo rows, applies the version bumps and queues refcount-0 blobs for a GC process (idle priority, visible in ps).\n- Nack: one transaction restores from undo, then the kernel re-applies the change to the in-memory tree, notifies the user with the reason, and re-validates later ops that depend on the reverted inodes (reverting them too if their preconditions fail).\n- Version conflict on a write: the client keeps its content as a new inode, 'name (conflict from <user>, <date>).ext', sent as a new op. Nothing is silently overwritten.\n\n4. ATOMIC LOCAL WRITE PATH FOR rm -r ~/old-drafts\n(a) The terminal sends sys.unlink('/home/student/old-drafts', {recursive:true}) over its MessageChannel.\n(b) The kernel resolves the path on the in-memory tree in O(depth). Errors: ENOENT, ENOTDIR, ELOOP.\n(c) vfs.ensureLoaded(subtree): a readonly transaction lazily loads any unloaded directories so the plan is complete.\n(d) plan = DFS over the hand-written tree, O(k). Each entry is {ino, type, size, version, parent, name}.\n(e) perm.checkUnlinkTree: w+x on the parent and on every directory in the plan, plus sticky-bit rules. Errors: EACCES/EPERM, with no side effects.\n(f) locks.assertNoForeignLease(plan), giving EBUSY.\n(g) opId = crypto.randomUUID().\n(h) The transaction:\n    await store.tx(['inodes','dentries','users','undo','outbox','meta'], 'strict', t => {\n      plan.forEach((n,i) => { fault.point('unlink', i); t.inodes.delete(n.ino); if (n.type==='dir') t.dentries.delete(childRange(n.ino)); });\n      t.dentries.delete([parent.ino, name]);\n      t.users.adjust(uid, -bytes(plan), -plan.length);   // quota in the same transaction\n      t.undo.put({opId, nodes: plan});\n      t.outbox.add({opId, call:'unlink', args:{ino: root.ino, parent: parent.ino, name, recursive:true}, pre:[{ino: root.ino, version: root.version}], lts: t.meta.bumpLamport(), state:'pending'});\n    });\n    fault.point throws only in the test build (tests/fault-injection). Any throw calls tx.abort(), and IDB rolls back every store.\n(i) Only after oncomplete: vfs.detach(parent, name) (O(1) on the hash-mapped children), trie.removeSubtree(path) (SYS-03 incremental), kernel event 'vfs.unlink' {plan, opId} to the AI indexer, Files windows and other sessions, then sync.kick().\n(j) Blob refcounts are decremented on server ack, not locally, so a revert never needs bytes back.\nMeasured prototype: p50 50-83 ms, p95 57-102 ms for 1,000 nodes; 80/80 unchanged on fault, 80/80 correct on success.\nOther bulk operations:\n- mv: delete one dentry key and add one, after an in-memory ancestor walk to reject a move into its own subtree (EINVAL).\n- cp -r: add inodes and dentries and increment blob refcount++ only; no bytes copied, thanks to content addressing.\n- chmod -R and batch rename: one transaction each, with the same fault points.\n\n5. QUOTA AND EVICTION\nPOST:\n- detect IDB, OPFS, Workers, crypto and SW;\n- estimate();\n- persist(), shown in df, Settings and Storage. A result of false raises the taskbar degraded flag 'storage: best-effort' (OFF-04).\nLocal EDQUOT comes from the users row inside the transaction; the server is authoritative on replay. A browser QuotaExceededError aborts the transaction and is also reported as EDQUOT (device full), with no partial write.\nEviction: the whole origin is wiped together, detected on boot when meta.deviceId is missing. Online, the device re-syncs from the server; offline, it boots a guest or first-boot session with a notice.\nBOOT-08: a corrupt or mismatched schema is a critical 'storage' failure. The recovery screen offers retry, safe mode, diagnostics, and 'reset local cache and re-sync' (which exports the outbox first).\n\n6. MULTI-TAB\n- navigator.locks.request('plotinium.kernel', {ifAvailable:true}). If the lock is not granted, the tab shows 'Plotinium is running in another tab' with a [Use here] button.\n- [Use here] posts 'handover' on BroadcastChannel('plotinium.sys'). The old tab runs the BOOT-12 graceful shutdown, closes IDB and releases the lock, and the new tab boots. After 5 s the new tab requests with {steal:true}. This is safe because IDB transactions are all-or-nothing.\n- IDB 'versionchange' from a new release makes the old connection close() itself.\n- Two users contending for a lock (VFS-09) use two browsers or profiles, each with its own storage.\n\n7. BOOT BUDGET\n- 'storage' (L1, critical): open plus migrations plus meta. Progress units are real (open, each migration step, persist result).\n- 'vfs' (L2, critical): lazy load of /, /home/<user> and the session's cwd and open Files windows. Measured p95 <=15 ms, versus 118-242 ms for a full 10k scan.\n- The trie is built for >=10k entries by an idle-priority process after the desktop is interactive.\n- No WASM is on the boot path.\n\n8. OFFLINE LOGIN (OFF-03)\nMini-matrix, criteria declared first: meets OFF-03 and follows OWASP guidance 35; cracking resistance beyond the guidance 15; works on shared lab PCs without enrolment 20; login latency 15; moving parts 15.\n- PBKDF2-SHA256 at 600k via WebCrypto: 5/3/5/5/5 = 4.70.\n- Argon2id via hash-wasm: 5/5/5/3/3 = 4.40.\n- WebAuthn platform authenticator: 5/5/2/4/3 = 3.95.\nRecord: {username, uid, gid, groups, kdf:'PBKDF2-SHA256', iter:600000, salt (16 random bytes), verifier: SHA-256(derivedBits), createdAt, expiresAt: +30 days, lastOnlineAuth}.\n- It is written only after a successful online login, and is refreshed on password change.\n- The comparison loop is constant-time, and 5 failures trigger exponential back-off.\n- An offline session sets 'authMode: offline'. Locks, sync and the AI gateway wait for online re-auth.\n- The server session cookie is HttpOnly and never stored in IDB.\n\n9. SERVICE WORKER (OFF-05, BOOT-09)\nMini-matrix, criteria declared first: correct versioned precache and cleanup 35; lifecycle control (wait until reboot) 25; viva explainability 20; build and manifest integration 10; moving parts 10.\n- vite-plugin-pwa injectManifest: 5/5/4/5/3 = 4.60.\n- Fully hand-written with the Vite manifest: 3/5/5/2/5 = 4.00.\n- Workbox generateSW: 5/2/3/3/3 = 3.45.\nsw.ts:\n  precacheAndRoute(self.__WB_MANIFEST); cleanupOutdatedCaches();\n  registerRoute(new NavigationRoute(createHandlerBoundToURL('/index.html'), {denylist:[/^[/]api/, /^[/]ws/]}));\n  self.addEventListener('message', e => { if (e.data?.type === 'SKIP_WAITING') self.skipWaiting(); });\nIt never calls skipWaiting on install and never calls clients.claim.\nvite.config: VitePWA({strategies:'injectManifest', srcDir:'src', filename:'sw.ts', registerType:'prompt', injectRegister:false, manifest:{name:'Plotinium', ...identity-kit icons}, injectManifest:{globPatterns:['**/*.{js,css,html,svg,woff2}']}}). Model weights are excluded from the precache (BOOT-10) and belong to the AI decision.\nUpdate flow:\n- registerSW({onNeedRefresh}) emits kernel event 'update.available' and the taskbar shows 'Restart to update vX'.\n- 'reboot' runs a graceful shutdown, then updateSW(true) (SKIP_WAITING), then reload, so the boot runs the new version.\n- Closing all tabs also activates the waiting SW on the next open.\nIf the team enables COOP/COEP for measureUserAgentSpecificMemory (MEM-01), M9 must verify that precached responses keep those headers.\n\n10. WHY NOT OPFS OR THE CACHE API FOR BYTES NOW\n- OPFS showed parity on Chrome 153 while adding a blkio worker, exclusive-handle errors, write-then-publish and GC. It stays the reversal path.\n- The Cache API has no transactions, uses Request/Response keys, has no partial update and is evicted with the origin anyway. It is used only for the shell (and possibly model weights).\n- Storage Buckets are rejected for the outbox, because IDB transactions cannot span buckets and rule 5 needs outbox plus inodes in one transaction.\n\n11. TESTING\n- Vitest with fake-indexeddb for store-layer logic on every PR, including property tests (random op sequences, then fsck is clean).\n- Playwright in real Chrome for fault injection (negative AND positive assertions), outbox exactly-once, multi-tab hand-over, offline boot and SW update.\n- Performance budgets (page-in p95 <=150 ms, 1,000-node bulk op <=500 ms, storage+vfs boot <=250 ms) fail the build."
+ },
+ "examiner_review": {
+  "verdict": "upheld_with_changes",
+  "factual_errors": [
+   {
+    "claim": "Since Chrome 150, new IndexedDB stores use Chromium's SQLite backend (evidence: 'It ships for new data stores in Chrome 150'; gave_up: 'Only fresh profiles were measured, which use the SQLite-backed IndexedDB').",
+    "correction": "The on-disk SQLite backend is not in current stable. On 2026-09-23 chromestatus lists the feature as 'Proposed', with a desktop and Android ship milestone of 156, rolled out through the Finch trial 'IdbSqliteOnDiskRollout' (flag #idb-sqlite-backing-store). The April PSA gave M150 only as an estimate. I tested a fresh disk-backed profile in Chrome 153.0.8010.52: it created <origin>.indexeddb.leveldb plus <origin>.indexeddb.blob, so the store was LevelDB. Only in-memory (incognito) contexts use SQLite today (step 1 of the rollout). A test run can force the SQLite store with --enable-features=IdbSqliteBackingStore,IdbSqliteOnDiskRollout; I confirmed the profile layout changes to per-database hashed files.",
+    "source": "https://chromestatus.com/api/v0/features/5161589557821440 (read 2026-09-23); https://groups.google.com/a/chromium.org/g/blink-dev/c/jS0khnC5IWA; local test: scratchpad/exam/idbcheck/run.mjs, run5.mjs, out1.json, out6.jsonl"
+   },
+   {
+    "claim": "All measurements ran in 'headless Google Chrome 153 ... fresh profile per run'. The numbers are presented as characterising IndexedDB and OPFS on disk.",
+    "correction": "The harness (bench/run2.mjs, run.mjs) calls chromium.launch() and then browser.newContext(). In Playwright that creates an off-the-record, incognito-like context, so IndexedDB and OPFS lived in RAM. The result files report estimate().quota of 5.70-6.79 GB. That matches an incognito context on this machine (6.44 GB). A disk-backed profile reports 10,737,418,240 B (10 GiB). None of the record's IndexedDB or OPFS timings touched a disk.",
+    "source": "bench/run2.mjs and result*.json vs scratchpad/exam/idbcheck/out4.jsonl (incognito vs launchPersistentContext on the same machine)"
+   },
+   {
+    "claim": "Strict durability costs nothing measurable: p50 0.4 ms for both strict and relaxed on a small inode+outbox transaction.",
+    "correction": "This is an artefact of in-memory storage, where there is no fsync. In a disk-backed profile on NVMe, a small transaction took p50 1.1-1.5 ms and p95 1.4-1.8 ms with strict, against p50 0.2 ms and p95 0.3-0.4 ms with relaxed, on both the LevelDB and SQLite backends. That is about 6x slower, though still cheap in absolute terms. It must be measured again on the lab machine, where a SATA or HDD fsync can cost much more.",
+    "source": "scratchpad/exam/idbcheck/out4.jsonl, out6.jsonl (100 interleaved transactions per mode, 2-4 runs, load average about 1)"
+   },
+   {
+    "claim": "The 5 MB page-in showed parity between IndexedDB (p95 27-34 ms) and OPFS (p95 25-33 ms), so OPFS 'does not earn its place' for swap.",
+    "correction": "Parity appears only in incognito. My rerun there matched it: IndexedDB page-in p95 26.3-27.4 ms, OPFS 26.5-27.9 ms. On disk, with the same page-out/page-in logic, interleaved, 40 iterations per run:\n- LevelDB backend: IndexedDB page-in p50 19.6-24.3 / p95 23.2-33.5 ms vs OPFS p50 14.5-18.3 / p95 18.2-27.1 ms. Page-out: IndexedDB p50 37-45 / p95 44.7-62.4 ms vs OPFS p50 15.2-18.6 / p95 19.7-28.3 ms.\n- SQLite backend (forced): IndexedDB page-out p50 52-58 / p95 103-112 ms and page-in p50 22.3-22.6 / p95 25.5-25.7 ms. OPFS page-out p50 15.2-15.3 / p95 22.9-23.9 ms and page-in p50 14.5-14.6 / p95 17.1-19.9 ms.\nOPFS is about 2.4-3.8x faster on page-out and 1.3-1.55x faster on page-in. The record's own reversal trigger (IndexedDB page-in more than 25% slower than OPFS) already fires in 5 of 6 disk-backed runs.",
+    "source": "scratchpad/exam/idbcheck/w4.mjs, run4.mjs, run5.mjs; out4.jsonl, out5.jsonl, out6.jsonl"
+   },
+   {
+    "claim": "RxDB's premium storages have paid plans that start at about $239/month.",
+    "correction": "rxdb.info/premium lists Pro 'From $99 / month billed annually, unlimited developers'. Pro already includes the IndexedDB, OPFS and SQLite RxStorages. $239/month is the Pro Plus tier. The ranking does not change, because RxDB is disqualified on atomicity.",
+    "source": "https://rxdb.info/premium/ (fetched 2026-09-23)"
+   },
+   {
+    "claim": "Swap lives in a separate IndexedDB database, 'so 5 MB writes never contend with metadata commits'.",
+    "correction": "On the LevelDB backend, which is the default in current stable, Chrome keeps one backing store per origin (bucket): the profile holds a single <origin>.indexeddb.leveldb directory and a .blob directory for large values. Separate databases get separate transaction scheduling but share the engine's write path and compaction. Only the SQLite backend showed per-database files. 'Never contend' is not established and was not measured.",
+    "source": "Profile directory listings in scratchpad/exam/idbcheck/out1.json and out6.jsonl; Chromium IndexedDB backing-store layout"
+   },
+   {
+    "claim": "Chrome allows an origin up to 60% of total disk (used as context for the quota and swap-cap design).",
+    "correction": "The MDN figure is not what the page sees. On a 1 TB disk with 512 GB free, headless Chrome 153 reported estimate().quota = exactly 10,737,418,240 B (10 GiB) for a best-effort origin, and persist() returned false. Size the tiers from estimate() at runtime (the design already does this) and do not quote '60% of disk' in the viva.",
+    "source": "scratchpad/exam/idbcheck/runq.mjs output {before:10737418240, persistGranted:false}"
+   },
+   {
+    "claim": "vite-plugin-pwa 1.3.0 'has a peer dependency on vite ^8'.",
+    "correction": "This is a minor wording issue. The peer range is ^3.1.0 || ^4.0.0 || ^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0, which includes Vite 8.3.0; the packages table states it correctly.",
+    "source": "https://registry.npmjs.org/vite-plugin-pwa/1.3.0"
+   }
+  ],
+  "spec_gaps": [
+   "MEM-06 requires accounted memory to return under the budget within 1 s under a 2x workload. That depends on page-out throughput, but the criteria and trigger 1 only consider page-in (MEM-05). On disk with the SQLite IndexedDB backend, page-out took p50 52-58 ms per 5 MB page, so evicting 64 MB takes about 0.7 s even on a fast laptop. That is tight on a 'modest' lab workstation. OPFS measured about 0.2 s for the same work.",
+   "BOOT-10: the record never measures IndexedDB open on a cold browser start from a disk-backed profile, which is the first open after the browser launches. The lazy-load figures (p95 8.9-15.1 ms) came from an in-memory context with a warm browser process. M3 must launch a fresh browser per sample against a pre-seeded persistent profile, on both backends.",
+   "BOOT-08 ('local database version corrupted by the examiner') has no concrete detection path. It needs to cover a VersionError (the stored DB version is newer than the code after a rollback deploy, and IndexedDB cannot downgrade), a deleted object store, and a tampered meta row. The client 'rollback = export outbox, delete, re-sync' flow needs its own fixture test.",
+   "s6.3 POST 'request persistent storage': navigator.storage.persist() exists only on Window, not in workers. MDN says so, and my test confirmed typeof navigator.storage.persist === 'undefined' in a worker. The record says storage is kernel-worker-only and the main thread never touches storage, but it does not carve out this main-thread probe.",
+   "OFF-04 / BOOT-07: raising 'storage: best-effort' as a degraded service will show on every fresh examiner profile, because persist() returned false for a fresh origin. That would happen during the 0:00-0:05 clean bring-up, before the team speaks. It should be an info badge. Degrade only on detected eviction or quota pressure.",
+   "s11.3 rule 3 (invariants before commit) and DB-03 (concurrent overlapping moves) on the client: the kernel worker is asynchronous and updates the in-memory tree only after commit. Between planning and commit, another syscall can act on the stale tree, for example creating a file inside a directory whose rm -r is in flight, which leaves an orphan dentry. No kernel write serialisation and no precondition re-check inside the transaction are specified.",
+   "The s11 fault-injection harness requires a hook that 'throws after N of M node ops'. The cited 80/80 result threw in the synchronous builder before any request had executed, so it only proves that abort() works. The spec is better matched by aborting from the onsuccess of the Nth executed request. I verified that version: 20/20 unchanged on both backends, with the positive check passing 20/20. It should be combined with a crash-mid-commit test.",
+   "s15.3 performance, durability and crash tests 'in real Chrome' must use a disk-backed context (launchPersistentContext). The record's M1-M9 plan inherits the in-memory browser.newContext() harness, so CI would benchmark RAM.",
+   "Examiner machines may run a Guest or incognito window. Storage there is in memory and lost when the window closes, and persist() is denied. BOOT-09 and OFF-01 work only within that session. The OS should detect this (persisted() is false and the quota looks in-memory-sized) and warn.",
+   "MEM-01 cross-origin isolation: if COOP/COEP is enabled for measureUserAgentSpecificMemory, precached navigation responses and dedicated worker scripts must carry the headers, and cross-origin model weights need CORP or COEP: credentialless. The record only defers this to M9.",
+   "s9.5 and the walk-through ('broadcast to the user's other sessions'): with one kernel per origin, a second session must be a different browser, profile or device. This should be stated in ARCHITECTURE.md and the demo script."
+  ],
+  "weaknesses": [
+   "The evidence base is methodologically invalid. Every IndexedDB and OPFS number came from Playwright's in-memory browser.newContext(). That undermines three of the scored claims: that strict durability is free, that 5 MB swap is at parity, and every absolute I/O figure. The metadata conclusion survives a disk-backed rerun, but the swap conclusion does not.",
+   "Selective reporting: the round-1 results (bench/result1.json, result2.json) discovered the subtree inside the write transaction and measured rm -r of 1,000 nodes at p50 395-463 ms and p95 527-716 ms under load. That is above the record's own 500 ms trigger, and it is not reported. The cited 'planned' variant excluded the cost of loading the subtree even though the design loads lazily. My disk-backed end-to-end cold rm -r (ensureLoaded plus the planned delete) measured p95 96-112 ms, which supports the design. The record should report both variants.",
+   "The SQLite-vs-IndexedDB bulk comparison is not like for like. The SQLite timing includes subtree discovery through a recursive CTE, while the IndexedDB timing started from a precomputed plan.",
+   "Scoring is internally inconsistent. A2 scores 3 on atomicity because 'a swap page and its page-table row cannot commit together', yet option A's own design puts swap in a separate database, which has the same property. A2 and C are marked down on multi-tab behaviour (3 and 2) even though the design runs exactly one kernel per origin under a Web Lock, which makes exclusive handles and single-connection engines irrelevant. C's explainability score of 3 rests on a strawman: the team decides whether path resolution uses CTEs.",
+   "The weights do not look reverse-engineered, and the ranking is robust: A 4.55, B 4.15, A2 3.80, C 3.70 (arithmetic checked). Rescoring A2 consistently (atomicity 4, swap performance 5, multi-tab 4) gives 4.25, which is still second. However, the matrix bundles metadata and swap into one option. Swap has no cross-store atomicity need and deserved its own mini-matrix, as login and the Service Worker got.",
+   "Reversal trigger 1 is badly calibrated. Its relative clause fires on the first honest disk-backed measurement, while its absolute clause (150 ms) sits five times above the measured values.",
+   "Dexie's durability penalty is thin. Per-transaction durability is not in Dexie's public API, but DBCore exposes DbCoreTransactionOptions.durability, and two Dexie instances with different chromeTransactionDurability settings can open the same database.",
+   "Using idb promises on the write path already produced a silent empty commit in the prototype. The safer design is raw IndexedDB inside one hand-written tx() helper for every readwrite transaction, with idb kept only for reads, or dropped entirely.",
+   "Tooling churn: vite-pwa issue #933 (May 2026) announces a Workbox fork (@vite-pwa/workbox) and a split into @vite-pwa/core. The stack freezes at Week 4, so versions must be pinned exactly and the team should not migrate mid-semester. hash-wasm 4.12.0, the Argon2id upgrade path, has not released since 2024-11-19.",
+   "Verified correct as of 2026-09-23 on registry.npmjs.org: idb 8.0.3 (ISC, 2025-05-07), dexie 4.4.6 (Apache-2.0, 2026-09-10, dexie.min.js 30,794 B gzip), @sqlite.org/sqlite-wasm 3.53.4-build1 (2026-09-08), @electric-sql/pglite 0.5.8 (2026-08-26), rxdb 17.5.0 (2026-08-20), vite-plugin-pwa 1.3.0 (2026-05-05), workbox-* 7.4.1 (2026-05-04), fake-indexeddb 6.2.5, @playwright/test 1.63.0, vitest 5.0.1 (peer vite ^8 allowed), vite 8.3.0. Chrome 154.0.8037.57 reached stable on 2026-09-22. The durability default changed to relaxed in Chrome 121, Storage Buckets shipped in 122 with only IndexedDB implemented, sahpool pauseVfs arrived in 3.50, and the OWASP PBKDF2 600k guidance is correct. The record omits the 'opfs-wl' VFS added in SQLite 3.53.0, which gives multi-tab concurrency but also needs COOP/COEP."
+  ],
+  "extra_risks": [
+   {
+    "risk": "The IndexedDB engine changes during the project. Chromium's SQLite backend (targeted for M156, Finch-gated, new stores only) may be live on an examiner's fresh profile while CI's headless Chrome, which receives no Finch seed, keeps LevelDB. On the SQLite backend, 5 MB page-out p95 was about 2x the LevelDB figure (103-112 ms vs 45-62 ms).",
+    "mitigation": "Run every performance budget on both backends: the default, and --enable-features=IdbSqliteBackingStore,IdbSqliteOnDiskRollout. Record which backend was used from the profile layout. Add a Chrome Beta job once M156 reaches beta, and treat a regression of more than 2x as a reversal trigger."
+   },
+   {
+    "risk": "Readonly scans block writers. In Chrome, a readwrite transaction waits for overlapping readonly transactions. A small strict mkdir+outbox transaction issued during an 11k-row readonly scan committed only after the scan, at 76-88 ms on LevelDB and 108-120 ms on SQLite, versus 1.2-1.5 ms alone. At 100k inodes, one-transaction scans such as the trie build, fsck, find, du or indexer reads would stall syscalls for about a second.",
+    "mitigation": "Run all scans as chunked readonly transactions of at most 500 keys, using key-range pagination and yielding between chunks. Add a performance test that measures mkdir p95 while the post-boot trie build runs."
+   },
+   {
+    "risk": "Kernel interleaving. While an rm -r or mv transaction is in flight, other syscalls resolve against the not-yet-updated in-memory tree and can commit writes into a directory that is being deleted, leaving orphans.",
+    "mitigation": "Add a kernel write queue or subtree intent locks that cover everything from the permission check to oncomplete. Each transaction also re-reads the parent inode and version inside itself and aborts with a conflict on mismatch. Add a property test that issues concurrent random syscalls and then checks that fsck and the orphan probes are clean."
+   },
+   {
+    "risk": "A Web Locks steal without fencing. After {steal:true}, the old kernel (a frozen tab that thaws) keeps writing to IndexedDB against a stale tree.",
+    "mitigation": "Keep a fencing epoch in meta. The new kernel bumps it on acquisition, and every readwrite transaction reads it first and aborts on mismatch. When a kernel's lock request rejects, it closes IndexedDB immediately and shows 'session moved to another tab'."
+   },
+   {
+    "risk": "persist() is Window-only, so a POST that runs in the kernel worker throws or silently skips it, and the origin stays best-effort.",
+    "mitigation": "The main-thread boot shim calls persist() as a capability probe (not storage access), then transfers {persisted, estimate} to the kernel. Document this as the one allowed main-thread storage-API call."
+   },
+   {
+    "risk": "CI and team benchmarks measure RAM instead of disk, because Playwright's newContext() is incognito-like. Durability, crash and performance budgets then pass for the wrong reason.",
+    "mitigation": "Every storage test uses launchPersistentContext on a real filesystem. The harness asserts it is disk-backed (quota not incognito-sized, profile directory contains IndexedDB files) and fails fast otherwise."
+   },
+   {
+    "risk": "OPFS swap (amended) has crash windows: orphaned .tmp files, or a page file whose page-table entry never became LOCAL_SWAP.",
+    "mitigation": "Use write .tmp, flush, read back and verify SHA-256, move to the final name, and only then update the page table and release the memory. The boot sweep removes *.tmp files and pages not referenced by the restored session. The crash suite kills the page at random points during page-out."
+   },
+   {
+    "risk": "An examiner runs a Guest or incognito window, where storage is in memory, persist() is denied, and the reported quota is RAM-based. The 'reboot to show offline boot' demo still works, but closing the window loses everything.",
+    "mitigation": "At POST, show a clear 'ephemeral browser profile' notice when persisted() is false and the quota looks in-memory-sized. The demo script uses a normal profile and installs the PWA."
+   },
+   {
+    "risk": "MEM-06 on modest hardware. With IndexedDB swap on the SQLite backend, evicting 64 MB takes about 0.7 s on a fast laptop. With 4x CPU throttling or a SATA disk, it could exceed the 1 s window.",
+    "mitigation": "Use OPFS as the default swap device (2.4-3.8x faster page-out on disk). The pager also reserves budget and evicts before admitting a new heavy process, rather than evicting after an overshoot."
+   }
+  ],
+  "amended_recommendation": "Adopt option A (native IndexedDB) for all transactional client state. Change the tier-1 swap device to OPFS, and redo every storage measurement on disk.\n\n1. Metadata store (unchanged in substance)\n- Native IndexedDB, opened only by the kernel's dedicated worker.\n- Database 'plotinium' holds:\n  - inodes;\n  - dentries, keyed by the compound primary key [parent, name] and created with add(), so a ConstraintError maps to EEXIST;\n  - content-addressed blob chunks of at most 1 MiB;\n  - the users quota mirror;\n  - outbox, undo, meta, sessions, credentials, the telemetry ring and bootlog.\n- Every user-visible VFS mutation is exactly one readwrite transaction over every affected store, including the quota row, the undo record and the outbox op (s11.3 rule 5).\n- Durability:\n  - 'strict' for any transaction that touches outbox, credentials or users. Measured on disk at p50 1.1-1.5 ms, about 1 ms more than relaxed on NVMe; to be re-measured on the lab machine.\n  - 'relaxed' for session autosave, telemetry and bootlog.\n- All readwrite transactions go through one hand-written tx(scope, durability, build) helper over raw IndexedDB. The builder is synchronous, with no awaits, enforced by an ESLint rule. idb 8.0.3 is used only for readonly convenience, which removes the idb/raw mixing hazard that silently committed an empty transaction in the prototype.\n\n2. Kernel mutation discipline (new)\n- Mutating syscalls are serialised from the permission check to the commit, through a kernel write queue or subtree intent locks on the in-memory tree.\n- Each transaction re-reads the parent inode version inside the transaction and aborts on a mismatch.\n- The in-memory n-ary tree, the trie and kernel events are updated only after oncomplete.\n- Readonly scans run as chunked transactions of at most 500 keys. This covers the post-boot trie build, fsck, find, du and indexer reads. The reason: Chrome makes a readwrite transaction wait for overlapping readonly ones, and we measured a 76-120 ms stall behind an 11k-row scan.\n\n3. Boot\n- 'storage' opens the database and runs migrations.\n- 'vfs' lazily loads /, /home/<user>, the cwd and any open Files windows.\n- Before a bulk operation, ensureLoaded(subtree) loads unloaded directories level by level. On disk, for 1,000 nodes, ensureLoaded measured p95 30-36 ms and an end-to-end cold rm -r p95 96-112 ms.\n- No WASM is on the boot path.\n- POST calls navigator.storage.persist() on the main thread, because it is Window-only. This is a capability probe, not storage access, and the result is passed to the kernel.\n- 'Best-effort' storage shows as an info badge. The degraded flag is raised only on detected eviction (meta.deviceId missing) or on quota pressure.\n\n4. Tier-1 swap (changed)\n- Swap sits behind a SwapDevice interface.\n- Default: OPFS FileSystemSyncAccessHandle in a dedicated 'blkio' worker that only the kernel talks to.\n- Page-out order (MEM-03):\n  1. write <session>-<pid>-<page>.tmp and flush;\n  2. read it back and verify the SHA-256;\n  3. move it to its final name;\n  4. mark the page LOCAL_SWAP in the in-memory page table;\n  5. release the memory.\n- The boot sweep removes *.tmp files and any pages the restored session does not reference.\n- Reason: on disk, OPFS measured 2.4-3.8x faster page-out and 1.3-1.55x faster page-in than IndexedDB on both Chrome backends. Page-out throughput decides MEM-06, which requires returning under the budget within 1 s. The earlier 'parity' result came from an in-memory context.\n- Fallbacks:\n  - the separate IndexedDB database 'plotinium-swap' with relaxed durability, used automatically if OPFS sync handles are unavailable at POST;\n  - an in-memory device for Node unit tests.\n- Tier-2 remote swap is unchanged. It is used when usage/quota from estimate() exceeds 0.8, or when local swap exceeds min(2 GB, 25% of the reported quota).\n- The Cache API is used only for the shell precache, and for model weights if the AI decision chooses that.\n\n5. Multi-tab\n- One kernel per origin, enforced by the Web Lock 'plotinium.kernel', with a BroadcastChannel hand-over and a steal after 5 s.\n- A fencing epoch in meta is bumped on acquisition and checked inside every readwrite transaction. A kernel that loses its lock closes IndexedDB at once.\n- Other sessions for multi-user and sync demos are other browsers or profiles.\n\n6. Offline shell (unchanged)\n- vite-plugin-pwa 1.3.0 in injectManifest mode, with a hand-written sw.ts that uses workbox-precaching and workbox-routing 7.4.1, all pinned exactly.\n- We will not migrate to the announced @vite-pwa/workbox fork or @vite-pwa/core during the semester.\n- There is no skipWaiting on install. 'Restart to update' runs a graceful shutdown, sends SKIP_WAITING and reloads.\n- If COOP/COEP is enabled for MEM-01, precached navigations and worker scripts must carry those headers.\n\n7. Offline login (unchanged)\n- PBKDF2-HMAC-SHA256 at 600,000 iterations with a 16-byte salt. The verifier is SHA-256 of the derived bits.\n- The verifier expires after 30 days without an online login, and failed attempts trigger exponential back-off.\n- An offline session cannot take server-authoritative actions.\n\n8. Evidence and tests\n- All performance, durability and crash tests use Playwright launchPersistentContext (disk-backed), never browser.newContext().\n- Every budget runs on both IndexedDB backends:\n  - the default, which is LevelDB in Chrome 153/154;\n  - --enable-features=IdbSqliteBackingStore,IdbSqliteOnDiskRollout, the SQLite store that chromestatus targets for M156.\n  The backend is recorded from the profile layout.\n- Fault injection aborts from the onsuccess of the Nth executed request, and a separate test crashes the page mid-commit. Both negative and positive assertions are checked.\n- Before Week 4, re-run M1-M9 on the lab machine with the corrected harness. Replace every incognito-derived figure in STACK_DECISION.md, and report both rm -r variants and the transaction-scheduling stall.\n\nReversal triggers (lab machine, current stable, disk-backed profile, p95 over 100 runs, on both backends)\n- (1) Swap returns to the IndexedDB device if the crash suite shows any OPFS checksum mismatch or an orphan the sweep does not reclaim, or if OPFS page-out is less than 1.5x faster than IndexedDB there.\n- (2) Metadata moves to SQLite-WASM (opfs-sahpool, same outbox format) if any of these hold:\n  - an end-to-end rm -r, cp -r, mv or chmod -R of 1,000 nodes, including ensureLoaded, exceeds 500 ms;\n  - the 500-file rename exceeds 1 s;\n  - the storage+vfs warm boot exceeds 250 ms.\n- (3) We switch to Dexie if more than two partial commits in a phase trace back to wrapper misuse.\n- (4) We switch to a hand-written Service Worker if vite-plugin-pwa cannot keep a new version waiting until reboot.\n- (5) We re-run the matrix if the SQLite IndexedDB backend makes any budget more than 2x worse than LevelDB.\n\nWhat we give up\n- Client-side SQL, FKs and CHECKs. These are enforced by the store layer, fsck, the orphan probes and the server's DB-04 constraints.\n- About 2x faster bulk operations from SQLite-WASM.\n- Dexie's ergonomics.\n- For swap: one extra worker, and a write-then-rename byte path that can only be tested in a real browser.",
+  "amended_chat_reason": "IndexedDB stays as the home for the file tree data, the queue of pending changes, file contents and the offline login check. It can save many related records in one all-or-nothing step, which rm -r and quotas require, and it adds almost nothing to boot time. We changed one part: swap pages now go to OPFS files. Our first tests had accidentally run in an in-memory browser mode. On a real disk, OPFS wrote 5 MB pages 2.4-3.8x faster and read them 1.3-1.5x faster, and IndexedDB stays as the swap fallback. The offline shell still uses vite-plugin-pwa with our own service worker, so updates wait for the next reboot.",
+  "defence_qa": [
+   {
+    "question": "Did your storage benchmarks actually hit the disk, and which IndexedDB engine did they use?",
+    "strong_answer": "Our first run did not. Playwright's browser.newContext() is an in-memory, incognito-like context. That is why strict and relaxed durability looked identical and why IndexedDB and OPFS looked equal. We re-ran everything with launchPersistentContext. On disk, strict costs about 1 ms more per small transaction (p50 1.1-1.5 ms vs 0.2 ms). For 5 MB swap, OPFS page-out ran at p50 about 15 ms against 37-58 ms for IndexedDB. Chrome 153/154 still stores new IndexedDB data in LevelDB. Chromestatus targets the SQLite backend for M156 behind a Finch rollout. So we run every budget on both engines, forcing SQLite with --enable-features=IdbSqliteBackingStore,IdbSqliteOnDiskRollout, and we record the engine from the profile layout. The metadata decision held on both engines. The swap decision changed, and we say so in the record."
+   },
+   {
+    "question": "Your fault hook throws before any IndexedDB request has run. Isn't 'tree unchanged' trivially true?",
+    "strong_answer": "Yes, that version only proved that abort() works. The harness now aborts from the onsuccess of the 500th executed delete, so 500 deletes really happened inside the transaction before the fault. The tree checksum, both orphan probes and the quota row were unchanged in 20 of 20 runs on both LevelDB and SQLite. The positive run removed exactly 1,000 nodes, again 20 of 20. We also crash the page mid-commit through CDP and run the same probes after restart. We learned to always assert both outcomes after an idb bug committed an empty transaction and still passed the 'unchanged' check."
+   },
+   {
+    "question": "You load the tree lazily. What does rm -r cost on a directory the kernel hasn't loaded yet?",
+    "strong_answer": "ensureLoaded reads the subtree level by level in one readonly transaction. The kernel then builds the plan on its own n-ary tree, checks permissions, and runs one strict readwrite transaction over inodes, dentries, users, undo, outbox and meta. For 1,000 nodes on disk, ensureLoaded took p95 30-36 ms and the whole cold operation took p95 96-112 ms, five times under our 500 ms trigger. We also report the rejected design that discovered the subtree inside the write transaction: p95 527-716 ms under load. That is why planning happens outside the transaction. Scans are chunked because Chrome makes writers wait for readonly transactions; we measured a 76-120 ms stall behind an 11k-row scan."
+   },
+   {
+    "question": "Your team knows SQL, and SQLite-WASM gives you foreign keys and was 2x faster. Why not use it?",
+    "strong_answer": "Storage and vfs are critical services on the boot path. SQLite-WASM adds about 564 KB gzipped and 116-387 ms of init and open before the first query, against a 1.5 s warm and 3.0 s cold budget, while IndexedDB costs about 1.6 KB. The spec also requires our own n-ary tree, trie and LRU to be the real engine, and a SQL mirror duplicates them. IndexedDB already meets every budget with a 5x margin. Foreign keys and CHECKs are enforced authoritatively by the server (DB-04), and on the client by add() on the [parent, name] key, pre-commit invariants, fsck and the orphan probes. SQLite with opfs-sahpool is the named fallback in trigger 2 and uses the same outbox format, so switching is bounded."
+   },
+   {
+    "question": "Two tabs are open, or a frozen tab loses its lock to a steal. What stops two kernels writing the same store?",
+    "strong_answer": "There is one kernel per origin, holding the Web Lock 'plotinium.kernel'. A second tab offers 'Use here', the old kernel shuts down gracefully over BroadcastChannel, and after 5 s the new tab may steal the lock. Because a steal can wake a frozen kernel later, meta holds a fencing epoch that the new kernel bumps. Every readwrite transaction reads the epoch first and aborts if it has changed. A kernel whose lock request rejects closes IndexedDB immediately. Outbox replay runs under its own lock, and the server deduplicates by op_id, so a duplicate send becomes 'duplicate', not a second apply."
+   },
+   {
+    "question": "A fresh Chrome on our machine denies persist(). What happens to unsynced offline edits if the origin is evicted?",
+    "strong_answer": "persist() exists only on Window, so the main-thread boot shim calls it and passes the result to the kernel. A denial shows as an info badge, not a degraded service. The installed PWA raises the chance of a grant. We never size anything from '60% of disk': Chrome reported a 10 GiB quota here, so the pager reads estimate() at runtime and spills to remote swap above 80% usage. Eviction wipes the whole origin, and we detect it at boot because meta.deviceId is missing. Online, we re-sync from the server, which is the source of truth. The honest limit is that offline edits on a best-effort origin that is evicted before reconnecting are lost. The outbox replays at every reconnect, and Recovery can export it to a JSON file before any reset."
+   }
+  ]
+ }
+}

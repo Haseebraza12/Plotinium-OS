@@ -1,0 +1,38 @@
+{
+  "name": "@plotinium/server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "One Node 24 process of Fastify plugins: auth gateway, sessions, sync engine, lock manager, blob and swap store, index API, LLM gateway, metrics.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run --root .. --project server"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "catalog:",
+    "@fastify/cookie": "catalog:",
+    "@fastify/websocket": "catalog:",
+    "@plotinium/dsa": "workspace:*",
+    "@plotinium/protocol": "workspace:*",
+    "@plotinium/vfs": "workspace:*",
+    "@valibot/to-json-schema": "catalog:",
+    "dbmate": "catalog:",
+    "fastify": "catalog:",
+    "kysely": "catalog:",
+    "pg": "catalog:",
+    "pgvector": "catalog:",
+    "pino": "catalog:",
+    "prom-client": "catalog:",
+    "valibot": "catalog:",
+    "ws": "catalog:"
+  },
+  "devDependencies": {
+    "@types/pg": "catalog:",
+    "@types/ws": "catalog:",
+    "kysely-codegen": "catalog:"
+  }
+}

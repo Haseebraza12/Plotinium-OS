@@ -1,0 +1,7 @@
+# Indexing notes (Carol)
+
+- B+ tree: data in leaves, leaves linked, high fan-out → 3–4 levels for huge tables.
+- Leaf overflow → split into two, copy the separator up; internal overflow → split, push the middle key up.
+- Hash index: equality only, no ranges.
+- GIN for arrays/full-text, GiST for geometry and ranges, BRIN for huge naturally ordered tables (timestamps).
+- For our schema: dentries(parent_ino, name) unique; dentries(ino) for reverse lookups; file_chunks(content_hash).

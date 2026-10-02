@@ -1,0 +1,278 @@
+# End-to-end, accessibility, integration and visual suites of tests/ (specs/13-quality/testing-and-performance.md
+# §3.1-§3.3, §3.14; specs/14-devops/deployment-and-ci.md §3.7.2). Owner: R5 QA/DevOps. Reviewer: R1 Kernel.
+#
+# - harness:     pure tests of the harness itself (parsers, budgets, oracle, fixtures) and the property suite.
+# - integration: fault-injection matrix, DB-03 torture and schema checks against the Compose db service.
+# - e2e:         Playwright e2e on the Compose stack built from the commit with PLT_TEST_BUILD=1 (push to main,
+#                releases through workflow_call, Sunday flake hunt with every test repeated 5 times).
+# - a11y:        axe in four theme passes and keyboard flows (pull requests that touch the UI, main, releases).
+# - visual:      screenshots of every ui/gallery page in both themes (manual and on main when ui/ changes).
+#
+# The browser suites report `fixme` until the repository variable PLT_E2E_UI is set to 1, which R5 does in the
+# pull request that makes boot-ui, login and the desktop implement tests/e2e/SELECTORS.md.
+# Nothing here runs on the lab-spec runner (TST-07); performance lives in perf-lab.yml.
+# Third-party actions are pinned to full commit SHAs (the tag is in the trailing comment), as in ci.yml.
+
+name: e2e
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - 'tests/**'
+      - 'wm/**'
+      - 'apps/**'
+      - 'web/**'
+      - 'ui/**'
+      - 'db/**'
+      - 'compose*.yaml'
+      - 'Dockerfile'
+      - '.github/workflows/e2e.yml'
+  schedule:
+    # Sunday 21:30 UTC = Monday 02:30 PKT: weekly flake hunt (TST-16).
+    - cron: '30 21 * * 0'
+  workflow_dispatch:
+  workflow_call:
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  PLOTINIUM_PORT: '4717'
+  PLT_E2E_UI: ${{ vars.PLT_E2E_UI }}
+
+jobs:
+  harness:
+    name: harness and property tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up pnpm (version from packageManager in package.json)
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Set up Node.js (version from .node-version)
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type check tests/
+        run: pnpm exec tsc -p tests/tsconfig.json --noEmit
+
+      - name: Vitest harness and property projects
+        run: pnpm exec vitest run --config tests/vitest.config.ts --project harness --project property
+
+  integration:
+    name: integration and fault injection (Compose PostgreSQL)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Start the database (loopback only)
+        run: docker compose -f compose.yaml -f compose.test.yaml up -d --wait db
+
+      - name: Vitest integration project
+        run: |
+          # The owner password is generated at first start; it stays in this step's environment only.
+          owner_pw="$(docker compose -f compose.yaml -f compose.test.yaml exec -T db cat /run/plotinium/owner_password)"
+          echo "::add-mask::${owner_pw}"
+          export DATABASE_URL="postgres://plotinium_owner:${owner_pw}@127.0.0.1:55432/plotinium"
+          PLT_DB03_MOVES="${{ github.event_name == 'schedule' && '20000' || '1000' }}" \
+            pnpm exec vitest run --config tests/vitest.config.ts --project integration
+
+      - name: Database logs on failure
+        if: ${{ failure() }}
+        run: docker compose -f compose.yaml -f compose.test.yaml logs db --tail 300
+
+      - name: Stop the database
+        if: ${{ always() }}
+        run: docker compose -f compose.yaml -f compose.test.yaml down -v
+
+  e2e:
+    name: e2e (Playwright, Chrome stable)
+    if: ${{ github.event_name != 'pull_request' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      PLT_TEST_BUILD: '1'
+      PLT_E2E_STACK: '1'
+      PLAYWRIGHT_JUNIT_OUTPUT_FILE: test-results/junit/playwright-e2e.xml
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Google Chrome stable
+        run: pnpm exec playwright install --with-deps chrome
+
+      - name: Build and start the stack from this commit (test build)
+        run: docker compose up -d --wait --build
+
+      - name: Playwright e2e project
+        run: |
+          repeat=1
+          if [ "${{ github.event_name }}" = "schedule" ]; then repeat=5; fi
+          pnpm exec playwright test -c tests/playwright.config.ts --project=e2e --repeat-each="${repeat}"
+
+      - name: Record the Chrome version (TST-13)
+        if: ${{ always() }}
+        run: echo "Chrome $(google-chrome --version)" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Stack logs on failure
+        if: ${{ failure() }}
+        run: docker compose logs --tail 300
+
+      - name: Upload the JUnit report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: junit-e2e
+          path: test-results/junit/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload traces and screenshots on failure
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: e2e-traces
+          path: |
+            test-results/playwright/
+            playwright-report/
+          if-no-files-found: ignore
+          retention-days: 3
+
+      - name: Stop the stack
+        if: ${{ always() }}
+        run: docker compose down -v
+
+  a11y:
+    name: a11y (axe in both themes, keyboard flows)
+    if: ${{ github.event_name != 'schedule' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      PLT_TEST_BUILD: '1'
+      PLAYWRIGHT_JUNIT_OUTPUT_FILE: test-results/junit/playwright-a11y.xml
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Google Chrome stable
+        run: pnpm exec playwright install --with-deps chrome
+
+      - name: Build and start the stack from this commit (test build)
+        run: docker compose up -d --wait --build
+
+      - name: Playwright a11y project
+        run: pnpm exec playwright test -c tests/playwright.config.ts --project=a11y
+
+      - name: Upload the JUnit report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: junit-a11y
+          path: test-results/junit/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Stop the stack
+        if: ${{ always() }}
+        run: docker compose down -v
+
+  visual:
+    name: visual (ui gallery, light and dark)
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'push' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      PLOTINIUM_GALLERY_URL: http://127.0.0.1:4719/
+      PLAYWRIGHT_JUNIT_OUTPUT_FILE: test-results/junit/playwright-visual.xml
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Google Chrome stable
+        run: pnpm exec playwright install --with-deps chrome
+
+      - name: Build and serve the gallery
+        run: |
+          pnpm --filter @plotinium/ui gallery:build
+          python3 -m http.server 4719 --bind 127.0.0.1 --directory ui/gallery/dist > /dev/null 2>&1 &
+          for _ in $(seq 1 30); do curl -sf http://127.0.0.1:4719/ > /dev/null && break; sleep 1; done
+
+      - name: Playwright visual project
+        # Missing references are written (and uploaded below for review) instead of failing, so the
+        # first run on the CI image records them; an existing reference that differs fails the job.
+        run: pnpm exec playwright test -c tests/playwright.config.ts --project=visual --update-snapshots=missing
+
+      - name: Upload screenshots and diffs
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: visual-screenshots
+          path: |
+            tests/visual/__screenshots__/
+            test-results/playwright/
+          if-no-files-found: ignore
+          retention-days: 14

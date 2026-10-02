@@ -1,0 +1,17 @@
+[
+  {
+    "id": "UI-041 dblclick with data-title-dblclick=minimise minimises",
+    "ok": true,
+    "detail": "minimised"
+  },
+  {
+    "id": "UI-041 dblclick with none does nothing",
+    "ok": true,
+    "detail": "normal"
+  },
+  {
+    "id": "UI-041 scale effect minimises",
+    "ok": true,
+    "detail": ""
+  }
+]

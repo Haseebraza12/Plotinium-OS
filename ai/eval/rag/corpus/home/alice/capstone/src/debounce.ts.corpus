@@ -1,0 +1,53 @@
+/**
+ * Delay a call until the caller has been quiet for `waitMs`.
+ *
+ * Used by the text editor: every keystroke calls `save()`, but the file is only written once the
+ * user pauses typing for 800 ms. `flush()` writes immediately (on blur or before closing the
+ * window) and `cancel()` drops a pending call.
+ */
+export interface Debounced<A extends unknown[]> {
+  (...args: A): void;
+  flush(): void;
+  cancel(): void;
+  readonly pending: boolean;
+}
+
+export function debounce<A extends unknown[]>(
+  fn: (...args: A) => void,
+  waitMs: number,
+): Debounced<A> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let lastArgs: A | undefined;
+
+  const run = (): void => {
+    timer = undefined;
+    const args = lastArgs;
+    lastArgs = undefined;
+    if (args !== undefined) fn(...args);
+  };
+
+  const wrapped = ((...args: A) => {
+    lastArgs = args;
+    if (timer !== undefined) clearTimeout(timer);
+    timer = setTimeout(run, waitMs);
+  }) as Debounced<A>;
+
+  wrapped.flush = () => {
+    if (timer !== undefined) {
+      clearTimeout(timer);
+      run();
+    }
+  };
+  wrapped.cancel = () => {
+    if (timer !== undefined) clearTimeout(timer);
+    timer = undefined;
+    lastArgs = undefined;
+  };
+  Object.defineProperty(wrapped, 'pending', { get: () => timer !== undefined });
+  return wrapped;
+}
+
+// editor usage
+// const save = debounce((text: string) => sys.write(fd, text), 800);
+// editor.onChange((text) => save(text));
+// window.onBlur(() => save.flush());

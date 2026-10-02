@@ -1,0 +1,12 @@
+# Draft: request for re-evaluation, DB midterm (private, not sent yet)
+
+Dear Sir,
+
+I am requesting a re-check of question 4 of the Database Systems midterm. My answer used NOT EXISTS, which returns the correct result when the subquery column is nullable; the marking scheme expected NOT IN. I believe my answer is correct and I have attached a small test case that shows the difference.
+
+I was awarded 3/8 for this question. I would be grateful if it could be reviewed.
+
+Regards,
+Alice — Roll no. withheld in draft
+
+(Wait until the grades are final before sending. Ask Carol if she got the same deduction.)

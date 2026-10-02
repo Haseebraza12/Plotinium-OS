@@ -1,0 +1,30 @@
+{
+  "name": "@plotinium/apps",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Built-in applications: terminal, shell, coreutils, files, editor, task manager, settings, demo programs. Syscalls only.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run --root .. --project apps"
+  },
+  "dependencies": {
+    "@codemirror/commands": "catalog:",
+    "@codemirror/lang-javascript": "catalog:",
+    "@codemirror/lang-markdown": "catalog:",
+    "@codemirror/language": "catalog:",
+    "@codemirror/state": "catalog:",
+    "@codemirror/view": "catalog:",
+    "@plotinium/kernel": "workspace:*",
+    "@plotinium/protocol": "workspace:*",
+    "@plotinium/ui": "workspace:*",
+    "@xterm/addon-fit": "catalog:",
+    "@xterm/xterm": "catalog:",
+    "lucide-solid": "catalog:",
+    "solid-js": "catalog:"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "ai.indexer",
+  "description": "Indexer process spawned, cursor reconciled, pending count reported",
+  "requires": ["ai.runtime", "vfs", "session"],
+  "critical": false,
+  "weight": 3,
+  "timeoutMs": 4000,
+  "priority": 32,
+  "safeMode": false,
+  "runsIn": "executor",
+  "caps": ["fs.read", "mem", "ai.index"]
+}

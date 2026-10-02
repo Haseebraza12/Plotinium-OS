@@ -1,0 +1,22 @@
+[
+  {
+    "name": "UI-066 arrows work after a click outside",
+    "ok": true,
+    "detail": "Normal bootStart Plotinium and -> Verbose bootTimestamped kernel (focus was BODY)"
+  },
+  {
+    "name": "UI-062 verbose log keeps following",
+    "ok": true,
+    "detail": "worst gap 24"
+  },
+  {
+    "name": "CSP violations (menu/verbose)",
+    "ok": false,
+    "detail": "[{\"d\":\"require-trusted-types-for\",\"b\":\"trusted-types-sink\",\"s\":\"http://localhost:4718/assets/index-DaGSVGE4.js\",\"l\":3}]"
+  },
+  {
+    "name": "console/page errors",
+    "ok": true,
+    "detail": ""
+  }
+]

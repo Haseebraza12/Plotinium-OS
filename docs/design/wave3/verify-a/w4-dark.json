@@ -1,0 +1,73 @@
+[
+  {
+    "id": "UI-096 compact at 760x560: editor fits the viewport",
+    "ok": true,
+    "detail": {
+      "app": "editor",
+      "wid": "1",
+      "x": 0,
+      "y": 28,
+      "w": 760,
+      "h": 448,
+      "vw": 760,
+      "vh": 410,
+      "snap": null,
+      "state": "maximised",
+      "focused": "true"
+    }
+  },
+  {
+    "id": "UI-096 snapped editor not below its minimum width (560) at 760",
+    "ok": true,
+    "detail": {
+      "app": "editor",
+      "wid": "1",
+      "x": 0,
+      "y": 28,
+      "w": 560,
+      "h": 448,
+      "vw": 560,
+      "vh": 410,
+      "snap": "left",
+      "state": "normal",
+      "focused": "true"
+    }
+  },
+  {
+    "id": "UI-096 maximised Settings not below its minimum (880x620)",
+    "ok": true,
+    "detail": {
+      "app": "settings",
+      "wid": "2",
+      "x": 0,
+      "y": 28,
+      "w": 880,
+      "h": 620,
+      "vw": 880,
+      "vh": 620,
+      "snap": null,
+      "state": "normal",
+      "focused": "true"
+    }
+  },
+  {
+    "id": "UI-096 editor regains its size after the viewport grows",
+    "ok": true,
+    "detail": {
+      "e0": [900, 640],
+      "e3": {
+        "app": "editor",
+        "wid": "1",
+        "x": 40,
+        "y": 68,
+        "w": 900,
+        "h": 640,
+        "vw": 900,
+        "vh": 602,
+        "snap": null,
+        "state": "normal",
+        "focused": "false"
+      }
+    }
+  }
+]

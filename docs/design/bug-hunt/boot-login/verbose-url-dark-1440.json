@@ -1,0 +1,86 @@
+{
+  "console": [],
+  "pageErrors": [],
+  "failed": ["401 GET /api/auth/me"],
+  "states": [
+    {
+      "verbose": true,
+      "rows": 1,
+      "stepOpacity": "0.948725",
+      "countOpacity": "1",
+      "chip": "true",
+      "chipText": "Hide log",
+      "warnRows": []
+    },
+    {
+      "verbose": true,
+      "rows": 2,
+      "stepOpacity": "1",
+      "countOpacity": "1",
+      "chip": "true",
+      "chipText": "Hide log",
+      "warnRows": []
+    },
+    {
+      "verbose": true,
+      "rows": 2,
+      "stepOpacity": "1",
+      "countOpacity": "1",
+      "chip": "true",
+      "chipText": "Hide log",
+      "warnRows": []
+    },
+    {
+      "verbose": true,
+      "rows": 35,
+      "stepOpacity": "1",
+      "countOpacity": "0",
+      "chip": "true",
+      "chipText": "Hide log",
+      "warnRows": [
+        "warn: [    1.472] storage: WARN persistent storage denied color=rgba(255, 255, 255, 0.92)",
+        "warn: [    1.472] storage: WARN persistent storage denied color=rgba(255, 255, 255, 0.92)",
+        "warn: [    1.492] storage: WARN persistent storage not granted: the browser may evict  color=rgba(255, 255, 255, 0.92)"
+      ]
+    },
+    {
+      "verbose": true,
+      "rows": 35,
+      "stepOpacity": "1",
+      "countOpacity": "1",
+      "chip": "true",
+      "chipText": "Hide log",
+      "warnRows": [
+        "warn: [    1.472] storage: WARN persistent storage denied color=rgba(255, 255, 255, 0.92)",
+        "warn: [    1.472] storage: WARN persistent storage denied color=rgba(255, 255, 255, 0.92)",
+        "warn: [    1.492] storage: WARN persistent storage not granted: the browser may evict  color=rgba(255, 255, 255, 0.92)"
+      ]
+    },
+    {
+      "verbose": true,
+      "rows": 35,
+      "stepOpacity": "1",
+      "countOpacity": "1",
+      "chip": "true",
+      "chipText": "Hide log",
+      "warnRows": [
+        "warn: [    1.472] storage: WARN persistent storage denied color=rgba(255, 255, 255, 0.92)",
+        "warn: [    1.472] storage: WARN persistent storage denied color=rgba(255, 255, 255, 0.92)",
+        "warn: [    1.492] storage: WARN persistent storage not granted: the browser may evict  color=rgba(255, 255, 255, 0.92)"
+      ]
+    },
+    {
+      "verbose": true,
+      "rows": 35,
+      "stepOpacity": "1",
+      "countOpacity": "1",
+      "chip": "true",
+      "chipText": "Hide log",
+      "warnRows": [
+        "warn: [    1.472] storage: WARN persistent storage denied color=rgba(255, 255, 255, 0.92)",
+        "warn: [    1.472] storage: WARN persistent storage denied color=rgba(255, 255, 255, 0.92)",
+        "warn: [    1.492] storage: WARN persistent storage not granted: the browser may evict  color=rgba(255, 255, 255, 0.92)"
+      ]
+    }
+  ]
+}

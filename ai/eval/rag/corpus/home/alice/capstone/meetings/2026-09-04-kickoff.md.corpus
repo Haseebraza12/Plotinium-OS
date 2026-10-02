@@ -1,0 +1,29 @@
+# Kickoff — Friday 4 Sep 2026
+
+Present: Alice, Bob, Carol, Dan, Esha. Location: library group room 3, 2–4 pm.
+
+## Roles
+
+| Role | Person | Owns |
+|---|---|---|
+| R1 Kernel | Dan | scheduler, memory manager, syscalls |
+| R2 VFS/DB | Carol | file system, IndexedDB layout, Postgres schema |
+| R3 WM/UI | Bob | compositor, windows, dock, Files app |
+| R4 AI | Alice | embeddings, indexer, semantic search, agent |
+| R5 QA/DevOps | Esha | CI, Docker, test projects, release process |
+
+## Sprint 1 (until 18 Sep)
+
+- Dan: kernel worker boots, process table, round-robin scheduler with a fake workload.
+- Carol: inode + dentry stores, mkdir/ls/cat on a test page.
+- Bob: static desktop mock with the dock and one draggable window.
+- Alice: pilot of two embedding models on 60 documents, numbers for the defence.
+- Esha: repo scaffold, lint, typecheck and unit tests in CI on every PR.
+
+## Agreements
+
+- PRs need one review from someone outside your role.
+- Standup in the WhatsApp group every weekday by 10 pm: done / next / blocked.
+- Weekly sync Fridays 2 pm.
+
+Next meeting: 11 Sep.

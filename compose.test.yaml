@@ -1,0 +1,32 @@
+# compose.test.yaml: CI and developers' integration tests (specs/14-devops/deployment-and-ci.md §3.1.4).
+#   docker compose -f compose.yaml -f compose.test.yaml up -d --wait db
+# Publishes PostgreSQL on the loopback interface only, with auto_explain.log_analyze on (database.md
+# §3.24). Read the generated owner password with:
+#   docker compose exec -T db cat /run/plotinium/owner_password
+services:
+  db:
+    ports: ['127.0.0.1:${PLOTINIUM_DB_PORT:-55432}:5432'] # loopback only
+    command: !override
+      - postgres
+      - -c
+      - shared_preload_libraries=pg_stat_statements,auto_explain
+      - -c
+      - auto_explain.log_min_duration=10ms
+      - -c
+      - auto_explain.log_analyze=on
+      - -c
+      - random_page_cost=1.1
+      - -c
+      - jit=off
+      - -c
+      - fsync=on
+      - -c
+      - lc_messages=C
+      - -c
+      - timezone=UTC
+      - -c
+      - idle_in_transaction_session_timeout=10s
+
+networks:
+  backplane:
+    internal: false # allows the loopback port mapping for the test process

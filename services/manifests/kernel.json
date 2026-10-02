@@ -1,0 +1,11 @@
+{
+  "name": "kernel",
+  "description": "PID 1, process table, IPC bus, klog ring and timer heap exist; manifests loaded",
+  "requires": [],
+  "critical": true,
+  "weight": 3,
+  "timeoutMs": 1000,
+  "priority": 0,
+  "safeMode": true,
+  "recovery": true
+}

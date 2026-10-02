@@ -1,0 +1,95 @@
+{
+ "files_changed": [
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/engine/sync/README.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/engine/sync/index.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/engine/sync/clock.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/engine/sync/close-policy.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/engine/sync/router.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/engine/sync/watchdog.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/engine/sync/throttle.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/engine/sync/outcome.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/engine/sync/feed-steps.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/engine/sync/engine.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/engine/sync/lane.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/engine/sync/content-write.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/engine/sync/kysely-content.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/engine/sync/base-check.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/engine/sync/names.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/engine/sync/visibility.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/engine/sync/feed.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/engine/sync/feed-reader.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/engine/sync/resume.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/engine/sync/connection.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/engine/sync/hub.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/engine/sync/runtime.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/engine/sync/tests/fake-db.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/engine/sync/tests/manual-clock.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/engine/sync/engine.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/engine/sync/router.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/engine/sync/lane.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/engine/sync/outcome.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/engine/sync/policy.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/engine/sync/feed.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/engine/sync/connection.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/engine/sync/sync.int.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/engine/locks/README.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/engine/locks/index.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/engine/locks/types.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/engine/locks/expiry-index.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/engine/locks/fencing.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/engine/locks/sweeper.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/engine/locks/manager.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/engine/locks/store.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/engine/locks/tests/memory-store.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/engine/locks/tests/test-heap.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/engine/locks/manager.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/engine/locks/fencing.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/server/src/engine/locks/store.int.test.ts"
+ ],
+ "verification": [
+  {
+   "command": "pnpm exec tsc -p server/tsconfig.json --noEmit  (filtered to server/src/engine/sync|locks)",
+   "outcome": "0 errors in my paths. The full server typecheck currently reports errors only in server/src/engine/llm/gateway.test.ts, which is another agent's work in progress and does not touch my code."
+  },
+  {
+   "command": "pnpm exec eslint server/src/engine/sync server/src/engine/locks --max-warnings 0",
+   "outcome": "exit 0, no warnings (package boundaries respected: only @plotinium/protocol, @plotinium/dsa, @plotinium/vfs/path and @plotinium/vfs/perm are imported)"
+  },
+  {
+   "command": "pnpm exec prettier --check server/src/engine/sync server/src/engine/locks",
+   "outcome": "All matched files use Prettier code style"
+  },
+  {
+   "command": "pnpm exec vitest run --project server server/src/engine/sync server/src/engine/locks  (no DATABASE_URL)",
+   "outcome": "9 files passed, 2 DB-gated files skipped; 149 passed, 14 skipped. Includes fast-check properties: OFF-02 exactly-once (40 runs, seed 20261114) and SYN-17 stream/live interleavings (150 runs, seed 17)."
+  },
+  {
+   "command": "docker run plotinium-db:0.1.0 (disposable container plt-synclocks-pg on 127.0.0.1:55499) + dbmate up db/migrations; DATABASE_URL=... pnpm exec vitest run --project server server/src/engine/sync server/src/engine/locks --coverage",
+   "outcome": "11 files, 163/163 passed against real PostgreSQL 18 + pgvector. The DB-gated tests exercise all of the lease SQL, content-write SQL, feed reader, directory context, OS-session registry and runtime wiring. Coverage of my folders (tests excluded): lines 95.2%, statements 92.8%, functions 92.7%, branches 83.8%. The container was removed afterwards; the core stack's plotinium-db-1 was never touched."
+  },
+  {
+   "command": "test-title scan (C18)",
+   "outcome": "All 163 test titles begin with a registered ID: OFF-02, VFS-09, VFS-10, SYN-01..18, PROC-07, BOOT-12, AGT-09"
+  }
+ ],
+ "problems": [
+  "dsa/heap still has IMPLEMENTED=false, so `new BinaryHeap()` would throw NotImplementedError on the first lease grant. I followed the repo's existing pattern (kernel/src/host/timers.ts, kernel proc table, klog): ExpiryIndex uses dsa/heap when HEAP_IMPLEMENTED is true and otherwise a built-in Map with a linear-scan minimum. That stand-in is not a heap, and it carries a TODO(dsa/heap) to delete it. Tests cover both the heap path (a test-only IndexedMinHeap double) and the stand-in. The broadcaster's per-owner hold list reuses the same index.",
+  "The spec wants conflicted-copy names from the isomorphic vfs/names.ts and the subtree digest from vfs/digest.ts. The server boundary (tools/eslint-rules/boundaries.js) and vfs/package.json exports allow only @plotinium/vfs/path and /perm. So engine/sync/names.ts (conflictName, isoDate) and base-check.ts subtreeDigest are line-for-line mirrors, marked TODO(boundary) and pinned by tests.",
+  "server/src/vfs/types.ts VfsCall has no 'utimes', 'audit.append' or 'session.layout'. Those op kinds currently get `retry ENOSYS not-implemented` (retryAfterMs 60 s), so clients keep them rather than losing them. The same answer applies to any op kind that has no handler: only `write` is implemented here, and create/unlink/rename/link/copy/chmod/chown/batch come from the vfs/ops handlers.",
+  "\u00a73.12.5 server-side salvage of REJECTED content (EACCES, EPERM, parent ENOENT) into ~/lost+found is not implemented, because it needs a hook inside vfsTxn's recordRejection transaction (server/src/vfs, not my path). The client parks the bytes locally instead (\u00a73.12.4), so nothing is lost.",
+  "A duplicate of a retention-pruned tombstone can only report `pruned: true` if the stored result says so, because vfsTxn's readStoredOp does not return purged_at.",
+  "GET /api/sync/snapshot (the target of snapshot.required) was not in my assignment and is not implemented. The frame and its URL are produced: /api/sync/snapshot?scope=owner&owner=<uid>.",
+  "LockNotifier.watchersOf (lock.released pushed to connections watching the file's directory) is not wired, because it needs a parent lookup. Connections that were denied or queued for an inode are notified by the manager itself."
+ ],
+ "integration_notes": "All of this is new code under server/src/engine/{sync,locks}; I edited nothing else. The integration step must add the following (only in files owned by core):\n\n1) app.ts (buildApp), after the gateway is set up and before the locks/sync plugins are registered:\n```ts\nimport { createSyncRuntime } from './engine/sync/runtime.ts';\nimport { ProtocolViolation } from './engine/sync/engine.ts';\nconst sync = database === null ? null : createSyncRuntime({\n  db: database.db, cancel,\n  build: { name: 'Plotinium', version: <pkg version>, build: <git sha 7-12 hex>, date: <YYYY-MM-DD> },\n  leaseTtlMs: config.leaseTtlMs, lockTimeoutMs: config.database.lockTimeoutMs,\n  statementTimeoutMs: config.database.statementTimeoutMs, timeZone: config.timeZone,\n  validateAuth: async (id) => { const s = await authStore.findSession(id); const n = now();\n    return s !== null && s.revokedAt === null && s.expiresAt.getTime() > n && s.absoluteExpiresAt.getTime() > n; },\n  cancelBackendPid: (pid) => void database.pool.query('SELECT pg_cancel_backend($1)', [pid]).catch(() => {}),\n  handlers: (submit) => /* vfs/ops handler for create|unlink|rename|link|copy|chmod|chown|batch,\n             structural ones wrapped in withBaseCheck(h, kind === 'batch' ? 'batch' : 'structural', subtreeOf) */ undefined,\n  ...(config.faultInjection ? { faultFor: (s) => faultArming.take(s.osSessionId, s.op.kind) } : {}),\n  onError: (err, ctx) => logger.warn({ err, ctx }, 'sync'),\n});\nawait sync?.start();                       // rebuild the lease expiry index from `locks` BEFORE listen\nsessions?.onRevoke((ids) => void sync?.hub.revoke(ids));   // bye revoked + 4401 + release leases\napp.decorate('sync', sync); app.decorate('locks', sync?.locks ?? null);\n```\n\n2) server/src/sync/routes.ts: register @fastify/websocket with `{ options: { maxPayload: 65_536, perMessageDeflate: false } }`, then replace the /ws 501 stub. Its preValidation must run, in order, before the upgrade (backend-api.md \u00a73.7): draining \u2192 503; rateClass 'ws-upgrade'; exact Origin allowlist \u2192 403; Sec-Fetch-Site if present must be 'same-origin' \u2192 403; session required \u2192 401; `sync.hub.socketsOf(auth.authSessionId) >= 4` \u2192 429. The handler must attach its listeners SYNCHRONOUSLY:\n```ts\napp.get('/ws', { websocket: true, config: { rateClass: 'ws-upgrade' }, preValidation: [...] }, (socket, req) => {\n  const a = req.plt.auth!;                       // AuthState\n  const username = /* authStore.usernameOf(a.uid), resolved in preValidation and stored on req.plt */;\n  const conn = sync.hub.accept({\n    send: (t) => socket.send(t), close: (c, r) => socket.close(c, r), terminate: () => socket.terminate(),\n    ping: () => socket.ping(), get bufferedAmount() { return socket.bufferedAmount; },\n    pauseReading: (ms) => { socket.pause(); setTimeout(() => socket.resume(), ms).unref(); },\n  }, { authSessionId: a.authSessionId, uid: a.uid, username, kind: a.kind === 'root' ? 'user' : a.kind,\n       gids: a.gids, suGrants: () => (a.suGrant === null ? [] : [a.suGrant]) });\n  socket.on('message', (data, isBinary) => conn.onMessage(isBinary ? '' : data.toString('utf8'), isBinary));\n  socket.on('pong', () => conn.onPong());\n  socket.on('close', (code) => conn.onClose(code));\n});\n```\nPOST /api/ops/:opId (bodyLimit 4 MiB): run `v.safeParse(OpSubmit, body)` (400 EINVAL on failure), then check `body.opId === params.opId` (409 EINVAL otherwise). Then call `reply.send(await sync.hub.submitOp({ uid: auth.uid, mayActAs: (p) => p === auth.uid || (a.suGrant?.uid === p && a.suGrant.expiresAt > now), gidsOf: (p) => p === auth.uid ? auth.gids : [p] }, body))`, which answers status 200 for every outcome. Catch ProtocolViolation \u2192 403 EACCES. submitOp joins the live socket's op lane for that OS session (HTTP results never go on the socket), and otherwise runs the op directly.\n\n3) server/src/locks/plugin.ts: nothing beyond the `locks` decorator above. The manager is wired inside createSyncRuntime, and lock.* frames go over /ws.\n\n4) server/src/shutdown.ts, on SIGTERM, after /api/readyz starts reporting draining: `await sync?.hub.shutdown(config.shutdownGraceMs / 2)`. Each connection finishes its running op, then gets `bye restart` / 1012. Leases are NOT released.\n\n5) su grants: when a grant expires, exits or is revoked, call `sync.hub.suEnded(authSessionId, uid, 'su-expired' | 'su-revoked')`. That sends proc.signal SIGHUP.\n\n6) Cross-package requests (for integration or the owners):\n- (a) Export `./names` and `./digest` from vfs/package.json and allow `@plotinium/vfs/(names|digest)` in SERVER_IMPORTS in tools/eslint-rules/boundaries.js. Then swap engine/sync/names.ts and base-check.ts subtreeDigest for the isomorphic modules.\n- (b) server/src/vfs/types.ts VfsCall: add 'utimes' | 'audit.append' | 'session.layout'.\n- (c) server/src/vfs/steps.ts readStoredOp: also return `purged: purged_at IS NOT NULL`, so the engine can set op.result.pruned. Also add a salvage hook to recordRejection for \u00a73.12.5.\n- (d) The gateway's AuthState should carry `username`, which hello.ok.auth needs.\n\nNo protocol changes were needed: every wire shape comes from protocol/src/ws (C2SFrame, S2CFrame, OpSubmit, OpResult, Hello, Change, and the constants).",
+ "deps_requested": [],
+ "todos_for_team": [
+  "R1: implement dsa/heap and flip HEAP_IMPLEMENTED. Then delete the Map stand-in in server/src/engine/locks/expiry-index.ts (TODO(dsa/heap)).",
+  "R2: write the vfs/ops handlers for create/unlink/rename/link/copy/chmod/chown/batch, wrap the structural ones in withBaseCheck(), and pass them to createSyncRuntime({ handlers }). Until then those ops get `retry ENOSYS not-implemented`.",
+  "R2: salvage of rejected content ops (\u00a73.12.5) into ~/lost+found inside vfsTxn's rejection transaction.",
+  "R2: GET /api/sync/snapshot (scopes owner/dir/subtree, headSeq captured on the first page). It is the target of snapshot.required.",
+  "R2/R5: wire LockNotifier.watchersOf (connections watching the leased file's directory) once a cheap parent lookup is available.",
+  "R5: add the DB-gated suites (server/src/engine/locks/store.int.test.ts, server/src/engine/sync/sync.int.test.ts) to the integration CI job. They use uids 3101-3103 and 3201-3202 on a freshly migrated owner-role database.",
+  "Spec owners: register the reasons used on the wire (EAGAIN 'rate' and 'predecessor-retry', EAGAIN 'blob-missing', EINVAL 'schema' and 'unknown-lease', ENOSYS 'not-implemented', EACCES 'principal') in syscall-abi.md \u00a74.3.1, as offline-and-sync.md \u00a79.2 already requests for some of them."
+ ]
+}

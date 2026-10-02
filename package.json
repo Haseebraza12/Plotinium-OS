@@ -1,0 +1,49 @@
+{
+  "name": "plotinium",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Plotinium: an AI-native, local-first web operating system (LGU BSCS capstone, Fall 2026).",
+  "license": "UNLICENSED",
+  "type": "module",
+  "packageManager": "pnpm@12.5.1",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "start": "node tools/build-id.ts -- docker compose up -d --wait --build",
+    "stop": "docker compose down",
+    "dev": "node tools/dev.ts",
+    "logs": "docker compose logs --follow --tail 200",
+    "creds": "node tools/creds.ts",
+    "build": "pnpm -r run build",
+    "typecheck": "tsc -p tsconfig.json && tsc -p tools/tsconfig.json && tsc -p tests/tsconfig.json && pnpm -r run typecheck",
+    "lint": "eslint . --max-warnings 0",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "bench": "vitest bench --run",
+    "e2e": "playwright test",
+    "traceability": "node tools/traceability.ts",
+    "bundle-budget": "node tools/bundle-budget.ts",
+    "ci": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test:coverage"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "catalog:",
+    "@eslint/js": "catalog:",
+    "@playwright/test": "catalog:",
+    "@types/estree": "catalog:",
+    "@types/node": "catalog:",
+    "@typescript/native": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "eslint": "catalog:",
+    "eslint-plugin-solid": "catalog:",
+    "fast-check": "catalog:",
+    "globals": "catalog:",
+    "prettier": "catalog:",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  }
+}

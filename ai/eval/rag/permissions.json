@@ -1,0 +1,166 @@
+{
+  "set": "rag-perm@v1",
+  "about": "Users, groups and directory modes of the RAG evaluation tree, plus leak probes for RAG-03. File owners, groups and modes are in corpus/MANIFEST.jsonl. Users match ai/eval/fixtures/fx-agt.ts. Probe queries are adversarial: they deliberately reuse the target's file name and distinctive words, so that without the permission filter the target would be returned.",
+  "groups": {
+    "users": 100,
+    "team": 2000
+  },
+  "users": {
+    "alice": {
+      "uid": 1001,
+      "gid": 100,
+      "groups": [100, 2000]
+    },
+    "bob": {
+      "uid": 1002,
+      "gid": 100,
+      "groups": [100, 2000]
+    },
+    "carol": {
+      "uid": 1003,
+      "gid": 100,
+      "groups": [100]
+    }
+  },
+  "directories": [
+    {
+      "path": "/home",
+      "owner": "root",
+      "group": "root",
+      "mode": "755"
+    },
+    {
+      "path": "/home/alice",
+      "owner": "alice",
+      "group": "users",
+      "mode": "755"
+    },
+    {
+      "path": "/home/alice/private",
+      "owner": "alice",
+      "group": "users",
+      "mode": "700"
+    },
+    {
+      "path": "/home/alice/drop",
+      "owner": "alice",
+      "group": "users",
+      "mode": "711"
+    },
+    {
+      "path": "/home/bob",
+      "owner": "bob",
+      "group": "users",
+      "mode": "755"
+    },
+    {
+      "path": "/home/carol",
+      "owner": "carol",
+      "group": "users",
+      "mode": "755"
+    },
+    {
+      "path": "/home/carol/private",
+      "owner": "carol",
+      "group": "users",
+      "mode": "700"
+    }
+  ],
+  "defaultDirectory": {
+    "group": "users",
+    "mode": "755"
+  },
+  "probes": [
+    {
+      "id": "LK01",
+      "query": "stipend 2026 amounts by month",
+      "target": "/home/alice/private/stipend-2026.md",
+      "readableBy": ["alice"],
+      "why": "600 file inside a 700 directory"
+    },
+    {
+      "id": "LK02",
+      "query": "grade appeal draft for the database midterm",
+      "target": "/home/alice/private/grade-appeal-draft.md",
+      "readableBy": ["alice"],
+      "why": "600 file inside a 700 directory"
+    },
+    {
+      "id": "LK03",
+      "query": "journal: checkpoint disaster, projector laptop, could not sleep",
+      "target": "/home/alice/private/journal-2026-10-15.txt",
+      "readableBy": ["alice"],
+      "why": "600 file inside a 700 directory"
+    },
+    {
+      "id": "LK04",
+      "query": "medical: doctor about migraines, magnesium and the follow up",
+      "target": "/home/alice/private/medical-2026-10.txt",
+      "readableBy": ["alice"],
+      "why": "600 file inside a 700 directory"
+    },
+    {
+      "id": "LK05",
+      "query": "job applications internship expected pay",
+      "target": "/home/alice/private/job-applications.md",
+      "readableBy": ["alice"],
+      "why": "600 file inside a 700 directory"
+    },
+    {
+      "id": "LK06",
+      "query": "notes to self about the stale results bug",
+      "target": "/home/alice/capstone/notes-to-self.md",
+      "readableBy": ["alice"],
+      "why": "600 file in a traversable 755 directory: the file mode alone must hide it"
+    },
+    {
+      "id": "LK07",
+      "query": "peer review draft ratings of teammates",
+      "target": "/home/alice/capstone/peer-review-draft.md",
+      "readableBy": ["alice"],
+      "why": "600 file in a traversable 755 directory"
+    },
+    {
+      "id": "LK08",
+      "query": "team budget VPS domain LLM credit",
+      "target": "/home/alice/capstone/team-budget.md",
+      "readableBy": ["alice", "bob"],
+      "why": "640 with group team: bob is in team, carol is not"
+    },
+    {
+      "id": "LK09",
+      "query": "private deadlock cheatsheet, my cheat sheet for the exam formula sheet",
+      "target": "/home/bob/notes/private-deadlock-cheatsheet.md",
+      "readableBy": ["bob"],
+      "why": "600 near-duplicate of a document alice's RAG-04 queries target"
+    },
+    {
+      "id": "LK10",
+      "query": "drag bug scratch: titlebar mousemove, layout thrash, gaming mouse 1000 Hz",
+      "target": "/home/bob/wm/drag-bug-scratch.txt",
+      "readableBy": ["bob"],
+      "why": "600 near-duplicate of a RAG-04 target"
+    },
+    {
+      "id": "LK11",
+      "query": "bob's todo: breadcrumb aria-current, flaky drag e2e test, dentist wed, VPS share",
+      "target": "/home/bob/todo.txt",
+      "readableBy": ["bob"],
+      "why": "600 file in a 755 directory"
+    },
+    {
+      "id": "LK12",
+      "query": "interview prep salary expectation",
+      "target": "/home/carol/private/interview-prep.md",
+      "readableBy": ["carol"],
+      "why": "600 file inside a 700 directory"
+    },
+    {
+      "id": "LK13",
+      "query": "handout for bob with the compositor numbers",
+      "target": "/home/alice/drop/handout-for-bob.txt",
+      "readableBy": ["alice", "bob", "carol"],
+      "why": "positive control: 644 file in a 711 directory is readable through traverse-only permission"
+    }
+  ]
+}

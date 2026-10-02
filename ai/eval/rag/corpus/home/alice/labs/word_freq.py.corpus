@@ -1,0 +1,27 @@
+"""Lab 1 warm-up: print the 20 most common words in a text file and how many times each occurs.
+
+usage: python3 word_freq.py book.txt
+"""
+import string
+import sys
+
+
+def main(path):
+    counts = {}
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            for raw in line.split():
+                word = raw.strip(string.punctuation).lower()
+                if not word:
+                    continue
+                counts[word] = counts.get(word, 0) + 1
+    ranked = sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))
+    for word, n in ranked[:20]:
+        print(f"{n:6d}  {word}")
+    print(f"{len(counts)} distinct words, {sum(counts.values())} total")
+
+
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        sys.exit("usage: word_freq.py FILE")
+    main(sys.argv[1])

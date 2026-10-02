@@ -1,0 +1,15 @@
+{
+  "v": 1,
+  "t": "lock.denied",
+  "id": 12,
+  "body": {
+    "reqId": "0192f0c1-9000-7000-8000-000000000003",
+    "errno": "EBUSY",
+    "reason": "lease",
+    "holder": {
+      "username": "bob",
+      "mode": "X",
+      "expiresAt": "2026-09-24T10:00:00.000Z"
+    }
+  }
+}

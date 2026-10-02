@@ -1,0 +1,18 @@
+# Amortised analysis
+
+Average cost per operation over a worst-case **sequence**, not an average over random inputs.
+
+Methods:
+1. **Aggregate:** total cost of n operations / n.
+2. **Accounting (banker's):** overcharge cheap operations, store credit, spend it on expensive ones.
+3. **Potential:** Φ(state) ≥ 0; amortised cost = actual + ΔΦ.
+
+## Dynamic array doubling
+
+Appending is O(1) except when the array is full and we copy everything. Over n appends the copies cost 1 + 2 + 4 + … + n < 2n, so O(1) amortised. Charge 3 per append: 1 to insert, 2 saved to pay for moving itself and one older element later.
+
+Shrinking must use a lower threshold (shrink at 1/4 full, not 1/2) or alternating push/pop at the boundary costs O(n) each.
+
+## Other examples
+
+Binary counter increment (amortised 2 bit flips), union-find with path compression, splay trees, the two-stack queue.

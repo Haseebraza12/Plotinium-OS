@@ -1,0 +1,71 @@
+name: Requirement or feature
+description: Work item keyed by a requirement ID (definition of ready, TEAM_CONTRACT.md §2)
+title: '[REQ-ID] '
+labels: ['feature']
+body:
+  - type: input
+    id: requirement
+    attributes:
+      label: Requirement ID(s)
+      description: Spec IDs such as VFS-06 or DB-02, or a Plotinium design ID such as ARC-01.
+      placeholder: VFS-06
+    validations:
+      required: true
+  - type: input
+    id: spec
+    attributes:
+      label: Spec section
+      description: The file and section under specs/ that defines this work.
+      placeholder: specs/04-vfs/virtual-file-system.md §3.2
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria, written as test names
+      description: Each line is a test title that begins with the requirement ID.
+      placeholder: |
+        - VFS-06 rejects a write beyond quota with EDQUOT and no partial data
+        - VFS-06 df and du report usage that matches the quota row
+    validations:
+      required: true
+  - type: dropdown
+    id: owner
+    attributes:
+      label: Owner (primary role)
+      options: [R1 Kernel, R2 VFS/DB, R3 WM/UI, R4 AI, R5 QA/DevOps]
+    validations:
+      required: true
+  - type: dropdown
+    id: reviewer
+    attributes:
+      label: Secondary reviewer
+      options: [R1 Kernel, R2 VFS/DB, R3 WM/UI, R4 AI, R5 QA/DevOps]
+    validations:
+      required: true
+  - type: dropdown
+    id: estimate
+    attributes:
+      label: Estimate
+      options: [S (up to half a day), M (1-2 days), L (3 days; split it if larger)]
+    validations:
+      required: true
+  - type: dropdown
+    id: gate
+    attributes:
+      label: Gate milestone
+      options:
+        - Registration (Week 2)
+        - P1 (Week 4, architecture defence)
+        - P2 (Week 7, v0.2.0)
+        - P3 (Week 11, v0.3.0)
+        - P4 (Week 14, v0.4.0)
+        - Freeze (Week 16, v1.0.0-rc)
+        - Final (Weeks 17-18, v1.0.0)
+    validations:
+      required: true
+  - type: input
+    id: risk
+    attributes:
+      label: Linked risk (optional)
+      placeholder: R-2

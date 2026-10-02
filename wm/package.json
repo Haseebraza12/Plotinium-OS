@@ -1,0 +1,32 @@
+{
+  "name": "@plotinium/wm",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Window manager: framework-free compositor and boot-ui, Solid desktop shell, design tokens, frame meter.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./shell": "./src/shell/index.ts",
+    "./compositor": "./src/compositor/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run --root .. --project wm"
+  },
+  "dependencies": {
+    "@codemirror/commands": "catalog:",
+    "@codemirror/lang-javascript": "catalog:",
+    "@codemirror/lang-markdown": "catalog:",
+    "@codemirror/language": "catalog:",
+    "@codemirror/state": "catalog:",
+    "@codemirror/view": "catalog:",
+    "@plotinium/dsa": "workspace:*",
+    "@plotinium/protocol": "workspace:*",
+    "@plotinium/ui": "workspace:*",
+    "@xterm/addon-fit": "catalog:",
+    "@xterm/xterm": "catalog:",
+    "lucide-solid": "catalog:",
+    "solid-js": "catalog:"
+  }
+}

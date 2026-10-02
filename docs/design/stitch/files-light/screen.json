@@ -1,0 +1,10 @@
+{
+  "note": "Raw response of mcp__stitch__generate_screen_from_text for files-light. No screen id was returned and list_screens stayed empty for about 14 minutes, so get_screen could not be called.",
+  "request": {
+    "projectId": "12849137298552292712",
+    "deviceType": "DESKTOP",
+    "designSystem": "assets/3690503530025860907",
+    "modelId": "GEMINI_3_8_FLASH"
+  },
+  "response": {"projectId": "12849137298552292712", "sessionId": "2958429668086585372"}
+}

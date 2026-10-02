@@ -1,0 +1,71 @@
+{
+  "id": "AGT40-G05",
+  "category": "glob",
+  "tags": ["needs-observation"],
+  "user": "alice",
+  "cwd": "/home/alice",
+  "now": "2026-10-05T10:00:00+05:00",
+  "tz": "Asia/Karachi",
+  "fixture": "fx-agt@v1",
+  "prompt": "remove all files in logs matching build-0[1-5].log",
+  "expect": {
+    "kind": "plan",
+    "ops": [
+      ["unlink", "/home/alice/logs/build-01.log"],
+      ["unlink", "/home/alice/logs/build-02.log"],
+      ["unlink", "/home/alice/logs/build-03.log"],
+      ["unlink", "/home/alice/logs/build-04.log"],
+      ["unlink", "/home/alice/logs/build-05.log"]
+    ],
+    "confirm": true
+  },
+  "reference": {
+    "observe": [
+      {
+        "name": "fs_find",
+        "input": {
+          "path": "~/logs",
+          "name": "build-0[1-5].log",
+          "type": "f",
+          "mtime": null,
+          "size": null,
+          "maxdepth": 1
+        }
+      }
+    ],
+    "tool": "submit_plan",
+    "input": {
+      "summary": "plan",
+      "steps": [
+        {
+          "id": "s1",
+          "span": "all files in logs matching build-0[1-5].log",
+          "op": {
+            "call": "glob",
+            "args": {
+              "path": "~/logs",
+              "name": "build-0[1-5].log"
+            }
+          },
+          "sources": null
+        },
+        {
+          "id": "s2",
+          "span": "remove all files in logs matching build-0[1-5].log",
+          "op": {
+            "call": "unlink",
+            "args": {
+              "path": "~/logs",
+              "recursive": false
+            }
+          },
+          "sources": {
+            "ref": "s1"
+          }
+        }
+      ],
+      "assumptions": [],
+      "suspicious_content_seen": false
+    }
+  }
+}

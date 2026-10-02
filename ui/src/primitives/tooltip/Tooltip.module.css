@@ -1,0 +1,37 @@
+.anchor {
+  display: contents;
+}
+.tooltip {
+  max-width: var(--pl-tooltip-max-w);
+  padding: var(--pl-space-1) var(--pl-space-2);
+  border-radius: var(--pl-radius-sm);
+  background: var(--pl-tooltip-bg);
+  color: var(--pl-tooltip-text);
+  box-shadow:
+    var(--pl-shadow-tooltip),
+    inset 0 0 0 var(--pl-hairline-width) var(--pl-hairline);
+  font: var(--pl-type-caption);
+  font-weight: var(--pl-weight-medium);
+  white-space: normal;
+  pointer-events: auto;
+}
+/* The dock label: a larger glass capsule above the icon. */
+.prominent {
+  padding: var(--pl-space-1) var(--pl-space-3);
+  border-radius: var(--pl-radius-md);
+  font: var(--pl-type-callout);
+  font-size: var(--pl-text-md);
+}
+.hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+@media (forced-colors: active) {
+  .tooltip {
+    border: 1px solid CanvasText;
+  }
+}

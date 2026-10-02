@@ -1,0 +1,17 @@
+# Sync — 18 Sep 2026: embedding bake-off results
+
+Alice presented the pilot: 60 documents, 15 queries written by Bob and Carol (not by her, so the wording doesn't copy the documents).
+
+| Model | Dims | Recall@5 | MRR | Size (q8) | Query embed p95 |
+|---|---|---|---|---|---|
+| leaf-ir | 768 → 384 | 0.87 | 0.74 | 23 MB | 41 ms |
+| bge-small-en-v1.5 | 384 | 0.83 | 0.71 | 34 MB | 55 ms |
+| BM25 only | – | 0.60 | 0.52 | – | 2 ms |
+
+Discussion:
+- Dan worried about memory: the ONNX runtime grows its WebAssembly memory and never gives it back. We'll declare it as one ~100 MiB page that can be evicted by terminating the worker.
+- Carol asked whether 384 dims is enough; leaf truncated to 384 lost only 0.01 recall on the pilot.
+
+**Decision:** ship leaf-ir truncated to 384 dimensions as the primary model and keep bge-small as the fallback (same dimensions, same tokenizer vocabulary, so switching is a config change plus re-index). Revisit if leaf falls below 0.80 on the full 200-document set.
+
+Actions: Alice writes the decision record; Esha adds the ai-eval CI project.

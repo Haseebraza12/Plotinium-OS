@@ -1,0 +1,11 @@
+# Deadlock — my summary (Bob)
+
+Four things must all be true at once:
+- resources that only one process can use at a time,
+- processes keep what they have while asking for more,
+- nobody can take a resource away from its holder,
+- a cycle of processes each waiting on the next.
+
+Kill any one of them and deadlock is impossible. In practice: acquire locks in one global order.
+
+Detection = find a cycle in the wait-for graph. Avoidance = Banker's. Most OSes ignore it.

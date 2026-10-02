@@ -1,0 +1,12 @@
+# tools/compose.dev.yaml: the `pnpm dev` override (tools/dev.ts), used ONLY as
+#   docker compose -f compose.yaml -f tools/compose.dev.yaml up -d --wait --build db app
+#
+# In dev mode the Vite dev server (http://localhost:5173) serves the shell and proxies /api and /ws
+# straight to the app, presenting the app's APP_ORIGIN (http://localhost:4717) as Origin, so the
+# `web` (Caddy) container is not needed. This override publishes the app's port 3000 on the host
+# LOOPBACK only, for that proxy. compose.yaml itself keeps OPS-02 (only `web` publishes a port);
+# never use this file in CI, on the defence machine or in production.
+services:
+  app:
+    ports:
+      - '127.0.0.1:${PLOTINIUM_API_PORT:-4780}:3000'

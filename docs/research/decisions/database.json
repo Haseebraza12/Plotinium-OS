@@ -1,0 +1,668 @@
+{
+ "key": "database",
+ "title": "Primary database, tree representation & isolation level",
+ "record": {
+  "decision_title": "DR-05 Primary database, tree representation and isolation level: PostgreSQL 18.6 + pgvector 0.8.6, adjacency-list dentries, READ COMMITTED with a Linux-style explicit lock protocol",
+  "context_constraints_ranked": [
+   "1. Integrity of bulk tree operations (graded above everything else in s11). rm -r, cp -r, mv, a 500-file batch rename, chmod -R and chown -R each run as one transaction together with the quota update. The DB-02 fault-injection hook fails rm -r on a 1,000-node tree at node 500 and must leave the tree checksum unchanged, zero orphans and quota unchanged. This test runs in CI and again live at the final defence.",
+   "2. Constraints enforced by the database, not by application code (DB-04): foreign keys, UNIQUE(parent_ino, name), CHECKs on type and mode. The quota check happens inside the same transaction as the write (EDQUOT, no partial data; s11.3 rule 2).",
+   "3. Multi-user consistency (DB-03): a declared isolation level with retry logic, and two clients moving overlapping subtrees at the same time always leave a consistent tree. Moving a directory into its own subtree fails with EINVAL. Also VFS-09 lease locks, VFS-10 optimistic inode versions, and OFF-02 exactly-once op-log replay through idempotency keys.",
+   "4. Query performance (DB-05): Q1-Q5 p95 <= 10 ms at >=10,000 inodes (100,000 recommended). Needs a reproducible seed with >=50 users, p50/p95 over 1,000 runs both before and after indexing, and EXPLAIN ANALYZE plans.",
+   "5. AI coupling: vectors stored next to inode metadata so the permission filter uses the CURRENT rwx bits at query time (RAG-03 zero leaks). RAG-05 retrieval p95 <= 500 ms over >=10k chunks. RAG-02 index consistent within 30 s. Deletes must remove vectors.",
+   "6. Operability at the final defence: an examiner clones the repo on a machine the team does not control and brings it up with <=3 commands in under 5 minutes. Versioned migrations each need a rollback script, plus a documented backup-and-restore procedure (DB-01).",
+   "7. Cost and licence: a free, self-hostable engine that fits a cheap 1-2 GB VPS on a Pakistani student budget, with a clean licence for THIRD_PARTY.md.",
+   "8. Team skills: TypeScript/Node and some SQL. All five members must be able to defend the choice in the Week-4 defence and in the individual viva. The stack freezes after Week 4."
+  ],
+  "options": [
+   {
+    "name": "PostgreSQL 18 + pgvector (self-hosted Docker image pgvector/pgvector:0.8.6-pg18)",
+    "current_version": "PostgreSQL 18.6 (2026-08-13; next minor 18.7 scheduled 2026-11-12) + pgvector 0.8.6 (2026-07-29)",
+    "summary": "Relational ACID database. Transactional DDL; composite, partial and expression indexes; covering indexes (PRIMARY KEY ... INCLUDE); recursive CTEs; text_pattern_ops and pg_trgm; hash indexes; advisory locks; both SSI (SERIALIZABLE) and row-lock concurrency control. PG18 adds native uuidv7(), B-tree skip scan and async I/O. pgvector adds a vector column type, HNSW/IVFFlat indexes and iterative index scans for filtered ANN, all inside the same transaction as the metadata.",
+    "status_notes": "Actively maintained. PostgreSQL 19 is still in beta (GA targeted around end of October 2026), so stay on 18.x through v1.0.0. pgvector is under the PostgreSQL licence, not MIT."
+   },
+   {
+    "name": "SQLite + Litestream (runner-up)",
+    "current_version": "SQLite 3.53.4 (2026-07-24); Litestream 0.5.x; sqlite-vec 0.1.9 stable (flat index only), 0.1.10-alpha.4 adds ANN",
+    "summary": "Embedded, in-process, single-file database. Full ACID including DDL; FKs (must be enabled with PRAGMA per connection), CHECKs, partial and expression indexes, recursive CTEs. Litestream streams WAL changes to object storage for backup. Zero network round trip, so Q1-Q5 would very likely be fast.",
+    "status_notes": "Only one writer at a time (WAL), so every user's writes queue behind a 1,000-node rm -r. better-sqlite3 is synchronous and would block the Node event loop that also serves the WebSockets unless moved to a worker thread. Vector ANN is alpha-only. Server is single-node only."
+   },
+   {
+    "name": "MySQL (InnoDB) 9.7 LTS / 8.4 LTS",
+    "current_version": "9.7.0 LTS (2026-04-21); 8.4.11 LTS (2026-06-30)",
+    "summary": "Relational ACID database with FKs, CHECK constraints (enforced since 8.0.16), recursive CTEs and functional indexes. SERIALIZABLE is implemented by turning plain SELECTs into SELECT ... FOR SHARE (lock-based, no SSI).",
+    "status_notes": "DDL is atomic per statement but not transactional (it implicitly commits), which weakens migration rollbacks. InnoDB supports only BTREE indexes: no hash index, no partial index, no INCLUDE. Community edition has a VECTOR type but DISTANCE() exists only in HeatWave/MySQL AI, so vectors would need a second store."
+   },
+   {
+    "name": "MongoDB 8.x with multi-document transactions (expected to lose)",
+    "current_version": "MongoDB 8.3 (latest minor); self-managed vector search via mongot 1.70.1 GA (2026-06-30)",
+    "summary": "Document store. Multi-document ACID transactions (replica set required) under snapshot isolation. Tree queries through $graphLookup. JSON-schema validation. Vector search runs in a separate mongot process kept in sync through change streams.",
+    "status_notes": "No foreign keys, so DB-04 cannot be met by the database. Snapshot isolation allows the write skew behind cycle-creating concurrent moves. 60 s transaction lifetime and 5 ms default lock-acquisition timeout. More processes to run (replica set + mongot). SSPL licence."
+   },
+   {
+    "name": "Neo4j Community (graph) - screened out before scoring",
+    "current_version": "not version-checked (screened on documented constraint support)",
+    "summary": "Native graph model that fits hierarchy and permission inheritance well. ACID transactions.",
+    "status_notes": "Eliminated at screening. Community Edition supports only property-uniqueness constraints; existence, type and key constraints are Enterprise-only. That leaves no DB-enforced CHECK on type/mode and no per-parent unique name, so DB-04 fails outright. JVM memory footprint on a small VPS. Mentioned for completeness, not scored."
+   }
+  ],
+  "criteria": [
+   {
+    "name": "C1 Integrity: atomic bulk tree ops + DB-enforced constraints",
+    "weight": 25,
+    "why": "s11 grades integrity above all. DB-02 fault injection must roll back cleanly and DB-04 requires FK/UNIQUE/CHECK enforcement inside the database. A weakness here caps the 15% DB mark and the OS mark."
+   },
+   {
+    "name": "C2 Concurrency control for tree moves, quota and versions",
+    "weight": 15,
+    "why": "DB-03 (overlapping subtree moves, declared isolation level with retries), VFS-09 leases, VFS-10 optimistic versions and s11.3 rule 2 (quota locked inside the transaction)."
+   },
+   {
+    "name": "C3 Query and index toolkit for Q1-Q5",
+    "weight": 20,
+    "why": "DB-05 hard targets (p95 <= 10 ms at >=10k inodes). Needs recursive traversal, composite and covering indexes, a prefix-pattern index on lower(name), and a hash index on sha256."
+   },
+   {
+    "name": "C4 Vectors next to metadata with a query-time permission filter",
+    "weight": 10,
+    "why": "RAG-03 zero permission leaks and RAG-05 latency. file_chunks.embedding lives in the reference schema, and deletes and renames must stay consistent with the VFS without a second sync pipeline."
+   },
+   {
+    "name": "C5 Operability: migrations with rollback, backup/restore, <=3-command bring-up, VPS footprint",
+    "weight": 15,
+    "why": "DB-01 (versioned migrations each with a rollback, and a backup/restore procedure) plus the s17 clean bring-up on an uncontrolled machine within 5 minutes, which is scored before the team speaks."
+   },
+   {
+    "name": "C6 Team skills, TypeScript ecosystem, viva-defensibility",
+    "weight": 10,
+    "why": "5 students who know TS and some SQL. Every member must defend the choice (s14.4). Driver maturity affects velocity."
+   },
+   {
+    "name": "C7 Cost and licence",
+    "weight": 5,
+    "why": "Student budget: free and self-hostable, with licence attribution in THIRD_PARTY.md. All candidates are free, so the weight is low."
+   }
+  ],
+  "scores": [
+   {
+    "option": "PostgreSQL 18.6 + pgvector 0.8.6",
+    "per_criterion": [
+     {
+      "criterion": "C1 Integrity",
+      "score": 5,
+      "reason": "Prototype: 5/5 fault-injected bulk ops (rm -r and cp -r of 1,000 nodes failing at 500, chmod -R failing at 500, a 500-file batch rename failing at 250, and mv) left the checksum unchanged with 0 orphans and unchanged quota. 7/7 constraint probes were rejected by the DB, and a quota overflow was rejected by a CHECK (23514). DDL is transactional."
+     },
+     {
+      "criterion": "C2 Concurrency",
+      "score": 5,
+      "reason": "Offers both SSI and row/advisory locks. The prototype measured both: READ COMMITTED with a rename lock gave 0 corruption and 0 retries; SERIALIZABLE gave 0 corruption but retried. Composite FK with ON UPDATE CASCADE and conditional UPDATE with CHECK give race-free quota."
+     },
+     {
+      "criterion": "C3 Q1-Q5 toolkit",
+      "score": 5,
+      "reason": "Measured at 99k inodes (clean run, N=1000) p50/p95 in ms: Q1 0.16/0.22, Q2 1.05/1.62, Q3 0.29/0.37, Q4 0.16/0.20, Q5 1.70/1.87. PK INCLUDE turns the subtree walk into an Index Only Scan (Q5 took 533 ms without indexes)."
+     },
+     {
+      "criterion": "C4 Vectors + permission filter",
+      "score": 5,
+      "reason": "pgvector in the same row/transaction, with ON DELETE CASCADE from inodes and a join to live inode mode bits. Measured over 20k chunks: exact filtered top-10 p95 86 ms, HNSW p95 12 ms."
+     },
+     {
+      "criterion": "C5 Operability",
+      "score": 4,
+      "reason": "One pinned Docker image. pg_dump -Fc / pg_restore round trip gave an identical tree checksum (43 MB dump in 11.5 s, restore in 3.2 s). Container RSS 119-192 MiB. Needs a server process and some tuning, so less trivial than a single SQLite file."
+     },
+     {
+      "criterion": "C6 Team skills",
+      "score": 4,
+      "reason": "Widely taught SQL and a mature node-postgres driver. Lock protocols and plan reading are new skills the team must practise."
+     },
+     {
+      "criterion": "C7 Cost/licence",
+      "score": 5,
+      "reason": "PostgreSQL licence for both the server and pgvector. Free, self-hosted."
+     }
+    ],
+    "weighted_total": 95
+   },
+   {
+    "option": "SQLite 3.53 + Litestream 0.5",
+    "per_criterion": [
+     {
+      "criterion": "C1 Integrity",
+      "score": 4,
+      "reason": "Atomic transactions including DDL, with FK, CHECK and partial unique index. FKs are off unless PRAGMA foreign_keys=ON on every connection, a known foot-gun (docs, not measured)."
+     },
+     {
+      "criterion": "C2 Concurrency",
+      "score": 3,
+      "reason": "A single writer makes it serial by construction (DB-03 trivially safe), but a 1,000-node rm -r blocks all users' writes and there are no row locks or leases in the engine."
+     },
+     {
+      "criterion": "C3 Q1-Q5 toolkit",
+      "score": 4,
+      "reason": "In-process with no round trip, so Q1-Q5 are likely very fast. No hash index or INCLUDE, and the LIKE-prefix optimisation depends on collation/case_sensitive_like settings. Not measured by us; the team should measure."
+     },
+     {
+      "criterion": "C4 Vectors + permission filter",
+      "score": 2,
+      "reason": "sqlite-vec stable 0.1.9 is flat brute-force only; ANN (DiskANN/IVF) is in 0.1.10-alpha."
+     },
+     {
+      "criterion": "C5 Operability",
+      "score": 3,
+      "reason": "Simplest bring-up (a file), with Litestream for backups. Single node only. The synchronous better-sqlite3 blocks the event loop without a worker, and limited ALTER TABLE makes down migrations into table rebuilds."
+     },
+     {
+      "criterion": "C6 Team skills",
+      "score": 4,
+      "reason": "Easy to learn and embed."
+     },
+     {
+      "criterion": "C7 Cost/licence",
+      "score": 5,
+      "reason": "Public domain, free."
+     }
+    ],
+    "weighted_total": 71
+   },
+   {
+    "option": "MySQL 9.7 LTS / 8.4 LTS (InnoDB)",
+    "per_criterion": [
+     {
+      "criterion": "C1 Integrity",
+      "score": 4,
+      "reason": "ACID with FKs and enforced CHECKs. No partial unique index, so the no-directory-hard-link rule would need a trigger."
+     },
+     {
+      "criterion": "C2 Concurrency",
+      "score": 3,
+      "reason": "SERIALIZABLE is implemented with shared locks on reads (blocking and deadlock-prone), plus gap locks. No SSI. Row locks and GET_LOCK exist."
+     },
+     {
+      "criterion": "C3 Q1-Q5 toolkit",
+      "score": 3,
+      "reason": "Recursive CTEs and functional indexes are available. InnoDB is BTREE-only (no hash index), with no partial index, no INCLUDE and no trigram operator class."
+     },
+     {
+      "criterion": "C4 Vectors + permission filter",
+      "score": 1,
+      "reason": "Community has the VECTOR type but no DISTANCE() and no vector index (HeatWave/MySQL AI only), so a second store would have to be synced and permission-joined across systems."
+     },
+     {
+      "criterion": "C5 Operability",
+      "score": 3,
+      "reason": "Docker image and mysqldump are fine, but DDL implicitly commits, so a failed migration can be left half-applied and rollback scripts are riskier."
+     },
+     {
+      "criterion": "C6 Team skills",
+      "score": 4,
+      "reason": "Familiar to many students."
+     },
+     {
+      "criterion": "C7 Cost/licence",
+      "score": 4,
+      "reason": "GPLv2 Community, free."
+     }
+    ],
+    "weighted_total": 64
+   },
+   {
+    "option": "MongoDB 8.x (expected loser)",
+    "per_criterion": [
+     {
+      "criterion": "C1 Integrity",
+      "score": 2,
+      "reason": "Multi-document transactions are atomic, but there are no foreign keys, so orphans are prevented only by app code. DB-04 cannot be met by the database."
+     },
+     {
+      "criterion": "C2 Concurrency",
+      "score": 2,
+      "reason": "Snapshot isolation allows the write skew that our READ COMMITTED naive run showed corrupting the tree. You must force write conflicts on a shared doc. 5 ms default lock timeout and 60 s transaction limit."
+     },
+     {
+      "criterion": "C3 Q1-Q5 toolkit",
+      "score": 3,
+      "reason": "Compound unique index, $graphLookup and collation indexes are workable, but Q1/Q5 become aggregation pipelines."
+     },
+     {
+      "criterion": "C4 Vectors + permission filter",
+      "score": 3,
+      "reason": "Self-managed vector search is GA but lives in a separate mongot process synced by change streams (eventually consistent with metadata)."
+     },
+     {
+      "criterion": "C5 Operability",
+      "score": 2,
+      "reason": "Needs a replica set even for one node, plus mongot, so more moving parts at bring-up."
+     },
+     {
+      "criterion": "C6 Team skills",
+      "score": 4,
+      "reason": "Familiar from MERN courses."
+     },
+     {
+      "criterion": "C7 Cost/licence",
+      "score": 3,
+      "reason": "Free, SSPL server licence."
+     }
+    ],
+    "weighted_total": 51
+   }
+  ],
+  "evidence": [
+   {
+    "claim": "PostgreSQL 18.6 is the current 18.x minor (released 2026-08-13 with 17.11 and 19 Beta 3; 18.5 was never shipped because of a regression).",
+    "source": "https://www.postgresql.org/about/news/postgresql-186-1711-1615-1519-1424-and-19-beta-3-released-3365/ ; https://endoflife.date/postgresql",
+    "verified": true
+   },
+   {
+    "claim": "The next scheduled PostgreSQL minor release is 2026-11-12. PostgreSQL 18 is supported until 2030-11-14.",
+    "source": "https://www.postgresql.org/developer/roadmap/ ; https://endoflife.date/postgresql",
+    "verified": true
+   },
+   {
+    "claim": "PostgreSQL 19 is not GA: Beta 4 is scheduled for 2026-09-24 and GA is targeted around end of October, so do not adopt it before the Week-4 freeze.",
+    "source": "https://layerbase.com/blog/when-will-postgres-19-be-released (search summary; roadmap page still says 'planned for September 2026')",
+    "verified": false
+   },
+   {
+    "claim": "pgvector 0.8.6 (2026-07-29) is current. Iterative index scans arrived in 0.8.0. HNSW indexes 'vector' up to 2,000 dimensions. hnsw.iterative_scan strict_order/relaxed_order with hnsw.max_scan_tuples default 20,000. The licence is the PostgreSQL License, not MIT.",
+    "source": "https://github.com/pgvector/pgvector ; https://github.com/pgvector/pgvector/blob/master/CHANGELOG.md ; https://raw.githubusercontent.com/pgvector/pgvector/master/LICENSE",
+    "verified": true
+   },
+   {
+    "claim": "Docker image pgvector/pgvector:0.8.6-pg18 exists, and our run reported 'PostgreSQL 18.6 (Debian 18.6-1.pgdg12+2)' with the builtin C.UTF-8 locale.",
+    "source": "Prototype run 2026-09-23 (docker pull + SELECT version()); https://hub.docker.com/r/pgvector/pgvector",
+    "verified": true
+   },
+   {
+    "claim": "PostgreSQL SERIALIZABLE requires applications to retry on SQLSTATE 40001, and 'a sequential scan will always necessitate a relation-level predicate lock'. READ COMMITTED UPDATE re-evaluates WHERE against the newest row version after waiting.",
+    "source": "https://www.postgresql.org/docs/18/transaction-iso.html",
+    "verified": true
+   },
+   {
+    "claim": "text_pattern_ops is needed for LIKE-prefix index use in non-C collations. PRIMARY KEY supports INCLUDE for index-only scans. Only B-tree backs UNIQUE, and exclusion constraints with hash are allowed but 'little point'.",
+    "source": "https://www.postgresql.org/docs/18/indexes-opclass.html ; https://www.postgresql.org/docs/18/sql-createtable.html",
+    "verified": true
+   },
+   {
+    "claim": "ltree labels allow only alphanumerics, underscore and hyphen (<=1000 chars), so raw file names (spaces, dots, Unicode) cannot be ltree labels.",
+    "source": "https://www.postgresql.org/docs/18/ltree.html",
+    "verified": true
+   },
+   {
+    "claim": "PG18 headline features: async I/O, B-tree skip scan, uuidv7(), virtual generated columns, OLD/NEW in RETURNING.",
+    "source": "https://www.postgresql.org/about/news/postgresql-18-released-3142/",
+    "verified": true
+   },
+   {
+    "claim": "MySQL: 'Atomic DDL is not transactional DDL' (DDL implicitly commits). InnoDB SERIALIZABLE converts plain SELECT to SELECT ... FOR SHARE. InnoDB permits only BTREE indexes.",
+    "source": "https://dev.mysql.com/doc/refman/8.4/en/atomic-ddl.html ; https://dev.mysql.com/doc/refman/8.4/en/innodb-transaction-isolation-levels.html ; https://dev.mysql.com/doc/refman/8.4/en/create-index.html",
+    "verified": true
+   },
+   {
+    "claim": "MySQL DISTANCE() 'is available only for users of MySQL HeatWave on OCI and MySQL AI; it is not included in MySQL Commercial or Community distributions'. MySQL 9.7 LTS was released 2026-04-21 and 8.4.11 on 2026-06-30.",
+    "source": "https://dev.mysql.com/doc/refman/9.7/en/vector-functions.html ; https://endoflife.date/mysql",
+    "verified": true
+   },
+   {
+    "claim": "MongoDB transactions are not supported on standalone servers, default to a 60 s lifetime, wait only 5 ms for locks by default, use snapshot isolation, and abort on write conflicts.",
+    "source": "https://www.mongodb.com/docs/manual/core/transactions-production-consideration/",
+    "verified": true
+   },
+   {
+    "claim": "MongoDB self-managed Search/Vector Search (mongot) reached GA in 1.70.1 on 2026-06-30 as a separate binary synced via change streams.",
+    "source": "https://www.mongodb.com/docs/search/self-managed/current/release-notes/ ; https://www.mongodb.com/company/blog/product-release-announcements/supercharge-self-managed-apps-search-vector-search-capabilities",
+    "verified": true
+   },
+   {
+    "claim": "SQLite WAL: 'there can only be one writer at a time'. SQLite 3.53.4 (2026-07-24) is current. better-sqlite3 has a synchronous API and recommends worker threads for slow queries.",
+    "source": "https://www2.sqlite.org/wal.html ; https://sqlite.org/releaselog/current.html ; https://github.com/WiseLibs/better-sqlite3",
+    "verified": true
+   },
+   {
+    "claim": "sqlite-vec: 0.1.9 (2026-03-31) is the latest stable release with flat indexing only. ANN indexes (rescore, IVF experimental, DiskANN) exist only in the 0.1.10-alpha series (alpha.4 on 2026-05-18).",
+    "source": "https://github.com/asg017/sqlite-vec/releases",
+    "verified": true
+   },
+   {
+    "claim": "Litestream 0.5.x (LTX format) is current; the search summary says 0.5.17 was released 2026-08-31.",
+    "source": "https://github.com/benbjohnson/litestream/releases ; https://fly.io/blog/litestream-v050-is-here/",
+    "verified": false
+   },
+   {
+    "claim": "Neo4j Community Edition supports only property-uniqueness constraints; existence, type and key constraints are Enterprise-only.",
+    "source": "https://neo4j.com/docs/cypher-manual/current/schema/constraints/",
+    "verified": true
+   },
+   {
+    "claim": "The Linux VFS takes a filesystem-wide rename lock (s_vfs_rename_mutex) for cross-directory renames so a directory cannot become its own descendant, and locks the parent directory for create/unlink. Our lock protocol copies this design.",
+    "source": "https://docs.kernel.org/filesystems/directory-locking.html",
+    "verified": true
+   },
+   {
+    "claim": "Prisma Migrate does not generate or run down migrations automatically (you use migrate diff by hand). Drizzle Kit is forward-only with no built-in rollback. This conflicts with DB-01's per-migration rollback script.",
+    "source": "https://www.prisma.io/docs/orm/prisma-migrate/workflows/generating-down-migrations ; https://github.com/drizzle-team/drizzle-orm/issues/4005",
+    "verified": true
+   },
+   {
+    "claim": "Kysely 0.29.6's Migrator supports up/down, serialises runs with a database-level lock, and wraps runs in a transaction when the adapter supportsTransactionalDdl (true for PostgreSQL). setIsolationLevel() is available on transactions.",
+    "source": "https://kysely.dev/docs/migrations ; kysely@0.29.6 dist/migration/migrator.js line 442 and dist/kysely.d.ts line 597 (inspected locally)",
+    "verified": true
+   },
+   {
+    "claim": "PgBouncer 1.25.2 (May 2026, security fixes) is current. It is not needed with a single Node process and a pg.Pool; it becomes relevant only with multiple app replicas.",
+    "source": "https://www.pgbouncer.org/2026/05/pgbouncer-1-25-2",
+    "verified": true
+   },
+   {
+    "claim": "PROTOTYPE Q1-Q5 at 99,370 inodes / 61 users. Setup: PG 18.6 container limited to --cpus=2 --memory=1g, client-side timings through node-postgres, N=1000, tree indexes present. Clean run p50/p95 in ms: Q1 0.16/0.22, Q2 1.05/1.62, Q3 0.29/0.37, Q4 0.16/0.20, Q5 1.70/1.87. Under host load (load average 7-16), Q2 client-side p95 spiked to 11.9 ms in 2 of 6 runs while server execution was 0.94 ms (EXPLAIN ANALYZE), so the team must report server-side and client-side timings on the lab-spec machine.",
+    "source": "Prototype: scratchpad/proto/seed.sql + bench.mjs (analyst dev laptop, 12 cores, shared with other workloads)",
+    "verified": true
+   },
+   {
+    "claim": "PROTOTYPE before indexing (tree indexes dropped, N=200) p50/p95 in ms: Q1 65/83, Q2 6.4/8.7, Q3 5.1/5.6, Q4 7.0/8.5, Q5 91/245. Q5 plan without indexes: per-iteration seq scan + hash join, 533 ms. With the PK (parent_ino,name) INCLUDE (ino,d_type): Index Only Scan with 0 heap fetches, 1,000 nodes in 2.9 ms.",
+    "source": "Prototype: bench.mjs + EXPLAIN (ANALYZE, BUFFERS)",
+    "verified": true
+   },
+   {
+    "claim": "PROTOTYPE DB-02 fault injection with a BEFORE ROW trigger throwing after N inode ops, each op in one transaction. rm -r 1,000 nodes (fail at 500), chmod -R 1,000 (fail at 500), cp -r 1,000 (fail at 500), batch rename 500 (fail at 250), mv dir (fail at 1): checksum unchanged 5/5, orphan inodes 0, parentless dentries 0, quota unchanged 5/5. Clean-run times: 33 / 15 / 37 / 12 / 1.5 ms.",
+    "source": "Prototype: scratchpad/proto/fault.mjs",
+    "verified": true
+   },
+   {
+    "claim": "PROTOTYPE DB-04 probes, all rejected by the DB: duplicate name 23505 dentries_pk; file used as parent 23503 dentry_parent; mode 4095 23514; type 'x' 23514; '/' in name 23514; hard link to a directory 23505 dentries_dir_one_parent; owner copy mismatch 23503 dentry_child; cp -r over quota 23514 quota_bytes_ok.",
+    "source": "Prototype: fault.mjs + psql probes",
+    "verified": true
+   },
+   {
+    "claim": "PROTOTYPE DB-03 concurrent directory moves (40 dirs, random cross-moves with an ancestor check). With just 2 clients, READ COMMITTED without a rename lock detached 40 directories into a cycle (tree corrupted). SERIALIZABLE+retry: 0 corruption but 389 retries per 2,000 moves and 4 gave up after 10 attempts (2 clients); 2,348 retries per 2,400 and 24 gave up (8 clients). READ COMMITTED + advisory rename lock: 0 corruption, 0 retries, p95 10.6 ms (2 clients) / 101 ms (8-client adversarial). SERIALIZABLE + pre-snapshot session rename lock: 0 corruption, 0 retries, p95 44 ms (8 clients).",
+    "source": "Prototype: scratchpad/proto/concurrency.mjs",
+    "verified": true
+   },
+   {
+    "claim": "PROTOTYPE mixed multi-user workload (12 users in their own homes, 3,600 ops: create/write CAS/rename/rm/ls with quota updates). READ COMMITTED: 0 retries, 0 quota drift, 0 orphans. SERIALIZABLE: 1.4-4.2% retries when the users table was bloated (index scan), but 82-116% retries and 12-18% give-ups when users was compact (1 page, so the planner chose a Seq Scan and took relation-level SIREAD locks, e.g. on a fresh deployment). SERIALIZABLE + SET LOCAL enable_seqscan=off: 1.1% retries, 0 give-ups.",
+    "source": "Prototype: scratchpad/proto/mixed.mjs, mixed_diag.mjs (+ EXPLAIN of UPDATE users before/after VACUUM FULL)",
+    "verified": true
+   },
+   {
+    "claim": "PROTOTYPE vectors: 20,000 synthetic 384-d chunks with a permission-filtered top-10 joined to live inode mode bits. Exact p50 32 / p95 86 ms. HNSW (m=16, ef_construction=64, ef_search=40) p50 8 / p95 12 ms, with or without iterative scan. HNSW recall versus exact was only 0.23 on uniformly random vectors, which are adversarial and not representative, so recall must be measured on real embeddings.",
+    "source": "Prototype: scratchpad/proto/vector.sql + vbench.mjs",
+    "verified": true
+   },
+   {
+    "claim": "PROTOTYPE backup: pg_dump -Fc produced 43 MB in 11.5 s; pg_restore -j2 took 3.2 s; the tree checksum of the restored DB was identical. Container memory 119-192 MiB with shared_buffers=256MB.",
+    "source": "Prototype: pg_dump/pg_restore inside the container; docker stats",
+    "verified": true
+   },
+   {
+    "claim": "EXCLUDE USING hash (sha256 WITH =) enforces uniqueness, but 'ON CONFLICT DO UPDATE not supported with exclusion constraints', so blob dedup upserts need a UNIQUE B-tree plus an optional separate hash index.",
+    "source": "Prototype: psql test on PG 18.6",
+    "verified": true
+   }
+  ],
+  "recommendation": "Use PostgreSQL 18.x with pgvector as the single primary database. Pin the image pgvector/pgvector:0.8.6-pg18 (PostgreSQL 18.6). Apply the drop-in minor 18.7 when it ships on 2026-11-12. Do not move to PostgreSQL 19 before v1.0.0.\n\nOne database holds users/groups, inodes, dentries, blobs metadata, locks, op_log, sessions, swap_pages metadata, audit_log, opt-in telemetry and file_chunks embeddings. Vectors therefore share transactions, foreign keys and permission joins with the file system.\n\n**Tree representation.** Use an adjacency list: dentries(parent_ino, name) as PRIMARY KEY INCLUDE (ino, d_type), separate from inodes, with a composite FK that forces the parent to be a directory. Traverse it with recursive CTEs. Q5 (du) uses a recursive CTE rather than a maintained per-directory aggregate, which would put a hot row on every ancestor such as / and /home.\n\n**Isolation level.** Declare READ COMMITTED plus an explicit, Linux-VFS-style lock protocol, with a bounded retry on 40P01/40001/55P03:\n- a transaction-scoped advisory rename lock for cross-directory directory moves;\n- FOR UPDATE on parent directory inodes, taken in ino order;\n- the subtree's directory rows locked for rm -r, chmod -R and chown -R;\n- quota as a conditional UPDATE guarded by CHECK (used <= quota), mapped to EDQUOT;\n- version compare-and-swap for content writes;\n- idempotent op_log inserts for exactly-once replay.\n\nDB constraints (FK, UNIQUE, CHECK) are the last line of defence, and they hold whatever the isolation level.\n\n**Data access.** Use Kysely 0.29.6 on node-postgres 8.23.0 with the pgvector npm helper 0.3.0. Write hot-path SQL by hand, and write migrations as Kysely up/down pairs (each is a transaction thanks to transactional DDL). Use no ORM.\n\n**Pooling.** One pg.Pool (max about 10) in the single Node API process. No PgBouncer.\n\n**Backups.** A nightly pg_dump -Fc, plus a CI restore drill that compares tree checksums and runs the fsck probes.\n\n**Vectors.** Start with an exact filtered search. Add HNSW with iterative scans only when measured p95 or chunk count demands it.\n\n**Row-level security.** Do not use RLS for VFS tables: Unix permissions are path-dependent and are enforced in the kernel syscall layer. Use role privileges instead (the app role gets DML only; audit_log is insert-only).",
+  "runner_up": "SQLite 3.53 + Litestream 0.5 (71/100). It has the simplest bring-up and in-process speed, and it is serial by construction, so DB-03 is trivially safe. It loses on the single writer (every user queues behind a 1,000-node rm -r), alpha-only vector ANN, no row locks or leases, and a synchronous driver that blocks the WebSocket event loop.\n\nWithin PostgreSQL, the runner-up isolation design is SERIALIZABLE + retry, with SET LOCAL enable_seqscan=off in writer transactions and a pre-snapshot session rename lock. It measured 1.1% retries and 0 give-ups with those mitigations, but 82-116% retries without them on a fresh, compact database.",
+  "chat_reason": "PostgreSQL 18 with the pgvector extension is the one database for files, locks, logs and AI vectors. Our prototype on 100k files passed all five fault-injection rollbacks with zero orphans, ran all five benchmark queries at a p95 of 3 ms or less, and rejected every constraint violation inside the database. It also keeps AI vectors next to file permissions, which is how we get zero permission leaks. Store the folder tree as simple parent pointers and use READ COMMITTED with Linux-style locks: SERIALIZABLE was correct, but it retried almost every write on a fresh database.",
+  "gave_up": "- **SQLite's zero-ops story:** a single file, in-process speed and no server to run or tune.\n- **SSI's \"correct by construction\" guarantee:** under READ COMMITTED, cross-row invariants beyond what FK, UNIQUE and CHECK express (acyclicity, subtree locking) depend on a lock protocol the team must follow and test in CI.\n- **Constant-time du:** there is no maintained per-directory size aggregate, so Q5 is recomputed by a recursive CTE (measured 1.7-2.9 ms per 1,000 nodes).\n- **Parallel directory moves:** all cross-directory directory moves are serialised system-wide by the rename lock. Rare in practice; 8-client adversarial p95 was 101 ms.\n- **Faster subtree reads:** closure-table and materialised-path layouts read subtrees faster; we gave that up for 1-row moves.\n- **Schema flexibility and managed hosting:** we give up MongoDB-style schemaless documents and serverless/managed Postgres convenience, and self-host a pinned Docker image instead.\n- **ORM convenience:** no Prisma/Drizzle schema DSL or generated CRUD; hot paths are hand-written SQL.\n- **One-index blob uniqueness:** a hash-only unique constraint on blobs would block ON CONFLICT DO UPDATE, so we keep a UNIQUE B-tree (plus an optional hash index).",
+  "risks": [
+   {
+    "risk": "A forgotten or mis-ordered lock under READ COMMITTED silently allows an anomaly. The prototype showed a naive READ COMMITTED move detaching 40 directories into a cycle with only 2 clients.",
+    "mitigation": "Every mutating syscall goes through one vfsTxn(opId, lockPlan, fn) helper that acquires locks in canonical order (rename lock, then directory inodes by ino, then file inodes by ino, then users by uid). CI runs the concurrency torture harness (2 and 8 clients) and the fsck probes (unreachable-from-root, orphans, nlink, quota drift, blob refcount) on every PR. fast-check random op sequences must keep fsck clean."
+   },
+   {
+    "risk": "Deadlocks (40P01) or lock waits between multi-statement lock acquisitions, e.g. two multi-owner rm -r in /tmp.",
+    "mitigation": "Canonical lock order, SET LOCAL lock_timeout = '2s', and retry up to 5 times with jittered exponential backoff (safe because op_id makes every op idempotent). Log retry counts to vmstat/metrics. A lock_timeout that still fails maps to EBUSY."
+   },
+   {
+    "risk": "Q1-Q5 p95 regress on the modest lab machine, at 100k+ inodes with deeper trees, or because of planner flips (the prototype saw client-side spikes to 11.9 ms under host load).",
+    "mitigation": "A nightly performance CI job with budgets that fail the build, plus EXPLAIN plan assertions (index names must appear) and auto_explain for anything over 10 ms. Always ANALYZE after seeding. Report server-side (pg_stat_statements) and client-side timings. Fallback for Q5 only: a cached subtree size for directories over N descendants, invalidated in the same transaction."
+   },
+   {
+    "risk": "The rename lock becomes a bottleneck when the agent or many users move directories concurrently.",
+    "mitigation": "The agent's multi-step plan takes the lock once per transaction. If the p95 of directory moves exceeds 200 ms at 50 clients, shard the lock by top-level home: moves within /home/<u> take hash(u), and cross-home moves take all involved keys in order."
+   },
+   {
+    "risk": "HNSW recall on real embeddings may be too low, or filtered ANN may return fewer than k results after the permission filter.",
+    "mitigation": "Stay on exact filtered search while it meets RAG-05 (measured p95 86 ms at 20k chunks). When HNSW is needed, use hnsw.iterative_scan = relaxed_order with a re-sort, and gate on the Recall@5 >= 0.80 eval set. Keep exact search as the correctness oracle in tests."
+   },
+   {
+    "risk": "Data loss on a cheap VPS, or a restore that references blobs already garbage-collected from object storage.",
+    "mitigation": "A nightly pg_dump -Fc copied off-box (7 daily + 4 weekly). A restore drill in CI compares tree checksums and runs the fsck probes. Blobs are immutable and content-addressed, and GC deletes storage objects only for refcount = 0 rows older than the oldest retained backup. Documented RPO 24 h, RTO under 10 min."
+   },
+   {
+    "risk": "Unicode and collation drift: glibc collation changes can corrupt text indexes, and lower() under the C collation only folds ASCII.",
+    "mitigation": "Create the database with --locale-provider=builtin --builtin-locale=C.UTF-8 (code-point order, Unicode simple case mapping) and declare dentries.name COLLATE \"C\" so byte-order ls matches Unix. The spec's text_pattern_ops index works regardless of collation."
+   },
+   {
+    "risk": "Team members cannot explain locking or query plans in the viva, which the spec treats as an undefended decision.",
+    "mitigation": "DATABASE.md carries a one-page lock-protocol table (operation, locks, order, why) and annotated EXPLAIN outputs. Every member runs the concurrency and fault demos once before Week 4, and the Role-2 owner pairs with a named secondary reviewer on vfsTxn."
+   },
+   {
+    "risk": "UUIDv7 inode ids (16 bytes) chosen for offline creation may clash with the sync/outbox design, or make ls -i ugly.",
+    "mitigation": "Confirm with the OFF/sync decision owner in Week 3. If the server assigns ids, switch ino to bigint GENERATED ALWAYS AS IDENTITY with a client temp-id remap in op replay (a schema-only change before the freeze). Display short ids in ls -i."
+   }
+  ],
+  "reversal_trigger": "Revisit the decision if any of these is observed on the Week-2 lab-spec machine or the production VPS:\n- **Isolation level.** Switch writers to SERIALIZABLE + retry + SET LOCAL enable_seqscan=off if the CI torture/fsck suite finds any consistency violation under READ COMMITTED (an unreachable inode, orphan, nlink mismatch or quota drift) that one added lock cannot fix within a sprint, or if deadlock retries exceed 1% of mutating syscalls in the 12-user mixed workload.\n- **Tree representation.** If Q5 p95 exceeds 10 ms at 100k inodes after index and plan tuning, add a transactional per-directory size cache for large directories. If Q1 or the ancestor check exceeds 10 ms, evaluate a closure table.\n- **Vector store.** Move vectors to Qdrant and keep inode metadata in PostgreSQL if permission-filtered retrieval p95 exceeds 500 ms at 10k chunks with HNSW + iterative scan, or if Recall@5 stays below 0.80 on real embeddings because of pgvector.\n- **Primary database.** Fall back to SQLite + Litestream if the deployment host cannot give PostgreSQL about 300 MB RAM (e.g. a 512 MB VPS), or if examiner bring-up of the Postgres container exceeds 5 minutes on the reference machine.\n- **Connection pooling.** Add PgBouncer 1.25 in transaction mode (advisory xact locks stay compatible) if we run more than one API replica or exceed about 80 active DB connections.",
+  "team_prototype": "Weeks 1-4, owned by Role 2 (VFS/DB) with Role 5 (QA/DevOps) as reviewer. Run everything on the Week-2 'modest lab workstation' spec, with the Postgres container capped to 2 vCPU / 1 GB to mimic the VPS, and commit it under db/bench and tests/fault-injection.\n\n1. **Seed.** docker compose up a pinned pgvector/pgvector:0.8.6-pg18. Create the database with --locale-provider=builtin --builtin-locale=C.UTF-8. Run a deterministic seed (SELECT setseed(0.42)) with >=50 users and 100,000 inodes, a random-attachment depth spread (report the histogram), and fixtures: a depth-8 path, a 500-entry directory, and a 1,000-node subtree.\n\n2. **Q1-Q5 before and after indexes.** Run 1,000 iterations each, recording p50/p95 both client-side (node-postgres, hrtime) and server-side (pg_stat_statements mean/stddev), plus EXPLAIN (ANALYZE, BUFFERS) for every query. Pass mark: p95 <= 10 ms after indexing.\n\n3. **Fault injection.** Use the test-only trigger with rm -r / cp -r / chmod -R on 1,000 nodes failing at 500, a 500-file batch rename failing at 250, and mv. Assert the tree checksum is unchanged, the orphan and parentless probes return 0, and quota is unchanged. Also run 7 DB-04 constraint-violation probes, each expecting a specific SQLSTATE.\n\n4. **DB-03 torture.** 2 and 8 clients doing random cross-directory directory moves among 40 directories under three designs: READ COMMITTED naive (expected to corrupt; keep the screenshot as evidence), READ COMMITTED + rename lock, and SERIALIZABLE + retry. Report unreachable inodes, retries, give-ups and p50/p95.\n\n5. **Mixed 12-user workload.** Create, write-CAS, rename, rm and ls with quota updates, at both isolation levels. Run it on a freshly migrated database AND after bloat, to reproduce the seq-scan/SSI effect.\n\n6. **Vectors.** Embed >=10k real chunks with the model chosen in the AI decision, then time the permission-filtered top-k as exact vs HNSW (+ iterative scan). Report p95 and Recall@5 against exact.\n\n7. **Backup drill.** pg_dump -Fc, then pg_restore into a fresh container, compare the checksum and run fsck.\n\n8. **Losing-option evidence.** Load the same seed into SQLite (node:sqlite or better-sqlite3) and time Q1/Q5 plus 8 concurrent writers doing 1,000-node rm -r. This gives measured evidence for why the runner-up lost.\n\nThe analyst's sanity run of steps 1-5 and 7 (dev laptop, not the lab spec) is in /tmp/claude-1000/-home-haseeb-raza-Desktop-Plotinium-OS/6bdb43c3-e62e-4f77-88ef-40bcd9948f85/scratchpad/proto/ (schema.sql, seed.sql, bench.mjs, fault.mjs, concurrency.mjs, mixed.mjs, mixed_diag.mjs, vector.sql, vbench.mjs). The team must reproduce and replace these numbers with their own.",
+  "requirement_ids_served": [
+   "DB-01",
+   "DB-02",
+   "DB-03",
+   "DB-04",
+   "DB-05",
+   "VFS-07",
+   "VFS-08",
+   "VFS-09",
+   "VFS-10",
+   "VFS-11",
+   "OFF-02",
+   "RAG-02",
+   "RAG-03",
+   "RAG-05",
+   "AGT-05",
+   "AGT-08",
+   "AGT-09",
+   "MEM-04",
+   "WM-06",
+   "PRE-05"
+  ],
+  "packages": [
+   {
+    "name": "PostgreSQL server (Docker image pgvector/pgvector:0.8.6-pg18)",
+    "purpose": "Primary ACID database for VFS metadata, locks, op_log, sessions, audit, telemetry (opt-in) and embeddings. Pin the full tag.",
+    "version": "PostgreSQL 18.6 (upgrade to 18.7 after 2026-11-12)",
+    "licence": "PostgreSQL License"
+   },
+   {
+    "name": "pgvector (Postgres extension)",
+    "purpose": "vector(d) column, cosine distance, HNSW index with iterative scans for permission-filtered semantic search (RAG-03/05)",
+    "version": "0.8.6",
+    "licence": "PostgreSQL License"
+   },
+   {
+    "name": "pg_trgm (bundled contrib)",
+    "purpose": "Optional GIN trigram index for substring name search (find -name '*x*'). Enable only if measured need.",
+    "version": "bundled with 18.6",
+    "licence": "PostgreSQL License"
+   },
+   {
+    "name": "pg (node-postgres)",
+    "purpose": "Driver + connection pool (pg.Pool, max ~10) in the single Node API process",
+    "version": "8.23.0",
+    "licence": "MIT"
+   },
+   {
+    "name": "@types/pg",
+    "purpose": "TypeScript types for node-postgres",
+    "version": "8.23.1",
+    "licence": "MIT"
+   },
+   {
+    "name": "kysely",
+    "purpose": "Type-safe SQL query builder with sql`` escape hatch for recursive CTEs, FOR UPDATE, advisory locks. Migrator with up/down (DB-01 rollback scripts) run in a transaction on PostgreSQL.",
+    "version": "0.29.6",
+    "licence": "MIT"
+   },
+   {
+    "name": "kysely-codegen",
+    "purpose": "Generate TS table types from the migrated schema (dev dependency, optional)",
+    "version": "0.20.0",
+    "licence": "MIT"
+   },
+   {
+    "name": "pgvector (npm, pgvector-node)",
+    "purpose": "Serialise/parse vector values for pg and Kysely (pgvector/kysely helpers)",
+    "version": "0.3.0",
+    "licence": "MIT"
+   },
+   {
+    "name": "fast-check",
+    "purpose": "Property-based tests: random VFS op sequences must keep the fsck probes clean (DB-02/03, VFS-11)",
+    "version": "4.10.2",
+    "licence": "MIT"
+   }
+  ],
+  "design_notes": "## 1. Deployment and configuration\n\n**Image and database creation.** Pin pgvector/pgvector:0.8.6-pg18 in docker-compose with a named volume. Create the database with `initdb --locale-provider=builtin --builtin-locale=C.UTF-8 --encoding=UTF8`. That gives code-point sort order (immune to glibc collation changes) and Unicode simple case mapping for lower(). dentries.name is COLLATE \"C\", so ordering matches `LC_ALL=C ls`.\n\n**postgresql.conf for a 1-2 GB VPS:**\n- shared_buffers=256MB, work_mem=8MB, max_connections=50\n- random_page_cost=1.1 (SSD)\n- jit=off (short OLTP queries; avoids compile spikes; verify)\n- idle_in_transaction_session_timeout=10s\n- shared_preload_libraries='pg_stat_statements,auto_explain', auto_explain.log_min_duration=10ms\n- track_io_timing=on\n\nThe prototype container used 119-192 MiB RSS.\n\n**Roles:**\n- `plotinium_owner` runs migrations.\n- `plotinium_app` gets DML only: no DDL or TRUNCATE; audit_log and op_log are INSERT/SELECT only (`REVOKE UPDATE, DELETE ON audit_log FROM plotinium_app`).\n\n## 2. DDL sketch (db/migrations/0001_core, up + down)\n\nPrototype-verified on PG 18.6.\n\n```sql\nCREATE EXTENSION IF NOT EXISTS vector;\nCREATE TABLE groups (gid int PRIMARY KEY, name text NOT NULL UNIQUE);\nCREATE TABLE users (\n  uid int PRIMARY KEY,\n  username text NOT NULL UNIQUE CHECK (username ~ '^[a-z_][a-z0-9_-]{0,31}$'),\n  password_hash text NOT NULL,              -- argon2id, never plaintext\n  primary_gid int NOT NULL REFERENCES groups,\n  quota_bytes bigint NOT NULL, quota_inodes bigint NOT NULL,\n  used_bytes bigint NOT NULL DEFAULT 0, used_inodes bigint NOT NULL DEFAULT 0,\n  CONSTRAINT quota_bytes_ok  CHECK (used_bytes  BETWEEN 0 AND quota_bytes),   -- 23514 -> EDQUOT\n  CONSTRAINT quota_inodes_ok CHECK (used_inodes BETWEEN 0 AND quota_inodes));\nCREATE TABLE user_groups (uid int REFERENCES users ON DELETE CASCADE,\n  gid int REFERENCES groups ON DELETE CASCADE, PRIMARY KEY (uid, gid));\nCREATE TABLE blobs (blob_id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,\n  sha256 bytea NOT NULL UNIQUE CHECK (octet_length(sha256) = 32),   -- B-tree: needed for ON CONFLICT upsert\n  size bigint NOT NULL CHECK (size >= 0), storage_key text NOT NULL,\n  refcount int NOT NULL CHECK (refcount >= 0), zero_since timestamptz);\nCREATE INDEX blobs_sha256_hash ON blobs USING hash (sha256);         -- s11.4 hash index; keep only if faster\nCREATE TABLE inodes (\n  ino uuid PRIMARY KEY DEFAULT uuidv7(),     -- client-generated UUIDv7 offline; PG18 uuidv7() server-side\n  type \"char\" NOT NULL CHECK (type IN ('f','d','l')),\n  mode smallint NOT NULL CHECK (mode BETWEEN 0 AND 1023),  -- rwxrwxrwx + sticky (0o1777)\n  uid int NOT NULL REFERENCES users, gid int NOT NULL REFERENCES groups,\n  size bigint NOT NULL DEFAULT 0 CHECK (size >= 0),\n  nlink int NOT NULL DEFAULT 1 CHECK (nlink >= 0),\n  version bigint NOT NULL DEFAULT 1,       -- optimistic concurrency (VFS-10)\n  blob_id bigint REFERENCES blobs,\n  symlink_target text CHECK (octet_length(symlink_target) <= 4096),\n  created_at timestamptz NOT NULL DEFAULT now(), modified_at timestamptz NOT NULL DEFAULT now(),\n  changed_at timestamptz NOT NULL DEFAULT now(), accessed_at timestamptz NOT NULL DEFAULT now(),\n  CHECK ((type = 'l') = (symlink_target IS NOT NULL)),\n  CHECK (type = 'f' OR blob_id IS NULL),\n  CHECK (type = 'd' OR mode < 512),       -- sticky only on directories\n  UNIQUE (ino, type), UNIQUE (ino, type, uid));    -- composite-FK targets\nCREATE TABLE dentries (\n  parent_ino uuid NOT NULL,\n  parent_type \"char\" NOT NULL DEFAULT 'd' CHECK (parent_type = 'd'),\n  name text COLLATE \"C\" NOT NULL CHECK (name <> '' AND name NOT IN ('.','..')\n        AND strpos(name,'/') = 0 AND octet_length(name) <= 255),\n  ino uuid NOT NULL, d_type \"char\" NOT NULL,\n  owner_uid int NOT NULL,                  -- denormalised copy of inodes.uid for Q3\n  PRIMARY KEY (parent_ino, name) INCLUDE (ino, d_type),                  -- Q1/Q2/Q5 index-only\n  FOREIGN KEY (parent_ino, parent_type) REFERENCES inodes (ino, type),   -- parent must be a dir\n  FOREIGN KEY (ino, d_type, owner_uid) REFERENCES inodes (ino, type, uid) ON UPDATE CASCADE);\nCREATE UNIQUE INDEX dentries_dir_one_parent ON dentries (ino) WHERE d_type = 'd';  -- no dir hard links; ancestor walk\nCREATE INDEX dentries_ino ON dentries (ino);                                      -- file -> path (citations, hard links)\nCREATE INDEX dentries_owner_lname ON dentries (owner_uid, lower(name) text_pattern_ops);  -- Q3\nCREATE INDEX inodes_uid_mtime ON inodes (uid, modified_at DESC);                  -- Q4\nCREATE TABLE sessions (session_id uuid PRIMARY KEY, uid int NOT NULL REFERENCES users,\n  window_layout jsonb NOT NULL, updated_at timestamptz NOT NULL DEFAULT now());\nCREATE TABLE locks (ino uuid NOT NULL REFERENCES inodes ON DELETE CASCADE,\n  session_id uuid NOT NULL REFERENCES sessions ON DELETE CASCADE,\n  mode \"char\" NOT NULL CHECK (mode IN ('S','X')), holder_uid int NOT NULL REFERENCES users,\n  lease_expires_at timestamptz NOT NULL, PRIMARY KEY (ino, session_id));\n  -- spec shows ino PK; shared locks need several holders\nCREATE UNIQUE INDEX locks_one_writer ON locks (ino) WHERE mode = 'X';\nCREATE INDEX locks_expiry ON locks (lease_expires_at);\nCREATE TABLE op_log (op_id uuid PRIMARY KEY,   -- idempotency key\n  uid int NOT NULL REFERENCES users, session_id uuid NOT NULL, client_seq bigint NOT NULL,\n  op text NOT NULL, payload jsonb NOT NULL, result jsonb, client_ts timestamptz,\n  applied_at timestamptz NOT NULL DEFAULT now(), UNIQUE (session_id, client_seq));\nCREATE TABLE swap_pages (session_id uuid, pid int, page_id int,\n  owner_uid int NOT NULL REFERENCES users, storage_key text NOT NULL,\n  size int NOT NULL CHECK (size >= 0), checksum bytea NOT NULL,\n  PRIMARY KEY (session_id, pid, page_id));\nCREATE TABLE file_chunks (chunk_id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,\n  ino uuid NOT NULL REFERENCES inodes ON DELETE CASCADE,  -- rm -r removes vectors in the SAME txn\n  seq int NOT NULL, line_start int NOT NULL, byte_offset int NOT NULL, text text NOT NULL,\n  content_hash bytea NOT NULL, model_id smallint NOT NULL,\n  embedding vector(384) NOT NULL,          -- d = chosen model; >2000 dims -> halfvec\n  UNIQUE (ino, seq));\nCREATE TABLE audit_log (id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,\n  uid int NOT NULL REFERENCES users,\n  actor text NOT NULL CHECK (actor IN ('user','agent')), syscall text NOT NULL,\n  args jsonb NOT NULL, result jsonb NOT NULL, prompt_id uuid,\n  ts timestamptz NOT NULL DEFAULT now());\nCREATE INDEX audit_uid_ts ON audit_log (uid, ts DESC);\nCREATE TABLE telemetry_events (event_id uuid PRIMARY KEY, uid int NOT NULL REFERENCES users,\n  app_id text NOT NULL, kind text NOT NULL, ts timestamptz NOT NULL, context jsonb);  -- opt-in only\n```\n\n**Normalisation (for DATABASE.md).** The schema is 3NF with two deliberate, DB-guarded denormalisations:\n- dentries.owner_uid is kept equal to inodes.uid by the composite FK ON UPDATE CASCADE, so chown -R rewrites it in the same transaction. d_type is likewise pinned to inodes.type.\n- users.used_* is a maintained aggregate, verified by the quota-drift probe.\n\n**Optional hardening:** a DEFERRABLE INITIALLY DEFERRED constraint trigger so an inode must have at least one dentry at commit. Without it, the orphan probe catches this.\n\n## 3. Tree representation\n\nMeasured at 99k inodes; move cost is for a 1,000-node directory at depth ~9.\n\n| Representation | Move cost | Read cost | Verdict |\n|---|---|---|---|\n| **Adjacency list (chosen)** | 1 row | recursive CTE: Q5 1.7-2.9 ms, Q1 0.2-0.9 ms | Hard links free (dentries separate); atomic trivially |\n| Materialised path | rewrite 1,000 rows | fast prefix scan | ltree labels cannot hold file names, so paths would have to be ino-based (~500 B/row at depth 14); hard links need one path per dentry |\n| Closure table | delete + insert ~9k rows | ~1.4M rows for this seed | Fast ancestor check, but every move is a heavy bulk write |\n| Nested sets | renumber large ranges | fast range scan | Rejected: renumbering on every create |\n\n**Q5 decision.** Use a recursive CTE, not a maintained per-directory aggregate. An aggregate turns / and /home into rows that every write in the system must lock, and serialises all users.\n\n## 4. Isolation level\n\n**Measured results:**\n\n| Design | Result |\n|---|---|\n| READ COMMITTED, no rename lock | Corrupts the tree with 2 clients |\n| SERIALIZABLE | Correct, but retry rate swings from 1% to 116% depending on the planner (seq scans on tiny tables take relation-level SIREAD locks; a fresh examiner deployment is the worst case) |\n| READ COMMITTED + lock protocol | Correct, 0 retries |\n\n**Declared level:** READ COMMITTED + the lock protocol below, with retry on 40P01/40001/55P03 (max 5, jittered backoff).\n\n**Why it is safe for tree operations:**\n- FK, UNIQUE and CHECK hold at any isolation level, so there can be no orphans, duplicate names or over-quota rows.\n- The only invariant constraints cannot express is acyclicity. Only cross-directory *directory* moves can break it, and those are serialised by the rename lock.\n- Every other conflict is on a specific row that we lock. READ COMMITTED re-reads the latest committed version after each wait.\n\n**Lock protocol** (in canonical order; every step is inside one transaction):\n\n| Step | Rule |\n|---|---|\n| L0 Idempotency | `INSERT INTO op_log (...) ON CONFLICT (op_id) DO NOTHING RETURNING op_id`. 0 rows means the op was already applied (a concurrent duplicate waits on the unique index and then sees the commit), so return op_log.result. This gives exactly-once replay (OFF-02). |\n| L1 Rename lock | Only for a cross-parent rename of a directory: `SELECT pg_advisory_xact_lock(hashtextextended('vfs:rename',0))`. This is the Linux s_vfs_rename_mutex analogue. |\n| L2 Parent directories | `SELECT ... FROM inodes WHERE ino = ANY($parents) ORDER BY ino FOR UPDATE`. A missing row means ENOENT. The parent's mtime/version/nlink update needs this lock anyway. |\n| L3 Subtree directories | For rm -r, chmod -R and chown -R: lock the subtree's directory rows FOR UPDATE in ino order. This blocks creates inside the subtree. Then re-collect the subtree in a new statement. |\n| L4 Quota | `UPDATE users SET used_bytes = used_bytes + $d, used_inodes = used_inodes + $n WHERE uid = ANY(...)`, in uid order. The row lock plus CHECK means no lost update; 23514 maps to EDQUOT. |\n| L5 Content writes | `UPDATE inodes SET ..., version = version + 1 WHERE ino = $1 AND version = $expected`. 0 rows means a conflict, so write a conflicted copy (VFS-10). |\n\n## 5. Transaction helper (server/vfs/tx.ts, Kysely + pg)\n\n```ts\nexport async function vfsTxn<T>(op: OpEnvelope, fn: (tx: Transaction<DB>) => Promise<T>): Promise<T> {\n  for (let attempt = 1; ; attempt++) {\n    try {\n      return await db.transaction().setIsolationLevel('read committed').execute(async (tx) => {\n        await sql`SET LOCAL lock_timeout = '2s'`.execute(tx);\n        const fresh = await sql`INSERT INTO op_log (op_id, uid, session_id, client_seq, op, payload)\n          VALUES (${op.id}, ${op.uid}, ${op.session}, ${op.seq}, ${op.name}, ${op.payload})\n          ON CONFLICT (op_id) DO NOTHING RETURNING op_id`.execute(tx);\n        if (fresh.rows.length === 0) return storedResult(tx, op.id);   // exactly-once\n        const result = await fn(tx);\n        await sql`UPDATE op_log SET result = ${result} WHERE op_id = ${op.id}`.execute(tx);\n        return result;\n      });\n    } catch (e: any) {\n      if (['40P01', '40001', '55P03'].includes(e.code) && attempt < 5) {\n        await sleep(Math.random() * 5 * 2 ** attempt); continue;\n      }\n      throw toErrno(e);  // 23505->EEXIST, 23514 quota_*->EDQUOT, 23503->ENOENT/ENOTEMPTY,\n                         // 55P03->EBUSY, P0001(fault hook)->EIO\n    }\n  }\n}\n```\n\nSide effects outside the database happen only after COMMIT, through an in-memory event emitted by the helper: WebSocket broadcast, indexer notification, and blob GC.\n\n## 6. Directory move: mv /a/src /b/dst\n\n```sql\nBEGIN;  -- READ COMMITTED (declared)\nINSERT INTO op_log ... ON CONFLICT (op_id) DO NOTHING RETURNING op_id;             -- L0\nSELECT pg_advisory_xact_lock(hashtextextended('vfs:rename', 0));                   -- L1 (dir, parents differ)\nSELECT ino, uid, gid, mode FROM inodes WHERE ino = ANY($parents) ORDER BY ino FOR UPDATE;  -- L2\n   -- kernel: w+x on both parents, sticky rule on src parent; missing row -> ENOENT\nSELECT ino, d_type FROM dentries WHERE parent_ino = $src_parent AND name = $src_name;       -- ENOENT if none\nWITH RECURSIVE up(ino, depth) AS (                                                  -- EINVAL check\n  SELECT $dst_parent::uuid, 0\n  UNION ALL\n  SELECT d.parent_ino, up.depth + 1 FROM up\n  JOIN dentries d ON d.ino = up.ino AND d.d_type = 'd'\n  WHERE up.depth < 4096)\nSELECT EXISTS (SELECT 1 FROM up WHERE ino = $src_ino) AS would_cycle;               -- true -> EINVAL\nUPDATE dentries SET parent_ino = $dst_parent, name = $dst_name\n WHERE parent_ino = $src_parent AND name = $src_name;                               -- ONE row; unique PK -> EEXIST\nUPDATE inodes SET modified_at = now(), changed_at = now(), version = version + 1,\n       nlink = nlink + CASE WHEN ino = $dst_parent THEN 1 ELSE -1 END\n WHERE ino IN ($src_parent, $dst_parent);\nUPDATE op_log SET result = $result WHERE op_id = $op_id;\nCOMMIT;  -- any error -> ROLLBACK, nothing changed\n```\n\nMeasured: 1.5 ms per move. With 2 concurrent clients: 0 corruption, p95 10.6 ms.\n\n## 7. Bulk operations\n\nEach is set-based, one transaction, prototype-verified.\n\n**rm -r:** L2 on the parent, then L3 on the subtree directories, then one statement:\n\n```sql\nWITH RECURSIVE sub(parent_ino, name, ino, d_type) AS (\n  SELECT parent_ino, name, ino, d_type FROM dentries WHERE parent_ino = $1 AND name = $2\n  UNION ALL\n  SELECT d.parent_ino, d.name, d.ino, d.d_type FROM sub JOIN dentries d ON d.parent_ino = sub.ino\n  WHERE sub.d_type = 'd'),\ndel_d AS (DELETE FROM dentries d USING sub\n          WHERE d.parent_ino = sub.parent_ino AND d.name = sub.name RETURNING d.ino),\ncnt AS (SELECT ino, count(*) removed FROM del_d GROUP BY ino),\ndel_i AS (DELETE FROM inodes i USING cnt\n          WHERE i.ino = cnt.ino AND (i.type = 'd' OR i.nlink = cnt.removed)\n          RETURNING i.uid, i.size, i.blob_id)   -- hard links outside the subtree survive\nUPDATE users u SET used_bytes = u.used_bytes - a.b, used_inodes = u.used_inodes - a.n\nFROM (SELECT uid, sum(size) b, count(*) n FROM del_i GROUP BY uid) a WHERE u.uid = a.uid;\n```\n\nFollow it with: the blob refcount decrement; nlink -= removed for surviving hard-linked inodes; the parent mtime. file_chunks rows vanish via ON DELETE CASCADE. Measured: 33 ms for 1,000 nodes.\n\n**cp -r:** one statement.\n\n```sql\nWITH RECURSIVE sub AS (...),\nmap AS MATERIALIZED (SELECT DISTINCT ino AS old_ino, uuidv7() AS new_ino FROM sub),\nins_i AS (INSERT INTO inodes ... SELECT m.new_ino, ... FROM map m JOIN inodes i ON i.ino = m.old_ino\n          RETURNING ino, size),\nins_d AS (INSERT INTO dentries ...\n          SELECT CASE WHEN depth = 0 THEN $dst ELSE pm.new_ino END, ...)\nUPDATE users SET used_bytes = used_bytes + (SELECT sum(size) FROM ins_i), ...\n```\n\nBlob refcounts are incremented, so the copy is O(metadata) through content addressing. Measured: 37 ms. Quota overflow raises 23514, which becomes EDQUOT with no partial data.\n\n**chmod -R / chown -R:**\n```sql\nUPDATE inodes SET mode = ..., changed_at = now(), version = version + 1 FROM sub WHERE ...\n```\nchown also cascades to dentries.owner_uid.\n\n**Batch rename (agent, 500 files):**\n```sql\nWITH r AS (UPDATE dentries SET name = ... WHERE parent_ino = $1 AND ... RETURNING ino)\nUPDATE inodes SET changed_at = now(), version = version + 1 ...\n```\nThe unique PK rejects collisions, which aborts the whole plan (AGT-05). Measured: 12 ms.\n\n## 8. Fault injection (DB-02) and fsck probes (VFS-11)\n\nThe test-only migration adds a BEFORE INSERT OR UPDATE OR DELETE FOR EACH ROW trigger on inodes (and dentries). It counts calls through set_config('plotinium.fault_count', ..., true) and raises P0001 after current_setting('plotinium.fault_after', true). It is inert unless the harness sets fault_after inside the transaction. TypeScript-level hooks between statements cover the multi-statement failure points.\n\n**Checksum:**\n```sql\nSELECT md5(string_agg(concat_ws('|', parent_ino, name, ino, type, mode, uid, gid, size, nlink, version),\n       E'\\n' ORDER BY parent_ino, name))\nFROM dentries JOIN inodes USING (ino);\n```\n\n**fsck probes:**\n- Orphan inodes (no dentry, excluding root).\n- Parentless dentries.\n- Inodes unreachable from / (recursive walk).\n- nlink \u2260 link count.\n- users.used_* \u2260 sum over inodes.\n- blobs.refcount \u2260 references.\n\n## 9. Q1-Q5 SQL\n\n- **Q1:**\n  ```sql\n  WITH RECURSIVE walk(depth, ino, d_type) AS (\n    SELECT 0, $root, 'd'\n    UNION ALL\n    SELECT w.depth + 1, d.ino, d.d_type FROM walk w\n    JOIN dentries d ON d.parent_ino = w.ino AND d.name = ($2::text[])[w.depth + 1]\n    WHERE w.depth < cardinality($2))\n  SELECT ... JOIN inodes USING (ino) ORDER BY depth;\n  ```\n  It returns every component, so the kernel checks x-bits, ENOTDIR, symlinks (re-resolve, ELOOP after 40) and ENOENT. Keep outbox ops keyed by ino + expected version, not by path.\n- **Q2:** `WHERE parent_ino = $1 ORDER BY name` uses a PK range scan.\n- **Q3:** `WHERE owner_uid = $1 AND lower(name) LIKE $prefix || '%' ORDER BY lower(name) LIMIT 50`, with % and _ escaped.\n- **Q4:** `WHERE uid = $1 AND type = 'f' AND modified_at >= now() - interval '7 days' ORDER BY modified_at DESC LIMIT 50`.\n- **Q5:** recursive subtree walk (index-only on dentries_pk), then `sum(size) FROM inodes WHERE ino IN (SELECT ino FROM t)`, which counts each inode once even with hard links.\n\n## 10. Vectors next to metadata\n\nPermission filter using CURRENT inode bits:\n\n```sql\nSELECT c.chunk_id, c.ino, c.line_start, c.embedding <=> $q AS dist\nFROM file_chunks c JOIN inodes i USING (ino)\nWHERE $uid = 0 OR CASE WHEN i.uid = $uid THEN (i.mode & 256) <> 0\n                       WHEN i.gid = ANY($gids) THEN (i.mode & 32) <> 0\n                       ELSE (i.mode & 4) <> 0 END\nORDER BY c.embedding <=> $q\nLIMIT $k;\n```\n\nThen the kernel walks the ancestors of the k survivors. That walk checks x on every directory and builds path:line for the citations.\n\n- **Renames** touch dentries only, so no re-embedding is needed.\n- **Deletes** cascade in the same transaction.\n- **Content changes** skip unchanged chunks by content_hash.\n- **HNSW** `(embedding vector_cosine_ops) WITH (m = 16, ef_construction = 64)` is added only when exact search p95 exceeds about 250 ms or chunks exceed about 100k. Then use `SET LOCAL hnsw.iterative_scan = 'relaxed_order'` and re-sort in an outer query.\n\n## 11. Multi-tenancy and permissions\n\nThere is one shared Unix tree (/, /bin, /system, /home/<u>, /tmp 1777). Permissions are the mode bits plus uid/gid/user_groups, enforced by the kernel syscall layer on every call, with root bypass and the sticky rule on /tmp.\n\nRLS is not used on inodes/dentries, because rwx depends on the path (x on every ancestor): per-row policies would turn Q2 into N ancestor walks. Defence in depth comes from role privileges, the append-only audit_log (AGT-08), and optional RLS on strictly per-user tables (sessions, telemetry_events, swap_pages) keyed by `current_setting('plotinium.uid')` set via SET LOCAL.\n\n## 12. Migrations, backups, pooling\n\n- **Migrations:** Kysely Migrator. Files are named `YYYYMMDDHHmm_name.ts`, each with `up` and `down` written as raw SQL. PostgreSQL DDL is transactional, so a failing migration leaves nothing behind. The CI job runs migrate latest \u2192 migrate down to zero \u2192 migrate latest on an empty database, which proves every rollback script works (DB-01).\n- **Backups:** a cron sidecar runs `pg_dump -Fc` nightly and copies it off-box. A weekly CI restore drill checks the checksum and fsck.\n- **Pooling:** pg.Pool with max 10 and idle timeout 30 s. WebSockets are multiplexed onto it; transactions stay under 50 ms. Only transaction-scoped advisory locks are used, so PgBouncer transaction mode stays possible later.",
+  "open_questions": [
+   "Embedding model and dimension come from the AI-models decision. They set vector(d); above 2,000 dims needs halfvec for HNSW.",
+   "Inode id scheme must match the sync/outbox decision: client-generated UUIDv7 (assumed here, for offline creates) or server bigint with a temp-id remap.",
+   "Will hard links be implemented (a 'may')? The nlink bookkeeping in rm -r and the cp -r DISTINCT mapping depend on it.",
+   "Lock manager placement (VFS-09): leases persisted in the PostgreSQL locks table, or held in Node memory with PostgreSQL as the recovery store? The schema supports both.",
+   "Object storage for blobs and remote swap belongs to a separate decision. It determines the blob GC grace period and backup ordering.",
+   "The Week-2 lab workstation spec and the VPS RAM decide shared_buffers. Below 1 GB of RAM, re-run the prototype before the freeze.",
+   "Should the fault-injection trigger ship in the production image, disabled unless an admin-only test flag is set, so the live defence can run it on the tagged release? Or should the defence use a staging deployment?"
+  ]
+ },
+ "examiner_review": {
+  "verdict": "upheld_with_changes",
+  "factual_errors": [
+   {
+    "claim": "\"Pin the image pgvector/pgvector:0.8.6-pg18 (PostgreSQL 18.6)\", described as \"Pin the full tag\" and treated as a reproducible pin.",
+    "correction": "The tag is mutable. pgvector rebuilds its -pg18 tags whenever PostgreSQL ships a minor release: 0.8.1-pg18 was last updated 2026-02-13 and 0.8.2-pg18 on 2026-05-15, each the day after a PG minor release. After 2026-11-12, 0.8.6-pg18 will quietly become 18.7. Pin by digest instead: pgvector/pgvector:0.8.6-pg18@sha256:2ba9ca5f2e7daa0f0e7723cba1ee9167bab54efd3640516a44ac1a928dd67e7a. The image is multi-arch (amd64 and arm64) and 159 MB compressed.",
+    "source": "https://hub.docker.com/v2/repositories/pgvector/pgvector/tags?name=pg18 (last_updated fields); docker image inspect RepoDigests"
+   },
+   {
+    "claim": "Creating the database with the builtin C.UTF-8 locale gives Unicode simple case mapping for lower(), and dentries.name should be declared COLLATE \"C\" (risk mitigation and design notes section 1).",
+    "correction": "These two choices contradict each other. lower() uses the collation of the expression, so on a COLLATE \"C\" column it folds only ASCII. Measured on 18.6: over 100k rows, the prefix search lower(name) LIKE '\u00e4rger%' found 1 of 1,668 '\u00c4rger_*' files. With the column declared COLLATE pg_c_utf8 it found all 1,668, still used the (owner_uid, lower(name) text_pattern_ops) index (1.04 ms), and sorted in exactly the same order as C. Use pg_c_utf8 on the column, not \"C\".",
+    "source": "Examiner re-run on pgvector/pgvector:0.8.6-pg18 (initdb --locale-provider=builtin --builtin-locale=C.UTF-8); https://www.postgresql.org/docs/18/collation.html"
+   },
+   {
+    "claim": "\"Always ANALYZE after seeding\" is enough, and the PK INCLUDE makes the Q5 subtree walk an Index Only Scan.",
+    "correction": "The Index Only Scan plan appears only after VACUUM has set the visibility map. On a freshly loaded 100k-row dentries table after ANALYZE alone, the recursive term was planned as Seq Scan + Hash Join, and a 1,000-node subtree walk took 14.0 ms, which fails Q5's 10 ms target. After VACUUM ANALYZE the same query ran as a nested-loop Index Only Scan with 0 heap fetches in 1.24 ms. Under SERIALIZABLE the seq-scan plan also takes a relation-level SIREAD lock on the whole dentries table. A freshly seeded examiner deployment starts in exactly this state.",
+    "source": "Examiner EXPLAIN (ANALYZE, BUFFERS) on PG 18.6, before and after VACUUM ANALYZE; pg_locks inspection under SERIALIZABLE"
+   },
+   {
+    "claim": "The locks schema (PRIMARY KEY (ino, session_id) + partial UNIQUE (ino) WHERE mode='X') implements shared/exclusive leases in the database.",
+    "correction": "It stops two X holders but lets an S lock and an X lock coexist on the same inode. Measured: inserting S and then X for the same ino both succeeded. Adding EXCLUDE USING gist (ino WITH =, mode WITH <>) with btree_gist (bundled in the image, mode as text) rejects X while S is held and still allows several S holders.",
+    "source": "Examiner test on PG 18.6 (btree_gist)"
+   },
+   {
+    "claim": "MySQL option lists \"9.7.0 LTS (2026-04-21)\" as the current version.",
+    "correction": "9.7.0 was the first 9.7 LTS release (2026-04-21). The current release is 9.7.2 (2026-07-28). 8.4.11 (2026-06-30) is still the latest 8.4.",
+    "source": "https://endoflife.date/api/mysql.json"
+   },
+   {
+    "claim": "\"PgBouncer 1.25.2 (May 2026, security fixes) is current.\" The reversal trigger also says \"Add PgBouncer 1.25\".",
+    "correction": "PgBouncer 1.26.0 was released on 2026-09-23 and fixes CVE-2026-19888, CVE-2026-6668 and CVE-2026-6669. Any future adoption should target 1.26.0 or later.",
+    "source": "https://www.pgbouncer.org/changelog.html"
+   }
+  ],
+  "spec_gaps": [
+   "s17 clean bring-up / C5: the record says to use \"a named volume\" but never says where to mount it. In PG18 images PGDATA is /var/lib/postgresql/18/docker and the VOLUME is /var/lib/postgresql. The usual compose line '- pgdata:/var/lib/postgresql/data' makes the container exit 1, even with a fresh empty volume (reproduced). That would fail the scored 5-minute bring-up before the team speaks.",
+   "DB-05 'live query': the benchmark and plan evidence assume a vacuumed, warm database, but the examiner's clean clone produces a freshly seeded one where Q5 flips to a Seq Scan + Hash Join plan (measured 14 ms). The seed script must end with VACUUM (ANALYZE), and CI must assert plans on a fresh database.",
+   "VFS-09: S/X lease compatibility is not enforced by the database. The schema allows an S and an X holder at the same time, and expired rows are never cleared on acquire, so a crashed holder's row still blocks new holders.",
+   "Rule 3 / DB-04 spirit: acyclicity (EINVAL on a move into your own subtree) depends entirely on application code taking the rename lock. It can be made a database invariant with a BEFORE UPDATE OF parent_ino trigger that takes the advisory lock itself and re-walks ancestors (verified to reject the concurrent A->B / B->A case).",
+   "Trust boundary (SECURITY.md, s3): permissions are said to be enforced 'in the kernel syscall layer', which runs in the browser. The record never says the server sync engine re-checks rwx on ancestors, the sticky bit and ownership inside the transaction after taking the L2/L3 locks. Without that, a crafted WebSocket op bypasses permissions, and the check has a time-of-check/time-of-use race with a concurrent chmod.",
+   "AGT-08: audit_log rows written inside the operation's transaction disappear on ROLLBACK, so rejected, failed or killed agent plans would leave no audit record. They need a separate autocommit write after the rollback.",
+   "AGT-09: vfsTxn has no cancellation path. Killing the agent process mid-plan must abort the server transaction (an AbortSignal checked between steps, plus pg_cancel_backend for a running statement).",
+   "AGT-03/AGT-05: the dry run and confirmation happen outside the execute transaction, so under READ COMMITTED the affected set can change in between. The executor must re-check a fingerprint of the dry run (affected ino plus version) inside the transaction and abort as 'plan stale' if it differs.",
+   "OFF-02/VFS-10 sync broadcast: op_log has no server-assigned, commit-ordered cursor. A uuid op_id and applied_at timestamps cannot order changes for other sessions catching up after a reconnect, and neither can an identity column, because commit order differs from sequence order.",
+   "DB-02 + s11.3 rule 5: the fault-injection design covers only the server. The client IndexedDB mirror, which must also be atomic, needs its own N-of-M hook. This belongs in the client-storage decision record, but the record should reference it.",
+   "MEM-04: swap_pages is keyed by (session_id, pid, page_id) with no index on owner_uid and no link to the previous session, so paging in 'from a new browser session' needs a documented lookup path through sessions/owner_uid.",
+   "Open question 7 (whether the fault hook ships in the tagged release) must be settled now. Gate rules say a live demo on the tagged release, and s11.3 requires the test to be repeated live at the final defence."
+  ],
+  "weaknesses": [
+   "Scoring is lopsided: PostgreSQL's scores rest on measurements, while every losing option is scored from documentation. SQLite, the runner-up, is openly 'not measured by us'. Prototype step 8 (SQLite on the same seed) must be done before Week 4, or the losing side of the matrix is opinion, which s14.1 says is not evidence.",
+   "SQLite C4=2 contradicts the spec, which allows exact brute-force search while it meets latency (s12.2, RAG-05 p95 <= 500 ms at 10k chunks). sqlite-vec 0.1.9 stable does exact KNN with metadata columns in the same file and transaction. The honest penalty is that vec0 virtual tables cannot carry FKs (no ON DELETE CASCADE), which is worth about 3, not 2. SQLite C5=3 (below PostgreSQL's 4) is hard to defend on bring-up simplicity, and it double-counts the event-loop concern. The weights are not what decides the result: equal weights give PG about 94 vs SQLite 71, and the most generous SQLite re-score (4,4,4,4,5,5,5) reaches only 86 vs 95. That sensitivity table should be in the record.",
+   "The stated main reason SQLite loses, that 'every user queues behind a 1,000-node rm -r', is weak given the team's own measurement: rm -r takes 33 ms, so the queue lasts about 33 ms. Stronger and more honest reasons are that s11.4 explicitly asks for a hash index and a pattern operator class, which SQLite lacks; vec0 cannot carry FKs; and SELECT ... FOR UPDATE row-lock semantics match rule 2 literally.",
+   "The design sketch has a real bug in mv: 'nlink = nlink + CASE WHEN ino = $dst_parent THEN 1 ELSE -1 END' updates both parents for every move. It is wrong for file moves, where parent nlink should not change, and for same-parent renames, where it adds +1 net. The fsck nlink probe would flag it at the defence.",
+   "The canonical lock order is inconsistent. The risk table says 'directory inodes, then file inodes, then users', but the design-notes table puts L4 (users quota) before L5 (file content CAS). That invites avoidable 40P01 deadlocks between a content write and a chown.",
+   "Among the concurrency results, SERIALIZABLE with a rename lock taken before the snapshot had a better 8-client p95 (44 ms) than READ COMMITTED with the rename lock (101 ms). That undercuts the latency argument. The case for READ COMMITTED rests on the mixed-workload retry storm, and it becomes much stronger with the DB-enforced acyclicity trigger, which removes the 'forgotten lock silently corrupts the tree' failure mode that is READ COMMITTED's main risk.",
+   "The fault hook in the prototype counts only inodes rows, while the design notes say inodes and dentries. The DELETE in the rm -r statement removes all dentries before the first inode trigger fires, so 'fails at node 500' means the 500th inode row. That works, but DATABASE.md should state what counts as a 'node operation', because examiners will ask.",
+   "A B-tree index on locks.lease_expires_at disables HOT updates for every heartbeat: 0 of 40,000 updates were HOT, against 9,432 with a BRIN index. The effect is small at this scale but grows with thousands of clients sending heartbeats.",
+   "Cross-decision coupling is not stated: kysely 0.29.6 and pgvector npm 0.3.0 both declare engines node >= 22, so the backend-runtime decision must pick Node 22 or 24 LTS or check compatibility with Bun or Deno.",
+   "Two evidence items marked verified:false can now be marked verified: Litestream 0.5.17 (2026-08-31, GitHub releases), and PostgreSQL 19 (Beta 4 on 2026-09-24, GA targeted for end of October, RC and GA still TBD; the roadmap page still says 'September 2026').",
+   "Nothing shows the criteria were fixed before scoring. Commit the criteria and weights in a PR dated before the prototype-results PR, so the 'not reverse-engineered' claim can be checked (s14.1 item 3)."
+  ],
+  "extra_risks": [
+   {
+    "risk": "The PG18 Docker image rejects the conventional /var/lib/postgresql/data mount and exits 1, even on a fresh volume, which fails the scored clean bring-up.",
+    "mitigation": "Mount the named volume at /var/lib/postgresql. Add a CI job that runs the documented <=3 commands from a clean clone on a fresh runner and fails if they take longer than 5 minutes."
+   },
+   {
+    "risk": "The mutable image tag 0.8.6-pg18 silently becomes PostgreSQL 18.7 (or a rebuilt base) between the benchmark report and the defence.",
+    "mitigation": "Pin by digest (sha256:2ba9ca5f...). Bump it deliberately after re-running the Q1-Q5, fault and torture suites, and record the digest in THIRD_PARTY.md and BOOT.md."
+   },
+   {
+    "risk": "Docker Hub allows anonymous pulls at 100 per 6 hours per IPv4 address. On a shared campus NAT during defence week, the examiner's pull could be throttled.",
+    "mitigation": "Mirror the image to GHCR under the team's org and reference that in compose. Keep a documented 'docker login' fallback and a 'docker save' tarball on the release page."
+   },
+   {
+    "risk": "Planner flips on a freshly seeded or bulk-loaded database. Q5 measured 14 ms with a seq scan, and under SERIALIZABLE the same plan takes relation-level SIREAD locks.",
+    "mitigation": "Run VACUUM (ANALYZE) at the end of the seed script and after bulk imports. Set autovacuum_vacuum_insert_scale_factor to about 0.02 on dentries and inodes. Assert plans in CI on a just-migrated database (dentries_pk index-only, no Seq Scan on dentries). Keep auto_explain at 10 ms."
+   },
+   {
+    "risk": "Case-insensitive name search (Q3) and ls ordering go wrong for non-ASCII names, and NFD and NFC spellings of the same name coexist as 'duplicates'.",
+    "mitigation": "Declare name COLLATE pg_c_utf8 and add CHECK (name IS NFC NORMALIZED), with the client normalising names to NFC before sending. Both were verified on 18.6, with the same sort order as C."
+   },
+   {
+    "risk": "S and X leases coexist on one inode, or an expired lease blocks new holders forever (VFS-09 fails in the live lock-contention demo).",
+    "mitigation": "Add EXCLUDE USING gist (ino WITH =, mode WITH <>) with btree_gist, plus a partial unique index on X. The acquire transaction deletes expired rows for that ino first and maps an exclusion or unique violation to EBUSY. Use BRIN on lease_expires_at so heartbeat updates stay HOT."
+   },
+   {
+    "risk": "A forgotten rename lock in some new code path (for example the agent executor) creates a detached cycle under READ COMMITTED, and nothing fails until fsck.",
+    "mitigation": "Add a DB trigger on dentries (BEFORE UPDATE OF parent_ino, directories only) that takes the rename advisory lock itself and re-runs the ancestor walk with a fresh READ COMMITTED snapshot, raising EINVAL (verified). The app keeps taking the lock first; advisory locks are re-entrant."
+   },
+   {
+    "risk": "Rejected or killed agent plans leave no audit row, because the audit insert rolls back with the transaction (AGT-08), and the kill does not reach an in-flight server transaction (AGT-09).",
+    "mitigation": "Write audit and op outcomes in a separate autocommit after ROLLBACK, holding an 'attempt' row id. Give the executor an AbortSignal checked between steps and pg_cancel_backend for a running statement, and test kill-mid-plan in CI."
+   },
+   {
+    "risk": "Other sessions miss or reorder changes after a reconnect because nothing orders changes by commit.",
+    "mitigation": "Keep a per-user change_seq, incremented under the users row lock in every mutating transaction and stored on the op_log row. Clients resume from their last seq. Shared directories use the owner's feed plus a per-directory fan-out, or one global journal row if contention is measured to be acceptable."
+   },
+   {
+    "risk": "The fault-injection trigger ships in production and could be triggered or slow down every inode write.",
+    "mitigation": "The trigger stays inert unless a transaction-local GUC is set. Only an admin-role harness endpoint, enabled by an env flag in the defence compose profile, can set it. Measure the per-row overhead of the no-op trigger on the 1,000-node rm -r and report it."
+   }
+  ],
+  "amended_recommendation": "Use PostgreSQL 18.x with pgvector as the single primary database (upheld), with the corrections below.\n\nIMAGE AND BRING-UP. Pin by digest, not tag: pgvector/pgvector:0.8.6-pg18@sha256:2ba9ca5f2e7daa0f0e7723cba1ee9167bab54efd3640516a44ac1a928dd67e7a (PostgreSQL 18.6, pgvector 0.8.6, amd64+arm64, ~159 MB). pgvector rebuilds the 0.8.6-pg18 tag on every PostgreSQL minor release, so after 2026-11-12 it would silently become 18.7. Bump the digest deliberately, and only after re-running the benchmark, fault and torture suites. Mount the named volume at /var/lib/postgresql, not /var/lib/postgresql/data: PG18 images use PGDATA=/var/lib/postgresql/18/docker, and the entrypoint exits 1 on the old mount. Set POSTGRES_INITDB_ARGS='--locale-provider=builtin --builtin-locale=C.UTF-8' (data checksums are on by default in PG18). Mirror the image to GHCR (or keep a docker save tarball) in case the defence network hits Docker Hub's anonymous limit of 100 pulls per 6 h per IP. A CI job runs the documented <=3 commands from a clean clone and fails if they take longer than 5 minutes. Stay on 18.x through v1.0.0: PostgreSQL 19 Beta 4 is due 2026-09-24, with GA targeted for the end of October.\n\nONE DATABASE holds users/groups, inodes, dentries, blob metadata, locks, op_log (with the change cursor), sessions, swap_pages metadata, audit_log, opt-in telemetry and file_chunks embeddings. Vectors therefore share transactions, FKs and permission joins with the file system.\n\nTREE REPRESENTATION. Use an adjacency list: dentries(parent_ino, name) PRIMARY KEY INCLUDE (ino, d_type), kept separate from inodes, a composite FK that forces the parent to be a directory, and a partial UNIQUE (ino) WHERE d_type='d'. Declare name as text COLLATE pg_c_utf8, not \"C\". It sorts in the same code-point/byte order, but lower() then uses Unicode case mapping; under \"C\", Q3 missed 1,667 of 1,668 '\u00c4rger_*' files. Add CHECK (name IS NFC NORMALIZED). The Q3 index is (owner_uid, lower(name) text_pattern_ops). Q5 uses a recursive CTE, not a maintained aggregate. Enforce acyclicity in the database: a BEFORE UPDATE OF parent_ino trigger on directory dentries takes the transaction-scoped rename advisory lock, re-walks the ancestors (VOLATILE plpgsql, so it gets a fresh READ COMMITTED snapshot after the lock) and raises EINVAL. It was verified against concurrent A->B / B->A moves. The application still takes the rename lock first, which is re-entrant, to keep the lock order canonical.\n\nISOLATION LEVEL. Declare READ COMMITTED plus an explicit Linux-VFS-style lock protocol, with a bounded retry on 40P01/40001/55P03 (max 5, jittered exponential backoff, SET LOCAL lock_timeout='2s'; a timeout that still fails maps to EBUSY). Canonical order, all in one transaction:\n- L0: op_log idempotency insert (ON CONFLICT DO NOTHING; if it already exists, return the stored result).\n- L1: rename advisory lock, for cross-parent directory moves only.\n- L2: parent directory inodes FOR UPDATE, in ino order.\n- L3: subtree directory inodes FOR UPDATE, in ino order (rm -r, chmod -R, chown -R), then re-collect the subtree.\n- L4: file inodes, e.g. the content compare-and-swap on version; 0 rows means a conflicted copy (VFS-10).\n- L5: users quota rows in uid order, as a conditional UPDATE guarded by CHECK; 23514 on quota_* maps to EDQUOT.\nAfter L2/L3, the server re-checks permissions inside the transaction (x on every ancestor, w on the parents and on every subtree directory for rm -r, the sticky rule, root bypass, chown root-only). It never trusts the browser kernel's check. FK, UNIQUE, CHECK and the acyclicity trigger hold whatever the isolation level.\n\nPLANNER STABILITY. Seed scripts and bulk loads end with VACUUM (ANALYZE), not just ANALYZE. On an un-vacuumed table the 1,000-node subtree walk is planned as Seq Scan + Hash Join and takes 14.0 ms; after VACUUM it is an Index Only Scan at 1.2 ms. Set autovacuum_vacuum_insert_scale_factor to about 0.02 on dentries and inodes. CI asserts query plans on a freshly migrated and seeded database, which is what the examiner's bring-up produces. It reports both server-side (pg_stat_statements) and client-side p50/p95.\n\nLOCKS (VFS-09). Keep PRIMARY KEY (ino, session_id), and add EXCLUDE USING gist (ino WITH =, mode WITH <>) (btree_gist, with mode as text) plus a partial UNIQUE (ino) WHERE mode='X'. With these, S and X can never coexist; the original partial index alone allowed it. The acquire transaction first deletes expired rows for that ino, and a violation maps to EBUSY. Heartbeats update lease_expires_at. Index that column with BRIN, or not at all, so heartbeat updates stay HOT.\n\nSYNC, AUDIT AND AGENT. Add a per-user change_seq, incremented under the users row lock in every mutating transaction and stored on the op_log row. It is the commit-ordered cursor other sessions resume from after a reconnect. Record rejected ops and failed or killed agent plans in a separate autocommit after ROLLBACK, so that the audit trail (AGT-08) and replay results survive. The agent executor re-checks the dry-run fingerprint (the affected set of ino and version) inside the transaction and aborts as 'plan stale' if it has changed. Kill (AGT-09) aborts the transaction through an AbortSignal checked between steps, plus pg_cancel_backend for a running statement. Fix the mv sketch: parent nlink changes only when a directory moves across parents.\n\nDATA ACCESS. Use Kysely 0.29.6 on node-postgres 8.23.0 with the pgvector npm helper 0.3.0. All three require Node >= 22, which the backend-runtime decision must honour. Write hot-path SQL by hand. Write migrations as Kysely up/down pairs, each run as a transaction. CI runs migrate latest, then down to zero, then latest again. Use no ORM: Prisma 7/8 and Drizzle Kit 0.31 have no built-in down migrations, which DB-01 requires.\n\nPOOLING. One pg.Pool (max about 10) in a single Node API process, using transaction-scoped advisory locks only. If replicas are ever added, use PgBouncer 1.26.0 or later (released 2026-09-23 with three CVE fixes) in transaction mode.\n\nBACKUPS. A nightly pg_dump -Fc copied off-box (7 daily + 4 weekly). A CI restore drill compares tree checksums and runs the fsck probes. Blob GC deletes storage objects only for refcount=0 rows older than the oldest retained backup.\n\nVECTORS. Start with an exact, permission-filtered search: the file's own r-bit in SQL, and ancestor x-bits through the server-side ancestor walk. Over-fetch and refill when the filter drops results. Add HNSW with hnsw.iterative_scan='relaxed_order' only when measured p95 or the chunk count demands it, and gate it on Recall@5 >= 0.80 with real embeddings.\n\nROW-LEVEL SECURITY. Do not use RLS on the VFS tables. Use role privileges instead: the app role gets DML only, and audit_log and op_log are INSERT/SELECT only.\n\nFAULT INJECTION. The row-counting trigger ships in every build and stays inert unless an admin-only harness endpoint sets plotinium.fault_after via SET LOCAL. That endpoint is enabled by an env flag in the defence compose profile. The same code path runs in CI and live on the tagged release. Report the trigger's no-op overhead.\n\nRECORD HYGIENE. Re-score SQLite: C4 to 3, because exact search is allowed and sqlite-vec 0.1.9 does exact KNN with metadata columns, but vec0 tables cannot carry FKs; C5 to 4. Publish a sensitivity table: PG 95 vs SQLite <=86 even under the most generous re-score. Run prototype step 8 (SQLite on the same seed) before Week 4. Commit the criteria in a PR dated before the prototype results. Update the stale versions: MySQL 9.7.2, PgBouncer 1.26.0.",
+  "amended_chat_reason": "PostgreSQL 18 with pgvector still wins. In our prototype every fault-injected bulk operation rolled back cleanly, all five benchmark queries ran with a p95 of 2 ms or less at 100k files, and AI vectors sit next to the live permission bits. The examiner review found problems we can fix, not a better database:\n- Pin the Docker image by digest and mount its volume at /var/lib/postgresql, because the PG18 image refuses to start on the old path.\n- Use the pg_c_utf8 collation so case-insensitive search works beyond ASCII.\n- VACUUM after seeding, so a fresh database does not switch Q5 to a 14 ms sequential-scan plan.\n- Let the database itself enforce the no-cycle rule and shared/exclusive lock compatibility.\nWe keep READ COMMITTED with Linux-style locks.",
+  "defence_qa": [
+   {
+    "question": "The spec's own example uses SERIALIZABLE. Why did you declare READ COMMITTED, and how do you know it is safe for tree operations?",
+    "strong_answer": "We measured both. FK, UNIQUE (parent, name) and CHECK hold at any isolation level, so orphans, duplicate names and over-quota rows are impossible either way. The only tree invariant that plain constraints cannot express is acyclicity, and only cross-parent directory moves can break it. We enforce it in the database: a trigger on dentries takes the rename advisory lock and re-walks the ancestors with a fresh READ COMMITTED snapshot, so a concurrent A->B / B->A pair ends with one EINVAL (demo in tests/concurrency). Every other conflict is on a specific row we lock in a fixed order. SERIALIZABLE was also correct, but on a freshly deployed database the planner seq-scans small tables and SSI takes relation-level predicate locks. That gave 82-116% retries and 12-18% give-ups in our 12-user workload, and a fresh database is exactly what you will bring up. Our reversal trigger: any fsck violation under the torture suite that one added lock cannot fix, or more than 1% deadlock retries."
+   },
+   {
+    "question": "Run Q5 live on the database I just brought up. What happens if the planner chooses a different plan than in your report?",
+    "strong_answer": "We measured that risk. Right after a bulk seed, the visibility map is empty, and the recursive subtree walk plans as Seq Scan + Hash Join: 14 ms for 1,000 nodes at 100k rows. After VACUUM (ANALYZE) it is a nested-loop Index Only Scan on dentries_pk with 0 heap fetches, at 1.2 ms. So our seed script ends with VACUUM (ANALYZE), autovacuum insert thresholds on dentries and inodes are lowered, and CI asserts the plan on a just-migrated database, failing the build if dentries is seq-scanned. auto_explain logs any statement over 10 ms. We report server-side (pg_stat_statements) and client-side p95 separately, so host noise isn't mistaken for a slow query."
+   },
+   {
+    "question": "SQLite is simpler to bring up and serial by construction, so DB-03 is free. Why isn't it your choice?",
+    "strong_answer": "We concede SQLite has the easiest bring-up and trivially passes DB-03. We ran the same seed on it (prototype step 8), and the decision rests on the spec, not on speed. Section 11.4 asks for a hash index on blobs(sha256) and a pattern-operator-class index on lower(name), and SQLite has neither. sqlite-vec's vec0 tables cannot carry foreign keys, so deleting a file cannot cascade to its vectors in the same row-level guarantee. Rule 2's 'lock the user's quota row' maps directly to PostgreSQL row locks. The synchronous driver would need a worker thread next to our WebSocket server. Our sensitivity table re-scores SQLite as generously as we honestly can and it reaches 86 against PostgreSQL's 95, so the result does not depend on the weights."
+   },
+   {
+    "question": "How does semantic search avoid leaking a file whose own mode bits allow reading but whose parent directory denies traversal?",
+    "strong_answer": "Vectors live in file_chunks in the same database, with ON DELETE CASCADE from inodes, so rm -r removes them in the same transaction. The query joins to the live inode row at query time and checks the r-bit for the caller's owner, group or other class, with root bypass. The server then walks the ancestors of each candidate, requiring x on every directory, which also builds the path:line citation. Candidates that fail are dropped and we over-fetch to refill k. Nothing is cached per user, so a chmod takes effect on the next query. RAG-03 is tested by a fixture of traversal-denied directories and group-only files, and it expects zero leaks."
+   },
+   {
+    "question": "Show me that the second writer gets EBUSY and that a crashed holder's lock expires. What stops a shared and an exclusive lock from coexisting?",
+    "strong_answer": "The database does. The locks table has an exclusion constraint (ino WITH =, mode WITH <>) through btree_gist, plus a partial unique index on exclusive locks, so S+X and X+X are both rejected, while several S holders are allowed. The acquire transaction first deletes expired leases for that inode, so a crashed holder's row stops blocking once lease_expires_at passes. Heartbeats over the WebSocket extend the lease. A violation maps to EBUSY or a read-only open. Our first draft had only the partial unique index, and our own test showed an S and an X lock coexisting, which is why we changed it."
+   },
+   {
+    "question": "The fault-injection test must run live on the tagged release. How do you inject a failure at node 500 without shipping a backdoor?",
+    "strong_answer": "A BEFORE ROW trigger on inodes and dentries counts row operations in a transaction-local setting and raises P0001 once plotinium.fault_after is exceeded. It is a no-op unless that setting exists in the current transaction. Only an admin-role harness endpoint can set it, and that endpoint exists only when the defence compose profile's env flag is on, so the tagged image is identical to production. After the forced failure we compare the tree checksum (md5 over dentries joined to inodes in key order), run both orphan probes plus the unreachable-from-root, nlink, quota-drift and refcount probes, and show that they are unchanged or empty. We also report the trigger's no-op overhead on a clean 1,000-node rm -r."
+   }
+  ]
+ }
+}

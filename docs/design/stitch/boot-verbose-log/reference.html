@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plotinium verbose boot</title>
+<!-- Hand-built reference render (NOT a Stitch export). Stitch generation timed out; see notes.md. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+  :root {
+    --pl-bg: #07070B;
+    --pl-label: rgba(255,255,255,.92);
+    --pl-label-2: rgba(255,255,255,.60);
+    --pl-ts: #7A7A86;
+    --pl-tag: #8E8CF2;
+    --pl-accent: #5E5CE6;
+    --pl-accent-hi: #9C9AFF;
+    --pl-warn: #FFB340;
+    --pl-ok: #30D158;
+    --pl-danger: #FF453A;
+    --pl-hair: rgba(255,255,255,.08);
+    --pl-glass: rgba(28,28,34,.62);
+    --pl-font: "Inter", system-ui, sans-serif;
+    --pl-mono: "JetBrains Mono", ui-monospace, monospace;
+    --pl-motion-fast: 120ms; --pl-motion-med: 200ms; --pl-motion-slow: 320ms;
+    --pl-ease: cubic-bezier(.2,.8,.2,1);
+    --pl-ease-out: cubic-bezier(0,0,.2,1);
+    --pl-ease-in: cubic-bezier(.4,0,1,1);
+    --pl-spring: linear(0, .35 12%, .78 26%, 1.02 40%, 1.04 50%, 1.01 65%, 1);
+  }
+  @media (prefers-reduced-motion: reduce) { :root { --pl-motion-fast: 0ms; --pl-motion-med: 0ms; --pl-motion-slow: 0ms; } }
+  :root[data-motion="reduce"] { --pl-motion-fast: 0ms; --pl-motion-med: 0ms; --pl-motion-slow: 0ms; }
+
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; }
+  body {
+    background: var(--pl-bg);
+    color: var(--pl-label);
+    font: 13px/1.4 var(--pl-font);
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  .bg { position: fixed; inset: 0; pointer-events: none;
+    background:
+      radial-gradient(900px 600px at 12% 8%, rgba(94,92,230,.10), transparent 60%),
+      radial-gradient(700px 500px at 88% 90%, rgba(94,92,230,.05), transparent 60%); }
+
+  header { position: fixed; top: 0; left: 0; right: 0; height: 64px; padding: 0 24px 0 48px;
+    display: flex; align-items: center; justify-content: space-between; }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand b { font-weight: 600; font-size: 14px; letter-spacing: -.01em; }
+  .chip { font: 11px var(--pl-mono); color: var(--pl-label-2); padding: 2px 8px; border-radius: 6px;
+    border: 1px solid var(--pl-hair); background: rgba(255,255,255,.04); }
+  .meta { font: 11px var(--pl-mono); color: var(--pl-ts); }
+
+  main { position: fixed; top: 64px; bottom: 64px; left: 0; right: 336px; padding: 16px 24px 0 48px; }
+  .log { height: 100%; overflow: auto; font: 12px/20px var(--pl-mono); outline: none; border-radius: 8px; }
+  .log:focus-visible { box-shadow: inset 0 0 0 3px rgba(94,92,230,.55); }
+  .row { display: flex; gap: 10px; white-space: pre; padding: 0 6px; border-radius: 4px;
+    transition: opacity var(--pl-motion-fast) var(--pl-ease-out), transform var(--pl-motion-fast) var(--pl-ease-out); }
+  @starting-style { .row { opacity: 0; transform: translateX(-6px); } }
+  .row:hover { background: rgba(255,255,255,.04); }
+  .ts { color: var(--pl-ts); }
+  .tag { color: var(--pl-tag); font-weight: 600; }
+  .row.warn, .row.warn .tag, .row.warn .ts { color: var(--pl-warn); }
+  .row.ok, .row.ok .tag, .row.ok .ts { color: var(--pl-ok); }
+  .pill { display: inline-block; font-size: 10px; line-height: 16px; font-weight: 600; padding: 0 6px; margin-right: 6px;
+    border-radius: 5px; background: rgba(255,179,64,.14); border: 1px solid rgba(255,179,64,.35);
+    transition: opacity var(--pl-motion-med) var(--pl-spring) 40ms, transform var(--pl-motion-med) var(--pl-spring) 40ms; }
+  @starting-style { .pill { opacity: 0; transform: scale(.9); } }
+  .check { display: inline-block; margin-right: 6px;
+    transition: opacity var(--pl-motion-slow) var(--pl-spring), transform var(--pl-motion-slow) var(--pl-spring); }
+  @starting-style { .check { opacity: 0; transform: scale(.6); } }
+  .cursor { display: inline-block; width: 7px; height: 14px; margin: 3px 0 0 6px; background: var(--pl-accent); border-radius: 1px; }
+
+  aside { position: fixed; top: 80px; right: 24px; width: 288px; padding: 14px 14px 12px;
+    background: var(--pl-glass); backdrop-filter: blur(30px) saturate(180%); -webkit-backdrop-filter: blur(30px) saturate(180%);
+    border: 1px solid var(--pl-hair); border-radius: 16px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 22px 70px rgba(0,0,0,.45);
+    transition: opacity var(--pl-motion-med) var(--pl-spring), transform var(--pl-motion-med) var(--pl-spring); }
+  @starting-style { aside { opacity: 0; transform: translateX(12px); } }
+  aside h2 { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--pl-label-2); margin: 0 4px 8px; }
+  aside ul { list-style: none; padding: 0; }
+  aside li { display: grid; grid-template-columns: 14px 1fr auto; align-items: center; gap: 8px; height: 26px; padding: 0 6px;
+    border-radius: 6px; font: 12px var(--pl-mono); }
+  aside li:hover { background: rgba(255,255,255,.04); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--pl-ok); }
+  .dot.warn { background: var(--pl-warn); } .dot.bg2 { background: var(--pl-accent); }
+  .state { font-size: 11px; color: var(--pl-label-2); }
+  .state.warn { color: var(--pl-warn); }
+  .sum { margin-top: 10px; padding: 8px 6px 0; border-top: 1px solid var(--pl-hair); font: 11px var(--pl-mono); color: var(--pl-label-2); }
+  .sum .w { color: var(--pl-warn); }
+
+  footer { position: fixed; left: 0; right: 0; bottom: 3px; height: 40px; padding: 0 24px 0 48px;
+    display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; font: 11px var(--pl-mono); color: var(--pl-ts); }
+  footer .c { display: flex; align-items: center; gap: 8px; color: var(--pl-label-2); font-family: var(--pl-font); font-size: 12px; }
+  footer .r { justify-self: end; }
+  kbd { font: 600 11px var(--pl-mono); color: var(--pl-label); min-width: 22px; height: 22px; display: inline-grid; place-items: center;
+    border-radius: 6px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.10), 0 1px 0 rgba(0,0,0,.6);
+    transition: transform var(--pl-motion-fast) var(--pl-ease); }
+  kbd.down { transform: translateY(1px); }
+
+  .bar { position: fixed; left: 0; right: 0; bottom: 0; height: 3px; background: rgba(255,255,255,.06); }
+  .fill { position: absolute; inset: 0; transform-origin: left; transform: scaleX(var(--p, 1));
+    background: linear-gradient(90deg, var(--pl-accent), var(--pl-accent-hi));
+    box-shadow: 0 0 12px rgba(94,92,230,.7);
+    transition: transform var(--pl-motion-fast) var(--pl-ease); }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="bg" aria-hidden="true"></div>
+
+<header role="banner">
+  <div class="brand">
+    <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+      <defs><radialGradient id="n"><stop offset="0" stop-color="#fff"/><stop offset=".5" stop-color="#C9C8FF"/><stop offset="1" stop-color="#5E5CE6" stop-opacity="0"/></radialGradient></defs>
+      <g fill="none" stroke="#5E5CE6" stroke-width="1.1" opacity=".95">
+        <ellipse cx="12" cy="12" rx="10.5" ry="4.2"/>
+        <ellipse cx="12" cy="12" rx="10.5" ry="4.2" transform="rotate(60 12 12)"/>
+        <ellipse cx="12" cy="12" rx="10.5" ry="4.2" transform="rotate(-60 12 12)"/>
+      </g>
+      <circle cx="12" cy="12" r="4" fill="url(#n)"/><circle cx="12" cy="12" r="1.7" fill="#fff"/>
+    </svg>
+    <b>Plotinium</b><span class="chip">verbose boot</span>
+  </div>
+  <div class="meta">boot id 7f3e·b12c · 2026-09-24 09:41:07 PKT</div>
+</header>
+
+<main>
+  <div class="log" id="log" role="log" aria-live="off" aria-label="Boot log" tabindex="0"></div>
+</main>
+
+<aside aria-label="Services">
+  <h2>Services</h2>
+  <ul>
+    <li><span class="dot"></span>init <span class="state">ok · pid 1</span></li>
+    <li><span class="dot"></span>sched <span class="state">ok · pid 2</span></li>
+    <li><span class="dot"></span>mm <span class="state">ok</span></li>
+    <li><span class="dot"></span>storage <span class="state">ok · v7</span></li>
+    <li><span class="dot"></span>vfs <span class="state">ok · pid 9</span></li>
+    <li><span class="dot warn"></span>syncd <span class="state warn">offline · 3 queued</span></li>
+    <li><span class="dot warn"></span>lockd <span class="state warn">degraded</span></li>
+    <li><span class="dot bg2"></span>ai.indexer <span class="state">background · pid 23</span></li>
+    <li><span class="dot"></span>desktop <span class="state">interactive</span></li>
+  </ul>
+  <div class="sum">16 ok · <span class="w">2 degraded</span> · 0 failed</div>
+</aside>
+
+<footer role="contentinfo">
+  <span>Plotinium 0.3.0 · build a1f93c2</span>
+  <span class="c"><kbd id="vk">V</kbd> Press V to hide log</span>
+  <span class="r">boot 0.73 s</span>
+</footer>
+<div class="bar" role="progressbar" aria-label="Boot progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100" aria-valuetext="Desktop interactive, 9 of 9"><div class="fill" id="fill"></div></div>
+<div class="sr" role="status" aria-live="polite" id="status">Desktop ready in 0.73 seconds. 2 services degraded.</div>
+
+<script>
+  // Reference only: lines are appended as DOM rows so each one enters from @starting-style
+  // (a transition, not @keyframes). ?replay simulates kernel events with rAF, never setTimeout.
+  const L = [
+    [0.000,'firmware','Plotinium 0.3.0 · POST ok (workers, indexeddb, opfs, crypto) · quota 2.1 GB, persisted'],
+    [0.004,'loader','profile=normal · service worker active (offline-capable)'],
+    [0.011,'kernel','process table ready (hash map, cap 1024) · pid 1 = init'],
+    [0.013,'sched','priority heap + RR · quantum 8 ms · workers 7/8 cores · aging 250 ms'],
+    [0.019,'mm','memory manager armed · budget 256 MB · swap tiers: opfs, cloud'],
+    [0.021,'svc','18 manifests · 30 edges · acyclic · 7 levels'],
+    [0.087,'storage','opened plotinium-vfs v7 (IndexedDB) in 64 ms'],
+    [0.212,'vfs','mounted / · 12,408 inodes · 3 users · quotas enforced'],
+    [0.402,'sync','backend unreachable · offline mode · outbox holds 3 ops · retry in 2 s','WARN'],
+    [0.405,'lockd','(requires sync) · local advisory locks only','DEGRADED'],
+    [0.644,'ai.indexer','412 chunks pending · scheduled at priority 32 (background)'],
+    [0.731,'desktop','interactive · 4 windows restored · boot 0.73 s · 2 services degraded','OK'],
+  ];
+  const log = document.getElementById('log'), fill = document.getElementById('fill');
+  const cursor = Object.assign(document.createElement('div'), { className: 'row' });
+  cursor.innerHTML = '<span class="cursor" aria-hidden="true"></span>';
+  function add([t, tag, msg, kind]) {
+    const r = document.createElement('div');
+    r.className = 'row' + (kind === 'OK' ? ' ok' : kind ? ' warn' : '');
+    const ts = `[${t.toFixed(3).padStart(6,' ')}]`;
+    const pre = kind === 'OK' ? '<span class="check" aria-hidden="true">✓</span>'
+              : kind ? `<span class="pill">${kind}</span>` : '';
+    r.innerHTML = `<span class="ts">${ts}</span><span><span class="tag">${tag}:</span> ${pre}${msg}</span>`;
+    log.insertBefore(r, cursor);
+    log.scrollTop = log.scrollHeight;
+  }
+  log.append(cursor);
+  if (new URLSearchParams(location.search).has('replay')) {
+    fill.style.setProperty('--p', 0);
+    let i = 0, start = performance.now();
+    (function tick(now) {
+      while (i < L.length && (now - start) / 1000 * 1.5 >= L[i][0]) { add(L[i]); i++; fill.style.setProperty('--p', i / L.length); }
+      if (i < L.length) requestAnimationFrame(tick); else cursor.remove();
+    })(start);
+  } else { L.forEach(add); }
+  addEventListener('keydown', e => { if (e.key === 'v' || e.key === 'V') document.getElementById('vk').classList.add('down'); });
+  addEventListener('keyup',   e => { if (e.key === 'v' || e.key === 'V') document.getElementById('vk').classList.remove('down'); });
+</script>
+</body>
+</html>

@@ -1,0 +1,1593 @@
+{
+ "key": "deploy",
+ "title": "Deployment, object storage, CI/CD & observability",
+ "record": {
+  "decision_title": "Deployment, object storage, CI/CD and observability: one Docker Compose file used for the examiner bring-up, CI and production on a single Hetzner VPS behind Caddy, with Garage for blobs and remote swap, GitHub Actions and lean in-house observability",
+  "context_constraints_ranked": [
+   "1. \u00a717.1 clean bring-up is scored before the team speaks. An examiner clones the repo and starts the system with at most 3 documented commands, finishing within 5 minutes, on a machine we do not control. Then they open the production URL.",
+   "2. The production URL must be up at every gate: P2 'deployed URL boots', and at the final defence a public URL with a demo account (\u00a717.2). Each unmet gate caps the mark at 80% (70% for two), per \u00a713.2.",
+   "3. The backend is WebSocket-first. It carries sync, lock leases (VFS-09) and process/change events over thousands of long-lived connections, so we cannot accept platform sleep, idle kills or proxy timeouts. Reconnection must preserve ordering and replay each op exactly once (OFF-02).",
+   "4. DB integrity and performance: Postgres needs session features (SELECT \u2026 FOR UPDATE, SERIALIZABLE with retry, advisory locks) plus pgvector. Q1\u2013Q5 must hit p95 \u226410 ms (DB-05), the fault-injection suite must run in CI (DB-02), and every migration needs a rollback plus a documented backup/restore procedure (DB-01).",
+   "5. Backend object storage holds file blobs and remote swap (MEM-04). A 5 MB remote page-in must reach p95 \u22642 s (MEM-05) from Lahore, where RTT to EU data centres is about 142\u2013149 ms.",
+   "6. Browser-platform needs: cross-origin isolation (COOP/COEP) so performance.measureUserAgentSpecificMemory() works (MEM-01); a versioned Service Worker shell with 'restart to update' (OFF-05); cold boot \u22643.0 s including the network fetch of the shell (BOOT-10); an offline boot path (BOOT-09).",
+   "7. CI must run unit, property and integration tests on every PR, e2e on main and on releases, and nightly performance budgets that fail the build. It reports coverage on every PR (\u226570% overall, \u226585% on dsa/, vfs/ and kernel/), and main must be protected (\u00a715.3\u201315.4).",
+   "8. Cost: a Pakistani student budget. The aim is roughly \u20ac10/month or less for the semester (Oct\u2013Feb), using free tiers only where they do not threaten gate-day availability.",
+   "9. Team skills and few moving parts: 5 students who know JS/TS, one QA/DevOps owner, and every member must be able to defend every component in the viva (\u00a714.4).",
+   "10. Secrets never go in the repo or the client bundle, and LLM keys stay server-side with cost logging (\u00a718, s12.6)."
+  ],
+  "options": [
+   {
+    "name": "A. Docker Compose on one VPS (Hetzner CX33): Caddy + app + Postgres/pgvector + Garage (CHOSEN)",
+    "current_version": "Docker Compose v5.5.x; Caddy 2.11.4; Postgres 18.6 + pgvector 0.8.6 (pgvector/pgvector:0.8.6-pg18-trixie); Garage v2.4.1 (2026-09-08); Hetzner CX33 = 4 vCPU / 8 GB / 80 GB / 20 TB at \u20ac8.49/mo + IPv4 (price since 15 Jun 2026)",
+    "summary": "One compose.yaml describes the whole backend. The same file serves the examiner's clone-and-run, CI integration/e2e jobs and production; production adds a small compose.prod.yaml override for the domain, TLS, restart policies and log rotation. Caddy terminates TLS (automatic HTTPS, HTTP/3), serves the precompressed static shell with COOP/COEP/CSP headers, and proxies /api and /ws to the app. Postgres and Garage share the private Docker network and are never published.",
+    "status_notes": "Hetzner changed prices four times in 2026. The 15 Jun 2026 change took CX23 from \u20ac3.99 to \u20ac5.49 and CX33 from \u20ac6.49 to \u20ac8.49. CX plans are sold in Nuremberg, Falkenstein and Helsinki (and Singapore, per a third-party source). WonderNetwork RTT from Lahore: Nuremberg ~142 ms, Frankfurt ~149 ms, Helsinki ~224 ms, Singapore ~103 ms. Pick NBG or FSN, never HEL."
+   },
+   {
+    "name": "B. PaaS: Fly.io app machine + Neon Postgres (Free) + Cloudflare R2",
+    "current_version": "Fly.io RAM $6/GB-month from 1 Oct 2026 (shared-cpu-1x 256 MB $2.19/mo; Managed Postgres Basic $38/mo); Neon Free 0.5 GB storage, 100 CU-hours, scale-to-zero after 5 min, max_connections 104 at 0.25 CU; R2 10 GB-month free, zero egress",
+    "summary": "Stateless app container on Fly with WebSockets, serverless Postgres with pgvector on Neon, and blobs in R2. Nothing to patch, but three vendors and a network hop between the app and the DB.",
+    "status_notes": "The wider PaaS market in 2026: Render's free tier sleeps after 15 min idle and deletes free Postgres after 30 days. Railway Hobby is $5/mo with $10/GB-RAM-month. Koyeb closed its free tier to new sign-ups after Mistral bought it (Feb 2026). Heroku has been in 'sustaining engineering' mode since Feb 2026. Supabase Free pauses after 1 week idle and allows 60 direct connections. Neon's pooler (transaction mode) rejects LISTEN/NOTIFY, SET, SQL PREPARE and session advisory locks."
+   },
+   {
+    "name": "C. Oracle Cloud Always Free (Ampere A1) running the same Compose stack",
+    "current_version": "A1 allowance for free-tier accounts halved on 15 Jun 2026 to 2 OCPU / 12 GB (1,500 OCPU-h, 9,000 GB-h per month); ARM64 only",
+    "summary": "The same architecture as A on a free ARM VM. Oracle has regions in Dubai and Jeddah; WonderNetwork puts Lahore\u2192Dubai RTT at ~54 ms.",
+    "status_notes": "Oracle may reclaim idle Always Free instances (CPU p95, network and memory all under 20% for 7 days), and our mostly-idle demo server fits that profile. The allowance was cut without announcement in June 2026, and A1 creation often fails with host-capacity errors."
+   },
+   {
+    "name": "D. Kubernetes (k3s + Helm) on the same VPS (expected to lose)",
+    "current_version": "k3s v1.37.0+k3s1 (14 Sep 2026)",
+    "summary": "Single-node k3s with bundled Traefik ingress, a StatefulSet for Postgres and Helm charts for the app and Garage.",
+    "status_notes": "Adds a control plane of about 0.5\u20131 GB RAM and a large YAML surface. Examiners still need a Compose or kind path for the 3-command bring-up, so we would maintain two deployment descriptors. Nothing in the spec needs orchestration across nodes."
+   },
+   {
+    "name": "[Object storage] Garage v2.4.1 (CHOSEN)",
+    "current_version": "v2.4.1 (2026-09-08), AGPL-3.0, Rust; image 28.1 MB compressed (amd64)",
+    "summary": "Single binary. Since v2.3.0 it supports `server --single-node --default-bucket` plus GARAGE_DEFAULT_ACCESS_KEY/SECRET_KEY/BUCKET, so the bucket and keys are created automatically with no manual steps in the bring-up. It implements PutObject, GetObject, multipart, CopyObject, DeleteObjects, presigned SigV4 and CORS. Versioning and object lock are missing, and lifecycle is partial (Expiration and AbortIncompleteMultipartUpload only).",
+    "status_notes": "NLnet-funded and in production at Deuxfleurs since 2020. We run it unmodified as a separate process, which the AGPL allows; it is recorded in THIRD_PARTY.md."
+   },
+   {
+    "name": "[Object storage] Filesystem BlobStore driver (own code on a Docker volume)",
+    "current_version": "n/a (team code)",
+    "summary": "sha256-sharded files behind the same BlobStore interface. It is the simplest and fastest option, but has no presigned URLs, multipart or lifecycle, and 'object storage' becomes just a directory.",
+    "status_notes": "Kept anyway as the unit-test driver and the fallback if Garage causes trouble."
+   },
+   {
+    "name": "[Object storage] SeaweedFS",
+    "current_version": "rolling releases (images published daily); Apache-2.0; image 195.2 MB compressed",
+    "summary": "Mature and very active, but it has more components (master, volume, filer, S3 gateway), identity config for S3 keys, and a 7\u00d7 larger image than Garage.",
+    "status_notes": ""
+   },
+   {
+    "name": "[Object storage] RustFS 1.0.0",
+    "current_version": "1.0.0 GA on 2026-09-16 (one week old), Apache-2.0; image 109.7 MB compressed",
+    "summary": "A MinIO-like Rust server with broad S3 coverage.",
+    "status_notes": "Pre-releases in 2026 carried several CVEs, including an auth bypass (CVE-2026-40937) and HMAC secret logging (CVE-2026-22782). GA is too new to stake a gate on."
+   },
+   {
+    "name": "[Object storage] Cloudflare R2 (managed) / Backblaze B2",
+    "current_version": "R2: 10 GB-month, 1M Class A and 10M Class B ops free, then $0.015/GB-month, zero egress. B2: 10 GB free, egress free up to 3\u00d7 stored",
+    "summary": "Managed, durable and cheap, but it cannot run inside the examiner's offline clone and needs keys.",
+    "status_notes": "Used only as the off-site backup target, not as primary storage."
+   },
+   {
+    "name": "[Object storage] MinIO Community Edition (expected to lose)",
+    "current_version": "No maintained release. Binaries and images stopped in Oct 2025, maintenance mode on 3 Dec 2025, 'no longer maintained' on 12 Feb 2026, repository archived on 25 Apr 2026",
+    "summary": "It was the default choice in 2024; today only frozen images remain.",
+    "status_notes": "No security fixes; a community fork (pgsty) exists but is unofficial."
+   },
+   {
+    "name": "[Reverse proxy] Caddy 2.11.4 (CHOSEN)",
+    "current_version": "2.11.4",
+    "summary": "Automatic HTTPS and HTTP/3 by default. Native WebSocket proxying with no default stream timeout. stream_close_delay keeps WebSockets open across config reloads, and lb_try_duration/lb_try_interval hold requests while the app restarts. precompressed file_server and header directives cover COOP/COEP/CSP.",
+    "status_notes": ""
+   },
+   {
+    "name": "[Reverse proxy] Nginx 1.30.5 (stable) + certbot",
+    "current_version": "1.30.5 stable / 1.31.6 mainline",
+    "summary": "Smallest footprint, but it needs a certbot/ACME sidecar and explicit Upgrade/Connection headers, and its 60 s proxy_read_timeout default closes idle WebSockets unless raised.",
+    "status_notes": ""
+   },
+   {
+    "name": "[Reverse proxy] Traefik v3.7.13",
+    "current_version": "v3.7.13",
+    "summary": "Automatic TLS and Docker-label discovery. Its routing lives in labels and dynamic config, which is harder to read and defend in a viva.",
+    "status_notes": ""
+   },
+   {
+    "name": "[Package manager] pnpm 12.5.1 workspaces (CHOSEN; no Turborepo yet)",
+    "current_version": "pnpm 12.5.1 (12.0 released 2026-08-26 as a Rust rewrite that keeps pnpm 11 commands, settings and lockfile; 11.27.1 is the fallback)",
+    "summary": "A strict, symlinked node_modules with no phantom dependencies, `--filter \"...[origin/main]\"` to run only changed packages, and catalogs to pin shared versions. It works whether the backend runtime decision lands on Node or Bun.",
+    "status_notes": "Node 25+ no longer bundles Corepack, so install pnpm with pnpm/action-setup in CI and `npm i -g pnpm@12.5.1` locally, and pin `packageManager`."
+   },
+   {
+    "name": "[Package manager] Bun 1.4.2 workspaces",
+    "current_version": "1.4.2",
+    "summary": "Fast installs. It couples the monorepo to Bun and has weaker filtering. It only makes sense if the backend-runtime decision picks Bun.",
+    "status_notes": ""
+   },
+   {
+    "name": "[Package manager] npm workspaces (expected to lose)",
+    "current_version": "npm bundled with Node 24 LTS",
+    "summary": "Hoisted node_modules allow phantom dependencies, and changed-package filtering is weak.",
+    "status_notes": ""
+   },
+   {
+    "name": "[Lint/format] Biome 2.5.14 (CHOSEN)",
+    "current_version": "2.5.14 (2026-09-16)",
+    "summary": "One binary for lint and format. Its own type inference powers noFloatingPromises and similar rules without depending on the tsc API, so it works with TypeScript 7 today. v2.5 has more than 500 rules.",
+    "status_notes": ""
+   },
+   {
+    "name": "[Lint/format] Oxlint 1.85 + tsgolint v7 + oxfmt 0.70 (beta)",
+    "current_version": "oxlint 1.85.0; type-aware linting stable since 2026-07-22 (tsgolint tracks TS 7.0.2, 59/61 typescript-eslint type-aware rules); oxfmt 0.70.0 beta",
+    "summary": "The best type-aware coverage on TS 7, but it is two tools and the formatter is still beta. It is the runner-up and can be added as a second CI step.",
+    "status_notes": ""
+   },
+   {
+    "name": "[Lint/format] ESLint 10.11 + typescript-eslint 8.70.1 + Prettier 3.9.9",
+    "current_version": "typescript-eslint 8.70.1 peer range typescript >=4.8.4 <6.1.0",
+    "summary": "The richest rule ecosystem, but type-aware rules cannot run on TypeScript 7, so it would need a second TypeScript install. It also means three configs and is the slowest.",
+    "status_notes": ""
+   },
+   {
+    "name": "[TypeScript] TypeScript 7.0.2 native (CHOSEN, with a per-package TS 6.0.3 escape hatch)",
+    "current_version": "7.0.2 (GA 2026-07-08; 7.1 dev builds on `next`)",
+    "summary": "The Go-native compiler gives roughly 8\u201312\u00d7 faster full builds. It has no stable programmatic API until 7.1, so svelte-check, vue-tsc and typescript-eslint cannot use it yet. Vite 8 does not need tsc.",
+    "status_notes": ""
+   },
+   {
+    "name": "[TypeScript] TypeScript 6.0.3",
+    "current_version": "6.0.3",
+    "summary": "The last JS-based release, compatible with every checker. A bridge version: 7.x is the future.",
+    "status_notes": ""
+   },
+   {
+    "name": "[TypeScript] TypeScript 5.9.3",
+    "current_version": "5.9.3",
+    "summary": "Stable but two majors behind; it would force a migration after the freeze.",
+    "status_notes": ""
+   },
+   {
+    "name": "[Observability] Lean in-house: pino + prom-client /metrics + in-OS monitor + LoAF long-frame logging (CHOSEN)",
+    "current_version": "pino 10.3.1; prom-client 15.1.3; Long Animation Frames API in Chrome \u2265123",
+    "summary": "Structured JSON logs with correlation IDs, an internal-only Prometheus-format /metrics endpoint, /healthz and /readyz, client long-frame and error capture into the kernel log ring buffer, and a production smoke check every 6 h. Adding dashboards later needs no app changes.",
+    "status_notes": ""
+   },
+   {
+    "name": "[Observability] In-house + Sentry (GitHub Student Pack: 50K errors, team features, 1 year)",
+    "current_version": "@sentry/browser and @sentry/node 11.0.0",
+    "summary": "Grouped, source-mapped errors per release. Stack traces and breadcrumbs can carry file names and paths off our infrastructure, and it adds weight to the boot bundle.",
+    "status_notes": "Without the student offer, the free Developer plan is 5K errors/month for 1 user."
+   },
+   {
+    "name": "[Observability] In-house + self-hosted Prometheus 3.13 + Grafana 13 + GlitchTip 6.2",
+    "current_version": "prom/prometheus v3.13.3; grafana 13.0.9; glitchtip 6.2.6",
+    "summary": "Complete dashboards and error tracking on our own box, at the cost of about 0.8 GB RAM and 3\u20134 more containers to run and explain.",
+    "status_notes": "This is the planned upgrade path as a Compose `ops` profile if a reversal trigger fires."
+   },
+   {
+    "name": "[Observability] Full OpenTelemetry stack: collector + Tempo + Loki + Prometheus + Grafana (expected to lose)",
+    "current_version": "n/a",
+    "summary": "Traces, logs and metrics all correlated. Heavy in RAM, effort and viva surface for a single-node student system.",
+    "status_notes": ""
+   }
+  ],
+  "criteria": [
+   {
+    "name": "Clean bring-up and dev/CI/prod parity",
+    "weight": 25,
+    "why": "\u00a717.1 is scored first on a machine we do not control (\u22643 commands, \u22645 min). One descriptor shared by examiners, CI and production removes drift, which is the reproducibility item in \u00a714.2."
+   },
+   {
+    "name": "Production availability at gates (no sleep, pause or reclamation; stable vendor policy)",
+    "weight": 20,
+    "why": "Gates pass only by a live demo on the tagged release, and P2 requires 'the deployed URL boots'. One missed gate caps the project at 80%, so a URL that sleeps, expires or is reclaimed costs marks directly."
+   },
+   {
+    "name": "WebSocket and long-lived connection support",
+    "weight": 15,
+    "why": "\u00a714.2 names WebSocket support for deployment explicitly. Lock leases (VFS-09), sync and process events need connections that survive idle periods and deploys."
+   },
+   {
+    "name": "Semester cost (Oct\u2013Feb, about 5 months)",
+    "weight": 15,
+    "why": "\u00a714.2 lists cost. The team is self-funded students in Pakistan, and DigitalOcean's student credit was retired on 1 Aug 2026."
+   },
+   {
+    "name": "Database co-location and session-feature fitness",
+    "weight": 15,
+    "why": "DB-05 needs p95 \u226410 ms on Q1\u2013Q5, and DB-02/DB-03 need SELECT \u2026 FOR UPDATE, SERIALIZABLE retries and advisory locks. A network hop to the DB, poolers in transaction mode, or cold starts all work against these."
+   },
+   {
+    "name": "Operational simplicity and viva-defensibility",
+    "weight": 10,
+    "why": "A decision that only one member can explain counts as undefended (\u00a714.4). The QA/DevOps owner also carries the service manager, CI and fault injection."
+   }
+  ],
+  "scores": [
+   {
+    "option": "A. Docker Compose on one VPS (Hetzner CX33) (CHOSEN)",
+    "per_criterion": [
+     {
+      "criterion": "Clean bring-up and dev/CI/prod parity",
+      "score": 5,
+      "reason": "The compose.yaml the examiner runs is the production descriptor plus a small override, and CI uses it too."
+     },
+     {
+      "criterion": "Production availability at gates",
+      "score": 4,
+      "reason": "Always on, no sleep and no reclamation. It is a single-node point of failure, handled by off-site backups and a rehearsed rebuild."
+     },
+     {
+      "criterion": "WebSocket and long-lived connection support",
+      "score": 5,
+      "reason": "Caddy has no default stream timeout. stream_close_delay and lb_try_duration cover reloads and restarts."
+     },
+     {
+      "criterion": "Semester cost",
+      "score": 4,
+      "reason": "About \u20ac9/month (\u20ac8.49 + IPv4), so roughly \u20ac45 for the semter; not free."
+     },
+     {
+      "criterion": "Database co-location and session-feature fitness",
+      "score": 5,
+      "reason": "Postgres sits on the same host with sub-millisecond network latency, every session feature works, and pgvector 0.8.6 is available on PG18."
+     },
+     {
+      "criterion": "Operational simplicity and viva-defensibility",
+      "score": 4,
+      "reason": "Five containers any member can read. The team does own OS patching and backups."
+     }
+    ],
+    "weighted_total": 4.55
+   },
+   {
+    "option": "B. PaaS: Fly.io + Neon + R2",
+    "per_criterion": [
+     {
+      "criterion": "Clean bring-up and dev/CI/prod parity",
+      "score": 2,
+      "reason": "The examiner still needs a local Compose file, so fly.toml, Neon and R2 settings become a second descriptor that drifts. Neon and R2 cannot run offline."
+     },
+     {
+      "criterion": "Production availability at gates",
+      "score": 3,
+      "reason": "Neon Free scales to zero after 5 min, and free-tier policies changed repeatedly in 2026 (Koyeb, Render, Heroku, Fly)."
+     },
+     {
+      "criterion": "WebSocket and long-lived connection support",
+      "score": 4,
+      "reason": "Fly supports WebSockets as long as a machine stays running."
+     },
+     {
+      "criterion": "Semester cost",
+      "score": 3,
+      "reason": "Fly RAM rises to $6/GB-month from 1 Oct, and Neon Free is capped at 0.5 GB. Growing past that means $19+ or Fly MPG at $38/mo."
+     },
+     {
+      "criterion": "Database co-location and session-feature fitness",
+      "score": 2,
+      "reason": "A network hop on every query plus cold starts. Transaction-mode pooling rejects advisory locks, LISTEN/NOTIFY and SET."
+     },
+     {
+      "criterion": "Operational simplicity and viva-defensibility",
+      "score": 4,
+      "reason": "No OS to patch, but three dashboards, three sets of secrets and three failure domains."
+     }
+    ],
+    "weighted_total": 2.85
+   },
+   {
+    "option": "C. Oracle Always Free A1 + same Compose (runner-up)",
+    "per_criterion": [
+     {
+      "criterion": "Clean bring-up and dev/CI/prod parity",
+      "score": 5,
+      "reason": "Identical Compose file (it needs multi-arch images, which we build anyway)."
+     },
+     {
+      "criterion": "Production availability at gates",
+      "score": 1,
+      "reason": "Idle-reclamation policy, an unannounced halving of the allowance in June 2026, and A1 capacity errors."
+     },
+     {
+      "criterion": "WebSocket and long-lived connection support",
+      "score": 5,
+      "reason": "Same Caddy setup as A."
+     },
+     {
+      "criterion": "Semester cost",
+      "score": 5,
+      "reason": "Free."
+     },
+     {
+      "criterion": "Database co-location and session-feature fitness",
+      "score": 5,
+      "reason": "Same host."
+     },
+     {
+      "criterion": "Operational simplicity and viva-defensibility",
+      "score": 3,
+      "reason": "The OCI console, networking model and sign-up/card verification add friction."
+     }
+    ],
+    "weighted_total": 4
+   },
+   {
+    "option": "D. Kubernetes (k3s + Helm) (expected to lose)",
+    "per_criterion": [
+     {
+      "criterion": "Clean bring-up and dev/CI/prod parity",
+      "score": 1,
+      "reason": "Examiners cannot be expected to run k3s or kind plus Helm within 5 min, so a separate Compose file would be needed and would drift."
+     },
+     {
+      "criterion": "Production availability at gates",
+      "score": 4,
+      "reason": "Same VPS as A."
+     },
+     {
+      "criterion": "WebSocket and long-lived connection support",
+      "score": 4,
+      "reason": "The ingress supports WebSockets with extra annotations and timeouts."
+     },
+     {
+      "criterion": "Semester cost",
+      "score": 3,
+      "reason": "Control-plane overhead pushes us to a bigger VPS."
+     },
+     {
+      "criterion": "Database co-location and session-feature fitness",
+      "score": 4,
+      "reason": "Works, but a StatefulSet and PVCs add complexity."
+     },
+     {
+      "criterion": "Operational simplicity and viva-defensibility",
+      "score": 1,
+      "reason": "A large YAML and controller surface that no member can defend in depth."
+     }
+    ],
+    "weighted_total": 2.8
+   },
+   {
+    "option": "[Object storage] Garage v2.4.1 (CHOSEN)",
+    "per_criterion": [
+     {
+      "criterion": "OBJ Maintenance & licence health (w25)",
+      "score": 4,
+      "reason": "Active: v2.3.0 in Apr and v2.4.x in Sep 2026. AGPL-3.0, used unmodified."
+     },
+     {
+      "criterion": "OBJ Clean bring-up fit (w25)",
+      "score": 5,
+      "reason": "The single-node flag and default key/bucket env vars need zero manual steps; the image is 28 MB."
+     },
+     {
+      "criterion": "OBJ VPS footprint (w15)",
+      "score": 5,
+      "reason": "Rust single binary."
+     },
+     {
+      "criterion": "OBJ S3 features we need (w15)",
+      "score": 4,
+      "reason": "Multipart, presign, DeleteObjects, CORS and Expiration are present. No versioning, and checksum headers are undocumented."
+     },
+     {
+      "criterion": "OBJ Cost (w10)",
+      "score": 5,
+      "reason": "Free."
+     },
+     {
+      "criterion": "OBJ Durability/backup path (w10)",
+      "score": 3,
+      "reason": "A single node has replication_factor 1, mitigated by nightly rclone sync to R2."
+     }
+    ],
+    "weighted_total": 4.4
+   },
+   {
+    "option": "[Object storage] Filesystem BlobStore driver",
+    "per_criterion": [
+     {
+      "criterion": "OBJ Maintenance & licence health (w25)",
+      "score": 5,
+      "reason": "Our own code."
+     },
+     {
+      "criterion": "OBJ Clean bring-up fit (w25)",
+      "score": 5,
+      "reason": "No extra container."
+     },
+     {
+      "criterion": "OBJ VPS footprint (w15)",
+      "score": 5,
+      "reason": "None."
+     },
+     {
+      "criterion": "OBJ S3 features we need (w15)",
+      "score": 2,
+      "reason": "No presign, multipart or lifecycle; we would have to build them."
+     },
+     {
+      "criterion": "OBJ Cost (w10)",
+      "score": 5,
+      "reason": "Free."
+     },
+     {
+      "criterion": "OBJ Durability/backup path (w10)",
+      "score": 2,
+      "reason": "Plain files on a volume; no portable API for off-site copies."
+     }
+    ],
+    "weighted_total": 4.25
+   },
+   {
+    "option": "[Object storage] SeaweedFS",
+    "per_criterion": [
+     {
+      "criterion": "OBJ Maintenance & licence health (w25)",
+      "score": 5,
+      "reason": "Very active, Apache-2.0."
+     },
+     {
+      "criterion": "OBJ Clean bring-up fit (w25)",
+      "score": 3,
+      "reason": "More components and S3 identity config; 195 MB image."
+     },
+     {
+      "criterion": "OBJ VPS footprint (w15)",
+      "score": 4,
+      "reason": "Go; several processes."
+     },
+     {
+      "criterion": "OBJ S3 features we need (w15)",
+      "score": 4,
+      "reason": "Good coverage."
+     },
+     {
+      "criterion": "OBJ Cost (w10)",
+      "score": 5,
+      "reason": "Free."
+     },
+     {
+      "criterion": "OBJ Durability/backup path (w10)",
+      "score": 3,
+      "reason": "Single node."
+     }
+    ],
+    "weighted_total": 4
+   },
+   {
+    "option": "[Object storage] RustFS 1.0.0",
+    "per_criterion": [
+     {
+      "criterion": "OBJ Maintenance & licence health (w25)",
+      "score": 3,
+      "reason": "GA a week old, with a 2026 CVE history in its pre-releases."
+     },
+     {
+      "criterion": "OBJ Clean bring-up fit (w25)",
+      "score": 4,
+      "reason": "Single container, 110 MB."
+     },
+     {
+      "criterion": "OBJ VPS footprint (w15)",
+      "score": 4,
+      "reason": "Rust."
+     },
+     {
+      "criterion": "OBJ S3 features we need (w15)",
+      "score": 5,
+      "reason": "Broad, MinIO-like coverage."
+     },
+     {
+      "criterion": "OBJ Cost (w10)",
+      "score": 5,
+      "reason": "Free."
+     },
+     {
+      "criterion": "OBJ Durability/backup path (w10)",
+      "score": 3,
+      "reason": "Single node."
+     }
+    ],
+    "weighted_total": 3.9
+   },
+   {
+    "option": "[Object storage] Cloudflare R2 (managed)",
+    "per_criterion": [
+     {
+      "criterion": "OBJ Maintenance & licence health (w25)",
+      "score": 5,
+      "reason": "Managed service."
+     },
+     {
+      "criterion": "OBJ Clean bring-up fit (w25)",
+      "score": 1,
+      "reason": "Cannot run in the examiner's offline clone and needs keys."
+     },
+     {
+      "criterion": "OBJ VPS footprint (w15)",
+      "score": 5,
+      "reason": "None on the VPS."
+     },
+     {
+      "criterion": "OBJ S3 features we need (w15)",
+      "score": 4,
+      "reason": "Needs WHEN_REQUIRED checksums with AWS SDK v3."
+     },
+     {
+      "criterion": "OBJ Cost (w10)",
+      "score": 4,
+      "reason": "10 GB free, then paid."
+     },
+     {
+      "criterion": "OBJ Durability/backup path (w10)",
+      "score": 5,
+      "reason": "Managed durability."
+     }
+    ],
+    "weighted_total": 3.75
+   },
+   {
+    "option": "[Object storage] MinIO CE (expected to lose)",
+    "per_criterion": [
+     {
+      "criterion": "OBJ Maintenance & licence health (w25)",
+      "score": 1,
+      "reason": "Archived in April 2026; no security fixes."
+     },
+     {
+      "criterion": "OBJ Clean bring-up fit (w25)",
+      "score": 4,
+      "reason": "Frozen images still pull."
+     },
+     {
+      "criterion": "OBJ VPS footprint (w15)",
+      "score": 4,
+      "reason": "Go single binary."
+     },
+     {
+      "criterion": "OBJ S3 features we need (w15)",
+      "score": 5,
+      "reason": "Complete."
+     },
+     {
+      "criterion": "OBJ Cost (w10)",
+      "score": 5,
+      "reason": "Free."
+     },
+     {
+      "criterion": "OBJ Durability/backup path (w10)",
+      "score": 3,
+      "reason": "Single node."
+     }
+    ],
+    "weighted_total": 3.4
+   },
+   {
+    "option": "[Reverse proxy] Caddy 2.11.4 (CHOSEN)",
+    "per_criterion": [
+     {
+      "criterion": "PRX Auto TLS + HTTP/3 (w20)",
+      "score": 5,
+      "reason": "Both on by default."
+     },
+     {
+      "criterion": "PRX WebSocket without idle kill, survives reload (w25)",
+      "score": 5,
+      "reason": "No default stream timeout; stream_close_delay."
+     },
+     {
+      "criterion": "PRX Config simplicity for viva (w25)",
+      "score": 5,
+      "reason": "About a 30-line Caddyfile."
+     },
+     {
+      "criterion": "PRX Header control + precompressed static (w15)",
+      "score": 5,
+      "reason": "header and file_server precompressed directives."
+     },
+     {
+      "criterion": "PRX Footprint (w15)",
+      "score": 4,
+      "reason": "24 MB image; Go RSS."
+     }
+    ],
+    "weighted_total": 4.85
+   },
+   {
+    "option": "[Reverse proxy] Traefik v3.7.13",
+    "per_criterion": [
+     {
+      "criterion": "PRX Auto TLS + HTTP/3 (w20)",
+      "score": 5,
+      "reason": "ACME built in."
+     },
+     {
+      "criterion": "PRX WebSocket without idle kill, survives reload (w25)",
+      "score": 4,
+      "reason": "Works; timeouts need tuning."
+     },
+     {
+      "criterion": "PRX Config simplicity for viva (w25)",
+      "score": 2,
+      "reason": "Routing lives in labels and dynamic config."
+     },
+     {
+      "criterion": "PRX Header control + precompressed static (w15)",
+      "score": 4,
+      "reason": "Middlewares handle headers; it is not a static file server."
+     },
+     {
+      "criterion": "PRX Footprint (w15)",
+      "score": 3,
+      "reason": "Heavier."
+     }
+    ],
+    "weighted_total": 3.55
+   },
+   {
+    "option": "[Reverse proxy] Nginx 1.30.5 + certbot",
+    "per_criterion": [
+     {
+      "criterion": "PRX Auto TLS + HTTP/3 (w20)",
+      "score": 2,
+      "reason": "Needs a certbot sidecar; HTTP/3 needs explicit config."
+     },
+     {
+      "criterion": "PRX WebSocket without idle kill, survives reload (w25)",
+      "score": 3,
+      "reason": "Needs Upgrade headers, and the 60 s read timeout kills idle sockets by default."
+     },
+     {
+      "criterion": "PRX Config simplicity for viva (w25)",
+      "score": 3,
+      "reason": "Familiar but verbose."
+     },
+     {
+      "criterion": "PRX Header control + precompressed static (w15)",
+      "score": 5,
+      "reason": "Excellent."
+     },
+     {
+      "criterion": "PRX Footprint (w15)",
+      "score": 5,
+      "reason": "Smallest."
+     }
+    ],
+    "weighted_total": 3.4
+   },
+   {
+    "option": "[Package manager] pnpm 12.5.1 (CHOSEN)",
+    "per_criterion": [
+     {
+      "criterion": "PKG Dependency strictness (w30)",
+      "score": 5,
+      "reason": "No phantom dependencies."
+     },
+     {
+      "criterion": "PKG Install speed & CI cache (w20)",
+      "score": 5,
+      "reason": "Rust rewrite with a content-addressed store."
+     },
+     {
+      "criterion": "PKG Workspace features (w20)",
+      "score": 5,
+      "reason": "--filter ...[origin/main] and catalogs."
+     },
+     {
+      "criterion": "PKG Independent of runtime decision (w15)",
+      "score": 5,
+      "reason": "Works with Node or Bun."
+     },
+     {
+      "criterion": "PKG Maturity (w15)",
+      "score": 3,
+      "reason": "The 12.x rewrite is 4 weeks old; 11.x lockfile compatibility is the fallback."
+     }
+    ],
+    "weighted_total": 4.7
+   },
+   {
+    "option": "[Package manager] Bun 1.4.2 workspaces",
+    "per_criterion": [
+     {
+      "criterion": "PKG Dependency strictness (w30)",
+      "score": 4,
+      "reason": "Isolated installs are available."
+     },
+     {
+      "criterion": "PKG Install speed & CI cache (w20)",
+      "score": 5,
+      "reason": "Very fast."
+     },
+     {
+      "criterion": "PKG Workspace features (w20)",
+      "score": 3,
+      "reason": "Weaker filtering."
+     },
+     {
+      "criterion": "PKG Independent of runtime decision (w15)",
+      "score": 2,
+      "reason": "Couples the repo to Bun."
+     },
+     {
+      "criterion": "PKG Maturity (w15)",
+      "score": 3,
+      "reason": "Moves fast."
+     }
+    ],
+    "weighted_total": 3.55
+   },
+   {
+    "option": "[Package manager] npm workspaces (expected to lose)",
+    "per_criterion": [
+     {
+      "criterion": "PKG Dependency strictness (w30)",
+      "score": 2,
+      "reason": "Hoisting allows phantom dependencies."
+     },
+     {
+      "criterion": "PKG Install speed & CI cache (w20)",
+      "score": 2,
+      "reason": "Slowest."
+     },
+     {
+      "criterion": "PKG Workspace features (w20)",
+      "score": 2,
+      "reason": "No changed-since filter."
+     },
+     {
+      "criterion": "PKG Independent of runtime decision (w15)",
+      "score": 5,
+      "reason": "Bundled with Node."
+     },
+     {
+      "criterion": "PKG Maturity (w15)",
+      "score": 5,
+      "reason": "Stable."
+     }
+    ],
+    "weighted_total": 2.9
+   },
+   {
+    "option": "[Lint/format] Biome 2.5.14 (CHOSEN)",
+    "per_criterion": [
+     {
+      "criterion": "LNT Works with TS 7 today (w30)",
+      "score": 5,
+      "reason": "No tsc API dependency."
+     },
+     {
+      "criterion": "LNT Speed (w20)",
+      "score": 5,
+      "reason": "Rust."
+     },
+     {
+      "criterion": "LNT Single tool/config (w20)",
+      "score": 5,
+      "reason": "Lint and format in one binary."
+     },
+     {
+      "criterion": "LNT Rules for our risks: floating promises, eval (w20)",
+      "score": 4,
+      "reason": "noFloatingPromises and noGlobalEval, but only a subset of typed rules."
+     },
+     {
+      "criterion": "LNT Maturity (w10)",
+      "score": 4,
+      "reason": "v2 line since mid-2025."
+     }
+    ],
+    "weighted_total": 4.7
+   },
+   {
+    "option": "[Lint/format] Oxlint + tsgolint + oxfmt",
+    "per_criterion": [
+     {
+      "criterion": "LNT Works with TS 7 today (w30)",
+      "score": 5,
+      "reason": "tsgolint tracks TS 7.0.2."
+     },
+     {
+      "criterion": "LNT Speed (w20)",
+      "score": 5,
+      "reason": "12\u201318\u00d7 faster than ESLint."
+     },
+     {
+      "criterion": "LNT Single tool/config (w20)",
+      "score": 3,
+      "reason": "Two tools, and the formatter is beta."
+     },
+     {
+      "criterion": "LNT Rules for our risks: floating promises, eval (w20)",
+      "score": 5,
+      "reason": "59 of 61 typed rules."
+     },
+     {
+      "criterion": "LNT Maturity (w10)",
+      "score": 3,
+      "reason": "Typed linting stable only since July 2026."
+     }
+    ],
+    "weighted_total": 4.4
+   },
+   {
+    "option": "[Lint/format] ESLint 10 + typescript-eslint 8.70 + Prettier",
+    "per_criterion": [
+     {
+      "criterion": "LNT Works with TS 7 today (w30)",
+      "score": 2,
+      "reason": "Peer range is <6.1.0."
+     },
+     {
+      "criterion": "LNT Speed (w20)",
+      "score": 2,
+      "reason": "Slow typed linting."
+     },
+     {
+      "criterion": "LNT Single tool/config (w20)",
+      "score": 2,
+      "reason": "Three tools."
+     },
+     {
+      "criterion": "LNT Rules for our risks: floating promises, eval (w20)",
+      "score": 5,
+      "reason": "The most rules."
+     },
+     {
+      "criterion": "LNT Maturity (w10)",
+      "score": 5,
+      "reason": "Industry default."
+     }
+    ],
+    "weighted_total": 2.9
+   },
+   {
+    "option": "[TypeScript] 7.0.2 (CHOSEN)",
+    "per_criterion": [
+     {
+      "criterion": "TS Ecosystem compatibility (w35)",
+      "score": 3,
+      "reason": "No stable API until 7.1, which blocks svelte-check, vue-tsc and typescript-eslint."
+     },
+     {
+      "criterion": "TS Typecheck speed (w25)",
+      "score": 5,
+      "reason": "About 8\u201312\u00d7 faster."
+     },
+     {
+      "criterion": "TS Longevity (w25)",
+      "score": 5,
+      "reason": "The future line; no migration after the freeze."
+     },
+     {
+      "criterion": "TS Stability (w15)",
+      "score": 4,
+      "reason": "A GA patch release."
+     }
+    ],
+    "weighted_total": 4.15
+   },
+   {
+    "option": "[TypeScript] 6.0.3",
+    "per_criterion": [
+     {
+      "criterion": "TS Ecosystem compatibility (w35)",
+      "score": 5,
+      "reason": "Every tool works."
+     },
+     {
+      "criterion": "TS Typecheck speed (w25)",
+      "score": 2,
+      "reason": "JS compiler."
+     },
+     {
+      "criterion": "TS Longevity (w25)",
+      "score": 3,
+      "reason": "Bridge release."
+     },
+     {
+      "criterion": "TS Stability (w15)",
+      "score": 5,
+      "reason": "Stable."
+     }
+    ],
+    "weighted_total": 3.75
+   },
+   {
+    "option": "[TypeScript] 5.9.3",
+    "per_criterion": [
+     {
+      "criterion": "TS Ecosystem compatibility (w35)",
+      "score": 5,
+      "reason": "Every tool works."
+     },
+     {
+      "criterion": "TS Typecheck speed (w25)",
+      "score": 2,
+      "reason": "Slow."
+     },
+     {
+      "criterion": "TS Longevity (w25)",
+      "score": 2,
+      "reason": "Two majors behind."
+     },
+     {
+      "criterion": "TS Stability (w15)",
+      "score": 5,
+      "reason": "Stable."
+     }
+    ],
+    "weighted_total": 3.5
+   },
+   {
+    "option": "[Observability] Lean in-house (CHOSEN)",
+    "per_criterion": [
+     {
+      "criterion": "OBS Produces graded/diagnostic evidence (w30)",
+      "score": 3,
+      "reason": "Logs, metrics and LoAF data exist, but there is no metric history or dashboards."
+     },
+     {
+      "criterion": "OBS Footprint & zero impact on bring-up (w20)",
+      "score": 5,
+      "reason": "No extra containers."
+     },
+     {
+      "criterion": "OBS Privacy & team access (w20)",
+      "score": 5,
+      "reason": "Data stays on our VPS, and all 5 members have access."
+     },
+     {
+      "criterion": "OBS Setup/maintenance effort (w20)",
+      "score": 5,
+      "reason": "Two libraries."
+     },
+     {
+      "criterion": "OBS Cost (w10)",
+      "score": 5,
+      "reason": "Free."
+     }
+    ],
+    "weighted_total": 4.4
+   },
+   {
+    "option": "[Observability] + Sentry (Student Pack)",
+    "per_criterion": [
+     {
+      "criterion": "OBS Produces graded/diagnostic evidence (w30)",
+      "score": 4,
+      "reason": "Grouped, source-mapped errors per release."
+     },
+     {
+      "criterion": "OBS Footprint & zero impact on bring-up (w20)",
+      "score": 5,
+      "reason": "SDK only."
+     },
+     {
+      "criterion": "OBS Privacy & team access (w20)",
+      "score": 3,
+      "reason": "Paths and file names leave our infrastructure unless scrubbed."
+     },
+     {
+      "criterion": "OBS Setup/maintenance effort (w20)",
+      "score": 5,
+      "reason": "Easy."
+     },
+     {
+      "criterion": "OBS Cost (w10)",
+      "score": 4,
+      "reason": "Free for 1 year only."
+     }
+    ],
+    "weighted_total": 4.2
+   },
+   {
+    "option": "[Observability] + self-hosted Prometheus/Grafana/GlitchTip",
+    "per_criterion": [
+     {
+      "criterion": "OBS Produces graded/diagnostic evidence (w30)",
+      "score": 5,
+      "reason": "Full history and errors."
+     },
+     {
+      "criterion": "OBS Footprint & zero impact on bring-up (w20)",
+      "score": 2,
+      "reason": "About 0.8 GB RAM and 3\u20134 containers."
+     },
+     {
+      "criterion": "OBS Privacy & team access (w20)",
+      "score": 5,
+      "reason": "Self-hosted."
+     },
+     {
+      "criterion": "OBS Setup/maintenance effort (w20)",
+      "score": 2,
+      "reason": "Dashboards as code, upgrades."
+     },
+     {
+      "criterion": "OBS Cost (w10)",
+      "score": 5,
+      "reason": "Free."
+     }
+    ],
+    "weighted_total": 3.8
+   },
+   {
+    "option": "[Observability] Full OpenTelemetry stack (expected to lose)",
+    "per_criterion": [
+     {
+      "criterion": "OBS Produces graded/diagnostic evidence (w30)",
+      "score": 5,
+      "reason": "Everything correlated."
+     },
+     {
+      "criterion": "OBS Footprint & zero impact on bring-up (w20)",
+      "score": 1,
+      "reason": "5+ containers."
+     },
+     {
+      "criterion": "OBS Privacy & team access (w20)",
+      "score": 5,
+      "reason": "Self-hosted."
+     },
+     {
+      "criterion": "OBS Setup/maintenance effort (w20)",
+      "score": 1,
+      "reason": "Steep."
+     },
+     {
+      "criterion": "OBS Cost (w10)",
+      "score": 5,
+      "reason": "Free."
+     }
+    ],
+    "weighted_total": 3.4
+   }
+  ],
+  "evidence": [
+   {
+    "claim": "MinIO's community edition stopped shipping binaries and Docker images in Oct 2025. It entered maintenance mode on 3 Dec 2025, was marked 'no longer maintained' on 12 Feb 2026, and the repository was archived on 25 Apr 2026. The code stays AGPLv3 but receives no patches.",
+    "source": "https://itsfoss.com/news/minio-moves-away-from-open-source/ ; https://stormdevelopments.ca/blog/minio-s-community-edition-is-archived-what-still-runs-in-2026/ ; https://blog.vonng.com/en/db/minio-resurrect/",
+    "verified": true
+   },
+   {
+    "claim": "Garage v2.4.1 was published on 2026-09-08 (v2.4.0 on 2026-09-06, v2.3.0 on 2026-04-16), and its licence is AGPL-3.0 (Cargo.toml).",
+    "source": "https://hub.docker.com/r/dxflrs/garage/tags ; https://github.com/deuxfleurs-org/garage (src/garage/Cargo.toml on main-v2)",
+    "verified": true
+   },
+   {
+    "claim": "Garage's single-node quick start is `garage server --single-node --default-bucket` with GARAGE_DEFAULT_ACCESS_KEY, GARAGE_DEFAULT_SECRET_KEY and GARAGE_DEFAULT_BUCKET, which auto-creates the key and bucket (added in v2.3.0).",
+    "source": "https://garagehq.deuxfleurs.fr/documentation/quick-start/ ; https://git.deuxfleurs.fr/Deuxfleurs/garage/releases/tag/v2.3.0",
+    "verified": true
+   },
+   {
+    "claim": "Garage implements PutObject, GetObject, multipart, CopyObject, DeleteObjects, presigned SigV4 and CORS. Versioning and object lock are missing, and lifecycle covers only Expiration and AbortIncompleteMultipartUpload.",
+    "source": "https://garagehq.deuxfleurs.fr/documentation/reference-manual/s3-compatibility/",
+    "verified": true
+   },
+   {
+    "claim": "Compressed amd64 image sizes: Garage v2.4.1 28.1 MB; RustFS 1.0.0 109.7 MB; SeaweedFS 195.2 MB; pgvector 0.8.6-pg18-trixie 164.0 MB; caddy 2.11.4-alpine 23.9 MB; node:24-trixie-slim 82.5 MB, sharing a 29.8 MB debian:trixie-slim base with the Postgres image.",
+    "source": "Docker Hub registry API, https://hub.docker.com/v2/repositories/<repo>/tags/<tag> (queried 2026-09-23)",
+    "verified": true
+   },
+   {
+    "claim": "RustFS reached 1.0.0 GA on 2026-09-16. Its 2026 pre-releases had CVEs, including CVE-2026-40937 (auth bypass) and CVE-2026-22782 (HMAC secret logged).",
+    "source": "https://hub.docker.com/r/rustfs/rustfs/tags ; https://www.sentinelone.com/vulnerability-database/cve-2026-40937/ ; https://www.sentinelone.com/vulnerability-database/cve-2026-22782/",
+    "verified": true
+   },
+   {
+    "claim": "AWS SDK for JS v3 \u22653.729.0 sends CRC32 checksums by default (requestChecksumCalculation: WHEN_SUPPORTED), which breaks some S3-compatible stores. The workaround is setting 'WHEN_REQUIRED'.",
+    "source": "https://github.com/aws/aws-sdk-js-v3/issues/6810 ; https://docs.aws.amazon.com/sdkref/latest/guide/feature-dataintegrity.html",
+    "verified": true
+   },
+   {
+    "claim": "Hetzner's 15 Jun 2026 price adjustment moved CX23 \u20ac3.99\u2192\u20ac5.49, CX33 \u20ac6.49\u2192\u20ac8.49, CAX11 \u20ac4.49\u2192\u20ac5.99 and CPX22 \u20ac7.99\u2192\u20ac19.49 (new orders and rescales). It was the fourth pricing action of 2026.",
+    "source": "https://docs.hetzner.com/general/infrastructure-and-availability/price-adjustment/ (primary returned HTTP 429) ; https://northflank.com/blog/hetzner-cloud-server-price-increases ; https://privatedevops.com/news/hetzner-june-2026-cloud-price-increase-what-to-do",
+    "verified": false
+   },
+   {
+    "claim": "CX33 is 4 vCPU / 8 GB / 80 GB / 20 TB traffic, with a primary IPv4 at about +\u20ac0.50/month. CX plans are sold in Nuremberg, Falkenstein, Helsinki and Singapore.",
+    "source": "https://www.bitdoze.com/hetzner-cloud-cost-optimized-plans/ (updated 12 Jun 2026, before the June prices)",
+    "verified": false
+   },
+   {
+    "claim": "Average ping from Lahore: Karachi 21 ms, Dubai 54 ms, Singapore 103 ms, Bangalore 139 ms, Nuremberg 142 ms, Amsterdam 147 ms, Frankfurt 149 ms, New York 221 ms, Helsinki 224 ms, Mumbai 249 ms.",
+    "source": "https://wondernetwork.com/pings/Lahore",
+    "verified": true
+   },
+   {
+    "claim": "DigitalOcean Basic Droplets cost $24/mo for 4 GB/2 vCPU and $48/mo for 8 GB/4 vCPU, billed per second since 1 Jan 2026. DigitalOcean is no longer in the GitHub Student Developer Pack; its student credits expired on 1 Aug 2026.",
+    "source": "https://www.digitalocean.com/pricing/droplets ; https://education.github.com/pack ; https://aistudentdiscount.com/digitalocean-github-student-developer-pack-credits/",
+    "verified": true
+   },
+   {
+    "claim": "The Student Pack currently includes a Sentry student plan (50K errors, team features, 1 year), a Namecheap .me domain and a .TECH domain free for 1 year, free name.com domains, $100 of Azure credit, and Heroku credit of $13/month for 24 months.",
+    "source": "https://education.github.com/pack",
+    "verified": true
+   },
+   {
+    "claim": "From 1 Oct 2026 Fly.io charges $6/GB-month for RAM, and shared-cpu-1x 256 MB costs $2.19/mo. Managed Postgres Basic is $38/mo.",
+    "source": "https://fly.io/pricing-update/ ; https://fly.io/docs/mpg/",
+    "verified": true
+   },
+   {
+    "claim": "Neon: max_connections is 104 at 0.25 CU. Its PgBouncer transaction mode does not support SET/RESET, LISTEN/NOTIFY, SQL PREPARE or session-level advisory locks. The Free plan has 0.5 GB storage and 100 CU-hours, and scales to zero after 5 min.",
+    "source": "https://neon.com/docs/connect/connection-pooling ; https://neon.com/docs/introduction/plans",
+    "verified": true
+   },
+   {
+    "claim": "Render's free web services spin down after 15 min idle (about 1 min to spin up), and free Postgres expires 30 days after creation.",
+    "source": "https://render.com/docs/free",
+    "verified": true
+   },
+   {
+    "claim": "Mistral AI acquired Koyeb in Feb 2026, and new users can no longer sign up for the free Starter tier. Heroku entered 'sustaining engineering' mode in Feb 2026 with no new features.",
+    "source": "https://techcrunch.com/2026/02/17/mistral-ai-buys-koyeb-in-first-acquisition-to-back-its-cloud-ambitions/ ; https://www.deployhq.com/blog/heroku-sustaining-engineering-alternatives",
+    "verified": false
+   },
+   {
+    "claim": "Oracle halved the Always Free Ampere A1 allowance to 2 OCPU / 12 GB on 15 Jun 2026 without an announcement. Idle Always Free instances (CPU p95, network and memory under 20% over 7 days) may be reclaimed.",
+    "source": "https://www.infoq.com/news/2026/07/oracle-cloud-free-tier-limits/ ; https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier_topic-Always_Free_Resources.htm",
+    "verified": true
+   },
+   {
+    "claim": "Cloudflare R2 includes 10 GB-month, 1M Class A and 10M Class B operations free, then $0.015/GB-month, with zero egress. Proxied WebSockets on the Free plan have a 100 s idle timeout.",
+    "source": "https://developers.cloudflare.com/r2/pricing/ ; https://developers.cloudflare.com/network/websockets/",
+    "verified": false
+   },
+   {
+    "claim": "Caddy 2.11.4 is the current stable release. Its reverse_proxy tunnels WebSockets with no default stream timeout. stream_close_delay keeps streams open when config is unloaded, and lb_try_duration/lb_try_interval (default 250 ms) retry upstreams while one is down.",
+    "source": "https://caddyserver.com/docs/caddyfile/directives/reverse_proxy ; https://hub.docker.com/_/caddy/tags",
+    "verified": true
+   },
+   {
+    "claim": "Current versions are Traefik v3.7.13, Nginx 1.30.5 stable / 1.31.6 mainline, and k3s v1.37.0+k3s1 (14 Sep 2026).",
+    "source": "Docker Hub tags for library/traefik, library/nginx and rancher/k3s (queried 2026-09-23)",
+    "verified": true
+   },
+   {
+    "claim": "Standard GitHub-hosted runners are free for public repos (Linux 4 vCPU/16 GB). Private repos get 2 vCPU/8 GB runners, with 2,000 min/month on Free and 3,000 on Pro/Team, and Linux 2-core overage is $0.006/min. The planned self-hosted runner fee was postponed.",
+    "source": "https://docs.github.com/en/billing/concepts/product-billing/github-actions ; https://docs.github.com/en/actions/reference/runners/github-hosted-runners ; https://resources.github.com/actions/2026-pricing-changes-for-github-actions/",
+    "verified": true
+   },
+   {
+    "claim": "Branch protection and rulesets on private repos need GitHub Pro (personal) or Team (organisation); Free organisations get them only on public repos. Teachers can obtain GitHub Team free through GitHub Education.",
+    "source": "https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches ; https://github.com/orgs/community/discussions/151735 ; https://github.com/education/teachers",
+    "verified": true
+   },
+   {
+    "claim": "GHCR container storage and bandwidth are currently free, and public packages can be pulled anonymously.",
+    "source": "https://docs.github.com/en/billing/concepts/product-billing/github-packages",
+    "verified": true
+   },
+   {
+    "claim": "TypeScript 7.0 (native Go) reached GA on 8 Jul 2026, and npm latest is 7.0.2. There is no stable programmatic API until 7.1, so Vue/Svelte/Astro/Angular tooling and typescript-eslint cannot use it yet. typescript-eslint 8.70.1 declares peer typescript >=4.8.4 <6.1.0.",
+    "source": "https://www.infoworld.com/article/4196378/go-based-typescript-7-0-arrives.html ; https://www.infoq.com/news/2026/08/typescript-7-released/ ; https://registry.npmjs.org/typescript-eslint/8.70.1",
+    "verified": true
+   },
+   {
+    "claim": "Oxlint's type-aware linting went stable on 22 Jul 2026. tsgolint v7 tracks TS 7.0.2 and covers 59 of 61 typescript-eslint typed rules. Biome 2.5 has more than 500 rules and improved type-aware noFloatingPromises; its latest release is 2.5.14 (16 Sep 2026).",
+    "source": "https://oxc.rs/blog/2026-07-22-type-aware-linting-stable ; https://biomejs.dev/blog/biome-v2-5/ ; https://registry.npmjs.org/@biomejs/biome",
+    "verified": true
+   },
+   {
+    "claim": "pnpm 12.0 (26 Aug 2026) is a Rust rewrite that keeps pnpm 11's commands, flags, settings and lockfile. The latest release is 12.5.1, and 11.27.1 still exists as a fallback. Node 25+ no longer bundles Corepack.",
+    "source": "https://pnpm.io/blog/releases/12.0 ; https://registry.npmjs.org/pnpm ; https://socket.dev/blog/node-js-tsc-votes-to-stop-distributing-corepack",
+    "verified": true
+   },
+   {
+    "claim": "Node 24.21.0 is the active LTS ('Krypton') and 26.10.0 is Current. Latest tool versions: Vitest 5.0.1 (2026-09-15; 4.1.11 is the fallback), Playwright 1.63.0, pino 10.3.1, prom-client 15.1.3, @aws-sdk/client-s3 3.1138.0, fast-check 4.10.2.",
+    "source": "https://nodejs.org/dist/index.json ; https://registry.npmjs.org (queried 2026-09-23)",
+    "verified": true
+   },
+   {
+    "claim": "Vitest coverage thresholds accept glob patterns (each with its own perFile), so 85% on dsa/**, vfs/** and kernel/** and 70% globally can be enforced in one config. The PR comment action needs the json-summary reporter.",
+    "source": "https://vitest.dev/config/coverage ; https://github.com/davelosert/vitest-coverage-report-action",
+    "verified": true
+   },
+   {
+    "claim": "The Long Animation Frames API shipped in Chrome 123 and exposes scripts[].sourceURL and sourceFunctionName for attribution through PerformanceObserver type 'long-animation-frame'.",
+    "source": "https://developer.chrome.com/docs/web-platform/long-animation-frames",
+    "verified": true
+   },
+   {
+    "claim": "Docker Compose v5.5.0 was released on 17 Aug 2026 and v5.5.1 on 3 Sep 2026; 5.5.0 tolerates missing env files on more commands.",
+    "source": "https://github.com/docker/compose/releases/tag/v5.5.0",
+    "verified": false
+   },
+   {
+    "claim": "Postgres 18.6 and pgvector 0.8.6 images for pg18 exist. dbmate 2.36.0 (19 Sep 2026) runs SQL migrations with -- migrate:up/-- migrate:down. prodrigestivill/postgres-backup-local was last updated on 2025-09-26, so we do not use it.",
+    "source": "Docker Hub tags for library/postgres, pgvector/pgvector, amacneil/dbmate and prodrigestivill/postgres-backup-local (queried 2026-09-23)",
+    "verified": true
+   },
+   {
+    "claim": "Sentry's free Developer plan is 5K errors/month for 1 user. Grafana Cloud Free offers 10k active series and 50 GB logs with 14-day retention. GlitchTip 6.2.6 (Aug 2026) accepts Sentry SDKs and needs Postgres plus web and worker containers.",
+    "source": "https://blog.struct.ai/sentry-pricing-error-monitoring-2026/ ; https://grafana.com/products/cloud/free-tier/ ; https://hub.docker.com/r/glitchtip/glitchtip/tags",
+    "verified": false
+   }
+  ],
+  "recommendation": "DECISION. Run production as ONE Docker Compose stack on a single Hetzner CX33 VPS (4 vCPU/8 GB, about \u20ac9/month) in Nuremberg or Falkenstein, confirmed by the week-3 RTT test. The stack has five services: web (Caddy 2.11.4 serving the built shell and reverse-proxying /api and /ws), app (backend image; base image follows the runtime decision, e.g. node:24-trixie-slim), db (pgvector/pgvector:0.8.6-pg18-trixie), blobs (Garage v2.4.1 single-node) and a one-shot init service (migrations up plus demo seed). The SAME compose.yaml gives the examiner's bring-up and CI integration/e2e; production adds only compose.prod.yaml (domain, TLS, restart policies, log rotation, required secrets).\n\nExaminer bring-up is two commands plus opening a URL: `git clone \u2026 && cd plotinium`, then `docker compose up -d --wait`, then open http://localhost:8080. Compose pulls prebuilt, tag-pinned GHCR images (about 310 MB compressed) and keeps a `build:` fallback.\n\n- Object storage: Garage via @aws-sdk/client-s3 (forcePathStyle, requestChecksumCalculation 'WHEN_REQUIRED'), behind our own BlobStore interface. An FsBlobStore serves tests and as the fallback. Blobs are uploaded before the DB transaction and garbage-collected after a 14-day grace period, so DB atomicity never depends on the object store.\n- Off-site backups: nightly pg_dump -Fc plus an rclone sync of blobs to Cloudflare R2 (free up to 10 GB), with a scripted weekly restore drill.\n- CI/CD: GitHub Actions. Every PR runs Biome, TypeScript 7 typecheck, Vitest 5 with per-directory coverage thresholds and a PR comment, and integration against `docker compose up db blobs` (fault injection and migration up/down/up). main and release tags add Playwright e2e in Chrome, offline boot included. Nightly perf budgets fail the build. A tag v* builds and pushes GHCR images, runs a timed clean-bring-up test, publishes the Release with coverage, and deploys over SSH after a second member approves. Tags are v0.2.0 (W7), v0.3.0 (W11), v0.4.0 (W14), v1.0.0-rc.1 (W16), v1.0.0 (W18).\n- Tooling: pnpm 12.5.1 workspaces with no Turborepo until CI is slow; Biome 2.5.14 for lint and format; TypeScript 7.0.2, with 6.0.3 only for a package whose framework checker needs the JS API.\n- Observability: pino JSON logs with correlation IDs, prom-client /metrics (internal only), /healthz and /readyz, client long-animation-frame and error capture into the kernel log ring buffer, and a production smoke check every 6 h. Prometheus/Grafana stay a ready-made `ops` profile, adopted only if a reversal trigger fires.\n- Repo: private under GitHub Pro (Student Pack) or a teacher's free GitHub Team org, so protected main works, unless the instructor allows a public repo, which would also give free 4-vCPU runners and unlimited minutes.\n- Budget: about \u20ac45\u201350 for the semester, split five ways.",
+  "runner_up": "Oracle Cloud Always Free (Ampere A1, now 2 OCPU/12 GB) running the identical Compose stack scores 4.00 against 4.55. It is free, and a Dubai region would cut RTT from Lahore to about 54 ms. It loses on gate-day availability: Oracle's idle-reclamation rule fits a mostly-idle demo server, the free allowance was halved without notice in June 2026, and A1 capacity errors are common. Keep it as the disaster-recovery target: the restore-drill script can rebuild production there from the R2 backups. PaaS (Fly.io + Neon + R2, 2.85) is the credible alternative architecture. Kubernetes (2.80) is the expected loser.",
+  "chat_reason": "Run the whole backend as one Docker Compose file: web server, app, Postgres with pgvector and Garage object storage. Host it on a single Hetzner VPS of about \u20ac9/month, and use that exact file for the examiner's clone-and-run and for CI. Free PaaS tiers in 2026 either sleep, expire or add a database network hop and pooler limits that hurt WebSockets and the 10 ms query target, and Kubernetes is too much for five students to defend. Garage replaces MinIO, whose open-source edition was archived in April 2026. GitHub Actions runs checks on every PR, e2e tests on main, and nightly performance budgets that fail the build.",
+  "gave_up": "- Managed Postgres features: point-in-time recovery, automatic failover and managed patching. We run nightly dumps with RPO 24 h, plus a dump before every deploy, and we patch the OS ourselves.\n- High availability: a single VPS is a single point of failure.\n- Zero cost: about \u20ac45\u201350 per semester.\n- Edge caching near Lahore, unless we later put Cloudflare's proxy in front.\n- Direct-to-storage presigned transfers in v1: bytes stream through the app for simpler permission checks.\n- S3 versioning and object lock, which Garage lacks.\n- typescript-eslint's full type-aware rule set: Biome covers a subset, with Oxlint as a later add-on.\n- Dashboards and error-grouping UIs by default: no Grafana or Sentry until a trigger fires.\n- Turborepo's task caching: we accept slower CI until PR wall time passes 10 min.",
+  "risks": [
+   {
+    "risk": "The single VPS goes down or is lost during a gate week.",
+    "mitigation": "Nightly pg_dump and blob sync to R2. ops/provision.sh (cloud-init: Docker, firewall, deploy user) plus ops/restore.sh rebuild on any provider, rehearsed to under 30 min before P2. Any member's laptop runs the same compose as a hot standby for demos. A smoke check against /readyz every 6 h (about 120 CI min/month) alerts the team."
+   },
+   {
+    "risk": "Hetzner prices change again (four actions in 2026), or account/payment verification with a Pakistani card fails.",
+    "mitigation": "Open and verify the account in week 1 and budget at the June 2026 prices. The Compose stack is provider-agnostic, with DigitalOcean ($24 for 4 GB), Contabo and Oracle Free as fallbacks, and the restore drill doubles as a migration drill."
+   },
+   {
+    "risk": "The examiner's network is slow, so the clean bring-up exceeds 5 minutes.",
+    "mitigation": "Keep the total pull near 310 MB: Debian slim bases shared between the node and Postgres images, a 28 MB Garage image, a 24 MB Caddy image, and model weights lazy-loaded after the desktop is interactive, not baked into the boot path. Publish multi-arch (amd64+arm64) GHCR images. Measure on the lab network in week 3, and CI fails a release if the clean bring-up exceeds 240 s."
+   },
+   {
+    "risk": "Pakistani connectivity problems on demo day (cable cuts, throttling).",
+    "mitigation": "The client is offline-first by spec (BOOT-09/OFF-01). The local compose path is the fallback for every server-side demo. Bring a phone hotspot and a pre-warmed Service Worker cache on the demo browser."
+   },
+   {
+    "risk": "Garage is abandoned like MinIO, or turns out to lack an S3 behaviour we rely on (e.g. checksum headers).",
+    "mitigation": "All access goes through the BlobStore interface. We verify sha256 ourselves, and the S3 client uses WHEN_REQUIRED checksums. RustFS, SeaweedFS and R2 are config swaps, and FsBlobStore is a code-level fallback already exercised in tests."
+   },
+   {
+    "risk": "A private repo lacks branch protection on GitHub Free, or runs out of CI minutes (about 2,570 min/month projected against 2,000 on Free).",
+    "mitigation": "Host under GitHub Pro (Student Pack) or a teacher's free GitHub Team org (3,000 min). Use concurrency cancel-in-progress, path filters, e2e only on main and tags, and skip nightly runs when nothing changed. Use a public repo if the instructor allows it. Overage is $0.006/min."
+   },
+   {
+    "risk": "Performance budgets are flaky on shared CI runners, which are not the lab machine.",
+    "mitigation": "Run 5 repetitions and take the median of the p95s. Apply CDP CPU throttling calibrated against the week-2 lab machine spec, and document the margins in perf/budgets.json. The lab-machine run before each gate is authoritative."
+   },
+   {
+    "risk": "Deploying during the demo (OFF-05) drops WebSockets or breaks already-open clients.",
+    "mitigation": "Caddy holds requests with lb_try_duration 15 s. Locks live in the DB with a lease TTL longer than the restart gap (for example a 30 s TTL with 10 s heartbeats), and WebSockets resume by sequence number. The protocol handshake accepts versions N and N-1, migrations are expand-then-contract, and the new Service Worker waits for the next boot. Rehearse at W16."
+   },
+   {
+    "risk": "A secret leaks (LLM key, DB password, deploy key).",
+    "mitigation": ".env exists only on the VPS (mode 0600). The deploy SSH key sits in a GitHub 'production' environment that requires approval. gitleaks runs on every PR, and the server refuses to start in production if any secret equals its dev default or is shorter than 32 bytes. A leaked key is revoked immediately and logged in SECURITY.md."
+   },
+   {
+    "risk": "COOP/COEP cross-origin isolation blocks third-party resources (fonts, CDN libraries, model weights).",
+    "mitigation": "Self-host everything on the same origin (a /models path served by Caddy with immutable caching). Use COEP credentialless as the fallback. Assert crossOriginIsolated === true in e2e."
+   },
+   {
+    "risk": "Docker-published ports bypass UFW and expose Postgres or Garage.",
+    "mitigation": "Only the web service publishes ports. Use the Hetzner Cloud Firewall (outside the VM) allowing 22/tcp with key-only SSH, 80/tcp and 443/tcp+udp. CI checks that compose.prod.yaml publishes nothing else."
+   },
+   {
+    "risk": "The disk fills up with images, logs and dumps.",
+    "mitigation": "Docker 'local' log driver capped at 10 MB \u00d7 5 files, `docker image prune` in deploy.sh, backup retention of 7 daily + 4 weekly, and a disk-usage gauge on /metrics checked by the smoke job."
+   },
+   {
+    "risk": "Toolchain churn: TS 7 is 2.5 months old, pnpm 12 is a 4-week-old rewrite, and Vitest 5 is 1 week old.",
+    "mitigation": "Pin exact versions (packageManager field, catalogs) and upgrade only at phase boundaries. Fallbacks share lockfiles and configs: pnpm 11.27.1, Vitest 4.1.11, TS 6.0.3. The stack freeze after W4 applies to major versions."
+   }
+  ],
+  "reversal_trigger": "Revisit this decision if any of the following is observed:\n1. The clean bring-up on the lab network (clone to interactive desktop) takes more than 240 s, 80% of the \u00a717.1 budget, in 2 of 5 timed runs.\n2. From the lab, WebSocket lock-grant p95 exceeds 250 ms, or a 5 MB remote page-in p95 exceeds 1.5 s, against the chosen region. Action: move the region or add Cloudflare's proxy.\n3. The VPS is unreachable for more than 1 h in any gate week, or the monthly bill passes \u20ac15. Action: rebuild from R2 on another provider.\n4. Garage fails a required S3 operation, or a restore drill finds a missing blob. Action: switch to FsBlobStore or RustFS behind the same interface.\n5. PR CI wall time exceeds 10 min, or monthly Actions minutes exceed 90% of quota. Action: adopt Turborepo caching or trim jobs.\n6. A missing TS 7 API blocks a package for more than a day. Action: pin TS 6.0.3 for that package.\n7. A production incident takes more than 2 h to diagnose from logs alone. Action: enable the Prometheus/Grafana ops profile.",
+  "team_prototype": "DEPLOY SPIKE, weeks 2\u20133. Owner: QA/DevOps; secondary reviewer: VFS/DB engineer. Results go in docs/evidence/deploy/*.csv and replace the cited numbers in the W4 defence.\n(0) Skeleton: build compose.yaml with web, app, db, blobs and init. The app exposes a WebSocket echo standing in for lock grants, plus PUT/GET /api/blob/:sha streaming to Garage. CI builds and pushes GHCR images on a test tag.\n(1) Clean bring-up timing: 5 runs each on (a) a lab workstation on the university network, (b) a member's laptop on home broadband, and (c) a fresh GitHub runner. Measure `git clone` \u2192 `docker compose up -d --wait` \u2192 Playwright waits for #desktop[data-ready]. Record wall time and MB pulled. Target: every run \u2264240 s.\n(2) Region/provider latency: create hourly CX23s in Nuremberg and Singapore (under \u20ac0.50 in total; delete afterwards), plus Oracle Free in Dubai or Jeddah if an account exists. From the lab and from home, measure:\n- WebSocket echo RTT, 1,000 messages (p50/p95);\n- 5 MB swap-page upload and download through app\u2192Garage, 100 runs each (p50/p95), with and without CompressionStream gzip. The MEM-05 remote budget is 2 s; our target is \u22641.2 s;\n- cold-boot TTI of a 400 KB stub shell over HTTP/2 vs HTTP/3;\n- 30-min idle WebSocket survival with 25 s heartbeats, with and without Cloudflare's proxy.\nPick the region from these numbers.\n(3) Object-store micro-benchmark on the CX23: compare Garage v2.4.1, FsBlobStore and RustFS 1.0.0 on 4 KB and 5 MB PUT/GET (1,000 operations, p50/p95), RSS at idle and under 20 concurrent clients, data persistence across `docker compose restart`, and whether a SigV4 presigned GET works through Caddy. Confirm or overturn the Garage choice with these numbers.\n(4) Backup/restore drill: seed 100k inodes with \u226550 users, `pg_dump -Fc -Z zstd` it, pg_restore into a fresh container and run the orphan/FK/quota probes. Record dump size and RTO in seconds.\n(5) CI minute projection: run the skeleton ci.yml 10 times and record billed minutes per PR. Project the monthly total against 2,000/3,000 and decide between a public repo and Pro/Team.\n(6) Zero-downtime deploy rehearsal: while 20 scripted clients hold leases, run deploy.sh twice. Count failed HTTP requests (target 0) and time WebSocket resumption (target p95 <3 s with no lost lease).",
+  "requirement_ids_served": [
+   "\u00a714.2 Deployment",
+   "\u00a717.1",
+   "\u00a717.2",
+   "\u00a713.2",
+   "\u00a715.1",
+   "\u00a715.3",
+   "\u00a715.4",
+   "\u00a718",
+   "\u00a75 identity (uname build hash/date)",
+   "s12.6",
+   "BOOT-09",
+   "BOOT-10",
+   "BOOT-11",
+   "OFF-01",
+   "OFF-02",
+   "OFF-04",
+   "OFF-05",
+   "MEM-01",
+   "MEM-04",
+   "MEM-05",
+   "DB-01",
+   "DB-02",
+   "DB-03",
+   "DB-05",
+   "VFS-09",
+   "VFS-10",
+   "PROC-05",
+   "WM-03",
+   "SYS-03",
+   "RAG-05",
+   "AGT-01",
+   "AGT-08"
+  ],
+  "packages": [
+   {
+    "name": "caddy (Docker image caddy:2.11.4-alpine)",
+    "version": "2.11.4",
+    "licence": "Apache-2.0",
+    "purpose": "TLS (automatic HTTPS, HTTP/3), static shell with precompressed assets, COOP/COEP/CSP headers, WS + API reverse proxy"
+   },
+   {
+    "name": "pgvector/pgvector (Docker image 0.8.6-pg18-trixie)",
+    "version": "Postgres 18.6 + pgvector 0.8.6",
+    "licence": "PostgreSQL Licence",
+    "purpose": "Primary DB + vector index (final choice per DB/vector decisions); same image in CI, examiner bring-up and prod"
+   },
+   {
+    "name": "dxflrs/garage (Docker image)",
+    "version": "v2.4.1",
+    "licence": "AGPL-3.0 (used unmodified, separate process)",
+    "purpose": "S3-compatible object storage for file blobs and remote swap pages (MEM-04)"
+   },
+   {
+    "name": "node (Docker base image node:24-trixie-slim)",
+    "version": "24.21.0 LTS",
+    "licence": "MIT",
+    "purpose": "App image base; replace with oven/bun if the backend-runtime decision picks Bun"
+   },
+   {
+    "name": "@aws-sdk/client-s3",
+    "version": "3.1138.0",
+    "licence": "Apache-2.0",
+    "purpose": "S3BlobStore driver (forcePathStyle, requestChecksumCalculation/responseChecksumValidation = 'WHEN_REQUIRED')"
+   },
+   {
+    "name": "@aws-sdk/lib-storage",
+    "version": "3.1138.0",
+    "licence": "Apache-2.0",
+    "purpose": "Streaming multipart uploads for large blobs"
+   },
+   {
+    "name": "pino",
+    "version": "10.3.1",
+    "licence": "MIT",
+    "purpose": "Structured JSON logging with redaction and correlation IDs (Fastify 5.12.5 embeds it if chosen)"
+   },
+   {
+    "name": "pino-http",
+    "version": "11.0.0",
+    "licence": "MIT",
+    "purpose": "Per-request logging if the HTTP layer is not Fastify"
+   },
+   {
+    "name": "pino-pretty",
+    "version": "13.1.3",
+    "licence": "MIT",
+    "purpose": "Dev-only human-readable logs (`docker compose logs app | pino-pretty`)"
+   },
+   {
+    "name": "prom-client",
+    "version": "15.1.3",
+    "licence": "Apache-2.0",
+    "purpose": "Internal /metrics: WS connections, lock-grant latency histogram, tx retries, blob I/O, LLM tokens/cost counters"
+   },
+   {
+    "name": "pnpm",
+    "version": "12.5.1",
+    "licence": "MIT",
+    "purpose": "Workspace package manager (pin via packageManager; fallback 11.27.1, same lockfile)"
+   },
+   {
+    "name": "@biomejs/biome",
+    "version": "2.5.14",
+    "licence": "MIT OR Apache-2.0",
+    "purpose": "Lint + format in one tool, type-aware noFloatingPromises, noGlobalEval"
+   },
+   {
+    "name": "typescript",
+    "version": "7.0.2",
+    "licence": "Apache-2.0",
+    "purpose": "Native typechecking (`tsc -b --noEmit`); 6.0.3 only for a package whose framework checker needs the JS API"
+   },
+   {
+    "name": "vitest",
+    "version": "5.0.1",
+    "licence": "MIT",
+    "purpose": "Unit, property and integration tests; `vitest bench` for DSA micro-benchmarks (fallback 4.1.11)"
+   },
+   {
+    "name": "@vitest/coverage-v8",
+    "version": "5.0.1",
+    "licence": "MIT",
+    "purpose": "Coverage with glob thresholds (70% global, 85% on dsa/vfs/kernel), json-summary for PR comments"
+   },
+   {
+    "name": "@playwright/test",
+    "version": "1.63.0",
+    "licence": "Apache-2.0",
+    "purpose": "E2E (channel 'chrome'), offline boot, clean-bring-up timing, CDP perf traces"
+   },
+   {
+    "name": "fast-check",
+    "version": "4.10.2",
+    "licence": "MIT",
+    "purpose": "Property-based tests (random VFS op sequences keep fsck clean; heap invariants) with fixed seeds"
+   },
+   {
+    "name": "amacneil/dbmate (Docker image)",
+    "version": "2.36.0",
+    "licence": "MIT",
+    "purpose": "SQL migrations with mandatory up/down sections, used only if the DB/ORM decision's tool cannot produce down migrations (DB-01)"
+   },
+   {
+    "name": "rclone (Docker image rclone/rclone)",
+    "version": "v1.75.1",
+    "licence": "MIT",
+    "purpose": "Nightly off-site copy of pg_dump files and content-addressed blobs to Cloudflare R2"
+   },
+   {
+    "name": "gitleaks",
+    "version": "v8.30.1",
+    "licence": "MIT",
+    "purpose": "Secret scanning on every PR (\u00a718)"
+   },
+   {
+    "name": "GitHub Actions: actions/checkout, actions/setup-node, pnpm/action-setup, actions/cache, actions/upload-artifact",
+    "version": "v7.0.1, v7.0.0, v6.1.0, v6.1.0, v7.0.1",
+    "licence": "MIT",
+    "purpose": "CI plumbing"
+   },
+   {
+    "name": "GitHub Actions: docker/setup-buildx-action, docker/login-action, docker/metadata-action, docker/build-push-action",
+    "version": "v4.4.1, v4.6.0, v6.2.0, v7.4.0",
+    "licence": "Apache-2.0",
+    "purpose": "Multi-arch image build/push to GHCR on tags"
+   },
+   {
+    "name": "GitHub Actions: davelosert/vitest-coverage-report-action",
+    "version": "v2.13.0",
+    "licence": "MIT",
+    "purpose": "Coverage summary comment on every PR (\u00a715.3)"
+   }
+  ],
+  "design_notes": "1) TOPOLOGY (one host, one origin)\nBrowser (Chrome) \u2192 https://<domain> \u2192 [web: Caddy 2.11.4] routes three ways:\n- /assets/*, /models/*, index.html, sw.js, version.json \u2192 static shell baked into the web image;\n- /api/* \u2192 app:3000 (HTTPS: auth, bulk transfer, LLM proxy);\n- /ws \u2192 app:3000 (WebSocket: sync, locks, process/change events).\nThe app talks to db:5432 (Postgres 18.6 + pgvector) and blobs:3900 (Garage S3) over the private network only. Off-site copies go to Cloudflare R2 (dumps and blobs). Serving everything from one origin makes crossOriginIsolated=true trivial (MEM-01), keeps the Service Worker scope simple (OFF-05), and avoids CORS for the WebSocket.\n\n2) COMPOSE (compose.yaml, shared by examiner, CI and prod)\n```yaml\nname: plotinium\nservices:\n  db:\n    image: pgvector/pgvector:0.8.6-pg18-trixie\n    environment: {POSTGRES_USER: plotinium, POSTGRES_DB: plotinium, POSTGRES_PASSWORD: ${DB_PASSWORD:-dev-only-not-secret}}\n    volumes: [pgdata:/var/lib/postgresql]   # PG18 images changed the data-dir layout; confirm the path in the image README\n    healthcheck: {test: [CMD-SHELL, pg_isready -U plotinium], interval: 2s, retries: 30}\n  blobs:\n    image: dxflrs/garage:v2.4.1\n    command: [/garage, server, --single-node, --default-bucket]\n    environment: {GARAGE_DEFAULT_ACCESS_KEY: ${S3_KEY:-GKdevonly0000000000000000000000}, GARAGE_DEFAULT_SECRET_KEY: ${S3_SECRET:-devonly...}, GARAGE_DEFAULT_BUCKET: plotinium, GARAGE_RPC_SECRET: ${GARAGE_RPC_SECRET:-<64 hex dev value>}}\n    volumes: [./ops/garage.toml:/etc/garage.toml:ro, garage-meta:/var/lib/garage/meta, garage-data:/var/lib/garage/data]\n  init:            # one-shot: migrate up + demo seed (idempotent)\n    image: ghcr.io/<owner>/plotinium-server:${PLOTINIUM_VERSION:-1.0.0}\n    build: {context: ., target: server}\n    command: [node, server/dist/init.js, --migrate, --seed=demo]\n    depends_on: {db: {condition: service_healthy}, blobs: {condition: service_started}}\n  app:\n    image: ghcr.io/<owner>/plotinium-server:${PLOTINIUM_VERSION:-1.0.0}\n    build: {context: ., target: server}\n    env_file: {path: .env, required: false}   # LLM keys only in prod .env; absent \u2192 AI degrades gracefully\n    depends_on: {init: {condition: service_completed_successfully}}\n    healthcheck: {test: [CMD, node, server/dist/health.js], interval: 2s, retries: 30}\n  web:\n    image: ghcr.io/<owner>/plotinium-web:${PLOTINIUM_VERSION:-1.0.0}   # caddy:2.11.4-alpine + dist/\n    build: {context: ., target: web}\n    ports: [\"8080:8080\"]\n    depends_on: {app: {condition: service_healthy}}\nvolumes: {pgdata: {}, garage-meta: {}, garage-data: {}}\n```\nWhen a service has both `image` and `build`, Compose tries the pull first and builds from source only if the pull fails, so examiners on arm64 Macs without a matching image still get a working stack. Verify during the spike that `up --wait` accepts the exited-0 init container on Compose v5.5; otherwise wait on `web` explicitly.\n\ncompose.prod.yaml overrides:\n- web gets ports 80, 443 and 443/udp plus `DOMAIN`;\n- every secret uses `${VAR:?required}`;\n- `restart: unless-stopped`;\n- `logging: {driver: local, options: {max-size: 10m, max-file: \"5\"}}`;\n- mem limits (db 2.5 GB, app 1.5 GB, blobs 512 MB);\n- Postgres `-c shared_buffers=1GB -c effective_cache_size=4GB -c maintenance_work_mem=512MB` (final values belong to the DB owner).\n\nREADME bring-up:\n(1) `git clone https://github.com/<owner>/plotinium.git && cd plotinium`\n(2) `docker compose up -d --wait`\n(3) open http://localhost:8080 (demo credentials are printed by init)\nReset with `docker compose down -v`. Use localhost rather than a LAN IP: http://localhost counts as a secure context (Service Worker, OPFS, crypto.subtle), a LAN IP over plain http does not.\n\n3) CADDYFILE (prod; the local file is the same with `:8080` in place of the domain)\n```\n{$DOMAIN} {\n  encode zstd gzip\n  header {\n    Cross-Origin-Opener-Policy same-origin\n    Cross-Origin-Embedder-Policy require-corp\n    Cross-Origin-Resource-Policy same-origin\n    Content-Security-Policy \"default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'\"\n    Strict-Transport-Security \"max-age=31536000\"\n    X-Content-Type-Options nosniff\n    Referrer-Policy no-referrer\n    -Server\n  }\n  @immutable path /assets/* /models/*\n  header @immutable Cache-Control \"public, max-age=31536000, immutable\"\n  @fresh path /sw.js /index.html /version.json /manifest.webmanifest\n  header @fresh Cache-Control \"no-cache\"\n  handle /ws  { reverse_proxy app:3000 { lb_try_duration 15s  stream_close_delay 5m } }\n  handle /api/* { reverse_proxy app:3000 { lb_try_duration 15s  lb_try_interval 250ms  health_uri /readyz } }\n  handle { root * /srv  try_files {path} /index.html  file_server { precompressed br zstd gzip } }\n}\n```\nBecause the CSP has no 'unsafe-eval', eval and new Function are blocked by the platform itself, backing up AGT-01 ('never eval'). 'wasm-unsafe-eval' is there only for the embedding runtime.\n\n4) RELEASE, DEPLOY AND OFF-05\n- Build args VERSION, GIT_SHA and BUILD_DATE are baked into version.json and a kernel constant, so `uname -a` prints e.g. `Plotinium 1.0.0 (a1b2c3d) 2026-12-20` (\u00a75 identity).\n- release.yml runs on tag v*: full CI, e2e and AI eval with recorded responses \u2192 multi-arch images to GHCR (X.Y.Z and sha tags) \u2192 a clean-bring-up job that fails at >240 s \u2192 GitHub Release with generated notes, coverage (json-summary + HTML) and perf report (\u00a717.2) \u2192 the deploy job, which waits for approval in `environment: production` from a member other than the tagger, then runs ops/deploy.sh vX.Y.Z over SSH with a pinned known_hosts.\n- deploy.sh steps: git checkout tag \u2192 backup.sh --tag pre-vX.Y.Z \u2192 compose pull \u2192 `compose run --rm init --migrate` (expand-only migrations) \u2192 `compose up -d --wait --no-deps app web` \u2192 smoke check (/readyz, and version.json must equal the tag) \u2192 image prune.\n- Rollback is `deploy.sh v<previous>`: images are immutable, and the contract step of a migration ships only in the release after that.\n- Client/server skew: the WebSocket hello carries {protocol, build}. The server accepts protocol N and N-1; for N-2 it replies UPGRADE_REQUIRED.\n- Service Worker: at boot (POST stage) it calls registration.update(). A new SW precaches into shell-<version> in the background and stays `waiting` (no skipWaiting mid-session). The taskbar shows 'Restart to update', and the new SW activates at the next boot (OFF-05). Old caches are deleted on activate.\n- Locks survive deploys: they live in the `locks` table with lease_expires_at (for example a 30 s TTL with 10 s heartbeats), and clients re-heartbeat after reconnecting with their last seq (VFS-09, OFF-02).\n- Demo script for OFF-05: v1.0.0 is live; deploy v1.0.1 (a bug fix, so it is freeze-compliant); the open desktop shows the update badge; `reboot`; uname shows 1.0.1.\n\n5) OBJECT STORAGE DESIGN\n```ts\ninterface BlobStore {\n  put(key: string, body: Readable | Uint8Array, o: { size: number; sha256: string }): Promise<void>; // hashes while streaming; mismatch \u2192 EIO, object deleted\n  get(key: string, range?: { start: number; end: number }): Promise<Readable>;\n  head(key: string): Promise<{ size: number } | null>;\n  delete(keys: string[]): Promise<void>;\n  presignGet?(key: string, ttlSec: number): Promise<string>; // later optimisation\n}\n```\n- Implementations: S3BlobStore (Garage, R2), FsBlobStore (tests and fallback) and FaultyBlobStore (throws after N operations, used by the fault-injection harness).\n- Keys: `blobs/sha256/ab/cd/<sha256>` is content-addressed (dedupe through blobs.sha256 UNIQUE and refcount). `swap/<uid>/<session>/<pid>/<page_id>` holds swap pages, with Garage lifecycle Expiration after 7 days for abandoned sessions; swap is never backed up.\n- Ordering rule (no two-phase commit): upload the blob first (idempotent), then run ONE DB transaction that inserts or increments the blobs row and writes the inode. A rollback leaves only an unreferenced object. Refcount decrements happen in the transaction; the GC sweeps an object only when refcount = 0 AND zero_since is older than 14 days, which is more than 2\u00d7 the backup interval, so any dump from the last week still finds its blobs.\n- v1 streams bytes through the app so the permission and quota checks live in one place (a 5 MB stream does not block the event loop). The pager worker compresses pages with CompressionStream('gzip'), and the checksum is the sha256 of the uncompressed bytes, so MEM-03 byte-identity is preserved.\n- Switch to presigned GETs on an `s3.` subdomain with CORS only if app CPU passes 50% during transfers or remote page-in p95 passes 1.5 s.\n\n6) CI PIPELINES (GitHub Actions)\nci.yml runs on pull_request and push to main, with `concurrency: {group: ci-${{ github.ref }}, cancel-in-progress: true}`.\n- check (~2 min): `pnpm i --frozen-lockfile` with the store cached, `biome ci .`, `tsc -b` (TS 7), gitleaks.\n- unit (~3 min): `vitest run --project unit --coverage`, where vitest.config sets `coverage.thresholds = {lines: 70, 'dsa/**': {lines: 85}, 'vfs/**': {lines: 85}, 'kernel/**': {lines: 85}}` and reporters include json-summary; a PR comment via davelosert/vitest-coverage-report-action@v2.13.0; fast-check property tests with the seed printed on failure.\n- integration (~6 min): `docker compose up -d --wait db blobs`, then:\n  - migrations up\u2192down\u2192up round-trip on every PR touching db/ (DB-01);\n  - syscalls against the DB;\n  - the fault-injection matrix (rm -r, mv, cp -r, batch rename, chmod -R on a 1,000-node tree failing at node 500: tree checksum and quota unchanged, orphan probes = 0) (DB-02);\n  - concurrent overlapping moves (DB-03), lock lease expiry (VFS-09), outbox exactly-once replay (OFF-02).\n  Compose is used here rather than service containers because service containers cannot pass Garage's command arguments, and this way CI also tests the examiner path.\n- e2e (main and tags, ~8 min): the full stack built from the commit, Playwright with channel 'chrome': boot \u2192 login \u2192 terminal \u2192 file ops \u2192 reboot \u2192 session restored; context.setOffline(true) + reload \u2192 usable desktop (BOOT-09/OFF-01); assert crossOriginIsolated.\n- Required status checks on main: check, unit, integration. Also one approving review from another member, CODEOWNERS mapping each subsystem to its primary owner plus secondary reviewer, and no force pushes.\n\nnightly.yml runs on cron '30 21 * * *' (02:30 PKT) and skips when main has not changed in 24 h. Perf suite, 5 repetitions each, median of the p95s:\n- warm/cold boot (BOOT-10);\n- frame time while dragging 10 windows during a CPU-bound process (WM-03/PROC-05);\n- trie p95 at \u226510k entries (SYS-03);\n- Q1\u2013Q5 p95 at 100k inodes with EXPLAIN ANALYZE captured (DB-05);\n- 5 MB local page-in (MEM-05);\n- retrieval p95 over 10k chunks (RAG-05).\nCDP Emulation.setCPUThrottlingRate is calibrated to the lab machine. perf/check-budgets.ts compares results against perf/budgets.json and exits non-zero on any breach. Results are uploaded as artifacts and written to the job summary.\n\nMinutes projection for a private repo: about 11 per PR run \u00d7 150 + about 8 \u00d7 60 main merges + about 20 \u00d7 22 nightlies \u2248 2,570/month. That fits Pro or Team (3,000) but not Free (2,000). A public repo has no limit.\n\nTask runner: none. Use `pnpm -r --filter \"...[origin/main]\" test`. Adopt Turborepo 2.11 only on the CI wall-time trigger. Nx is rejected.\n\n7) OBSERVABILITY (lean)\n- pino fields: ts, level, msg, build, reqId, sessionId, uid, pid, syscall, errno, durMs. Redacted: authorization, cookie, password, token, and args.content.\n- /metrics is internal only; Caddy never routes it:\n  - ws_connections;\n  - ws_messages_total{dir,type};\n  - lock_grant_seconds (histogram; the \u00a714.3-style evidence);\n  - lock_wait_total;\n  - op_apply_seconds{op};\n  - op_replay_batch_size;\n  - db_tx_seconds{op};\n  - db_tx_retries_total{reason};\n  - blob_io_seconds{op};\n  - swap_bytes_total{dir};\n  - llm_tokens_total{model,kind} and llm_cost_usd_total{model} (feeding the s12.6 cost report and budget cap);\n  - disk_free_bytes;\n  - Node defaults (RSS, heap, event-loop lag).\n- /healthz reports liveness. /readyz runs `SELECT 1`, a HeadBucket against Garage, and a migration-version check.\n- Client side, the kernel's main-thread shim observes PerformanceObserver({type: 'long-animation-frame', buffered: true}). Entries whose scripts[].sourceURL is our origin go into the kernel log ring buffer (extra-credit ring buffer) and are visible in dmesg, bootlog and Task Manager. Together with a frame-meter overlay this provides the 'no long task >50 ms from OS code' evidence for PROC-05.\n- window.onerror, unhandledrejection and worker errors go to the kernel log. Only with an explicit Settings \u2192 Diagnostics opt-in (in line with PRE-05) are they uploaded in batches to POST /api/diag, where pino records them with the build hash.\n- Source maps are kept as private CI artifacts and never served.\n- The upgrade path is a Compose `ops` profile (Prometheus v3.13 + Grafana 13, with GlitchTip 6.2 reusing our Postgres) that needs no app changes.\n\n8) BACKUPS AND RESTORE DRILL (DB-01)\n- ops/backup.sh runs from a host systemd timer at 02:00 PKT and before every deploy: `docker compose exec -T db pg_dump -Fc -Z zstd:6 -U plotinium plotinium > /var/backups/plotinium/db-<date>.dump`, plus a sidecar JSON holding the fsck tree checksum and row counts. It then runs `rclone copy` of the dumps to R2 and `rclone sync` of the Garage bucket to R2 (incremental, since blobs are content-addressed). Retention: 7 daily + 4 weekly.\n- ops/restore-drill.sh runs weekly and before every gate. It starts a throwaway pgvector:0.8.6-pg18 container, runs `pg_restore -j4`, then the db/probes/*.sql checks (orphaned inodes = 0, parentless dentries = 0, FK validation, recomputed quotas equal stored quotas), compares the tree checksum with the sidecar, and prints the RTO. It sets backup_restore_drill_last_success_timestamp. Results go into the DATABASE.md table.\n\n9) SECURITY AND HOST HARDENING\n- Ubuntu 24.04, unattended-upgrades, key-only SSH, and a `deploy` user in the docker group.\n- The Hetzner Cloud Firewall (free, outside the VM) allows 22/tcp, 80/tcp and 443/tcp+udp. Do not rely on UFW, because Docker-published ports bypass it.\n- /srv/plotinium/.env is mode 0600 and lives on the VPS only; LLM keys exist nowhere else.\n- GitHub 'production' environment secrets: SSH_KEY and KNOWN_HOSTS.\n- The server refuses to start in production if any secret equals its dev default or is shorter than 32 bytes.\n- The domain comes from the Student Pack (Namecheap .me or .TECH, free for one year), with DNS A and AAAA records pointing at the VPS.\n\n10) REPO GOVERNANCE\n- Ask the instructor in week 1. Private repos need GitHub Pro (Student Pack, personal owner) or a teacher's free GitHub Team org for branch protection and 3,000 minutes. A public repo would get free 4-vCPU runners and unlimited minutes, but makes copying by other teams easier.\n- Tags per gate: v0.2.0 (W7), v0.3.0 (W11), v0.4.0 (W14), v1.0.0-rc.1 (W16), v1.0.0 (W18). CHANGELOG.md is updated in each release PR, commits follow conventional feat:/fix:/test:/docs: messages referencing requirement IDs, and GitHub-generated notes are attached to each Release.\n\n11) BUDGET (Oct\u2013Feb)\n- Hetzner CX33 at about \u20ac9/month \u00d75 \u2248 \u20ac45. The spike uses hourly CX23s, under \u20ac1.\n- Domain \u20ac0 (Student Pack), R2 \u20ac0 (\u226410 GB), GitHub \u20ac0.\n- Contingency: Actions overage at $0.006/min.\n- Total about \u20ac45\u201350, roughly \u20ac10 per student.\nRAM plan on 8 GB: Postgres \u22482\u20132.5 GB, app \u22641.5 GB, Garage \u22480.2 GB, Caddy \u22480.05 GB, OS/Docker \u22480.5 GB, leaving more than 3 GB of headroom for HNSW builds and dumps. Measure this in the spike.\n\n12) CROSS-DECISION DEPENDENCIES\n- The backend-runtime decision sets the app base image (Node 24 LTS or Bun 1.4).\n- The UI-framework decision sets whether any package pins TS 6.0.3 (Svelte and Vue checkers need it; React and Solid work with TS 7).\n- The DB/ORM decision's migration tool must support down migrations; otherwise use dbmate 2.36.\n- The AI decision must keep model weights same-origin and lazy-loaded after the desktop is interactive, and must degrade gracefully when .env has no LLM key, which is the examiner bring-up case.",
+  "open_questions": [
+   "May the repository be public? This decides free runners and minutes versus GitHub Pro or Team for branch protection on a private repo. Ask the instructor in week 1, and also whether the department's GitHub Education org already has GitHub Team.",
+   "What are the reference lab workstation and the lab network bandwidth (published in Week 2)? Clean bring-up time (pulling about 310 MB of images) and the CPU-throttling calibration for nightly perf budgets both depend on them.",
+   "What OS and architecture will the examiner's defence machine have, and does it have Docker Engine or Docker Desktop with Compose v2.24+/v5 preinstalled? This decides whether arm64 images are needed and which prerequisites the README must list.",
+   "Will the team (or the department) fund about \u20ac45\u201350 for the semester, and can a member's card pass Hetzner's account verification? If not, fall back to Oracle Free or DigitalOcean.",
+   "Backend-runtime and UI-framework decisions are still pending. They determine the app base image (Node 24 vs Bun) and whether any package must pin TypeScript 6.0.3.",
+   "Is a demo account with a hosted-LLM key acceptable on the production URL during the examiners' hidden prompts? This affects the per-user rate limits and budget cap configured in the production .env."
+  ]
+ },
+ "examiner_review": {
+  "verdict": "upheld_with_changes",
+  "factual_errors": [
+   {
+    "claim": "CX plans are sold in Nuremberg, Falkenstein and Helsinki (and Singapore, per a third-party source). Spike step (2): 'create hourly CX23s in Nuremberg and Singapore'.",
+    "correction": "The cost-optimised CX and CAX lines are sold only in Germany and Finland. Singapore offers only CPX and CCX. So the spike cannot create a CX23 in Singapore; use an hourly CPX12 or CPX22 there. A stock tracker also shows no recent in-stock window for CX23 or CX33 in NBG1, and only short windows in FSN1 and HEL1.",
+    "source": "https://radar.iodev.org/cloud-status ; https://www.bitdoze.com/hetzner-cloud-cost-optimized-plans/ (search summary: CX/CAX Germany/Finland only)"
+   },
+   {
+    "claim": "Option A is priced and scored as if a Hetzner CX33 can simply be ordered at \u20ac8.49 + IPv4 (availability 4/5, cost 4/5). The rebuild-on-any-provider drill assumes Hetzner capacity exists.",
+    "correction": "On 2 Sep 2026 at 12:04 UTC, all eight CX and CAX plans showed 'not available' with the Create button disabled. A recheck on 8 Sep found them still unavailable. Hetzner says the cost-optimised line runs on older hardware, so 'the number of available servers is limited'. The nearest plan that could be ordered was CPX22 at \u20ac19.49 + \u20ac0.50 IPv4, about 3.3\u00d7 the price. Trackers show only short restock windows. The price in the record is correct, but whether the server can be bought at all is an unaddressed risk to cost, to the P2 date and to the DR plan.",
+    "source": "https://stackvaluelab.com/hetzner-cx-cax-unavailable/ ; https://bex.co/blog/2026/08/22/hetzner-capacity-crunch-limited-availability-fleet-provisioning ; https://radar.iodev.org/cloud-status"
+   },
+   {
+    "claim": "Caddy's stream_close_delay keeps WebSockets open across config reloads, and lb_try_duration holds requests while the app restarts. These are cited as mitigations for deploying during the demo.",
+    "correction": "Both statements are accurate, but neither applies to the deploy as designed. The shell is baked into the web image, so every release changes that image, and `compose up -d --no-deps app web` recreates the Caddy container. Recreating the container kills every WebSocket and refuses connections until the new Caddy binds its ports. stream_close_delay only covers in-process config reloads, and lb_try_duration cannot help when Caddy itself is down. The rehearsal target of '0 failed HTTP requests' cannot be met with this deploy flow.",
+    "source": "https://caddyserver.com/docs/caddyfile/directives/reverse_proxy (stream_close_delay: 'delays streaming requests such as WebSockets from being forcibly closed when the config is unloaded')"
+   },
+   {
+    "claim": "Cloudflare proxied WebSockets on the Free plan have a 100 s idle timeout. The reversal-trigger action is to 'add Cloudflare's proxy'.",
+    "correction": "The cited page gives no 100 s figure. It says only that Cloudflare closes WebSockets idle 'for a period of time', and that 'when Cloudflare releases new code to its global network, we may restart servers, which terminates WebSockets connections'. Adding the proxy therefore brings disconnections the team cannot control. Mark the claim unverified, and require the 30-min idle-survival spike before Cloudflare is used as a mitigation.",
+    "source": "https://developers.cloudflare.com/network/websockets/"
+   },
+   {
+    "claim": "FsBlobStore scores 2/5 on durability because it has 'no portable API for off-site copies'.",
+    "correction": "rclone copies a local directory to R2 with the same `rclone sync` command it uses for a bucket, and content-addressed files are just as incremental. The durability score should match Garage's (3). Together with scoring S3 features that the v1 design explicitly does not use (presign is deferred, 5 MB pages need no multipart), this is enough to reverse the object-storage ranking. See weaknesses.",
+    "source": "https://rclone.org/local/ (local filesystem is a first-class rclone remote)"
+   },
+   {
+    "claim": "Option B loses on DB session features because Neon's transaction-mode pooler rejects SET, LISTEN/NOTIFY, PREPARE and session advisory locks.",
+    "correction": "Neon also provides a direct, unpooled connection string with full session semantics (max_connections 104 at 0.25 CU), so that limit can be avoided. B's real costs are the network hop, scale-to-zero cold starts, the 0.5 GB cap and three vendors. DB-05 is also measured as query execution time with EXPLAIN ANALYZE, which a network hop does not affect. B still loses, but the argument as written is a straw man.",
+    "source": "https://neon.com/docs/connect/connection-pooling ; https://neon.com/docs/introduction/plans"
+   },
+   {
+    "claim": "Hetzner changed prices four times in 2026 (framed as cloud-price volatility).",
+    "correction": "Hetzner took four pricing actions, but two were changes to dedicated-server setup fees (February and 29 April). Cloud list prices changed twice: on 1 April, for all customers, and on 15 June, for new orders and rescales only. The risk is real but overstated for Cloud. Running servers keep the June terms, which is another reason to buy early and never recreate the server.",
+    "source": "https://webhosting.today/2026/05/29/hetzner-has-now-raised-prices-three-times-in-2026-this-one-is-different/ ; https://northflank.com/blog/hetzner-cloud-server-price-increases"
+   }
+  ],
+  "spec_gaps": [
+   "\u00a71 'Measurement' (numerical targets are measured on the lab workstation in current stable Chrome) vs \u00a717.1: the record never says which instance the 0:05\u20130:18 tests run against, the examiner's local clean bring-up or the production URL. That decides whether Lahore RTT and bandwidth matter at all for BOOT-10 cold boot, MEM-05 remote page-in and the two-user lock contention. Ask in week 2 and write the answer into BOOT.md and the spike plan.",
+   "MEM-05 remote (5 MB page-in p95 \u22642 s) is limited by bandwidth, not RTT. Moving 5 MB takes about 2.6 s at Pakistan's 2024 Ookla fixed-broadband median of 15.5 Mbps before any RTT, so region choice alone cannot meet the target. The spike must measure lab downlink bandwidth. The design needs compressed swap pages and server TCP tuning (BBR congestion control, net.ipv4.tcp_slow_start_after_idle=0, because the Linux default resets cwnd on idle keep-alive connections).",
+   "\u00a717.1 hidden AI prompts (AGT-07, RAG) on the examiner's local bring-up: `.env` is absent, so the LLM gateway has no key and the agent degrades. If examiners run the system-under-test segment on the local stack, the agent demo fails. The record has no path for this; the fix is in the amended recommendation.",
+   "\u00a717 'a machine the team does not control' is shared by every team. Other teams' stacks on localhost:8080 leave a Service Worker, IndexedDB and OPFS on that same origin, and a leftover SW can serve another team's cached shell. Every team's pulls from the lab NAT also share Docker Hub's anonymous limit of 100 pulls per 6 h per IP, with multi-arch pulls counted per architecture. The README must also state the prerequisites: Docker Engine or Desktop with Compose \u22652.24, needed for `env_file: {required: false}`.",
+   "OFF-05 'restart to update': a waiting Service Worker does not activate on reload, because the old worker still controls the page during navigation. It never activates while a second OS tab is open. The demo script (deploy v1.0.1 \u2192 `reboot` \u2192 uname shows 1.0.1) fails unless `reboot` explicitly sends SKIP_WAITING and coordinates all tabs.",
+   "MEM-01 offline: crossOriginIsolated must stay true when the shell is served by the Service Worker. Any synthesised or redirected SW response without COOP/COEP headers silently disables measureUserAgentSpecificMemory() and SharedArrayBuffer offline. The e2e suite asserts isolation only online.",
+   "VFS-06 / DB rule 'quota checked inside the transaction, no partial data': uploading the blob first with a 14-day GC means over-quota uploads rejected with EDQUOT still consume VPS disk for 14 days. That is invisible to the VFS but lets any user fill the 80 GB disk.",
+   "Reversal trigger 3 ('VPS unreachable >1 h in any gate week') cannot be detected by the only monitor, a smoke check every 6 h.",
+   "\u00a714.1 'arbitrary choices are penalised': the VPS provider (Hetzner vs OVHcloud, Contabo, etc.) and the size (CX33 8 GB vs a 4 GB plan) were chosen without a comparison or measurement. The RAM plan gives Postgres 2\u20132.5 GB for a database of about 1 GB (100k inodes plus about 10k 384-d vectors).",
+   "The ~310 MB bring-up pull estimate leaves out the same-origin /models weights and the ONNX/WASM runtime baked into the web image, which the COEP self-hosting rule requires. That dependency on the AI decision is unbudgeted, and a local LLM of several hundred MB would break the 5-minute budget.",
+   "The README bring-up joins `git clone \u2026 && cd` into one line. Examiners count commands, so list three separate commands (clone, cd, compose up) rather than appearing to game the \u22643 rule.",
+   "The service worker must not precache /models, which are tens of MB, during install. On a first-visit cold boot that would compete for bandwidth with the \u22643.0 s boot (BOOT-10). Cache model files lazily after the desktop is interactive."
+  ],
+  "weaknesses": [
+   "The provider is treated as settled when it is actually the most fragile part of the decision. As of September 2026, Hetzner's CX/CAX line was frequently sold out, and a comparable, available alternative, OVHcloud VPS-2 (4 vCore / 8 GB / 75 GB / 1 Gbps, from $8.50/mo with IPv4 included, EU or Singapore with a 1 TB APAC quota), is not considered. The fallbacks listed (DigitalOcean at $48 for 8 GB, and Oracle Free) are either 5\u00d7 the price or the very option the record rejected for poor availability.",
+   "The object-storage scores look reverse-engineered. Garage beats FsBlobStore by only 0.15. That margin rests on 'S3 features we need' (presign, multipart, lifecycle), which the v1 design says it will not use, and on marking FsBlobStore down for off-site copies that rclone handles equally well. Honest scores put FsBlobStore at about 4.55\u20134.65, ahead of Garage at 4.40. The real reason for Garage is conformance with the spec's 'backend object storage' (MEM-04, reference architecture) and a like-for-like path to R2. State that as a criterion openly instead of inflating the features score.",
+   "The top criterion, 'Clean bring-up and dev/CI/prod parity' (25%), mixes the examiner bring-up, which does not depend on the hosting choice (every option must ship a compose.yaml), with prod parity. Scoring PaaS 2 and k3s 1 on it partly double-counts. The winner survives: Oracle overtakes A only if its availability score rises to 4, the same as a paid VPS. Still, the criterion should be split so examiners do not see it as rigged.",
+   "The deploy design contradicts its own zero-downtime claims. The shell is baked into the Caddy image, so every release recreates the proxy. No volume is declared for Caddy's /data, so certificates are re-issued each time the container is recreated. Let's Encrypt allows 5 duplicate certificates per 7 days, and gate weeks can exceed that.",
+   "The case is built on RTT, but for 5 MB page-ins bandwidth is what limits the result. RTT drove the region choice, while the requirement at risk (MEM-05 remote) is limited by lab bandwidth.",
+   "Security headers: `Cross-Origin-Resource-Policy: same-origin` is applied globally. If the UI decision isolates apps in sandboxed iframes, which have an opaque origin and are a natural way to enforce 'no app touches storage directly', those iframes cannot load any /assets script. This dependency on the UI and app-isolation decision is not listed.",
+   "Observability cannot detect the failures that the reversal triggers depend on: there is no external uptime monitor, and a probe every 6 h cannot spot a 1-hour outage.",
+   "Scope creep: pnpm, Biome and TypeScript 7 are packed into the deployment record, and the TS-7 and lint criteria justify each other (the lint criterion 'works with TS 7' exists only because TS 7 was chosen). Examiners may ask for these to be separate records, or point out the circular justification.",
+   "Oracle is kept as the DR target even though the record itself scores its availability 1/5. A DR target that may be reclaimed or hit capacity errors is weak; a paid, available VPS or a member's laptop is the real fallback.",
+   "The spike measures the VPS but not the examiner-machine conditions: another team's stack on the same port, anonymous Docker Hub pulls behind the lab NAT, and whether GHCR images can be pulled anonymously when the repo is private."
+  ],
+  "amended_recommendation": "DECISION. Run production as ONE Docker Compose stack on a single x86 VPS of the 4 vCPU / 8 GB class. Choose 2 vCPU / 4 GB instead if the weeks 2\u20133 spike measures peak stack RSS below 2.5 GB with the 100k-inode seed and an HNSW build. Pick the location from measured lab numbers (WebSocket RTT, and 5 MB download throughput from the lab): Falkenstein or Nuremberg by default, Singapore if it measures better, never Helsinki.\n\nPROVIDER is an ordered list, decided at purchase time. Hetzner's cost-optimised CX/CAX line was fully 'not available' from 2 to 8 Sep 2026 and restocks only briefly.\n1. Hetzner CX33 (\u20ac8.49 + \u20ac0.50 IPv4) in FSN or NBG. Buy it through an API retry loop as soon as the account is verified in week 1\u20132, and never delete or recreate it; rescales count as new orders.\n2. If no CX33 can be ordered within 72 h: OVHcloud VPS-2 (4 vCore / 8 GB / 75 GB, from $8.50/mo, IPv4 included).\n3. Last resort: Contabo Cloud VPS 10 or DigitalOcean.\nThe budget ceiling is \u20ac15/month (\u20ac75 for the semester).\n\nSTACK: five services.\n- web: Caddy 2.11.4, long-lived. Its image holds only Caddy and the Caddyfile.\n- app: backend image; the base follows the runtime decision.\n- db: pgvector/pgvector:0.8.6-pg18-trixie (Postgres 18.6).\n- blobs: Garage v2.4.1 with `--single-node --default-bucket`.\n- init: a one-shot service that runs migrations and the idempotent demo seed. It also copies the versioned shell `dist/` into a `shell` volume and switches the `current` symlink atomically, so deploys never recreate Caddy.\nThe SAME compose.yaml serves the examiner bring-up and CI. compose.prod.yaml adds the domain and TLS, `restart: unless-stopped`, the local log driver capped at 10 MB \u00d7 5, memory limits, `${VAR:?required}` secrets, and persistent `caddy_data:/data` and `caddy_config:/config` volumes so certificates survive container recreation.\n\nEXAMINER BRING-UP: three separate commands: `git clone <url>`, `cd plotinium`, `docker compose up -d --wait`. Then open http://localhost:4717. Demo credentials are written in the README, not only printed by init.\n- Use a distinctive default port, overridable with PLOTINIUM_PORT, so we do not inherit another team's Service Worker or IndexedDB on a shared localhost origin. The POST stage checks that version.json carries our OS identity.\n- Every image is pulled from PUBLIC GHCR packages under our namespace, pinned by digest, and that includes mirrors of pgvector and Garage. The examiner never touches Docker Hub's anonymous limit (100 pulls per 6 h per IP), even behind the lab NAT.\n- A release job runs the clean bring-up on a fresh runner without docker login and with Docker Hub blocked, and fails at more than 240 s.\n- The README lists prerequisites: Docker Engine or Desktop with Compose \u22652.24, and amd64 or arm64.\n\nHEADERS AND SERVICE WORKER:\n- Headers are COOP same-origin and COEP require-corp everywhere; `CORP: same-origin` on /api/*; `CORP: cross-origin` on the public immutable /assets/* and /models/*, so apps in sandboxed opaque-origin iframes still load.\n- CSP has no 'unsafe-eval' (enforcing AGT-01). The AI spike must confirm that the embedding runtime runs with only 'wasm-unsafe-eval'. If it does not, relax the CSP only on that worker script's own response.\n- The SW never synthesises a response without COOP/COEP. e2e asserts `crossOriginIsolated` both online and after an offline reboot.\n- The SW precaches only the shell. /models are cached lazily after the desktop is interactive.\n- OFF-05: a new SW installs in the background and waits. The `reboot` command flushes dirty pages and the session, tells every OS tab over BroadcastChannel, posts SKIP_WAITING to `registration.waiting`, and reloads on `controllerchange`. Rehearse this at W16.\n\nOBJECT STORAGE: Garage accessed with @aws-sdk/client-s3 (forcePathStyle, WHEN_REQUIRED checksums), behind our BlobStore interface. FsBlobStore serves tests and is the fallback; FaultyBlobStore serves the fault-injection harness. Criterion declared openly: 'recognisable backend object storage per MEM-04 and a like-for-like S3 path to R2'.\n- Blobs are uploaded before ONE DB transaction, so DB atomicity never depends on the store.\n- Before any bytes are accepted, a quota pre-check runs and the upload size is capped at the remaining quota. The authoritative check stays inside the transaction.\n- GC deletes objects that never got a blobs row after 1 h, and dereferenced objects after 14 days, which is longer than the backup window.\n- Swap pages are gzip-compressed in the pager worker, and the checksum covers the uncompressed bytes.\n- Host sysctls: BBR, tcp_slow_start_after_idle=0, and larger UDP buffers for QUIC.\n\nBACKUPS: nightly `pg_dump -Fc` plus `rclone` of dumps and blobs to Cloudflare R2 (free up to 10 GB), and a scripted restore drill every week and before each gate. Restore targets are any provider in the ordered list, or a member's laptop.\n\nCI/CD: GitHub Actions, unchanged from the original record:\n- every PR: Biome, TS 7 typecheck, Vitest 5 with 70%/85% glob thresholds and a PR comment, gitleaks, and integration against `docker compose up db blobs` (fault-injection matrix, migration up/down/up, concurrent moves, lease expiry, outbox replay);\n- main and tags: Playwright e2e in Chrome, including a test that stops app and web and reboots to prove real offline boot;\n- nightly: perf budgets that fail the build;\n- a v* tag: GHCR multi-arch images, the timed clean bring-up, a Release with coverage, then an approval-gated SSH deploy (backup \u2192 migrate expand-only \u2192 `up --no-deps app init` \u2192 smoke check).\nThe rehearsal target is 0 lost ops, 0 lost leases and WebSocket resume p95 under 3 s. It is not '0 failed HTTP requests'.\n\nDEMO AI PATH: confirm with the instructor which instance the 0:08\u20130:18 tests use. If it is the local stack, the local LLM gateway has no key, so it forwards to the production gateway using a revocable, rate-limited demo token entered at login. Keys stay server-side and every call is logged with its cost. Otherwise run the AI prompts on the production URL.\n\nTOOLING: pnpm 12.5.1 (fallback 11.27.1), Biome 2.5.14, TypeScript 7.0.2 (6.0.3 per package if a framework checker needs it). These are recorded as separate records.\n\nOBSERVABILITY: pino logs with correlation IDs; internal-only prom-client /metrics; /healthz and /readyz; client long-animation-frame and error capture into the kernel log ring buffer. Add an external 5-minute uptime monitor on /readyz that pushes alerts to all five members, alongside the 6-hourly deep smoke check. Prometheus and Grafana stay an `ops` profile until a trigger fires.\n\nREPO: a public repo if the instructor allows it; otherwise GitHub Pro or a teacher's Team org, with GHCR packages set public.\n\nBUDGET: about \u20ac45\u201350 on a CX33, about $43 on OVH VPS-2, ceiling \u20ac75.\n\nREVERSAL TRIGGERS (the original seven, plus):\n- no CX33 can be ordered within 72 h: switch to OVH VPS-2;\n- the external monitor records an outage longer than 1 h in a gate week: rebuild from R2 on the next provider;\n- the lab 5 MB remote page-in p95 is above 1.5 s after compression: move the region or reduce the swap page size;\n- the SKIP_WAITING rehearsal fails: drop OFF-05, which is a 'should' requirement.",
+  "amended_chat_reason": "Keep the core decision. One Docker Compose file on a single paid VPS is still the right call: it is always on, WebSocket-safe, keeps Postgres and pgvector on the same host, and the examiner runs the exact file that production uses. Two things were wrong: the provider was treated as settled, and the deploy design was incomplete.\n- Hetzner's cheap CX line was sold out for most of September 2026. Buy early and never recreate the server, and use OVHcloud VPS-2 (about $8.50, 4 vCPU / 8 GB) as the fallback.\n- Caddy's certificate volume was missing.\n- Every release recreated the proxy, which breaks the zero-downtime claim.\n- The 'restart to update' demo would not activate the new Service Worker.\nGarage stays. Justify it by the spec's 'backend object storage' requirement, not by S3 features we don't use. Mirror every image to public GHCR, use an unusual port so we don't collide with other teams on the shared examiner machine, and add a 5-minute uptime monitor.",
+  "defence_qa": [
+   {
+    "question": "You pay \u20ac45 a semester when Oracle Always Free exists, and Oracle's Dubai region is 54 ms from Lahore against 139\u2013142 ms for Germany. Why isn't that the obvious winner?",
+    "strong_answer": "Our top risk is a gate that isn't met: each one caps the project at 80%. Oracle cut the free A1 allowance in half on 15 June 2026 without an announcement, it reclaims Always Free instances that stay under 20% CPU, network and memory for 7 days, which describes our demo server, and A1 creation often fails for lack of capacity. On sensitivity, Oracle overtakes us only if we rate its availability as highly as a paid VPS. We keep the stack identical so we can move within 30 minutes (the restore drill proves it). For latency, the requirement at risk is the 5 MB remote page-in, and that depends mostly on lab bandwidth: 5 MB takes about 2.6 s at 15.5 Mbps whatever the RTT. So we compress swap pages and tune TCP, and we measured it in the spike [insert CSV numbers]."
+   },
+   {
+    "question": "Hetzner's CX line was sold out in September. What happens if you can't buy the server, or it dies in gate week?",
+    "strong_answer": "The provider is an ordered list, not an article of faith. We try a CX33 through an API retry loop in week 1\u20132 and never delete it once we have it, because running servers keep their price. If none can be ordered within 72 h we take OVHcloud VPS-2, which is 4 vCPU / 8 GB for about $8.50 with IPv4 included. Everything is Compose, so the provider is a variable. Every night the database dump and blobs go to R2, and a weekly restore drill (probes: orphans 0, FK and quota checks) rebuilds on a fresh host in under 30 minutes. A 5-minute external uptime monitor alerts all five of us, and any member's laptop runs the same stack as a hot standby for gate demos."
+   },
+   {
+    "question": "Your examiner bring-up runs on a machine you don't control. What could make it fail, and how have you tested for that?",
+    "strong_answer": "We tested four things. First, network pulls: every image, including mirrors of pgvector and Garage, is on public GHCR and pinned by digest, and CI runs the clean bring-up on a fresh runner with no docker login and Docker Hub blocked. It fails if the run takes more than 240 s, and we repeated it 5 times on the lab network. Second, other teams: we publish one unusual port rather than 8080, so a Service Worker or IndexedDB left by another team's localhost:8080 can't serve their shell to us, and the boot's POST stage checks our identity in version.json. Third, Compose semantics: init is a one-shot service that app depends on with service_completed_successfully, so `up --wait` returns 0. Fourth, prerequisites (Docker with Compose \u22652.24) are in the README, and the images are multi-arch for ARM laptops."
+   },
+   {
+    "question": "How do you keep a recursive delete atomic when the object store isn't transactional?",
+    "strong_answer": "We never need the two to commit together. Blobs are content-addressed and uploaded before the DB transaction, which is idempotent. Then one Postgres transaction takes the quota row FOR UPDATE, writes the inodes and dentries, and changes refcounts. If anything fails, the only leftover is an unreferenced object. The GC deletes objects that never got a blobs row after 1 hour, and dereferenced objects only after 14 days, so any dump from the retention window still finds its blobs. We also pre-check the quota before accepting bytes, so rejected uploads can't fill the disk. The fault-injection harness includes a FaultyBlobStore, and a CI probe confirms the tree checksum, orphans and quota are unchanged after rollback."
+   },
+   {
+    "question": "Why Garage? A directory on disk is simpler, and you admit you don't use presigned URLs or multipart in v1.",
+    "strong_answer": "Honestly, on footprint and simplicity FsBlobStore ties or wins, and we keep it as the test driver and the fallback behind the same BlobStore interface. We chose Garage for two declared reasons. The spec's reference architecture and MEM-04 ask for backend object storage for blobs and remote swap, and Garage gives us the same S3 API we use for off-site copies in R2, so production could move to managed storage with a config change. It is a single 28 MB Rust binary, and since v2.3 it creates its key and bucket from environment variables, so the bring-up needs no manual steps. MinIO was ruled out because its repository was archived in April 2026. If Garage fails a required S3 operation, or a restore drill finds a missing blob, the reversal trigger switches us to FsBlobStore."
+   },
+   {
+    "question": "Show us 'restart to update' during the demo. Why doesn't a deploy break open clients or lose locks?",
+    "strong_answer": "Locks live in the database with a 30 s lease and 10 s heartbeats. Clients reconnect with their last sequence number, and the server accepts protocol versions N and N-1, so an app restart of about 2 s loses neither a lease nor an outbox op, which is replayed exactly once through idempotency keys. Caddy stays up during deploys because the shell is delivered through a volume, not a new proxy image, so only /api and /ws blip, and lb_try_duration holds those requests. A reload alone does not activate a waiting Service Worker, because the old worker controls the page during navigation. So `reboot` flushes dirty pages, tells all OS tabs over BroadcastChannel, sends SKIP_WAITING, and reloads on controllerchange, and uname then shows the new build hash. We rehearsed this at W16 with 20 scripted lease holders: 0 lost ops, and WebSocket resume p95 under 3 s."
+   }
+  ],
+  "extra_risks": [
+   {
+    "risk": "Hetzner's CX/CAX line cannot be ordered (all 'not available' 2\u20138 Sep 2026), so P2's 'deployed URL boots' slips, or the cost rises about 3\u00d7 to CPX.",
+    "mitigation": "Verify the account in week 1, buy through an API retry loop (poll every 10 s for up to an hour, repeated) and never delete the server. After 72 h, fall back to OVHcloud VPS-2 ($8.50, 4 vCPU / 8 GB, IPv4 included). Keep a \u20ac15/month ceiling as a reversal trigger."
+   },
+   {
+    "risk": "The web container is recreated on every deploy with no persistent Caddy /data, so certificates are re-issued and can hit Let's Encrypt's limit of 5 duplicate certificates per 7 days. Every WebSocket also drops.",
+    "mitigation": "Mount the caddy_data and caddy_config volumes. Make the Caddy image hold only the proxy and Caddyfile; init copies the versioned dist/ into a shell volume and swaps a symlink atomically."
+   },
+   {
+    "risk": "Shared examiner machine: another team's Service Worker, IndexedDB or OPFS on http://localhost:8080 hijacks or corrupts our shell, or the port is already taken.",
+    "mitigation": "Use a distinctive default port, overridable with PLOTINIUM_PORT. The POST stage checks the identity in version.json, and the README says to use a fresh Chrome profile if a foreign SW is detected."
+   },
+   {
+    "risk": "Docker Hub's anonymous limit (100 pulls per 6 h per IP, multi-arch counted per architecture) is exhausted behind the university NAT on Demo Day. Private GHCR packages would push Compose into a slow build from source.",
+    "mitigation": "Mirror pgvector and Garage to PUBLIC GHCR packages pinned by digest. The release job tests the bring-up without docker login and with Docker Hub blocked."
+   },
+   {
+    "risk": "A waiting Service Worker never activates, because a reload doesn't release the old controller and a second OS tab keeps it alive, so the OFF-05 demo shows the old version.",
+    "mitigation": "`reboot` flushes state, broadcasts to all tabs, posts SKIP_WAITING and reloads on controllerchange. Cover it with an e2e test that opens two tabs."
+   },
+   {
+    "risk": "A global `CORP: same-origin` blocks assets for sandboxed opaque-origin app iframes. SW-synthesised responses drop COOP/COEP, so crossOriginIsolated is false offline (breaking MEM-01 measurement and SharedArrayBuffer for the embedding runtime).",
+    "mitigation": "Scope CORP by path (cross-origin on public /assets and /models). The SW returns only stored responses, which keep their headers. e2e asserts crossOriginIsolated online and after an offline reboot."
+   },
+   {
+    "risk": "The examiner's local stack has no LLM key, so the hidden agent prompts fail if the system-under-test segment runs locally.",
+    "mitigation": "The local gateway forwards to the production LLM gateway using a revocable, rate-limited demo token, so keys stay server-side and every call is audited and costed. Or agree with the instructor that AI prompts run on the production URL."
+   },
+   {
+    "risk": "Over-quota uploads rejected with EDQUOT stay in Garage for up to 14 days, a way to fill the disk.",
+    "mitigation": "Pre-check the quota and cap the upload size before accepting bytes. GC objects that never got a blobs row after 1 h; keep the 14-day grace only for dereferenced blobs. Track disk_free_bytes with an alert."
+   },
+   {
+    "risk": "The embedding runtime (ONNX or WASM glue) needs 'unsafe-eval' under the strict CSP, so the AI worker fails in production only.",
+    "mitigation": "Test it under the production CSP in the AI spike. If needed, serve only that worker script with a relaxed per-response CSP. Keep 'unsafe-eval' out of the document and kernel CSP."
+   },
+   {
+    "risk": "pnpm 12 is a four-week-old Rust rewrite, and its remote side-effects cache supports Linux glibc only, so members' Windows laptops may hit rough edges.",
+    "mitigation": "Pin packageManager, keep pnpm 11.27.1 as a fallback that uses the same lockfile, and offer a devcontainer or WSL2 path for Windows members."
+   }
+  ]
+ }
+}

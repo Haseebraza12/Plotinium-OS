@@ -1,0 +1,45 @@
+{
+  "cmd": "reboot --menu",
+  "nav": ["http://localhost:4718/", "http://localhost:4718/?boot=menu", "http://localhost:4718/"],
+  "console": [
+    "error: Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-wLLyZ/3VJaoYVWhLyrYjNlmFjG0kFsPOuqqkze+n/Es=''. Either the 'unsafe-inline' keyword, a hash ('sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU='), or a nonce ('nonce-...') is required to enable ",
+    "error: Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-wLLyZ/3VJaoYVWhLyrYjNlmFjG0kFsPOuqqkze+n/Es=''. Either the 'unsafe-inline' keyword, a hash ('sha256-F0eMgzg/9KDZDnYmAjaV1/2SVRvtQav/R/mGbug/9vw='), or a nonce ('nonce-...') is required to enable ",
+    "error: Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-wLLyZ/3VJaoYVWhLyrYjNlmFjG0kFsPOuqqkze+n/Es=''. Either the 'unsafe-inline' keyword, a hash ('sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU='), or a nonce ('nonce-...') is required to enable ",
+    "error: Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-wLLyZ/3VJaoYVWhLyrYjNlmFjG0kFsPOuqqkze+n/Es=''. Either the 'unsafe-inline' keyword, a hash ('sha256-4r3fk6BZv93+p0wowLlidakfufjRa1DeauHEDAMz3Zg='), or a nonce ('nonce-...') is required to enable ",
+    "error: Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-wLLyZ/3VJaoYVWhLyrYjNlmFjG0kFsPOuqqkze+n/Es=''. Either the 'unsafe-inline' keyword, a hash ('sha256-F0eMgzg/9KDZDnYmAjaV1/2SVRvtQav/R/mGbug/9vw='), or a nonce ('nonce-...') is required to enable ",
+    "error: Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-wLLyZ/3VJaoYVWhLyrYjNlmFjG0kFsPOuqqkze+n/Es=''. Either the 'unsafe-inline' keyword, a hash ('sha256-4r3fk6BZv93+p0wowLlidakfufjRa1DeauHEDAMz3Zg='), or a nonce ('nonce-...') is required to enable ",
+    "error: Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-wLLyZ/3VJaoYVWhLyrYjNlmFjG0kFsPOuqqkze+n/Es=''. Either the 'unsafe-inline' keyword, a hash ('sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU='), or a nonce ('nonce-...') is required to enable ",
+    "error: Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-wLLyZ/3VJaoYVWhLyrYjNlmFjG0kFsPOuqqkze+n/Es=''. Either the 'unsafe-inline' keyword, a hash ('sha256-z1t+Suciet42iYy37aNB+jrM4lY7ppkraEbXHH1gr4g='), or a nonce ('nonce-...') is required to enable ",
+    "error: Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-wLLyZ/3VJaoYVWhLyrYjNlmFjG0kFsPOuqqkze+n/Es=''. Either the 'unsafe-inline' keyword, a hash ('sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU='), or a nonce ('nonce-...') is required to enable ",
+    "error: Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-wLLyZ/3VJaoYVWhLyrYjNlmFjG0kFsPOuqqkze+n/Es=''. Either the 'unsafe-inline' keyword, a hash ('sha256-F0eMgzg/9KDZDnYmAjaV1/2SVRvtQav/R/mGbug/9vw='), or a nonce ('nonce-...') is required to enable ",
+    "error: Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-wLLyZ/3VJaoYVWhLyrYjNlmFjG0kFsPOuqqkze+n/Es=''. Either the 'unsafe-inline' keyword, a hash ('sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU='), or a nonce ('nonce-...') is required to enable ",
+    "error: Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-wLLyZ/3VJaoYVWhLyrYjNlmFjG0kFsPOuqqkze+n/Es=''. Either the 'unsafe-inline' keyword, a hash ('sha256-F0eMgzg/9KDZDnYmAjaV1/2SVRvtQav/R/mGbug/9vw='), or a nonce ('nonce-...') is required to enable ",
+    "warning: Unable to determine content-length from response headers. Will expand buffer when needed.",
+    "error: Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-wLLyZ/3VJaoYVWhLyrYjNlmFjG0kFsPOuqqkze+n/Es=''. Either the 'unsafe-inline' keyword, a hash ('sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU='), or a nonce ('nonce-...') is required to enable ",
+    "error: Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-wLLyZ/3VJaoYVWhLyrYjNlmFjG0kFsPOuqqkze+n/Es=''. Either the 'unsafe-inline' keyword, a hash ('sha256-F0eMgzg/9KDZDnYmAjaV1/2SVRvtQav/R/mGbug/9vw='), or a nonce ('nonce-...') is required to enable ",
+    "error: Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-wLLyZ/3VJaoYVWhLyrYjNlmFjG0kFsPOuqqkze+n/Es=''. Either the 'unsafe-inline' keyword, a hash ('sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU='), or a nonce ('nonce-...') is required to enable ",
+    "error: Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-wLLyZ/3VJaoYVWhLyrYjNlmFjG0kFsPOuqqkze+n/Es=''. Either the 'unsafe-inline' keyword, a hash ('sha256-4r3fk6BZv93+p0wowLlidakfufjRa1DeauHEDAMz3Zg='), or a nonce ('nonce-...') is required to enable ",
+    "error: Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-wLLyZ/3VJaoYVWhLyrYjNlmFjG0kFsPOuqqkze+n/Es=''. Either the 'unsafe-inline' keyword, a hash ('sha256-F0eMgzg/9KDZDnYmAjaV1/2SVRvtQav/R/mGbug/9vw='), or a nonce ('nonce-...') is required to enable ",
+    "error: Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-wLLyZ/3VJaoYVWhLyrYjNlmFjG0kFsPOuqqkze+n/Es=''. Either the 'unsafe-inline' keyword, a hash ('sha256-4r3fk6BZv93+p0wowLlidakfufjRa1DeauHEDAMz3Zg='), or a nonce ('nonce-...') is required to enable ",
+    "error: Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-wLLyZ/3VJaoYVWhLyrYjNlmFjG0kFsPOuqqkze+n/Es=''. Either the 'unsafe-inline' keyword, a hash ('sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU='), or a nonce ('nonce-...') is required to enable ",
+    "error: Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-wLLyZ/3VJaoYVWhLyrYjNlmFjG0kFsPOuqqkze+n/Es=''. Either the 'unsafe-inline' keyword, a hash ('sha256-z1t+Suciet42iYy37aNB+jrM4lY7ppkraEbXHH1gr4g='), or a nonce ('nonce-...') is required to enable ",
+    "error: Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-wLLyZ/3VJaoYVWhLyrYjNlmFjG0kFsPOuqqkze+n/Es=''. Either the 'unsafe-inline' keyword, a hash ('sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU='), or a nonce ('nonce-...') is required to enable ",
+    "error: Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-wLLyZ/3VJaoYVWhLyrYjNlmFjG0kFsPOuqqkze+n/Es=''. Either the 'unsafe-inline' keyword, a hash ('sha256-F0eMgzg/9KDZDnYmAjaV1/2SVRvtQav/R/mGbug/9vw='), or a nonce ('nonce-...') is required to enable ",
+    "error: Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-wLLyZ/3VJaoYVWhLyrYjNlmFjG0kFsPOuqqkze+n/Es=''. Either the 'unsafe-inline' keyword, a hash ('sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU='), or a nonce ('nonce-...') is required to enable ",
+    "error: Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-wLLyZ/3VJaoYVWhLyrYjNlmFjG0kFsPOuqqkze+n/Es=''. Either the 'unsafe-inline' keyword, a hash ('sha256-F0eMgzg/9KDZDnYmAjaV1/2SVRvtQav/R/mGbug/9vw='), or a nonce ('nonce-...') is required to enable "
+  ],
+  "pageErrors": [],
+  "failed": [],
+  "frames": [
+    {
+      "plb": "plb plb-splash,plb plb-menu",
+      "menu": true,
+      "desk": false,
+      "txt": "Plotinium | is starting | dev build version 0.1.0-dev.0 · build 0000000 | Loading kernel · 564 of 564 KB | Starting kernel | ve"
+    }
+  ],
+  "menuShown": true,
+  "url": "http://localhost:4718/",
+  "menuFocus": "plb-lb",
+  "end": "desktop"
+}

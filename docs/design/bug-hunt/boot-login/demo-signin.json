@@ -1,0 +1,66 @@
+{
+  "nav": ["http://localhost:4718/"],
+  "console": [
+    "warning: Unable to determine content-length from response headers. Will expand buffer when needed."
+  ],
+  "pageErrors": [],
+  "failed": ["401 GET /api/auth/me"],
+  "focusAtStart": "login-password",
+  "frames": [
+    {
+      "state": "unlocking",
+      "hint": "Press Enter to sign in",
+      "desk": true
+    },
+    {
+      "state": "gone",
+      "hint": null,
+      "desk": true
+    },
+    {
+      "state": "gone",
+      "hint": null,
+      "desk": true
+    },
+    {
+      "state": "gone",
+      "hint": null,
+      "desk": true
+    },
+    {
+      "state": "gone",
+      "hint": null,
+      "desk": true
+    },
+    {
+      "state": "gone",
+      "hint": null,
+      "desk": true
+    }
+  ],
+  "msToDesktop": 1522,
+  "anims": [
+    "468 pl-login-shake",
+    "1414 pl-login-shake",
+    "2380 pl-login-shake",
+    "3380 pl-login-shake",
+    "4380 pl-login-shake",
+    "5380 pl-login-shake",
+    "6381 pl-login-shake",
+    "7380 pl-login-shake",
+    "8379 pl-login-shake",
+    "9379 pl-login-shake",
+    "10396 pl-login-shake",
+    "11379 pl-login-shake",
+    "12379 pl-login-shake",
+    "13379 pl-login-shake",
+    "14379 pl-login-shake",
+    "15379 pl-login-shake",
+    "16379 pl-login-shake",
+    "17380 pl-login-shake",
+    "18380 pl-login-shake",
+    "19380 pl-login-shake"
+  ],
+  "loginGone": true,
+  "bootRootGone": true
+}

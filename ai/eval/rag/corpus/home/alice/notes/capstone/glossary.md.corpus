@@ -1,0 +1,11 @@
+# Project glossary
+
+- **ino:** a file's identity (UUID), stable across renames.
+- **dentry:** a (parent directory, name) → ino link.
+- **executor:** a worker that runs user processes as generators, one quantum at a time.
+- **quantum:** the slice of work a process gets before it must yield.
+- **capability:** a named permission a process needs for a class of syscalls.
+- **outbox:** queue of local mutations waiting to be replayed on the server.
+- **degraded:** a non-critical service failed; the system keeps running without it.
+- **litmus build:** the build with all AI compiled out; everything else must still pass.
+- **modelKey:** identifies embedding model, revision, dimensions and chunker version; vectors with different keys are never compared.

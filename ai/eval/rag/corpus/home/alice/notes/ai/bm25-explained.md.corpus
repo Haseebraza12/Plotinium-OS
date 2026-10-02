@@ -1,0 +1,16 @@
+# BM25 explained
+
+Keyword ranking function used by Lucene, Elasticsearch and most search engines.
+
+score(q, d) = Σ over query terms t of IDF(t) · tf(t, d)·(k1 + 1) / (tf(t, d) + k1·(1 − b + b·|d|/avgdl))
+
+- **IDF:** rare terms matter more. ln(1 + (N − n_t + 0.5)/(n_t + 0.5)).
+- **Term frequency saturation:** the 10th occurrence of a word adds much less than the 2nd; k1 (≈ 1.2) controls how fast it saturates.
+- **Length normalisation:** long documents naturally contain more words; b (≈ 0.75) controls how much to penalise length.
+
+Strengths: exact identifiers, error codes, names; no model needed; tiny and fast.
+Weakness: no notion of meaning. "car" does not match "automobile", and a query phrased differently from the document scores zero.
+
+Fields: score title/name and body separately and weight them (we weight the file name 2×).
+
+Reciprocal rank fusion combines BM25 with vector search without having to calibrate their scores: Σ 1/(60 + rank).

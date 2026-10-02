@@ -1,0 +1,11 @@
+{
+  "name": "storage",
+  "description": "IndexedDB plotinium open at this build's version, migrated, fencing epoch bumped",
+  "requires": ["kernel"],
+  "critical": true,
+  "weight": 4,
+  "timeoutMs": 3000,
+  "priority": 2,
+  "safeMode": true,
+  "recovery": true
+}

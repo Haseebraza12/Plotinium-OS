@@ -1,0 +1,13 @@
+{
+  "note": "No Stitch screen for overview-switcher. mcp__stitch__generate_screen_from_text was called once at about 2026-09-24T15:33Z and returned only a session id (no screen id). It was NOT retried, per the run's instructions. list_screens for project 12849137298552292712 returned {} on 10 polls between about 15:34Z and 15:48Z; get_project showed no screen instances. get_screen needs a screen id, so it could not be called, and edit_screens could not be used either. Sibling agents saw the same (see files-light/screen.json, kernel-panic/screen.json).",
+  "request": {
+    "projectId": "12849137298552292712",
+    "deviceType": "DESKTOP",
+    "designSystem": "assets/10121591451242352758",
+    "modelId": "GEMINI_3_8_FLASH",
+    "prompt": "see notes.md, section 'Final prompt'"
+  },
+  "response": { "projectId": "12849137298552292712", "sessionId": "1160210699169062467" },
+  "list_screens_last": {},
+  "fallback": "reference.html + reference.png in this folder are a hand-built render of the same prompt (not a Stitch export)."
+}

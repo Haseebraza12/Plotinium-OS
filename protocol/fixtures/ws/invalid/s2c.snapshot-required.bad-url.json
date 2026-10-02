@@ -1,0 +1,14 @@
+{
+  "frame": {
+    "v": 1,
+    "t": "snapshot.required",
+    "id": 9,
+    "body": {
+      "ownerUid": 1002,
+      "reason": "horizon",
+      "headSeq": 900,
+      "url": "https://evil.example/api/sync/snapshot?x"
+    }
+  },
+  "issue": "body.url"
+}

@@ -1,0 +1,13 @@
+{
+  "v": 1,
+  "t": "proc.signal",
+  "id": 16,
+  "body": {
+    "target": {
+      "kind": "principal",
+      "uid": 0
+    },
+    "sig": "SIGHUP",
+    "reason": "su-expired"
+  }
+}

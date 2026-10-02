@@ -1,0 +1,56 @@
+{
+  "date": "2026-09-27",
+  "note": "Google Stitch MCP calls for the logo exploration brand board. No call produced a screen that list_screens or get_screen could return, so no screenshot exists. See README.md.",
+  "attempts": [
+    {
+      "tool": "generate_screen_from_text",
+      "projectId": "12849137298552292712",
+      "designSystem": "assets/10121591451242352758",
+      "deviceType": "DESKTOP",
+      "modelId": "default",
+      "prompt": "Plotinium logo exploration: a 1440x1600 brand board with SIX concepts (Nucleus + Orbit, Orbit P, Plotted Point, Electron Path, Crystal Core, Dense Core), each as a macOS-style violet squircle app icon with a white mark, the mark at 16/24/48 px on light and dark chips, a wordmark lockup and a one-line rationale. No hazard, radiation or weapon imagery; no Apple logo; no text inside the marks.",
+      "result": "The operation timed out. Not retried, per the tool instructions."
+    },
+    {
+      "tool": "generate_screen_from_text",
+      "projectId": "12849137298552292712",
+      "designSystem": "assets/10121591451242352758",
+      "deviceType": "DESKTOP",
+      "modelId": "GEMINI_3_5_FLASH_LITE",
+      "prompt": "Six app-icon concepts in a 3x2 grid (violet gradient tiles #8E8CFF to #3B2A9E, bold white marks): nucleus inside one thick tilted orbit; a P whose round bowl is an orbit ring with a nucleus; two thick crossing orbits; a nucleus with one electron on an open ellipse; a rounded hexagon crystal with a dot; a heavy sphere with a ring in front. Names and small versions under each tile. No hazard or radiation symbols.",
+      "result": "Text only: 'I have successfully brought the Plotinium Logo Exploration — Brand Board onto the canvas ...'. sessionId 14736554431131280864. No screen id; list_screens {}."
+    },
+    {
+      "tool": "generate_screen_from_text",
+      "projectId": "12849137298552292712",
+      "designSystem": "assets/10121591451242352758",
+      "deviceType": "DESKTOP",
+      "modelId": "GEMINI_3_8_FLASH",
+      "prompt": "Brand board with the Bohr P concept first (a lowercase p whose round bowl is an electron-shell ring with a nucleus dot and an electron in a gap at 1 o'clock), then closed ring p, two crossing orbits, electron on an open ellipse, rounded hexagon crystal, heavy sphere with a ring; each as an app icon plus 16/24/48 px marks on light and dark chips.",
+      "result": "The operation timed out."
+    },
+    {
+      "tool": "generate_screen_from_text",
+      "projectId": "12849137298552292712",
+      "designSystem": null,
+      "deviceType": "DESKTOP",
+      "modelId": "GEMINI_3_5_FLASH_LITE",
+      "prompt": "Same six concepts, Bohr P described with the shell open at the 1:30 position.",
+      "result": "Text only, listing Bohr P, Open Orbit P, Crossing Orbits, Tilted Electron Path, Crystal Core, Heavy Sphere. sessionId 4051749110761977477. No screen id; list_screens {}."
+    },
+    {
+      "tool": "create_project + generate_screen_from_text",
+      "projectId": "5024907487714755157",
+      "designSystem": null,
+      "deviceType": "DESKTOP",
+      "modelId": "GEMINI_3_5_FLASH_LITE",
+      "prompt": "The full brand-board prompt (six concepts, app icon, 16/24/48 px marks on light and dark chips, lockup, names).",
+      "result": "The operation timed out. get_project later showed a generated design theme ('Developer OS Interface') but no screen and no thumbnail; list_screens {}."
+    }
+  ],
+  "reads": {
+    "list_screens": "{} on both projects in every poll",
+    "get_screen(projects/12849137298552292712/screens/14736554431131280864)": "Requested entity was not found",
+    "list_projects": "no screenInstances for either project; older projects in the account list theirs"
+  }
+}

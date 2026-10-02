@@ -1,0 +1,10 @@
+lab 8 - when does postgres use the index?
+
+table: 1,000,000 rows, orders(id, customer_id, created_at, total).
+
+- WHERE customer_id = 42 (about 20 rows): index scan, 0.08 ms.
+- WHERE created_at > now() - interval '1 day' (0.3% of rows): bitmap heap scan, 4 ms.
+- WHERE total > 10 (95% of rows): seq scan, 110 ms. forcing the index (enable_seqscan=off) made it 380 ms. the planner was right.
+- after deleting 40% of rows without vacuum the seq scan got slower (dead tuples still read). VACUUM fixed it.
+
+conclusion: selectivity decides. an index is not always faster.

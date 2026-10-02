@@ -1,0 +1,164 @@
+{
+  "reactstore": {
+    "boot": {
+      "coldMedian": 575.4000000003725,
+      "coldP90": 594.4000000003725,
+      "warmMedian": 279,
+      "warmP90": 282.30000000074506,
+      "n": 5
+    },
+    "isolation": {
+      "taskMsPerUpdate": 2.8375100000000004,
+      "scriptMsPerUpdate": 0.70308,
+      "otherWindowsRerendered": 0,
+      "tickText": "100"
+    },
+    "isolationHeavy": {
+      "taskMsPerUpdate": 3.4605099999999998,
+      "scriptMsPerUpdate": 0.7262700000000002,
+      "otherWindowsRerendered": 0,
+      "tickText": "100"
+    },
+    "dragImperative": {
+      "frames": 231,
+      "p50": 16.699999999999818,
+      "p95": 16.799999999999955,
+      "max": 16.800000000000182,
+      "over16_7": 0,
+      "loaf50": 0,
+      "moves": 200,
+      "mainMsPerFrame": 4.667359307359308,
+      "scriptMsPerFrame": 0.49119480519480513
+    },
+    "dragReactive": {
+      "frames": 292,
+      "p50": 16.699999999999818,
+      "p95": 16.700000000000728,
+      "max": 16.800000000000182,
+      "over16_7": 0,
+      "loaf50": 0,
+      "moves": 200,
+      "mainMsPerFrame": 5.537431506849315,
+      "scriptMsPerFrame": 1.2711643835616437
+    },
+    "dragImperativeLoad": {
+      "frames": 581,
+      "p50": 16.699999999999818,
+      "p95": 16.800000000000182,
+      "max": 116.80000000000018,
+      "over16_7": 14,
+      "loaf50": 3,
+      "moves": 200,
+      "mainMsPerFrame": 10.252907056798621,
+      "scriptMsPerFrame": 1.2603511187607572
+    }
+  },
+  "solid": {
+    "boot": {
+      "coldMedian": 259,
+      "coldP90": 264.30000000074506,
+      "warmMedian": 194.39999999850988,
+      "warmP90": 197.2000000011176,
+      "n": 5
+    },
+    "isolation": {
+      "taskMsPerUpdate": 1.0836400000000002,
+      "scriptMsPerUpdate": 0.02874999999999999,
+      "otherWindowsRerendered": 0,
+      "tickText": "100"
+    },
+    "isolationHeavy": {
+      "taskMsPerUpdate": 1.39532,
+      "scriptMsPerUpdate": 0.019839999999999997,
+      "otherWindowsRerendered": 0,
+      "tickText": "100"
+    },
+    "dragImperative": {
+      "frames": 208,
+      "p50": 16.699999999999818,
+      "p95": 16.799999999999727,
+      "max": 16.800000000000182,
+      "over16_7": 0,
+      "loaf50": 0,
+      "moves": 200,
+      "mainMsPerFrame": 1.9596826923076924,
+      "scriptMsPerFrame": 0.1156875
+    },
+    "dragReactive": {
+      "frames": 207,
+      "p50": 16.699999999999818,
+      "p95": 16.700000000000273,
+      "max": 16.800000000000182,
+      "over16_7": 0,
+      "loaf50": 0,
+      "moves": 200,
+      "mainMsPerFrame": 2.4755217391304347,
+      "scriptMsPerFrame": 0.2807632850241546
+    },
+    "dragImperativeLoad": {
+      "frames": 654,
+      "p50": 16.699999999999818,
+      "p95": 16.800000000000182,
+      "max": 66.69999999999982,
+      "over16_7": 21,
+      "loaf50": 4,
+      "moves": 200,
+      "mainMsPerFrame": 11.505287461773701,
+      "scriptMsPerFrame": 1.099848623853211
+    }
+  },
+  "react": {
+    "boot": {
+      "coldMedian": 547.4000000003725,
+      "coldP90": 564,
+      "warmMedian": 230.59999999962747,
+      "warmP90": 250.59999999962747,
+      "n": 5
+    },
+    "isolation": {
+      "taskMsPerUpdate": 4.02467,
+      "scriptMsPerUpdate": 1.2508299999999999,
+      "otherWindowsRerendered": 9,
+      "tickText": "100"
+    },
+    "isolationHeavy": {
+      "taskMsPerUpdate": 2.1236999999999995,
+      "scriptMsPerUpdate": 0.6359000000000001,
+      "otherWindowsRerendered": 19,
+      "tickText": "100"
+    },
+    "dragImperative": {
+      "frames": 207,
+      "p50": 16.699999999999818,
+      "p95": 16.799999999999727,
+      "max": 16.800000000000182,
+      "over16_7": 0,
+      "loaf50": 0,
+      "moves": 200,
+      "mainMsPerFrame": 2.1869613526570046,
+      "scriptMsPerFrame": 0.2281400966183575
+    },
+    "dragReactive": {
+      "frames": 211,
+      "p50": 16.699999999999818,
+      "p95": 16.700000000000273,
+      "max": 16.800000000000182,
+      "over16_7": 0,
+      "loaf50": 0,
+      "moves": 200,
+      "mainMsPerFrame": 3.8362511848341234,
+      "scriptMsPerFrame": 1.0143554502369667
+    },
+    "dragImperativeLoad": {
+      "frames": 644,
+      "p50": 16.699999999999818,
+      "p95": 16.80000000000109,
+      "max": 166.70000000000005,
+      "over16_7": 32,
+      "loaf50": 3,
+      "moves": 200,
+      "mainMsPerFrame": 11.730378881987576,
+      "scriptMsPerFrame": 1.8516118012422358
+    }
+  }
+}

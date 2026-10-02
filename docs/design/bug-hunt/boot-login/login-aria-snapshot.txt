@@ -1,0 +1,20 @@
+- main "Sign in to Plotinium":
+  - paragraph: Sunday, 27 September
+  - time: "0 9 : 5 5"
+  - radiogroup "Choose user":
+    - radio "demo" [checked]: D demo
+    - radio "alice": A alice
+    - radio "bob": B bob
+    - radio "Guest, no password": Guest
+  - form "Sign in as demo":
+    - textbox "Password for demo":
+      - /placeholder: Enter password
+    - button "Show password"
+    - button "Sign in" [disabled]
+    - paragraph: Press Enter to sign in
+  - navigation "Power":
+    - button "Sleep"
+    - button "Restart"
+    - button "Shut Down"
+  - img "Plotinium"
+  - text: Plotinium 0.1.0-dev.0 build 0000000

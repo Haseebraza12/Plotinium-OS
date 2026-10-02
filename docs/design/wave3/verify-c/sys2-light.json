@@ -1,0 +1,24 @@
+{
+  "cc": {
+    "count": 1,
+    "disabled": false,
+    "before": "256",
+    "after": "320",
+    "menubar": "256 KB/320 MB",
+    "restored": "256 KB/256 MB"
+  },
+  "search": ["vc-muoaakqi.ts~/Projects/vc-muoaakqi.tsEdited 30 Sep"],
+  "edLock": " | edited · synced | ",
+  "edSave1": " | saved v3 · syncing… | ",
+  "edBanner1": "",
+  "edSave2": " | saved v4 · syncing… | ",
+  "edBanner2": "",
+  "tmAi": "Task Manager | Processes | Memory | Scheduler | AI | Semantic indexer | Up to date | Chunks indexed | 3 of 3 chunks | Pending | 0 chunks | Rate | 0 chunks/s | Process | ai.indexer pid 14 · priority 32 | Model | MongoDB/mdbr-leaf-ir@4262131b-q8-d384-chunker-v1 | Runs in the background band and yields while you type or drag. | Agent budget | Connected | The server has not reported this month’s budget yet. It shows here once the agent gateway answers. | Provider | Plotinium server (LLM proxy) | Requests today | 0 | Confirmation | Asks before deletes, overwrites, permission changes, system paths and plans over 20 files | Privacy & AI settings… | Audit log | All | Agent | User | System | Open Ter",
+  "setAi": "SEMANTIC SEARCH | Embedding model | MongoDB/mdbr-leaf-ir@4262131b-q8-d384-chunker-v1 | (ready · 23 MB) | On-device | Index status | All 3 chunks indexed | Rebuild index | 3 of 3 chunks indexed · ai.indexer pid 14 · priority 32 | Rebuilding the index from Settings is not available in this build. | AI AGENT | Provider | Plotinium server (LLM proxy) | Connected | Monthly budget | The server has not reported this month’s budget yet. | Not reported | Require confirmation for all changes | The kernel always asks before deletes, overwrites, permission changes, system paths and plans that touch more than 20 files. A stricter setting is not available in this build. | No agent actions yet | Open ai lo",
+  "semsearch": "~/Projects/vc-sched-muoaakqi.txt:1-1  0.38  Round robin scheduling gives every runna\nble process a fixed quantum; aging raises the priority of waiting processes so none \nstarves.\n~/.sh_history:1-8  0.22  svcctl status clear; whoami; id; uname -a bootlog --list cl\near; svcctl status ps -ef ps -o pid,ppid,uid,pri,ni,stat,cmd -e mkdir -p ~/Projects;\n echo \"export const answer = 41;\" > ~/Projects/vc-muoaakqi.ts echo \"Round robin sche\nduling gives…\n~/Projects/vc-muoaakqi.ts:1-2  0.18  export const answer = 41; // one // two\nexaminer2@plotinium:~$",
+  "menubar": "Terminal | Shell | Edit | View | Window | Help | AI | 768 KB/256 MB | Wed 30 Sep | 20:54 | Sync: Online, all changes synced",
+  "csp": [],
+  "errors": [],
+  "warnings": [],
+  "failed": []
+}

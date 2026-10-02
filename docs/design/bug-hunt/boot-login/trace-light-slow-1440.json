@@ -1,0 +1,33 @@
+{
+  "console": [],
+  "pageErrors": [],
+  "failed": [],
+  "msToLogin": 103722,
+  "trace": [
+    "210ms 0 | Checking system | checking system |  |  |  | ",
+    "755ms 0 | Checking system | Loading kernel |  |  |  | ",
+    "955ms 0 | Loading kernel · 1 of 564 KB | Loading kernel · 1 of 564 KB |  |  |  | ",
+    "1737ms 7 | Loading kernel · 129 of 564 KB | Loading kernel · 129 of 564 KB |  |  |  | ",
+    "2421ms 13 | Loading kernel · 257 of 564 KB | Loading kernel · 257 of 564 KB |  |  |  | ",
+    "3104ms 19 | Loading kernel · 385 of 564 KB | Loading kernel · 385 of 564 KB |  |  |  | ",
+    "3788ms 26 | Loading kernel · 513 of 564 KB | Loading kernel · 513 of 564 KB |  |  |  | ",
+    "4054ms 29 | Starting kernel | Starting kernel |  |  |  | ",
+    "13091ms 43 | wm: waiting for the compositor, 2 of 9 | wm: waiting for the compositor | Service start · 2 of 9 |  |  | ",
+    "13109ms 54 | vfs: mounting /, 3 of 9 | vfs: mounting / | Service start · 3 of 9 |  |  | ",
+    "13586ms  |  |  |  |  |  | "
+  ],
+  "shots": [
+    "splash-t0-light-slow-1440.png",
+    "splash-t1-light-slow-1440.png",
+    "splash-t2-light-slow-1440.png",
+    "splash-t3-light-slow-1440.png",
+    "splash-t4-light-slow-1440.png",
+    "splash-t5-light-slow-1440.png"
+  ],
+  "bootRootLeft": {
+    "plb": 1,
+    "bootRoot": true,
+    "status": null
+  },
+  "marks": []
+}

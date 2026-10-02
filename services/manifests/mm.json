@@ -1,0 +1,11 @@
+{
+  "name": "mm",
+  "description": "Budget loaded; LRU ready; swap device probed; tmp sweep done",
+  "requires": ["sched", "storage"],
+  "critical": true,
+  "weight": 2,
+  "timeoutMs": 2000,
+  "priority": 2,
+  "safeMode": true,
+  "runsIn": "kernel+blkio"
+}

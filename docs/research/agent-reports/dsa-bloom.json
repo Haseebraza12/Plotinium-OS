@@ -1,0 +1,38 @@
+{
+ "files_changed": [
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/src/bloom/index.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/src/bloom/README.md"
+ ],
+ "verification": [
+  {
+   "command": "pnpm exec tsc -p dsa/tsconfig.json --noEmit",
+   "outcome": "Passed (exit 0)."
+  },
+  {
+   "command": "pnpm exec vitest run --project dsa dsa/tests/bloom.test.ts dsa/tests/bloom.prop.test.ts dsa/tests/scaffold.test.ts",
+   "outcome": "Passed: 3 files. All 9 bloom tests pass (7 edge-case, 2 property). The scaffold file's skipped count only reflects other structures whose flags have also flipped. Final run: 13 passed, 7 skipped."
+  },
+  {
+   "command": "PLT_PROP_RUNS=10000 PLT_BLOOM_TRIALS=1000000 pnpm exec vitest run --project dsa dsa/tests/bloom.test.ts dsa/tests/bloom.prop.test.ts dsa/tests/scaffold.test.ts",
+   "outcome": "Passed at the nightly settings: 10,000 fast-check runs, and 10^6 false-positive probes inside the 0.6\u20131.05% band."
+  },
+  {
+   "command": "PLT_BENCH_OUT=<scratchpad> pnpm exec vitest bench --run --project 'dsa (bench)' dsa/bench/bloom.bench.ts (run 3 times)",
+   "outcome": "Passed all 3 runs (2 of 2 tests each). The shape ratio stayed within the limit of 2, and bytes per key allocated were at most 1.25 + 4/n. Note: '--project dsa' is refused for bench; the bench project is named 'dsa (bench)'."
+  },
+  {
+   "command": "pnpm exec eslint dsa/src/bloom dsa/tests dsa/bench --max-warnings 0",
+   "outcome": "Passed (exit 0) after one fix: two restrict-template-expressions errors about the type `never`, fixed by reading bitsPerKey and k as unknown."
+  }
+ ],
+ "benchmark": "Measured on the dev machine (AMD Ryzen 5 7530U, Node v24.13.1, runner 'dev', seed 42, batch 1,000, about 2,400\u20133,600 samples per point). Load average was about 5 because other agents were running at the same time. Re-run on the lab machine before the final defence.\n\nRepresentative run, mean / p50 / p95 in ns per op:\n- add: 10^3 79.0 / 70.5 / 113.5; 10^4 87.5 / 78.1 / 120.5; 10^5 84.3 / 79.7 / 113.3. Ratio 1.07.\n- mayContain (50% members): 10^3 71.0 / 68.2 / 91.4; 10^4 75.9 / 74.0 / 91.8; 10^5 85.3 / 80.3 / 128.8. Ratio 1.20.\n\nAcross 3 runs, the add ratio was 1.07\u20131.35 and the mayContain ratio 0.86\u20131.44 (limit 2). Every mean was 70\u2013102 ns (target 200 ns or less). The curve is flat, as O(k) = O(1) predicts; the small rise from 10^3 to 10^5 comes from cache (the bit array grows from 1.25 KB to 125 KB).\n\nMemory (bytes per key):\n- Allocated: 1.252 at 10^3, 1.250 at 10^4 and 1.250 at 10^5.\n- Measured with --expose-gc: 13.3, 1.78 and 1.257. At 10^3 the fixed object overhead of about 12 KB dominates.\n\nMeasured false-positive rate at nDesign = 16,384: 0.907% with 10^5 probes and 0.845% with 10^6 (expected 0.819%). At 10^3, 10^4 and 10^5 keys it was 0.79\u20130.85%. Bit fill was 0.504, against 0.503 in theory.\n\nReplacing `%` with an exact floor-division modulo (modU32) cut add by about 25% (roughly 80 ns down to 60 ns in a tight loop). Its exactness is proven in comments and a 5\u00b710^6-value check against `%` found no mismatch.",
+ "problems": [
+  "I left AI_USAGE.md (lines 9 and 26) unchanged because it is outside my allowed files. Those lines still say that the team writes the dsa/ Bloom filter, which contradicts the 2026-09-25 decision that Claude writes it. The orchestrator or team needs to add the disclosure entry. The README's DSA.md template has a <link> placeholder for it.",
+  "I also left DSA.md unchanged. Row 27 still says 'interface + tests; not implemented', and the S8 section needs the filled entry from dsa/src/bloom/README.md copied in, including the PR number placeholder.",
+  "The contract README asks the first structure to flip to add 'dsa' to GATED_PACKAGES in vitest.config.ts, and to commit a benchmark JSON run under docs/evidence/dsa. Both are root or shared paths I was told not to touch, so neither is done. The JSON lines from my dev runs are only in the scratchpad (/tmp/claude-1000/.../scratchpad/bench1..3/bloom/*.jsonl).",
+  "The benchmark command in the task (`vitest bench --run --project dsa`) fails with a Vitest startup error. The command that works is `--project 'dsa (bench)'`, and I used it.",
+  "Two additions go beyond the spec text; both are documented in the README. First, nDesign above floor(2^32/10) = 429,496,729 throws RANGE, so that m stays at or below 2^32 and bit positions fit a u32. Second, a caller that bypasses the types with bitsPerKey other than 10 or k other than 7 gets RANGE. checkInvariants() also checks popcount <= k\u00b7count, labelled BF2.",
+  "The benchmark numbers are noisy because other agents were running tests in parallel (load average about 5 on 12 threads). They must be re-run on the lab machine."
+ ],
+ "test_changes": "None. I did not modify any test or benchmark file: dsa/tests/bloom.test.ts, dsa/tests/bloom.prop.test.ts and dsa/bench/bloom.bench.ts pass as written."
+}

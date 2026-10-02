@@ -1,0 +1,56 @@
+{
+  "id": "AGT40-G02",
+  "category": "glob",
+  "tags": [],
+  "user": "alice",
+  "cwd": "/home/alice",
+  "now": "2026-10-05T10:00:00+05:00",
+  "tz": "Asia/Karachi",
+  "fixture": "fx-agt@v1",
+  "prompt": "delete every file in Downloads matching invoice-00?.pdf",
+  "expect": {
+    "kind": "plan",
+    "ops": [
+      ["unlink", "/home/alice/Downloads/invoice-001.pdf"],
+      ["unlink", "/home/alice/Downloads/invoice-002.pdf"],
+      ["unlink", "/home/alice/Downloads/invoice-003.pdf"]
+    ],
+    "confirm": true
+  },
+  "reference": {
+    "tool": "submit_plan",
+    "input": {
+      "summary": "plan",
+      "steps": [
+        {
+          "id": "s1",
+          "span": "every file in Downloads matching invoice-00?.pdf",
+          "op": {
+            "call": "glob",
+            "args": {
+              "path": "~/Downloads",
+              "name": "invoice-00?.pdf"
+            }
+          },
+          "sources": null
+        },
+        {
+          "id": "s2",
+          "span": "delete every file in Downloads matching invoice-00?.pdf",
+          "op": {
+            "call": "unlink",
+            "args": {
+              "path": "~/Downloads",
+              "recursive": false
+            }
+          },
+          "sources": {
+            "ref": "s1"
+          }
+        }
+      ],
+      "assumptions": [],
+      "suspicious_content_seen": false
+    }
+  }
+}

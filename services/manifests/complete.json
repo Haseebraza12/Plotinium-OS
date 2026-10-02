@@ -1,0 +1,12 @@
+{
+  "name": "complete",
+  "description": "Completion trie process running with cmd, flag and hist namespaces loaded",
+  "requires": ["vfs", "desktop"],
+  "critical": false,
+  "weight": 1,
+  "timeoutMs": 10000,
+  "priority": 36,
+  "safeMode": true,
+  "runsIn": "executor",
+  "caps": ["fs.read", "mem"]
+}

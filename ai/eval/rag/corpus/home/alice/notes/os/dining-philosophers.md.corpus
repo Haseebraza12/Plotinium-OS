@@ -1,0 +1,13 @@
+# Dining philosophers
+
+Five philosophers, five forks, each needs both neighbouring forks to eat. If everyone picks up the left fork at once, nobody can get the right one: a cycle, i.e. deadlock.
+
+Solutions:
+1. **Resource ordering:** number the forks; always pick up the lower number first. The last philosopher picks right then left, which breaks the cycle.
+2. **Waiter / arbitrator:** at most four philosophers may try at once (a counting semaphore initialised to 4).
+3. **Chandy/Misra:** forks are dirty or clean and passed on request; works for any number and any graph.
+4. **Pick up both or neither:** check both under a monitor, wait on a condition otherwise (Tanenbaum's solution with states THINKING, HUNGRY, EATING).
+
+Starvation is a separate issue: a solution can be deadlock-free and still let one philosopher starve if the neighbours alternate perfectly.
+
+labs/dining.py has my ordering version with random think and eat times; it ran 10 minutes without getting stuck.

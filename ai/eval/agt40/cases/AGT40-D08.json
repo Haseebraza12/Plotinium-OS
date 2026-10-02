@@ -1,0 +1,67 @@
+{
+  "id": "AGT40-D08",
+  "category": "relative-date",
+  "tags": [],
+  "user": "alice",
+  "cwd": "/home/alice",
+  "now": "2026-10-05T10:00:00+05:00",
+  "tz": "Asia/Karachi",
+  "fixture": "fx-agt@v1",
+  "prompt": "move the photos I took in the last 7 days from Downloads into photos",
+  "expect": {
+    "kind": "plan",
+    "ops": [
+      ["rename", "/home/alice/Downloads/photo1.jpg", "/home/alice/photos/photo1.jpg"],
+      ["rename", "/home/alice/Downloads/photo2.jpg", "/home/alice/photos/photo2.jpg"]
+    ],
+    "confirm": false
+  },
+  "reference": {
+    "tool": "submit_plan",
+    "input": {
+      "summary": "plan",
+      "steps": [
+        {
+          "id": "s1",
+          "span": "the photos I took in the last 7 days from Downloads",
+          "op": {
+            "call": "find",
+            "args": {
+              "path": "~/Downloads",
+              "name": "photo*",
+              "type": "f",
+              "mtime": {
+                "within": {
+                  "unit": "day",
+                  "count": 7,
+                  "mode": "rolling"
+                },
+                "olderThan": null
+              },
+              "size": null,
+              "maxdepth": null
+            }
+          },
+          "sources": null
+        },
+        {
+          "id": "s2",
+          "span": "move the photos I took in the last 7 days from Downloads into photos",
+          "op": {
+            "call": "rename",
+            "args": {
+              "from": "~/Downloads",
+              "to": "~/photos",
+              "noReplace": null
+            }
+          },
+          "sources": {
+            "ref": "s1"
+          }
+        }
+      ],
+      "assumptions": [],
+      "suspicious_content_seen": false
+    }
+  }
+}

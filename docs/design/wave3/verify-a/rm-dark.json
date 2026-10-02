@@ -1,0 +1,26 @@
+[
+  {
+    "id": "RM open: no scale/opacity animation under reduced motion",
+    "ok": true,
+    "detail": ["none|1"]
+  },
+  {
+    "id": "RM minimise: no genie/scale frames",
+    "ok": true,
+    "detail": ["none|1"]
+  },
+  {
+    "id": "RM Dock magnification off",
+    "ok": true,
+    "detail": []
+  },
+  {
+    "id": "RM snap preview appears without a fade",
+    "ok": true,
+    "detail": {
+      "vis": "true",
+      "op": "1",
+      "tr": "0s"
+    }
+  }
+]

@@ -1,0 +1,9 @@
+# Weekly sync — 16 Oct 2026
+
+- The Week-6 checkpoint demo happened on Wednesday and did not go well (cold boot 9 s on the projector laptop, the terminal froze once). Alice is writing up what went wrong; we'll go through it next week.
+- Bob fixed the sluggish desktop issue (see his write-up). Soak test now stays flat for 3 hours.
+- Dan: memory manager evicts declared pages in LRU order.
+- Carol: rename conflicts produce a conflicted copy; tests pass.
+- Esha: nightly performance job on the lab runner.
+
+Decision: no new features until boot time is back under 3 s.

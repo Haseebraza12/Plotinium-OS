@@ -1,0 +1,76 @@
+{
+  "id": "AGT40-D07",
+  "category": "relative-date",
+  "tags": ["needs-observation"],
+  "user": "alice",
+  "cwd": "/home/alice",
+  "now": "2026-10-05T10:00:00+05:00",
+  "tz": "Asia/Karachi",
+  "fixture": "fx-agt@v1",
+  "prompt": "delete the log files in src older than two weeks",
+  "expect": {
+    "kind": "plan",
+    "ops": [["unlink", "/home/alice/src/build.log"]],
+    "confirm": true
+  },
+  "reference": {
+    "observe": [
+      {
+        "name": "fs_find",
+        "input": {
+          "path": "~/src",
+          "name": "*.log",
+          "type": "f",
+          "mtime": null,
+          "size": null,
+          "maxdepth": null
+        }
+      }
+    ],
+    "tool": "submit_plan",
+    "input": {
+      "summary": "plan",
+      "steps": [
+        {
+          "id": "s1",
+          "span": "the log files in src older than two weeks",
+          "op": {
+            "call": "find",
+            "args": {
+              "path": "~/src",
+              "name": "*.log",
+              "type": "f",
+              "mtime": {
+                "within": null,
+                "olderThan": {
+                  "unit": "week",
+                  "count": 2,
+                  "mode": "rolling"
+                }
+              },
+              "size": null,
+              "maxdepth": null
+            }
+          },
+          "sources": null
+        },
+        {
+          "id": "s2",
+          "span": "delete the log files in src older than two weeks",
+          "op": {
+            "call": "unlink",
+            "args": {
+              "path": "~/src",
+              "recursive": false
+            }
+          },
+          "sources": {
+            "ref": "s1"
+          }
+        }
+      ],
+      "assumptions": [],
+      "suspicious_content_seen": false
+    }
+  }
+}

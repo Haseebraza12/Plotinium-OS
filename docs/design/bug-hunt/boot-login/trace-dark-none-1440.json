@@ -1,0 +1,24 @@
+{
+  "console": [],
+  "pageErrors": [],
+  "failed": ["401 GET /api/auth/me"],
+  "msToLogin": 1465,
+  "trace": [
+    "40ms 0 | Checking system | checking system |  |  |  | ",
+    "61ms 0 | Checking system | Loading kernel |  |  |  | ",
+    "105ms 29 | Starting kernel | Starting kernel |  |  |  | ",
+    "220ms 37 | sched: starting executor 1, 1 of 9 | sched: starting executor 1 | Service start · 1 of 9 |  |  | ",
+    "248ms 54 | vfs: mounting /, 3 of 9 | vfs: mounting / | Service start · 3 of 9 |  |  | ",
+    "283ms 69 | login: checking the saved session, 4 of 9 | login: checking the saved session | Service start · 4 of 9 |  |  | ",
+    "299ms 71 | mm: loading the memory budget, 5 of 9 | mm: loading the memory budget | Service start · 5 of 9 |  |  | ",
+    "604ms 77 | login: waiting for the user, 6 of 9 | login: waiting for the user | Service start · 6 of 9 | LOGIN |  | desktop",
+    "1038ms  |  |  |  | LOGIN |  | "
+  ],
+  "shots": ["splash-t0-dark-none-1440.png"],
+  "bootRootLeft": {
+    "plb": 0,
+    "bootRoot": false,
+    "status": null
+  },
+  "marks": []
+}

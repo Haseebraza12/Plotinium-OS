@@ -1,0 +1,46 @@
+{
+ "files_changed": [
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/src/hashtable/index.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/src/hashtable/README.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/tests/hashtable.test.ts"
+ ],
+ "verification": [
+  {
+   "command": "pnpm exec tsc -p dsa/tsconfig.json --noEmit",
+   "outcome": "PASS: exit 0, no errors."
+  },
+  {
+   "command": "pnpm exec vitest run --project dsa dsa/tests/hashtable.test.ts dsa/tests/hashtable.prop.test.ts",
+   "outcome": "PASS: 2 files, 19/19 tests. That is the 14 spec \u00a78.7 edge cases, 3 added tests and 2 property tests: the fast-check differential test against Map (1,000 runs x up to 200 ops, HT1-HT5 checked after every op) and the seeded 200,000-op run. Also passes with PLT_PROP_RUNS=10000 (3.1 s)."
+  },
+  {
+   "command": "pnpm exec vitest run --project dsa (whole package)",
+   "outcome": "PASS: 17 files, 127 passed, 55 skipped (the skips are other structures that are still unimplemented). scaffold.test.ts turns its hashtable row off automatically."
+  },
+  {
+   "command": "pnpm exec vitest bench --run --project 'dsa (bench)' dsa/bench/hashtable.bench.ts",
+   "outcome": "PASS: 2/2 benchmarks, including the shape assertion t(1e5)/t(1e3) <= 2 and allocated bytes/entry <= 48. Note: the project name is 'dsa (bench)'; '--project dsa' finds no bench project."
+  },
+  {
+   "command": "pnpm exec eslint dsa/src/hashtable dsa/tests dsa/bench --max-warnings 0",
+   "outcome": "PASS: exit 0."
+  },
+  {
+   "command": "Mutation check: changed >= to > in the backward-shift condition, ran the tests, then restored the file",
+   "outcome": "Caught: 4 tests failed (both property tests, the cluster head/middle/tail test and the wrap-around test). The file was restored and the tests are green again."
+  },
+  {
+   "command": "vitest --coverage limited to dsa/src/hashtable/index.ts",
+   "outcome": "97.0% lines, 95.5% statements, 86.1% branches, 100% functions. Uncovered: the HT2-HT5 failure branches, which the single spec-defined corruption 'probe-hole' cannot reach, and the debugCorrupt guard. Above the 85% dsa gate."
+  }
+ ],
+ "benchmark": "Dev machine: AMD Ryzen 5 7530U, Node v24.13.1, seed 42, run while other agents were loading the machine. The README says these numbers must be re-run on the lab machine. Each figure is the median of 3 harness runs, workload 50% get / 25% set / 25% delete.\n\nMean ns/op for n = 1e3 / 1e4 / 1e5:\n- Table, sequential keys: 61.5 / 81.3 / 65.4. Map: 68.5 / 73.6 / 60.9.\n- Table, random keys: 61.5 / 64.5 / 62.0. Map: 66.0 / 73.6 / 66.9.\n\nShape ratio t(1e5)/t(1e3) (limit 2): the curve is flat, as expected for O(1).\n- Sequential: 1.17, 1.11 and 0.73 across the three runs.\n- Random: 1.01, 0.99 and 0.98.\n\nBudgets:\n- Mean <= 0.3 us: passes in every cell.\n- Not more than 1.5x slower than Map: 0.7-1.4x in 2 of 3 runs. One noisy run had a mean ratio of up to 2.3x on random keys while its p50 equalled Map's. This budget is soft and not asserted.\n\nTight-loop cross-check without the harness (1e6 ops, best of 7):\n- Table 17.6-45.5 ns/op against Map 25.4-82.4 ns/op, so the table takes 0.55-0.83x as long as Map.\n- The rise at 1e5 on random keys comes from cache misses (the table is 3 MB), not from the algorithm. Map rises more (2.9x).\n\nMeasured mean probe lengths on random keys: 1.419 / 1.213 / 1.308 at load 0.488 / 0.305 / 0.381. Knuth's formula 1/2(1 + 1/(1-a)) predicts 1.48 / 1.22 / 1.31. Sequential pids: max probe 2.\n\nBytes per entry, excluding values (limit 48), at 1e3 / 1e4 / 1e5:\n- Measured with --expose-gc: 24.97 / 40.69 / 31.47.\n- Allocated: 24.58 / 39.32 / 31.46.\n- Used: 12.00.\n\nThe full tables and a filled-in DSA.md entry template are in dsa/src/hashtable/README.md.",
+ "test_changes": "No existing test was changed or weakened. I added 3 tests at the end of dsa/tests/hashtable.test.ts, one for each behaviour the implementation adds beyond the spec's list:\n(1) 'DSA-HASH-01 inserting or deleting during forEach or keys() throws INVALID but replacing a value does not'. Iteration is fail-fast, because a backward shift or a resize during a walk would skip or repeat keys.\n(2) 'DSA-HASH-01 an undefined value and an unbounded initial capacity are rejected'. set(k, undefined) throws INVALID because undefined marks an empty slot (HT5); an initialCapacity of 2^31, Infinity or NaN throws RANGE.\n(3) 'DSA-GEN-09 stats reports 12 bytes per slot and capacity/2 entries before growth'.",
+ "problems": [
+  "The user asked where the boot screen, logo and other UI are. That request is outside this subagent's scope: this subagent implemented only the S6 hash table in dsa/. The boot screen, logo and desktop UI must come from other agents or the orchestrator.",
+  "Design decisions the R1 owner must know for the viva, all documented in index.ts and the README. (a) forEach and keys() are fail-fast: an insert, delete or clear during a walk throws DsaError INVALID, while replacing a value is allowed. Kernel code that reaps processes must collect the pids first. (b) set(k, undefined) throws INVALID. (c) initialCapacity above 2^30, NaN or Infinity throws RANGE. (d) stats().capacity reports cap/2, the number of entries that fit before growing (the DsaStats definition), while the .capacity getter reports slots. (e) clear() keeps the current capacity.",
+  "Not done because it is outside the allowed files. dsa is not yet in GATED_PACKAGES in /home/haseeb-raza/Desktop/Plotinium OS/vitest.config.ts: the README checklist says the first structure to flip adds it. AI_USAGE.md and DSA.md are also not updated; the filled-in DSA.md entry is ready to copy from dsa/src/hashtable/README.md. No benchmark JSON was committed to docs/evidence/dsa: the runs went to the scratchpad only.",
+  "The DSA.md 'Written by' field still has an '<owner name>' placeholder for R1 and a 'PR #...' placeholder.",
+  "The benchmark timings are noisy because many agents were running on the same machine; the Map-ratio soft budget passed in 2 of 3 runs. The numbers must be re-run on the lab machine (PLT_BENCH_RUNNER=lab)."
+ ]
+}

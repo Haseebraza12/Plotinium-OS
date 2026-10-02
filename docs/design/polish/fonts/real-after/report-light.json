@@ -1,0 +1,131 @@
+{
+  "login-light@1x": {
+    "fonts": {
+      "loaded": ["Inter Variable|U+0-FF, U+131,", "Geist Mono Variable|U+0-FF, U+131,"],
+      "uiOk": true,
+      "monoOk": true
+    },
+    "woff": [
+      {
+        "name": "inter-latin-opsz-normal-BwkfbSeq.woff2",
+        "start": 186,
+        "end": 201,
+        "initiator": "css",
+        "size": 73220
+      },
+      {
+        "name": "geist-mono-latin-wght-normal-XN7g48iV.woff2",
+        "start": 190,
+        "end": 201,
+        "initiator": "css",
+        "size": 23428
+      }
+    ],
+    "logs": []
+  },
+  "login-light@2x": {
+    "fonts": {
+      "loaded": ["Inter Variable|U+0-FF, U+131,", "Geist Mono Variable|U+0-FF, U+131,"],
+      "uiOk": true,
+      "monoOk": true
+    },
+    "woff": [
+      {
+        "name": "inter-latin-opsz-normal-BwkfbSeq.woff2",
+        "start": 244,
+        "end": 275,
+        "initiator": "css",
+        "size": 73220
+      },
+      {
+        "name": "geist-mono-latin-wght-normal-XN7g48iV.woff2",
+        "start": 259,
+        "end": 275,
+        "initiator": "css",
+        "size": 23428
+      }
+    ],
+    "logs": []
+  },
+  "desktop-light": {
+    "fonts": {
+      "loaded": [
+        "Inter Variable|U+0-FF, U+131,",
+        "Geist Mono Variable|U+0-FF, U+131,",
+        "Geist Mono Variable|U+2000-2001, U"
+      ],
+      "uiOk": true,
+      "monoOk": true
+    },
+    "woff": [
+      {
+        "name": "inter-latin-opsz-normal-BwkfbSeq.woff2",
+        "start": 189,
+        "end": 201,
+        "initiator": "css",
+        "size": 73220
+      },
+      {
+        "name": "geist-mono-latin-wght-normal-XN7g48iV.woff2",
+        "start": 192,
+        "end": 201,
+        "initiator": "css",
+        "size": 23428
+      },
+      {
+        "name": "geist-mono-symbols2-wght-normal-CO5SzqOn.woff2",
+        "start": 7255,
+        "end": 7259,
+        "initiator": "css",
+        "size": 6112
+      }
+    ],
+    "term": {
+      "family": "\"Geist Mono Variable\", \"Geist Mono\", ui-monospace, \"Cascadia Mono\", Consolas, \"DejaVu Sans Mono\", monospace",
+      "size": "14px",
+      "rowHeight": "21px",
+      "text": [
+        "Plotinium 0.1.0-dev.0 shell — type 'man <command>'",
+        "u1200@plotinium:~$ tree -L 1 /",
+        "/",
+        "├── bin",
+        "├── home",
+        "├── lost+found",
+        "├── mnt",
+        "├── root",
+        "├── system",
+        "├── tmp",
+        "└── usr",
+        ""
+      ]
+    },
+    "editor": {
+      "family": "\"Geist Mono Variable\", \"Geist Mono\", ui-monospace, \"Cascadia Mono\", Consolas, \"DejaVu Sans Mono\", monospace",
+      "display": "flex",
+      "lineHeight": "20.8px"
+    },
+    "logs": [
+      "warning: Unable to determine content-length from response headers. Will expand buffer when needed.",
+      "error: Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-N4O1jjcc+piUlNHPA2COwiugu9OEo2htOz0DtF5s21A=''. Either the 'unsafe-inline' keyword, a hash ('sh",
+      "error: Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-N4O1jjcc+piUlNHPA2COwiugu9OEo2htOz0DtF5s21A=''. Either the 'unsafe-inline' keyword, a hash ('sh",
+      "error: Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-N4O1jjcc+piUlNHPA2COwiugu9OEo2htOz0DtF5s21A=''. Either the 'unsafe-inline' keyword, a hash ('sh",
+      "error: Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-N4O1jjcc+piUlNHPA2COwiugu9OEo2htOz0DtF5s21A=''. Either the 'unsafe-inline' keyword, a hash ('sh",
+      "error: Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-N4O1jjcc+piUlNHPA2COwiugu9OEo2htOz0DtF5s21A=''. Either the 'unsafe-inline' keyword, a hash ('sh",
+      "error: Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-N4O1jjcc+piUlNHPA2COwiugu9OEo2htOz0DtF5s21A=''. Either the 'unsafe-inline' keyword, a hash ('sh",
+      "error: Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-N4O1jjcc+piUlNHPA2COwiugu9OEo2htOz0DtF5s21A=''. Either the 'unsafe-inline' keyword, a hash ('sh",
+      "error: Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-N4O1jjcc+piUlNHPA2COwiugu9OEo2htOz0DtF5s21A=''. Either the 'unsafe-inline' keyword, a hash ('sh",
+      "error: Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-N4O1jjcc+piUlNHPA2COwiugu9OEo2htOz0DtF5s21A=''. Either the 'unsafe-inline' keyword, a hash ('sh",
+      "error: Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-N4O1jjcc+piUlNHPA2COwiugu9OEo2htOz0DtF5s21A=''. Either the 'unsafe-inline' keyword, a hash ('sh",
+      "error: Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-N4O1jjcc+piUlNHPA2COwiugu9OEo2htOz0DtF5s21A=''. Either the 'unsafe-inline' keyword, a hash ('sh",
+      "error: Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-N4O1jjcc+piUlNHPA2COwiugu9OEo2htOz0DtF5s21A=''. Either the 'unsafe-inline' keyword, a hash ('sh",
+      "error: Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-N4O1jjcc+piUlNHPA2COwiugu9OEo2htOz0DtF5s21A=''. Either the 'unsafe-inline' keyword, a hash ('sh",
+      "error: Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-N4O1jjcc+piUlNHPA2COwiugu9OEo2htOz0DtF5s21A=''. Either the 'unsafe-inline' keyword, a hash ('sh",
+      "error: Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-N4O1jjcc+piUlNHPA2COwiugu9OEo2htOz0DtF5s21A=''. Either the 'unsafe-inline' keyword, a hash ('sh",
+      "error: Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-N4O1jjcc+piUlNHPA2COwiugu9OEo2htOz0DtF5s21A=''. Either the 'unsafe-inline' keyword, a hash ('sh",
+      "error: Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-N4O1jjcc+piUlNHPA2COwiugu9OEo2htOz0DtF5s21A=''. Either the 'unsafe-inline' keyword, a hash ('sh",
+      "error: Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-N4O1jjcc+piUlNHPA2COwiugu9OEo2htOz0DtF5s21A=''. Either the 'unsafe-inline' keyword, a hash ('sh",
+      "error: Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-N4O1jjcc+piUlNHPA2COwiugu9OEo2htOz0DtF5s21A=''. Either the 'unsafe-inline' keyword, a hash ('sh",
+      "error: Applying inline style violates the following Content Security Policy directive 'style-src 'self' 'sha256-N4O1jjcc+piUlNHPA2COwiugu9OEo2htOz0DtF5s21A=''. Either the 'unsafe-inline' keyword, a hash ('sh"
+    ]
+  }
+}

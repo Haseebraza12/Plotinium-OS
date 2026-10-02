@@ -1,0 +1,147 @@
+[
+  {
+    "id": "UI-028 atom menu has Log Out <user>…",
+    "ok": true,
+    "detail": [
+      "About Plotinium",
+      "Settings…",
+      "Lock Screen",
+      "Log Out examiner1…",
+      "Restart…",
+      "Shut Down…"
+    ]
+  },
+  {
+    "id": "UI-028 Log Out asks for confirmation",
+    "ok": true,
+    "detail": [
+      " :: Log out examiner1?Your windows are saved and restored at the next sign-in.CancelLog Out"
+    ]
+  },
+  {
+    "id": "UI-086 desktop app menu has no dead \"Quit Plotinium\"",
+    "ok": true,
+    "detail": ["About Plotinium", "Settings…"]
+  },
+  {
+    "id": "UI-076 About Files is not About Plotinium",
+    "ok": true,
+    "detail": [
+      " :: FilesVersion 0.1.0-dev.0 · build 5c9f63aA system app of Plotinium, built with it.OK"
+    ]
+  },
+  {
+    "id": "UI-086 Quit item names what it does",
+    "ok": true,
+    "detail": ["Quit Files"]
+  },
+  {
+    "id": "UI-077 \"<App> Help\" opens something",
+    "ok": true,
+    "detail": {
+      "hm": ["Files Help", "Keyboard Shortcuts"],
+      "fh": [
+        " :: Files HelpFiles's commands are in its menus in the menu bar; these are their keyboard shortcuts.FileNew FolderCtrl Shift NCtrl+Shift+NOpenCtrl OCtrl+OGet InfoAlt EnterAlt+EnterMove to TrashDeleteDelet"
+      ]
+    }
+  },
+  {
+    "id": "UI-077 Keyboard Shortcuts opens a shortcuts sheet",
+    "ok": true,
+    "detail": [
+      " :: Keyboard ShortcutsThese keys work everywhere on the desktop.WindowsSwitch to the next windowAlt `Alt+`Switch to the "
+    ]
+  },
+  {
+    "id": "UI-077 AI chip opens Settings at Privacy & AI",
+    "ok": false,
+    "detail": ""
+  },
+  {
+    "id": "UI-084 Dock Trash shows the Trash (empty, no ENOENT)",
+    "ok": true,
+    "detail": [
+      "TrashFavouritesHomeLocationsTrashTemporaryRoot0 bytes of 1 GBTrash/homeexaminer1.Trash/homeexaminer1.Trash…IconsListSemanticNameDate ModifiedSizeKindPermissionsThis folder is emptyDrop files here or p"
+    ]
+  },
+  {
+    "id": "UI-093 dock label says minimised",
+    "ok": true,
+    "detail": "Files, running, 1 window, 1 minimised"
+  },
+  {
+    "id": "UI-078 Alt+N focuses the first app, not Trash",
+    "ok": false,
+    "detail": "terminal"
+  },
+  {
+    "id": "UI-078 Esc from Dock returns to the focused window",
+    "ok": true,
+    "detail": {
+      "tag": "TEXTAREA",
+      "label": "Terminal input",
+      "cls": "xterm-helper-textarea",
+      "inView": true,
+      "win": "terminal"
+    }
+  },
+  {
+    "id": "UI-078 Esc in a Dock item menu refocuses the icon",
+    "ok": true,
+    "detail": "files"
+  },
+  {
+    "id": "UI-088 no invisible <body> Tab stop after the Dock",
+    "ok": true,
+    "detail": [
+      "BUTTON",
+      "Sync: Online, all changes sync",
+      "AI: ready",
+      "256 KB/256 MB memory used, les",
+      "Control Centre",
+      "Search"
+    ]
+  },
+  {
+    "id": "UI-087 Task Manager Ctrl+2 / Ctrl+1 switch tabs",
+    "ok": true,
+    "detail": {
+      "t0": "Processes",
+      "t2": "Memory"
+    }
+  },
+  {
+    "id": "UI-092 Task Manager data-app is task-manager",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "id": "UI-027 desktop inert + hidden while locked; Tab stays in lock screen",
+    "ok": true,
+    "detail": {
+      "inert": {
+        "inert": true,
+        "hidden": true
+      },
+      "seen": [
+        "Show password",
+        "Sign in",
+        "Forgot password?",
+        "Restart",
+        "Shut Down",
+        "Accessibility",
+        "examiner1, signed in",
+        "Password for examiner1",
+        "Show password",
+        "Sign in",
+        "Forgot password?",
+        "Restart"
+      ]
+    }
+  },
+  {
+    "id": "UI-027 Alt+N does nothing while locked",
+    "ok": true,
+    "detail": ""
+  }
+]

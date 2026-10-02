@@ -1,0 +1,13 @@
+# Skip lists
+
+A sorted linked list with express lanes. Each node gets a random height (level i with probability 1/2^i). Search starts at the top level and drops down when the next node would overshoot.
+
+Expected O(log n) search, insert and delete, with no rotations or rebalancing, which makes concurrent versions much easier than for balanced trees.
+
+Space: about 2n pointers on average with p = 1/2 (fewer with p = 1/4).
+
+Used in Redis sorted sets, LevelDB/RocksDB memtables and Java's ConcurrentSkipListMap.
+
+Compared with a red-black tree: similar performance, simpler code, but only probabilistic guarantees and worse cache locality.
+
+My implementation bug: I generated the level once per list instead of once per node, so every node had the same height and the structure was just several copies of a linked list.

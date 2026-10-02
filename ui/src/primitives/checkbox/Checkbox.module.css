@@ -1,0 +1,106 @@
+.root {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: var(--pl-space-2);
+  min-height: var(--pl-target-min);
+  padding-top: var(--pl-space-1);
+  font: var(--pl-type-body);
+  color: var(--pl-text);
+  cursor: default;
+}
+.control {
+  position: relative;
+  flex: none;
+  width: var(--pl-checkbox-size);
+  height: var(--pl-checkbox-size);
+  margin-top: var(--pl-space-half);
+}
+.input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: inherit;
+}
+.box {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: var(--pl-radius-xs);
+  background: var(--pl-field-bg);
+  box-shadow:
+    inset 0 0 0 var(--pl-hairline-width) var(--pl-border),
+    var(--pl-field-shadow);
+  color: var(--pl-on-accent);
+  pointer-events: none;
+}
+.box::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--pl-accent);
+  box-shadow: var(--pl-button-primary-shadow);
+  opacity: 0;
+  transition: opacity var(--pl-motion-fast) var(--pl-ease);
+}
+.mark {
+  position: relative;
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  transform: scale(0.4);
+  transition:
+    opacity var(--pl-motion-fast) var(--pl-ease),
+    transform var(--pl-motion-slow) var(--pl-ease-spring-bouncy);
+}
+.input:checked + .box::before,
+.input:indeterminate + .box::before {
+  opacity: 1;
+}
+.input:checked + .box .check,
+.input:indeterminate + .box .dash {
+  opacity: 1;
+  transform: none;
+}
+.input:indeterminate + .box .check {
+  opacity: 0;
+}
+.dash {
+  position: absolute;
+}
+.input:focus-visible + .box {
+  outline: var(--pl-focus-ring);
+  outline-offset: var(--pl-focus-offset);
+}
+.input:disabled + .box {
+  opacity: 0.45;
+}
+.text {
+  display: flex;
+  flex-direction: column;
+}
+.description {
+  font: var(--pl-type-caption);
+  color: var(--pl-text-muted);
+}
+.disabled {
+  color: var(--pl-text-disabled);
+}
+@media (prefers-reduced-motion: reduce) {
+  .box::before,
+  .mark {
+    transition: none;
+  }
+}
+@media (forced-colors: active) {
+  .box {
+    border: var(--pl-hairline-width) solid ButtonText;
+  }
+  .mark {
+    color: ButtonText;
+  }
+}

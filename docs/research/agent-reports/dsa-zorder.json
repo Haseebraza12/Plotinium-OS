@@ -1,0 +1,50 @@
+{
+ "files_changed": [
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/src/zorder/index.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/src/zorder/README.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/bench/zorder.bench.ts"
+ ],
+ "verification": [
+  {
+   "command": "pnpm exec tsc -p dsa/tsconfig.json --noEmit",
+   "outcome": "Exit 0, no errors. One earlier run failed on dsa/src/dag/index.ts(429,12) 'Cannot find name assemble'. That file belongs to the DAG agent's work in progress, and the error was gone on the next run. zorder never had a type error."
+  },
+  {
+   "command": "pnpm exec vitest run --project dsa dsa/tests/zorder.test.ts dsa/tests/zorder.prop.test.ts",
+   "outcome": "2 files and 10 tests pass: all 9 edge cases from spec 8.10 and the model-based property test (1,000 runs, about 1.9 s)."
+  },
+  {
+   "command": "PLT_PROP_RUNS=10000 pnpm exec vitest run --project dsa dsa/tests/zorder.prop.test.ts --testTimeout=120000",
+   "outcome": "Passes in about 20 s. Without --testTimeout, Vitest's default 5 s timeout stops the test, but no assertion fails."
+  },
+  {
+   "command": "pnpm exec vitest run --project dsa dsa/tests/zorder.test.ts dsa/tests/zorder.prop.test.ts --coverage (include **/zorder/**)",
+   "outcome": "zorder/index.ts has 96.4% line coverage. The uncovered lines are the checkInvariants failure branches and the RANGE check on the constructor argument."
+  },
+  {
+   "command": "pnpm exec vitest bench --run --project 'dsa (bench)' dsa/bench/zorder.bench.ts (the task's '--project dsa' matches no project; the bench project is named 'dsa (bench)')",
+   "outcome": "1 file and 3 bench tests pass: raise+renumber curve plus the n=64 budget, the O(1) curves (each asserted ratio <= 3), and bytes per window."
+  },
+  {
+   "command": "pnpm exec eslint dsa/src/zorder dsa/tests dsa/bench --max-warnings 0",
+   "outcome": "Exit 0, no warnings."
+  },
+  {
+   "command": "pnpm exec vitest run --project dsa dsa/tests/scaffold.test.ts dsa/tests/shared.test.ts",
+   "outcome": "7 passed, 9 skipped. The scaffold row for zorder turned itself off after the flag flip, as intended."
+  }
+ ],
+ "benchmark": "These are dev-machine numbers: AMD Ryzen 5 7530U, Node 24.13.1, 2026-09-25, while about 25 other agents were loading the machine. They must be re-run on the lab machine. Each value is the median of 3 runs, 1,000 operations per timed batch. The spec's sizes for S9 are n = 10, 100 and 1,000 (spec 7.1).\n\nraise+renumber of a random window (O(n) by WM-02):\n- n = 10: mean 88 ns, p95 147 ns\n- n = 100: mean 733 ns, p95 1,086 ns\n- n = 1,000: mean 7,955 ns, p95 9,991 ns\n- Ratio t(1,000)/t(10) was 68 to 90. The expected ratio is 91, since a random raise renumbers (n+1)/2 windows on average. That works out to about 10 to 18 ns per renumbered window.\n- Budget at n = 64: mean 485 ns against a limit of 2,000 ns, so it passes.\n\nO(1) curves (mean at n = 10 / 100 / 1,000; ratio limit 3):\n- insertTop plus remove of the top: 97 / 96 / 100 ns, ratio 0.65 to 1.44\n- zOf of a random window: 46 / 75 / 62 ns, ratio 1.24 to 1.37\n- raise of the window second from the top (renumbers 2 windows): 76 / 82 / 84 ns, ratio 1.06 to 1.10. This shows that raise cost depends on n - p, not on n.\n\nBytes per window, built from the default capacity of 16:\n- Used: 28 B at every n (16 B of slot arrays plus 12 B for the S6 entry).\n- Allocated: 64.0 at 10, 51.2 at 100, 41.0 at 1,000, 65.5 at 10^4, 52.4 at 10^5. It moves with where n falls between doublings.\n- Measured: 47 to 55 at 10^3, 66.3 to 66.8 at 10^4, 52.4 at 10^5. At n = 10 and 100 the measurement is noise below GC granularity (negative values).\n\nAll of this is written into dsa/src/zorder/README.md, including the filled DSA.md entry.",
+ "problems": [
+  "S9 now depends on S6 at runtime. As the spec requires, zorder imports OpenAddressingTable from dsa/src/hashtable for the wid-to-slot index. S6 flipped to IMPLEMENTED = true at about 23:20, before the final runs, and every S9 run above used that code. If S6 regresses, the S9 tests fail with it.",
+  "AI_USAGE.md still says the dsa/ implementations are 'Written only by the team'. It needs a row for the 2026-09-25 decision that Claude writes them. That file is outside my allowed paths, so I did not edit it.",
+  "The S9 row in the root DSA.md still says 'not implemented'. The filled entry is in dsa/src/zorder/README.md for the DSA.md editor (R1) to copy. I did not touch DSA.md.",
+  "vitest.config.ts GATED_PACKAGES still needs 'dsa' added; the first structure to flip is supposed to do this. It is a root config, so I left it alone.",
+  "No benchmark JSON run is committed under docs/evidence/dsa/zorder, because that path is outside my allowed files. I wrote the runs to the scratchpad only. tools/dsa-report.ts does not exist yet, so I filled the benchmark table between the dsa-report markers by hand.",
+  "Nightly property runs (PLT_PROP_RUNS=10000) take about 20 s, longer than Vitest's default 5 s testTimeout. The test times out without any assertion failing, and passes with --testTimeout=120000. The other structures' 10,000-run property tests probably need the same fix in the nightly command or the config.",
+  "The verify command 'vitest bench --run --project dsa' fails with 'No projects matched'. The bench project is named 'dsa (bench)'.",
+  "The benchmark numbers are noisy because the machine was heavily loaded, with up to 2x spread between runs. Re-run them on the lab machine before the final defence.",
+  "Choices the owner should know about: every wid-taking method (not only insertTop) throws RANGE for a wid outside 0..2^31-1, which follows the contract's 'RANGE otherwise'. The class also has extra public stats() and capacity members beyond the ZOrderList interface, per spec 3.4 Accounting. The interface itself is unchanged. The contract has no debugCorrupt hook for S9, so there is no committed test that checkInvariants catches corruption. I checked each of Z1, Z2 and Z3 against deliberately corrupted state in a scratch script, and each was caught with its id in the message."
+ ],
+ "test_changes": "No test files changed and none weakened: dsa/tests/zorder.test.ts and dsa/tests/zorder.prop.test.ts are exactly as they were. In dsa/bench/zorder.bench.ts I only added things. The original raise+renumber curve and the n=64 budget measurement are unchanged. The additions are: (1) a build() helper; (2) a bench test 'DSA-ZORD-01 insertTop plus remove of the top, zOf and a raise just below the top stay flat from n = 10 to 1,000 (O(1) relink)', which records three curves and asserts each ratio is at most 3, the same limit the heap bench uses; (3) a test 'DSA-GEN-09 zorder bytes per window at n = 10, 100 and 1,000 (and 10^4, 10^5 to show the flat curve) are recorded', which uses measureBytesPerEntry and recordMemory like the other benches. I also updated the header comment to describe these additions."
+}

@@ -1,0 +1,95 @@
+{
+ "files_changed": [
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/boot/index.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/boot/types.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/boot/dom.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/boot/glyphs.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/boot/logo.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/boot/announcer.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/boot/log.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/boot/splash.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/boot/menu.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/boot/panic.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/boot/recovery.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/boot/unsupported.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/boot/boot.css",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/boot/splash.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/boot/log.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/boot/menu.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/boot/announcer.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/boot/screens.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/boot/static.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/gallery/pages/boot.tsx",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/gallery/pages/boot.module.css"
+ ],
+ "verification": [
+  {
+   "command": "Resume inventory: ls ui/src/boot; pnpm exec tsc -p ui/tsconfig.json --noEmit",
+   "outcome": "The interrupted run had left nothing in ui/src/boot, so there was no partial output to keep. The one ui TypeScript error mentioned in the task was already fixed (tsc exit 0 at start). All of ui/src/boot and the gallery page were written in this run."
+  },
+  {
+   "command": "pnpm exec tsc -p ui/tsconfig.json --noEmit",
+   "outcome": "PASS, exit 0, for all of ui/ including the other UI agents' files at the time of the final run. Mid-run, ui/src/shell tests from another agent had errors; they were fixed by their owner before the final run."
+  },
+  {
+   "command": "pnpm exec vitest run --config ui/vitest.config.ts (package config)",
+   "outcome": "PASS: 57 files and 406 tests in the whole ui package, including my 45 boot tests in 6 files. Coverage: BOOT-01 (logo, name, version and build; static first-paint markup; adopting the inlined markup; the dev-build prefix). BOOT-02 (60 s of fake time with no events leaves P unchanged and vi.getTimerCount() is 0; round(100\u00b7P) with clamping; a static check for no setTimeout, setInterval, @keyframes or CSS animation). BOOT-05 (the 11-column timestamp format, WARN/DEGRADED/FAIL text prefixes, 10,000 lines keep at most 60 rows in the DOM, batched appends, Jump to latest). BOOT-06 (the four entries, Esc, number keys, Safe preselected after 2 failed boots, the countdown shown only while the menu is open and stopped by the first key). BOOT-13 (at most one announcement per 750 ms with priority holding and no timer, progressbar values, a 0 s transition under reduced motion, keyboard operation of the menu, panic and recovery screens). Also BOOT-04 (panic cycle graph), DSN-02/07/14/24/30/31, WM-03, and CSP (no inline style attributes)."
+  },
+  {
+   "command": "pnpm exec vitest run --project ui (root config, as the task specified)",
+   "outcome": "FAIL, as the foundation already reported (root-config blocker). The whole project: 47 of 57 files fail because the root `ui` project has no vite-plugin-solid. My boot files: 41 of 45 pass. The 4 that fail are the CSS checks, because the root config has no css.include, so `?raw` CSS imports come back empty. A dedicated guard test makes this fail loudly instead of letting those checks pass vacuously."
+  },
+  {
+   "command": "pnpm exec eslint ui --max-warnings 0",
+   "outcome": "PASS, exit 0, with every eslint-plugin-solid rule, the SYS-01 boundaries and local/no-html-sinks (AGT-06). No boot source uses innerHTML or insertAdjacentHTML: the screens are element trees built with h() and turned into DOM nodes by render(), with text always as text nodes."
+  },
+  {
+   "command": "pnpm exec prettier --check ui/src/boot ui/gallery/pages/boot.tsx ui/gallery/pages/boot.module.css",
+   "outcome": "PASS"
+  },
+  {
+   "command": "pnpm --filter @plotinium/ui gallery:build",
+   "outcome": "PASS (built in about 6 s). The Boot screens page at #/boot shows a live splash that steps through a recorded boot one event at a time (after 3 events aria-valuenow is 26, as expected), plus dark and light frames of the splash, verbose log, menu (with a countdown tick), panic, recovery and unsupported screens. It logged no console errors."
+  },
+  {
+   "command": "Boot gzip size: a Vite lib build of the realistic inline set (all six screens plus the announcer, without the build-time splashHtml serialiser), minified with terser, gzip -9",
+   "outcome": "JS: 28.9 KB raw, 10.83 KB gzip (9.61 KB brotli). boot.css: 27.5 KB raw, 5.38 KB gzip. JS + CSS: 16.13 KB gzip. With tokens.css: 20.14 KB gzip. The splash alone (splash, announcer and log) is 4.13 KB gzip of JS. The whole public API is 11.37 KB gzip of JS. Against the budgets: the boot-critical main-thread JS limit of 60 KB is met with a large margin (about 18%). The boot spec's advisory 16 KB for inlined JS + CSS is met only for the splash-only split (about 4.1 KB of JS plus the CSS); all six screens come to 16.13 KB. DSN-10's 5 KB gzip for the inlined boot-ui is exceeded (see problems)."
+  },
+  {
+   "command": "axe-core 4.13 through Playwright Chromium (tags wcag2a, wcag2aa, wcag21a, wcag21aa, wcag22aa) on a 1440 \u00d7 900 scratch harness",
+   "outcome": "PASS: 0 violations on all 16 combinations of screen, theme and variant (splash, verbose, menu, menu after failed boots, panic, recovery, unsupported degraded and fatal, in dark and light). The gallery #/boot page in dark and light also has 0 violations."
+  },
+  {
+   "command": "CSP check: the harness served with the production policy as a meta tag (default-src 'self'; script-src 'self'; style-src 'self', with no unsafe-inline), recording securitypolicyviolation events",
+   "outcome": "PASS: no violations on any of the six screens, and the logo keeps its colours. Custom properties are set through the CSSOM; the builder refuses `style` and on* attributes."
+  },
+  {
+   "command": "Playwright screenshots at 1440 \u00d7 900 in both themes, compared with docs/design/stitch/{boot-splash,boot-menu,boot-verbose-log,kernel-panic,recovery-console,unsupported-browser}/reference.png",
+   "outcome": "The screens match the references closely. Fixed during review: the unreadable compact verbose header (scale 0.56 changed to 0.78, and the step and count lines fade out in verbose mode); the panic line wrapping in the code block; recovery sidebar rows wrapping to three lines (now one line with ellipsis, full text kept in the accessible description and the pane); tabular figures spacing the hyphen in 'auto-boot'; the `--` ligature in `reboot --menu`; the unsupported card missing its aurora backdrop; and a balanced title wrap."
+  }
+ ],
+ "problems": [
+  "BLOCKER (root config, already reported by the foundation): `pnpm exec vitest run --project ui` fails: 47 of 57 ui files cannot compile because there is no vite-plugin-solid. My boot tests are plain TypeScript, but 4 of the 45 fail there because the root config has no css.include, so `?raw` CSS imports come back empty. With ui/vitest.config.ts all 406 ui tests pass.",
+  "Budget conflict: DSN-10 (ui-design-system.md, kept unchanged by visual-language-macos.md) sets the inlined boot-ui (splash, menu, panic, recovery) at 5 KB gzip or less. The measured inline set is 16.13 KB gzip (10.83 KB JS plus 5.38 KB CSS). The splash alone is 4.13 KB gzip of JS. That is well within the 60 KB boot-critical budget and at the boot spec's advisory 16 KB, but about three times DSN-10. With six screens, 5 KB is not reachable without dropping screens or design detail. The spec owners (R3 and R5) need to decide.",
+  "Found and fixed during the work: the design references and the obvious implementation use inline `style` attributes and innerHTML templates, which the production CSP (no 'unsafe-inline', security-model.md \u00a73) and local/no-html-sinks (AGT-06) forbid. The boot screens now use an element-tree builder, set custom properties only through the CSSOM, and a test enforces both.",
+  "Found, not mine to fix: ui/src/icons/atom-logo.ts (foundation) paints the orbit, core and electron colours through `style` attributes. Under the production CSP these are blocked, so the Solid AtomLogo and the rawIcon strings may render with colourless orbits. The boot copy strips them and paints the same --pl-logo-* tokens from boot.css.",
+  "Spec inconsistencies. I implemented the choices noted here, pending an owner decision: the countdown is 5 s in boot-and-services.md \u00a73.7 but 3 s in ui-design-system.md \u00a73.8.2 (setCountdown(remaining, total) defaults to 5). The bar width: I used the token --pl-boot-bar-w (240 px) rather than the spec's 320 px or the design's 280 px. The identity spec's ring-and-point mark conflicts with the atom (I used the foundation's atom tree, as a single source). The panic label is 'Dump diagnostics' in the boot spec and design but 'Download diagnostics' in the UI spec. The recovery wording differs between the two specs.",
+  "Stitch returned no screens (screen.html and screenshot.png are absent for all six slugs). I followed the hand-built reference.html, reference.png and notes.md in each folder instead.",
+  "Scope not built: the boot-stall watchdog screen (SVC-18), the 'Plotinium is running in another tab' takeover, 'This page is not Plotinium', the 'Shut down' state, and the optional services rail of the verbose view (1280 px and wider). The exported h(), render(), backdrop() and logoSvg() make each of these small to add.",
+  "Other agents' in-progress files briefly failed tsc and one test (ui/src/shell, ui/src/login) during my run. They were green at the final verification. I did not touch them.",
+  "The scratchpad directory is shared by the concurrent agents. Before switching to a private ui-boot/ subfolder, I wrote shot.mjs, min.mjs, csp.mjs, gshot.mjs and gaxe.mjs at the scratchpad root. If another agent had files with those names there, I overwrote them. They are scratch files only; nothing in the repository is affected."
+ ],
+ "todos_for_team": [
+  "R5 (root vitest.config.ts): point the `ui` project at ui/vitest.config.ts, or add vite-plugin-solid, css.include [/\\.css\\?raw$/], the test-setup file and server.deps.inline [/lucide-solid/].",
+  "Owner of ui/package.json: add the export \"./boot.css\": \"./src/boot/boot.css\". The existing \"./boot\" export now resolves to ui/src/boot/index.ts.",
+  "web/ and wm/boot-ui (R3 and R5), the driver: at build time, write splashHtml({version, build}) into index.html after the inlined tokens.css and boot.css (the BOOT-01 first paint needs no script). In the first inline script, call createBootSplash({ root }) to adopt that markup; install the Esc and V listeners and mirror them with splash.setKeyDown. Call splash.setProgress only from progress.ts apply(event). Call splash.pulse() on every boot event, which also delivers held announcements, and splash.serviceDone() and splash.setCount(done, 9) for services in the ancestor set A. Call setMenuAvailable(false) after the stage-2 decision. Announce stage changes with announcer.say(text, Say.Stage). wm/boot-ui/menu.ts owns the allowlisted countdown timer and calls menu.setCountdown(remaining, 5), stopping it in onInteract.",
+  "R5 (tools/check-boot-truth.ts, SVC-10): add ui/src/boot/** to the scope, because the inlined boot code now lives there as well as in wm/boot-ui. It is currently clean: no timers, no keyframes and no CSS animation.",
+  "Foundation (icons owner): remove the inline `style` attributes from ui/src/icons/atom-logo.ts (and check app-icons.ts), or render them through the CSSOM, so the logo keeps its colours under the production CSP.",
+  "R3 and R5: settle DSN-10 against the measured 16.13 KB gzip for all six screens. The options: amend the budget, inline only the splash (4.13 KB gzip of JS) with the rescue screens in a precached boot chunk (which conflicts with DSN-14), or cut design detail.",
+  "Spec owners: align the countdown length (5 s vs 3 s), the boot bar width (token 240 px vs spec 320 px vs design 280 px), the logo mark (ring vs atom), the panic D label, and the recovery wording between boot-and-services.md and ui-design-system.md.",
+  "R5 e2e: run axe on the built index.html boot surfaces (BOOT-13); a first-paint test (BOOT-01) that the inlined splash shows the name, version and build before any script; a CI securitypolicyviolation test on the boot screens.",
+  "R5 traceability: my tests use the BOOT-01/02/04/05/06/13, DSN-02/07/14/24/30/31 and WM-03 prefixes, plus UI-<Component> titles for component-level checks.",
+  "Not yet built: the stall watchdog screen (SVC-18), the takeover, 'Not Plotinium' and 'Shut down' states, and the verbose services rail. They can reuse h(), render(), backdrop(), logoSvg() and the .plb-card and .plb-btn styles."
+ ],
+ "deps_requested": []
+}

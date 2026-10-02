@@ -1,0 +1,829 @@
+{
+ "conflicts": [
+  {
+   "between": "Kernel D2 (Valibot 1.5) vs Backend D3 (TypeBox 1.3 + @fastify/type-provider-typebox) vs LLM D8 (Zod 4.6 z.toJSONSchema) vs Transport D4 ('zod or valibot')",
+   "problem": "Three schema libraries all claim to be the source of truth in protocol/. AGT-01 requires one set of typed syscall/tool schemas. The client CSP has no 'unsafe-eval', so Zod 4's JIT and TypeBox Compile (both use new Function) either fail or fall back to slow paths (Zod jitless measured at 3.7 us per call).",
+   "fix": "Use Valibot 1.5.0 as the only schema library, in protocol/. Client: v.safeParse in the syscall dispatcher. Server: a small Fastify preValidation hook calls v.safeParse; no type provider. LLM tools: @valibot/to-json-schema 1.8.0 runs at build time on the server only. A post-processor converts the output to Claude's strict subset (anyOf only, additionalProperties:false, every key required, and it strips oneOf, maxItems, minLength, minimum and maximum). A unit test walks every schema node to confirm. Remove typebox, @fastify/type-provider-typebox and zod; @anthropic-ai/sdk declares zod only as an optional peer."
+  },
+  {
+   "between": "Deploy D9 (Biome 2.5 lint+format, TypeScript 7.0.2 only) vs UI D1 (eslint-plugin-solid rules raised to error, TS 6.0.3) vs Kernel/Backend/Client (ESLint no-restricted-globals, custom rules: no yield-less loop in function*, no await inside an IndexedDB txn builder)",
+   "problem": "The main mitigation for the Solid choice is eslint-plugin-solid's reactivity rules, and Biome cannot run them. Biome also cannot host the team's custom kernel/IDB rules without GritQL plugins nobody knows. Separately, typescript-eslint 8.70.1 declares peer typescript >=4.8.4 <6.1.0, and typescript@7.0.2 ships no classic API, so installing TS 7 as the only `typescript` fails with ERESOLVE and breaks type-aware lint.",
+   "fix": "Drop Biome. Lint with ESLint 10.11 flat config + typescript-eslint 8.70.1 + eslint-plugin-solid 0.18.0: solid/reactivity, solid/no-destructure and solid/components-return-once set to error, run with --max-warnings 0. Add local rules no-yieldless-loop-in-generator and no-await-in-idb-builder, plus no-restricted-imports/no-restricted-globals so apps/* cannot reach kernel/, vfs/, wm/, indexedDB, caches or navigator.storage. Format with Prettier 3.9. Install TypeScript through Microsoft's documented alias pair: 'typescript' = npm:@typescript/typescript6@6.0.2 (API for typescript-eslint and editors) and '@typescript/native' = npm:typescript@7.0.2. The single CI type-check gate is TS 7 `tsc -b --noEmit`, plus a weekly TS 6 check. tsconfig must avoid options removed in 7.0 (baseUrl, moduleResolution node10, target es5). Check the bin names (tsc vs tsc6) in Week 1."
+  },
+  {
+   "between": "Backend D3 tx() SERIALIZABLE + Transport D4 op pipeline SERIALIZABLE + ORM D6 original vs Database D5 (READ COMMITTED + lock protocol) and ORM D6 amended",
+   "problem": "Four different transaction helpers. Measured on PG 18.6: under SERIALIZABLE, 82-116% of writes retried on a freshly deployed (compact) database and 91-97% of cp -r attempts aborted with 10 concurrent writers. FOR UPDATE under SERIALIZABLE waits and then raises 40001, so it does not turn aborts into waits. READ COMMITTED without a rename lock corrupted the tree in 50/50 trials.",
+   "fix": "Use one server/vfs/tx.ts vfsTxn() for every mutation. Declare READ COMMITTED with an explicit lock protocol. Retry on 40001, 40P01 and 55P03, at most 5 times with jitter. SET LOCAL lock_timeout='2s' (55P03 maps to EBUSY) and statement_timeout. Enforce acyclicity in the database: a BEFORE UPDATE OF parent_ino trigger on directory dentries takes the rename advisory lock and re-walks the ancestors. Only non-DB side effects run after COMMIT. Delete the SERIALIZABLE helpers from the backend and transport designs."
+  },
+  {
+   "between": "Database D5 lock order (op_log, rename lock, parent dirs, subtree dirs, file inodes, users last) vs ORM D6 amended (users first, then dirmove advisory lock, then inodes by ino) vs Transport D4 (users row FOR UPDATE first for quota and change_seq)",
+   "problem": "When code paths take locks in different orders, 40P01 deadlocks follow, and a live lock-contention demo can stall on them.",
+   "fix": "Use one canonical order and document it in DATABASE.md, applied through a single lockPlan() helper. L0: INSERT op_log ON CONFLICT DO NOTHING (idempotency). L1: users rows (the actor plus every affected owner) FOR UPDATE in uid order, covering quota and per-user change_seq. L2: pg_advisory_xact_lock('vfs:rename'), only for cross-parent directory moves. L3: directory inodes FOR UPDATE in ino order; for rm -r/cp -r/chmod -R, plan, lock, then re-plan. L4: file inode version compare-and-swap. The acyclicity trigger's advisory lock is re-entrant. As a consequence, one user's mutations are serialised, which per-user change_seq requires anyway. A fast-check concurrency property test (2-8 clients, then fsck and reachability probes) runs on every PR."
+  },
+  {
+   "between": "Backend D3 amended (in-process serverSeq = boot epoch + counter, resume from an in-memory ring buffer) vs Transport D4 amended and Database D5 (per-user change_seq under the users row, resume from op_log, 30-day payload retention plus permanent tombstones)",
+   "problem": "Two event-ordering and resume mechanisms. The in-memory counter is lost on restart and forces resync. Postgres sequences are not commit-ordered, so they cannot be used for resume.",
+   "fix": "Keep only the per-user change_seq, incremented in L1 under the users row lock that is held until commit. That makes it gap-free and commit-ordered per user. Store it as op_log.srv_seq and resume from op_log WHERE uid AND srv_seq > since. Past the retention horizon, resume through GET /api/sync/snapshot. Broadcasts are in-process after COMMIT resolves. No NOTIFY, no epoch counter and no server resume ring buffer. Directories shared with other users are re-validated on resume with readdir versions."
+  },
+  {
+   "between": "Backend D3 amended (any inbound frame, including a protocol pong, renews leases; TTL 15 s; lease holders pinged every 5 s) vs Transport D4 (only the app heartbeat renews; TTL 30 s; heartbeat every 10 s; fencing tokens)",
+   "problem": "The browser's network stack answers pings even when the page's JS is hung or the tab is frozen by Energy Saver. Renewing on pong would keep a dead holder's lease forever, which breaks VFS-09 ('a crashed holder's lock expires within the lease time'). The alternative depends on worker timers surviving hidden-tab throttling. Verification: Chrome's timer-throttling article defines intensive throttling only for page timers and says nothing about workers, so that exemption is UNVERIFIED.",
+   "fix": "Adopt Transport's scheme. The lease heartbeat runs every 10 s from the kernel worker, where the sync client lives. TTL is 30 s and configurable (15 s for the demo, with a countdown shown in lsof). Every grant carries a fencing token, and a write with a stale fence gets EBUSY. The main thread forwards visibilitychange/resume to the kernel so it re-verifies leases immediately. Pongs are used only for socket liveness. A clean close releases leases at once; an abnormal close holds them until the TTL expires. Add a Playwright test that hides the tab for 6 minutes and asserts the lease is still held. If it fails, raise the TTL and rely on fencing and conflicted copies."
+  },
+  {
+   "between": "Transport D4 amended (one OS session per tab, per-session outbox partitions, leader adopts orphaned partitions) vs Kernel D2 / Client D6 / UI D1 (exactly one kernel per origin via Web Lock 'plotinium:kernel'; a second tab shows 'running elsewhere, take over')",
+   "problem": "These are incompatible session models, and the per-tab partitioning adds about 200 lines of adoption logic that would never run if only one tab can hold the kernel.",
+   "fix": "One kernel per origin. The OS session lasts as long as the kernel holds the lock. A fencing epoch is stored in IndexedDB meta and checked in every readwrite transaction; after a steal, the old kernel closes IndexedDB. Drop per-tab outbox partitions, leader adoption and the plotinium.outbox lock. Multi-user and two-user lock demos (VFS-09) use two browsers or profiles. Offline, local advisory locks use navigator.locks."
+  },
+  {
+   "between": "Quality D11 (auth_sessions) vs Database D5 (spec 'sessions' table with window_layout, and locks.session_id FK to sessions) vs MEM-04 (swap pages must page in from a NEW browser session) vs op_log.session_id",
+   "problem": "'session_id' means three different things. Leases must die when a login is revoked, but swap pages must outlive the browser session.",
+   "fix": "Use two tables. auth_sessions holds the revocable cookie session (SHA-256 of the secret, sliding expiry). os_sessions holds the desktop session: owner uid, window_layout (WM-06), and a nullable auth_session_id. locks, op_log and the WS hello reference os_session_id. Revoking an auth session makes the lock manager release that session's leases and broadcast the release; FK cascade is never used for this. swap_pages is keyed by (owner_uid, os_session_id, pid, page_id), with lookup and authorisation by owner_uid."
+  },
+  {
+   "between": "Database D5 (ino uuid DEFAULT uuidv7(), client-generated offline) vs ORM D6 amended (bigint from a sequence with INCREMENT BY 65536 per-session blocks) vs RAG D7 DDL (ino bigint)",
+   "problem": "The inode key type differs across schema, client mirror and vector store. Block reservation also fails if a device exhausts its block while offline.",
+   "fix": "Use uuid (UUIDv7) everywhere. The client generates it offline with a roughly 15-line generator (getRandomValues plus a timestamp), and PG18 uuidv7() is the server default. file_chunks.ino, locks.ino and inodes.lock_fence use it too. The kernel maps UUIDs to dense local slots so the typed-array (struct-of-arrays) data structures stay compact. ls -i shows a short form. Drop the sequence-block design."
+  },
+  {
+   "between": "Database D5 (Kysely Migrator up/down in TypeScript) vs ORM D6 (dbmate plain-SQL up/down) vs Deploy D9 ('dbmate only if the ORM lacks down migrations')",
+   "problem": "Two migration runners were proposed. DB-01 requires one versioned history with a rollback for every migration.",
+   "fix": "Use dbmate 2.36.0 only: one .sql file per migration with '-- migrate:up' and '-- migrate:down'. Kysely is the query builder only; kysely-codegen --verify runs in CI. The CI round trip calls 'dbmate rollback' N times (dbmate has no --all), then up again, then an explicit 'dbmate dump' using the ghcr.io/amacneil/dbmate:2.36.0 image (pg_dump 18.6), then a diff of db/schema.sql. Auto-dump is skipped silently when pg_dump is missing. The DB-05 'before indexes' state comes from separate perf-index up/down scripts."
+  },
+  {
+   "between": "ORM D6 (bulk ops as per-node statements with a TypeScript tick(); 366 ms per 1,000 nodes) vs Database D5 (set-based recursive-CTE statements plus a GUC-gated BEFORE ROW counting trigger; 33 ms) vs Transport/Backend (fault.tick() also used as the cancel point)",
+   "problem": "Two fault-injection mechanisms and two execution models for rm -r, cp -r, mv, batch rename and chmod -R.",
+   "fix": "The server uses set-based SQL. The row-counting trigger (raises P0001 after N inode rows) stays inert unless SET LOCAL plotinium.fault_after is set. Only a root-only, audited harness endpoint can set it, and only when FAULT_INJECTION=1 in the defence compose profile. DATABASE.md defines a 'node op' as an inode row write. The client IndexedDB mirror aborts from the onsuccess of the Nth request. AGT-09 kill uses an AbortSignal checked between plan steps, plus pg_cancel_backend for a statement already running."
+  },
+  {
+   "between": "Backend D3 (@fastify/helmet; server serves the static shell) vs Deploy D9 (Caddy serves the shell and sets COOP/COEP/CSP)",
+   "problem": "The two layers duplicate header and static-serving responsibility. Helmet's defaults leave COEP unset (so crossOriginIsolated is false and MEM-01 calibration is lost) and its CSP omits 'wasm-unsafe-eval' (which blocks the ONNX runtime).",
+   "fix": "Caddy 2.11.4 owns static files and all security headers, in one Caddyfile. Fastify serves only /api/* and /ws. Remove @fastify/helmet and @fastify/static."
+  },
+  {
+   "between": "Kernel D2 / UI D1 (COEP credentialless) vs Deploy/Quality/Backend (COEP require-corp) vs RAG D7 (Transformers.js defaults fetch models from the HF Hub and the ORT WASM from cdn.jsdelivr.net)",
+   "problem": "Cross-origin model weights and ORT binaries would be blocked by connect-src 'self' and complicate COEP. Isolation is needed for SharedArrayBuffer (the preemption control block), for 2-thread ORT and for measureUserAgentSpecificMemory. It also has to survive an offline boot served by the Service Worker.",
+   "fix": "Send COOP same-origin + COEP require-corp + CORP same-origin on every response, with every asset self-hosted: system font stacks, bundled lucide icons, /models/* and /ort/*. Configure Transformers.js with env.allowRemoteModels=false and localModelPath='/models/', and set wasmPaths as an OBJECT {wasm:'/ort/ort-wasm-simd-threaded.asyncify.wasm', mjs:'/ort/...asyncify.mjs'}; a string prefix silently disables useWasmCache. The Service Worker stores full Responses so the headers survive. e2e asserts window.crossOriginIsolated, and self.crossOriginIsolated inside a worker, both online and after an offline reboot. COEP credentialless is only the reversal option."
+  },
+  {
+   "between": "Quality D11 (Trusted Types, enforced once compatible) vs UI D1 (SolidJS) and worker-src differences (Quality 'self' vs Deploy 'self' blob:)",
+   "problem": "Solid's compiled templates assign HTML strings to template.innerHTML, which is a Trusted Types sink, so enforcing require-trusted-types-for would break every view. ORT's threaded WASM may start pthread workers from blob: URLs.",
+   "fix": "Do not enforce Trusted Types. Keep it Report-Only and add an ESLint ban on innerHTML/outerHTML/insertAdjacentHTML in our own code; all AI and file content renders as text nodes. CSP: script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob: (tighten to 'self' if the ORT spike shows blob: is unused); connect-src 'self'. In CSP3, 'self' also covers same-origin wss:."
+  },
+  {
+   "between": "Backend D3 (@fastify/rate-limit) vs LLM D8 (rate-limiter-flexible with a PostgreSQL store) vs Quality D11 (own token buckets bounded by dsa/lru)",
+   "problem": "Three rate limiters. The LLM budget also held a FOR UPDATE row lock and a pool connection across a multi-second provider call.",
+   "fix": "Use one own token-bucket module (server/ratelimit.ts, keys bounded by the team's dsa/lru) for HTTP routes (an onRequest hook) and WS frames. The LLM budget lives in Postgres llm_usage: reserve in a short transaction, call the provider outside any transaction, then settle in a second short transaction. Log per request to llm_requests. Remove @fastify/rate-limit and rate-limiter-flexible."
+  },
+  {
+   "between": "Backend D3 (maxPayload 1 MiB, close 4008 for a slow consumer, ping every 25 s, routes /api/swap, /api/llm) vs Transport D4 (64 KB maxPayload with POST /ops/{opId} for larger ops, close 4508, ping every 20 s, routes /blobs, /swap, /ops, /sync without /api) vs Deploy SW denylist (/api, /ws)",
+   "problem": "Protocol constants and URL namespaces disagree, and the Service Worker could end up caching backend routes.",
+   "fix": "Use Transport's catalogue: 64 KB maxPayload, op envelopes over 60 KB go to POST /api/ops/{opId}, close codes 1008/1009/1012/1013/4401/4408/4409/4429/4508, server ping 20 s, client heartbeat 10 s, dead-man timer 25 s. Put every backend route under /api/* (auth, sync/snapshot, ops, blobs, swap, llm, telemetry) plus /ws. The Service Worker treats /api/* and /ws as network-only and never caches them."
+  },
+  {
+   "between": "Quality D11 (WS limit 50 msg/s, burst 200, then close with 1008) vs OFF-02 exactly-once outbox replay (Transport D4, at most 16 ops in flight)",
+   "problem": "Replaying a long offline outbox trips the limiter, the client reconnects, and sync livelocks.",
+   "fix": "Replay sends op.batch frames of at most 32 ops with a credit window of 16 unacknowledged ops. The limiter counts frames, and a session that is replaying is throttled with {retryAfterMs}, never closed. Add an integration test: replay 5,000 queued ops with zero disconnects and one op_log row per opId."
+  },
+  {
+   "between": "LLM D8 original (claude-opus-5 at effort high, 'no downgrade for cost') vs LLM review (claude-opus-5-5 at medium, provisional) vs spec s12.6 (temperature 0)",
+   "problem": "Verified against the live Anthropic models overview (2026-09-23): the docs recommend starting with Claude Opus 5.5 ($4/$20, cache reads at 5%, default effort medium, retirement no sooner than 2027-09-22). Opus 5 is listed as legacy. Haiku 4.5's retirement commitment ends 2026-10-15, before the final defence. Opus 5 at high effort (about 54 tok/s, roughly 40 s per plan) cannot meet the 15 s p95 time-to-plan budget. Both Opus models reject temperature (HTTP 400). Opus 5.5 also returns 400 on forced tool_choice, and on edited history for accounts created on or after 2026-08-31.",
+   "fix": "Provisional default: claude-opus-5-5 with effort 'medium' set explicitly, tool_choice auto with strict:true tools and disable_parallel_tool_use, append-only transcripts, and fallbacks 'default' (beta server-side-fallback-2026-07-01). claude-opus-5 is the same-provider fallback. Haiku 4.5 is an evaluation baseline only. The model is fixed by the Week-3 AGT-40/INJ-20 bake-off using the review's single pre-registered selection rule. Get the instructor's written agreement, before the Week-4 defence, that recorded cassettes plus fixed seeds, a frozen clock and 3 live runs satisfy s12.6 in place of temperature 0."
+  },
+  {
+   "between": "RAG D7 (declares 23 MB of weights) vs MEM-01/MEM-06 (256 MB accounted budget) vs Kernel D2 memory manager",
+   "problem": "Measured ORT WASM linear memory: 83 MiB after one 512-token inference, 397 MiB after a single 8x512 batch. WebAssembly memory never shrinks, and session.release() frees nothing.",
+   "fix": "Enforce batch size 1 and max_length 512 in the Embedder (unit-tested). ai.embed is a dedicated worker declared to the pager as one large page of about 100 MiB, measured in Chrome. Evicting it means worker.terminate(). Page-in starts when a search box gains focus, and BM25 results show while it loads. Reversal: if ai.embed exceeds 120 MiB, move to 256-token chunks or bulk-index on the server."
+  },
+  {
+   "between": "Kernel D2 pool clamp(hwc-2, 2, 8) + UI D1 max(1, min(hwc-2, floor(0.75*hwc))) + RAG D7 (ORT 2 threads; separate ai.search and ai.predictor workers) + Transport (separate syncd worker) + Client (blkio worker) + Quality (auth worker)",
+   "problem": "On a 4-thread lab machine that adds up to 8 or more busy threads and oversubscribes the CPU during the PROC-05/WM-03 frame test. Even plain JS measured p95 33-50 ms with the CPU oversubscribed.",
+   "fix": "Special workers are limited to the kernel worker, the blkio worker and the ai.embed worker. syncd/lockd are kernel services (with pids) inside the kernel worker. ai.search, ai.predictor and ai.indexer are ordinary processes on executors. PBKDF2 derivation runs in the kernel worker after the desktop is interactive. Executors = clamp(hwc - 2 - (embedActive ? ortThreads : 0), 1, 6); one executor starts at boot and the rest on demand. ORT numThreads = hwc >= 8 ? 2 : 1. On pointerdown the compositor sends an 'interactive' hint that pauses niced work."
+  },
+  {
+   "between": "Kernel D2 (OPFS sync access handles used from the kernel worker) vs Client D6 amended (dedicated blkio worker)",
+   "problem": "A 5 MB synchronous OPFS write or read with SHA-256 verification blocks for 15-58 ms. On the kernel thread, that stalls every syscall.",
+   "fix": "The SwapDevice runs in a kernel-owned blkio worker using FileSystemSyncAccessHandle: write .tmp, flush, read back and verify, rename, then release. The fallback is the IndexedDB database 'plotinium-swap', used automatically when OPFS is unavailable at POST."
+  },
+  {
+   "between": "Deploy D9 SW precache (globPatterns '**/*.{js,css,html,svg,woff2}') vs BOOT-10 (cold boot <= 3.0 s; large assets only after interactive) vs RAG D7 (Transformers.js about 450 KB minified, /ort 26.9 MB, model 23 MB)",
+   "problem": "On a first visit the Service Worker install would precache every lazy chunk (xterm, CodeMirror, Transformers.js, /ort .mjs) and compete with the cold boot for bandwidth. The ORT WASM and model must never be on the boot path.",
+   "fix": "Register the Service Worker only after 'desktop-interactive' plus idle. Exclude /ort/*, /models/* and the transformers chunk from the precache; cache them at runtime on first use. CI budgets fail the build when boot-critical main-thread JS exceeds 60 KB gzip or the kernel worker bundle exceeds its own budget. The boot menu, panic and recovery screens live in the framework-free inlined boot-ui. auth, sync and ai.* are non-critical in the boot DAG, and no network call sits on the critical path."
+  },
+  {
+   "between": "Deploy D9 (one-shot init service + `docker compose up -d --wait`; shell copied by init into a volume so Caddy is never recreated) vs Backend D3 (compose exec migrate as a 3rd command)",
+   "problem": "The Docker docs define --wait only as 'running|healthy'. Whether an exited-0 one-shot service makes `up --wait` fail is UNVERIFIED, and a failure would break the scored clean bring-up. The shell-volume copy adds a moving part, even though an app restart drops every WebSocket anyway.",
+   "fix": "Remove the one-shot service. The app entrypoint runs `dbmate --wait --no-dump-schema up && node dist/seed.js --demo && exec node dist/main.js`, with dbmate as a production npm dependency of the server package. The /readyz healthcheck passes only after migrations, so --wait watches only long-lived services. Bake the shell into the Caddy image and mount caddy_data and caddy_config volumes (TLS certificates survive container recreation). A deploy causes a gap of about 2 s; clients resume by change_seq and the outbox replays. The rehearsal target is 0 lost ops and 0 lost leases, not 0 failed HTTP requests."
+  },
+  {
+   "between": "Quality D11 (cookie '__Host-plt_sid; Secure; HttpOnly; SameSite=Strict') vs Deploy D9 examiner bring-up (http://localhost)",
+   "problem": "Verified against MDN: the __Host- and __Secure- prefixes must be set from an HTTPS page. The localhost exemption covers only the Secure attribute. Caddy 'tls internal' would show an untrusted-CA warning on an examiner machine.",
+   "fix": "Set the cookie name from env: '__Host-plt_sid' in production (HTTPS), and 'plt_sid' with Secure; HttpOnly; SameSite=Strict; Path=/ on http://localhost. The README says to open http://localhost:4717, never a LAN IP (which is not a secure context: no Service Worker, WebCrypto subtle, OPFS or SharedArrayBuffer). POST logs isSecureContext and crossOriginIsolated."
+  },
+  {
+   "between": "Backend D3 (node:24-alpine, then node:24-slim) vs Deploy D9 (node:24-trixie-slim) vs Quality D11 (node:24-bookworm-slim) and the Node 24/26 LTS timing",
+   "problem": "Base images disagree. crypto.argon2 needs OpenSSL >= 3.2 (official images bundle 3.5.x; distro builds on 3.0 throw ERR_CRYPTO_ARGON2_NOT_SUPPORTED). uWebSockets.js, the reversal option, needs glibc. Node 24 enters maintenance LTS on 2026-10-20 and Node 26 becomes LTS on 2026-10-28, right around the freeze.",
+   "fix": "Use node:24-trixie-slim pinned by digest; it shares the debian:trixie-slim layer with the pgvector trixie image, which makes pulls smaller. At startup, run an argon2id known-answer self-test and fail fast if it fails. Stay on Node 24 LTS (security fixes until 2028-04-30). CI also runs the server suite on Node 26. Ask the instructor to pre-approve an optional move to Node 26 LTS before v0.2.0."
+  },
+  {
+   "between": "Backend D3 (@testcontainers/postgresql) vs Deploy D9 (compose db service in CI) vs Client D6 (fake-indexeddb for the store layer) vs Client review (the fault-injection atomicity must be tested in real Chrome on disk)",
+   "problem": "Duplicate test infrastructure. fake-indexeddb's commit timing differs from Chrome's, and Playwright's newContext() is in-memory (incognito-like), so durability and performance numbers never touched disk.",
+   "fix": "CI integration tests use `docker compose up -d --wait db`, which exercises the examiner path; drop Testcontainers. vfs/ IndexedDB code runs in the Vitest browser project on real Chrome, with a unique database or OPFS directory per test file; drop fake-indexeddb. Every storage performance, durability or crash test uses Playwright launchPersistentContext and asserts the context is disk-backed. Budgets run on both IndexedDB backends (default LevelDB, and SQLite forced with --enable-features=IdbSqliteBackingStore,IdbSqliteOnDiskRollout)."
+  },
+  {
+   "between": "Playwright 1.63 bundled Chrome for Testing 153.0.8010.12 vs spec ('current stable Chrome at each gate'; Chrome now ships every 2 weeks, 154 on 2026-09-22)",
+   "problem": "CI could pass on a pre-stable build while the Chrome the examiner uses differs.",
+   "fix": "Launch Vitest browser mode and every Playwright project with channel 'chrome' (current stable) and log the version in every run. Nightly runs a capability probe on stable and beta: nested module workers, SharedArrayBuffer in executors, createSyncAccessHandle, crossOriginIsolated, Web Locks. Re-run the e2e and perf suites on current stable within 48 h before each gate."
+  },
+  {
+   "between": "Database D5 / Deploy D9 (tag pgvector/pgvector:0.8.6-pg18) vs reproducibility, and the PG18 PGDATA layout",
+   "problem": "The -pg18 tag is rebuilt on every PostgreSQL minor release, so after 2026-11-12 it silently becomes 18.7. PG18 images exit 1 if the volume is mounted at the old /var/lib/postgresql/data path.",
+   "fix": "Pin pgvector/pgvector:0.8.6-pg18-trixie by digest and mirror it to public GHCR alongside every other image. Mount the named volume at /var/lib/postgresql. Bump the digest deliberately, and only after the Q1-Q5, fault-injection and torture suites pass. Initialise with POSTGRES_INITDB_ARGS='--locale-provider=builtin --builtin-locale=C.UTF-8'. dentries.name uses COLLATE pg_c_utf8 with CHECK (name IS NFC NORMALIZED)."
+  },
+  {
+   "between": "Schema drift across records: RAG D7 file_chunks (bigint ino, model_key, inode_version) vs Database D5 file_chunks (uuid ino, model_id smallint); Transport locks (fence column, inodes.lock_fence) vs Database D5 locks (EXCLUDE gist S/X); LLM D8 ai_requests vs Backend llm_calls vs Quality llm_requests + llm_usage",
+   "problem": "The owners would write incompatible migrations for the same tables.",
+   "fix": "Role 2 owns a single migration set. file_chunks: (chunk_id, ino uuid FK ON DELETE CASCADE, inode_version, seq, byte and line offsets, text, content_hash, model_key, embedding vector(384)), with no owner or mode copied. locks: PK (ino, os_session_id), mode, fence, lease_expires_at (BRIN index), EXCLUDE USING gist (ino WITH =, mode WITH <>), partial UNIQUE (ino) WHERE mode='X'; plus inodes.lock_fence and users.change_seq. LLM tables: llm_requests (per call) and llm_usage (budget rows)."
+  }
+ ],
+ "coverage_gaps": [
+  {
+   "area": "MEM-03 / MEM-04 (process state codec)",
+   "gap": "Page-out has to serialize process state to bytes and restore it byte-identical, but no record picks the codec. Structured clone is not a byte format, and JS generators cannot be serialized at all.",
+   "fix": "Write our own deterministic codec in kernel/mm/codec.ts: canonical JSON with sorted keys and no undefined, plus raw ArrayBuffer segments from ctx.mem, prefixed with a header of length and SHA-256. Programs follow the {init(argv)->state, *run(ctx,state)} contract, and page-out happens only at yield points. Remote pages are gzip-compressed with CompressionStream, and the checksum covers the uncompressed bytes. fast-check round-trip test."
+  },
+  {
+   "area": "BOOT-02 / BOOT-11 (truthful progress, critical path)",
+   "gap": "No record specifies how progress is measured from real work under a throttled network.",
+   "fix": "The boot-ui reads fetch ReadableStream byte counts for boot assets and Resource Timing, and weights each DAG service's done/total by its manifest weight. Service timings come from performance.mark and go into the bootlog ring buffer. bootlog --critical-path is the longest weighted path through the Kahn levels. A Playwright CDP network-throttling test asserts that progress at t=500 ms is lower on the throttled run."
+  },
+  {
+   "area": "BOOT-12 (graceful shutdown when the tab closes)",
+   "gap": "pagehide cannot await IndexedDB, so the 'flush dirty pages and pending writes' step only happens on an explicit shutdown or reboot.",
+   "fix": "Every outbox/VFS transaction is already durability:'strict', so no user data is pending at close. pagehide writes the session layout best-effort with relaxed durability. shutdown and reboot run the full reverse-topological flush. BOOT.md documents both paths."
+  },
+  {
+   "area": "DB-01 docs (ERD and diagrams)",
+   "gap": "The ERD and the context/container/component diagrams have no tooling assigned.",
+   "fix": "Draw them in Mermaid (erDiagram and C4/flowchart) inside the Markdown docs (ARCHITECTURE.md, DATABASE.md), which GitHub renders with no extra tool. Keep the DDL in db/schema.sql as generated by dbmate dump."
+  },
+  {
+   "area": "Docs and final deliverables (report, slides, video)",
+   "gap": "No technology home for the 20-30 page technical report, the slides or the 5-7 min demo video. STACK_DECISION.md needs its evidence tables.",
+   "fix": "Keep every doc in Markdown in docs/. Write the report and slides in Typst, compiled to PDF by a CI job on release tags so the build is reproducible. Record the video with OBS Studio. Commit raw benchmark JSON/CSV to docs/evidence/ and cite it from STACK_DECISION.md. TEAM_CONTRACT.md, AI_USAGE.md and CHANGELOG.md are plain Markdown."
+  },
+  {
+   "area": "Phase-1 benchmark analysis of Puter and daedalOS",
+   "gap": "The required measured 2-page analysis (memory with several apps open, offline behaviour) has no harness.",
+   "fix": "Reuse the Playwright perf harness: channel chrome, launchPersistentContext, performance.measureUserAgentSpecificMemory with --enable-blink-features=ForceEagerMeasureMemory, N apps opened, then setOffline+reload and a server-kill variant. Output to docs/benchmarks/competitors.md with screenshots."
+  },
+  {
+   "area": "RAG-04 evaluation corpus and hidden set",
+   "gap": "The corpus of 200 or more docs and 30 or more queries has no stated source or licence. The embedding models are English-only, and the examiners' hidden set may contain Urdu or Roman-Urdu.",
+   "fix": "Build the corpus from team-authored notes plus permissively licensed docs (MIT, Apache or CC-BY), each listed in THIRD_PARTY.md. The eval harness runs in Node with onnxruntime-node and the same ONNX file, and uses recorded embeddings keyed by modelKey and sha256(text). Ask at the Week-4 defence which languages the hidden set uses; reversal trigger 6 of the RAG record applies."
+  },
+  {
+   "area": "AGT / RAG on the examiner's local bring-up",
+   "gap": "The local stack has no ANTHROPIC_API_KEY, so hidden agent prompts fail if the examiners run the system-under-test segment locally.",
+   "fix": "Agree with the instructor that AI prompts run on the production URL. Separately, the local gateway can forward to the production gateway with a revocable, rate-limited DEMO_UPSTREAM_TOKEN entered at login. Examiner accounts get their own budget pool (US$15/day, 100 calls). Without either, ai degrades to the plain terminal with an explanation."
+  },
+  {
+   "area": "SYS (man, help, uname)",
+   "gap": "No record says where man page content or the build identity comes from.",
+   "fix": "Write man pages as Markdown in bin/man/*.md, seeded read-only into /usr/share/man by the VFS seed and rendered by the man command. uname, bootlog and About read VERSION, GIT_SHA and BUILD_DATE injected through Vite define. vite-plugin-pwa's manifest option generates the web app manifest and icons from the team's SVG logo."
+  },
+  {
+   "area": "DSA ownership and extras (s4, s10)",
+   "gap": "No record maps each mandatory structure to an owner, and the WM lead's structures (window registry, z-order) have no dsa/ module.",
+   "fix": "Put one generic hand-written dsa/hashtable (open addressing, Fibonacci hashing, backward-shift delete) behind both PidTable (Role 1) and the window registry (Role 3). Owners: heap and timer queue, Role 1; LRU, Role 1; n-ary tree, Role 2; trie as struct-of-arrays over basenames, Role 3; DAG with Kahn's algorithm, Role 5; ring buffer, Role 5; Bloom filter, Role 4; optional interval tree for window hit-testing, Role 3. Each structure has tests/ and bench/ reporting ns/op and bytes/entry, and DSA.md maps them."
+  },
+  {
+   "area": "PRE-05 (opt-in telemetry sync)",
+   "gap": "The server telemetry_events table exists, but no endpoint or consent flow is specified.",
+   "fix": "POST /api/telemetry is accepted only if the user's Settings > Privacy opt-in flag is stored server-side. Otherwise the ring buffer never leaves the device. The Settings view shows, clears and exports the buffer."
+  },
+  {
+   "area": "Deployment operations (monitoring, domain, TLS, host)",
+   "gap": "The 5-minute external uptime monitor has no tool (an Actions cron every 5 min would burn about 8,600 billed minutes a month on a private repo). Host provisioning is also unassigned.",
+   "fix": "Use the UptimeRobot free plan (5-min checks of /readyz, alerts to all 5 members) plus a deep smoke check in CI every 6 h. Use a Student Pack .me or .tech domain with DNS A/AAAA records to the VPS, and Caddy ACME TLS with a caddy_data volume. ops/provision.sh (cloud-init) sets up Docker, a deploy user, key-only SSH, the Hetzner Cloud Firewall (22, 80, 443 tcp+udp), BBR and tcp_slow_start_after_idle=0 for MEM-05 remote page-in. Buy the server early and never recreate it."
+  },
+  {
+   "area": "Security (boundary 1 and auditing)",
+   "gap": "Built-in app views run in the same realm as the kernel. Only uid/rwx checks are designed: per-app capabilities and auditing of auth events are missing, and the in-memory kernel audit ring buffer loses agent entries.",
+   "fix": "Apply lint rules plus a CI check on the built app chunks for banned globals. Executors shadow indexedDB, caches, navigator.storage and Worker before loading app code. Views receive only {sys, pid, wid} and a scoped container. Agent syscalls and auth events (login failures, su grants, chown, debug inject) are written durably: into the same IndexedDB transaction and to audit_log through the outbox. SECURITY.md states the same-realm trust assumption and says third-party apps would run in sandboxed iframes."
+  },
+  {
+   "area": "Testing gates (s15.3)",
+   "gap": "Since Vitest 4, coverage counts only files that were loaded. The CI minute budget is uncomputed (a private repo on GitHub Free gets 2,000 minutes a month). Frame-metric definitions are ambiguous (vsync jitter, 120 Hz examiner displays).",
+   "fix": "Set coverage.include to every source glob, with thresholds of 70% overall and 85% on dsa/, vfs/ and kernel/, and add a check that the file count equals the source count. A dropped frame is a rAF delta above 1.5x the measured refresh interval; the p95 gate is the refresh interval + 1 ms, plus zero LoAF entries over 50 ms attributed to our scripts. PR runs carry only deterministic budgets (bundle size, algorithmic p95s). Frame and boot budgets run nightly on a self-hosted runner on the lab-spec machine. Make the repo public, or use the Student Pack Pro or Teacher Team plan, with cancel-in-progress and path filters."
+  },
+  {
+   "area": "WM-03 / PROC-05 evidence",
+   "gap": "All framework and kernel measurements came from a 12-thread laptop with CDP 4x throttling. The gate machine will be the Week-2 lab workstation.",
+   "fix": "Re-run the UI, kernel, client-storage and embedding spikes on the lab workstation in current stable Chrome, with no CDP throttling for the PROC-05 gate. Replace every pilot number in STACK_DECISION.md with those results. Commit the weights and thresholds in a PR dated before the spike results."
+  },
+  {
+   "area": "OFF-03 / multi-user browser profile",
+   "gap": "Several OS users can share one browser profile, and Cache Storage and model caches are shared across all of them.",
+   "fix": "Store the offline verifier and IndexedDB data per uid (never uid 0). Cache Storage holds only the versioned shell and model assets. The vector index and telemetry use per-uid stores. Logout and lock are sent to other tabs over BroadcastChannel."
+  }
+ ],
+ "simplifications": [
+  {
+   "component": "Object storage: Garage v2.4.1 + @aws-sdk/client-s3 + @aws-sdk/lib-storage",
+   "proposal": "Replace them with our own content-addressed FsBlobStore on a Docker volume, behind the existing BlobStore interface. Keys are blobs/sha256/ab/cd/<sha> and swap/<owner_uid>/<os_session>/<pid>/<page>; writes stream to a temp file, verify SHA-256 and atomically rename. Keep Garage as the reversal option. Confirm at the Week-4 defence that a backend blob service meets the reference 'object storage' layer.",
+   "reason": "v1 uses no S3-only feature: presigned URLs are deferred, 5 MB pages need no multipart, and 1 h/14-day GC is our own code. Rescored honestly, FsBlobStore scores 4.55-4.65 against Garage's 4.40. The change removes a container, an AGPL component, a large SDK and its checksum incompatibility, and about 28 MB from the examiner's pull. rclone still syncs the directory to R2."
+  },
+  {
+   "component": "typebox, @fastify/type-provider-typebox, zod (zod/mini)",
+   "proposal": "Remove them; Valibot is the only schema library.",
+   "reason": "One schema source serves the client dispatcher, Fastify routes and LLM tool JSON Schema. It is 2.5 KB gzip, uses no eval under the strict CSP, and gives one less viva topic."
+  },
+  {
+   "component": "Biome",
+   "proposal": "Remove it; use ESLint for lint and Prettier for formatting.",
+   "reason": "Biome cannot run eslint-plugin-solid's reactivity rules, which are the main mitigation for the UI choice, or the team's custom kernel and IDB rules. ESLint is needed anyway."
+  },
+  {
+   "component": "@fastify/helmet, @fastify/static",
+   "proposal": "Remove them; Caddy serves the shell and sets every header.",
+   "reason": "They duplicate what Caddy already does, and Helmet's defaults would silently break cross-origin isolation."
+  },
+  {
+   "component": "@fastify/rate-limit, rate-limiter-flexible",
+   "proposal": "Replace them with one own token-bucket module (keys bounded by dsa/lru) plus a Postgres llm_usage budget row.",
+   "reason": "Three limiters did the same job. The own module is about 60 lines, reuses a mandatory DSA and covers HTTP and WS frames together."
+  },
+  {
+   "component": "@fastify/under-pressure, close-with-grace",
+   "proposal": "Remove them. A roughly 20-line SIGTERM handler drains sockets with close code 1012; event-loop delay is exported through prom-client default metrics with a nightly 20 ms p99 budget.",
+   "reason": "A single demo VPS rarely needs HTTP load shedding, and the metric plus budget gives the evidence."
+  },
+  {
+   "component": "@testcontainers/postgresql, fake-indexeddb, tinybench (direct), ws load-generator scripts",
+   "proposal": "Use the compose db service in CI, the Vitest browser project on real Chrome for IndexedDB code, Vitest bench (built on Tinybench) and k6 for load.",
+   "reason": "Fewer tools. The CI database path is the same one the examiner uses, and IndexedDB atomicity is tested on the real engine, not a fake with different commit timing."
+  },
+  {
+   "component": "Kysely Migrator",
+   "proposal": "Do not use it; dbmate owns migrations and Kysely is the query builder only.",
+   "reason": "Plain-SQL up/down files give one readable DDL history for DATABASE.md and DB-01 rollbacks."
+  },
+  {
+   "component": "Server resume ring buffer, boot-epoch serverSeq, Postgres LISTEN/NOTIFY",
+   "proposal": "Remove them. Resume comes from op_log using the per-user change_seq.",
+   "reason": "change_seq is already required under the users row lock and is durable. The in-memory buffer added a second ordering mechanism. NOTIFY takes a database-wide lock at commit."
+  },
+  {
+   "component": "Hybrid Logical Clock (Transport)",
+   "proposal": "Replace it with a Lamport counter plus cseq for outbox order; conflicted-copy dates and offline mtime come from server commit time and a client clock clamped by the server.",
+   "reason": "Conflict detection uses inode versions only, so a wall-clock-aware HLC adds viva surface with no benefit."
+  },
+  {
+   "component": "Per-tab OS sessions, outbox partitions, leader adoption, plotinium.outbox lock",
+   "proposal": "Remove them. One kernel per origin, with a takeover screen and a fencing epoch.",
+   "reason": "The kernel Web Lock already makes the other tabs passive, which removes about 200 lines of adoption logic."
+  },
+  {
+   "component": "syncd worker, ai.search worker, ai.predictor worker, auth worker",
+   "proposal": "Run them as kernel services or ordinary executor processes. Only the kernel, blkio and ai.embed workers remain special.",
+   "reason": "This avoids oversubscribing a 4-thread lab CPU. They stay visible in ps, schedulable and killable, which is exactly the 'AI is scheduled by the system' property."
+  },
+  {
+   "component": "One-shot init service and shell-volume copy (Deploy)",
+   "proposal": "Run migrations and seed in the app entrypoint and bake the shell into the Caddy image.",
+   "reason": "One fewer service. It removes the unverified behaviour of `up --wait` with an exited-0 container, and restarting the app drops WebSockets anyway."
+  },
+  {
+   "component": "Two hand-written hash tables (PidTable, window registry)",
+   "proposal": "Use one generic dsa/hashtable module for both registries.",
+   "reason": "The distinction credit is earned once with one set of tests and benchmarks, and it still has two real users."
+  },
+  {
+   "component": "Server-side embedding path (/api/llm/embed, Node Transformers.js backfill in production)",
+   "proposal": "Remove it. Node Transformers.js and onnxruntime-node are dev-only, for eval, CI fixtures and precomputed seed vectors.",
+   "reason": "Embedding is local-first in the browser. Seed vectors are precomputed so the examiner's bring-up can search 10k chunks within 5 minutes."
+  },
+  {
+   "component": "WebAuthn passkeys (@simplewebauthn/*)",
+   "proposal": "Defer to a Phase-4 stretch goal and leave it out of the frozen v1 stack unless time remains.",
+   "reason": "The PBKDF2 verifier already meets OFF-03, and passkeys add offline assertion code (DER-to-raw ECDSA, flags, counters)."
+  },
+  {
+   "component": "Optional UI libraries (@ark-ui/solid, @tanstack/solid-virtual, @xterm/addon-webgl)",
+   "proposal": "Install them only if the Week-3 accessibility, list-size or terminal-throughput spike fails.",
+   "reason": "Each one must earn its place with a measured failure."
+  },
+  {
+   "component": "Prometheus/Grafana ops profile, Sentry, GlitchTip, full OpenTelemetry, PgBouncer, Cloudflare proxy, HNSW index, msgpackr, uWebSockets.js, SQLite-WASM, Dexie",
+   "proposal": "Do not build or install them; each stays a named reversal target.",
+   "reason": "No requirement needs them at single-VPS, 50-client scale. Every one has a measurable trigger in its record."
+  },
+  {
+   "component": "Trusted Types enforcement",
+   "proposal": "Keep it Report-Only and add an ESLint ban on HTML-string sinks in our own code.",
+   "reason": "Solid's compiled templates use innerHTML on template elements, so enforcing Trusted Types would break every view for no gain."
+  }
+ ],
+ "final_stack": [
+  {
+   "layer": "Frontend framework",
+   "choice": "SolidJS (pinned exactly), provisional pending pre-registered Week-2 skills-spike thresholds. Compositor (wm/compositor.ts) is framework-free and is the only code that writes geometry. Boot, boot menu, panic and recovery screens are a framework-free inlined boot-ui.",
+   "version": "solid-js 1.9.15",
+   "one_line_reason": "Measured 7.3 KB gzip and 0.02-0.04 ms script per window update with zero sibling re-renders. Every option held 60 FPS because the compositor bypasses the framework, so Solid wins on headroom.",
+   "requirement_ids": "WM-01..07, BOOT-01, BOOT-05, BOOT-06, BOOT-08, BOOT-10, BOOT-13, PROC-05, PROC-08",
+   "alternatives_rejected": "React 19.3 + Compiler 1.0 (named fallback if the spike fails), Preact 10 + Signals, Svelte 5, Vue 3.5/Vapor RC, Lit 3"
+  },
+  {
+   "layer": "Build",
+   "choice": "Vite with vite-plugin-solid; vite-plugin-pwa (injectManifest) for the Service Worker and manifest; Vite define for the uname build identity",
+   "version": "vite 8.3.0 (Rolldown 1.x as locked), vite-plugin-solid 2.11.14, vite-plugin-pwa 1.3.0",
+   "one_line_reason": "A single Rolldown bundler handles nested module workers, and its manifest drives the Service Worker precache and the 60 KB gzip boot-chunk budget. Do not install a root Babel 8, because babel-preset-solid uses Babel 7.",
+   "requirement_ids": "BOOT-10, OFF-05, s15 identity kit",
+   "alternatives_rejected": "Rsbuild, bare Rolldown, Webpack"
+  },
+  {
+   "layer": "Styling",
+   "choice": "Native CSS: one tokens.css (custom properties, light-dark(), data-theme, reduced-motion tokens) plus CSS Modules and @layer; system font stacks; lucide-solid glyphs; team-made SVG logo",
+   "version": "lucide-solid 1.47.0",
+   "one_line_reason": "No runtime cost, and the boot screen is styled from the same tokens before any JS runs. No cross-origin fonts, which keeps COEP simple.",
+   "requirement_ids": "WM-07, BOOT-13, s15 identity kit",
+   "alternatives_rejected": "Tailwind 4.3, CSS-in-JS (styled-components)"
+  },
+  {
+   "layer": "Terminal renderer",
+   "choice": "xterm.js as the TTY device only (DOM renderer + fit addon, screenReaderMode). The line discipline, lexer/parser, pipes and trie completion are the team's own code.",
+   "version": "@xterm/xterm 6.0.0, @xterm/addon-fit 0.11.0 (webgl 0.19.0 only if the throughput test fails)",
+   "one_line_reason": "top needs cursor addressing and the alternate screen, and xterm provides screen-reader mode. It is a lazy chunk of about 82-113 KB gzip that loads after the desktop is interactive.",
+   "requirement_ids": "SYS-02, SYS-03, PROC-08",
+   "alternatives_rejected": "Hand-rolled DOM terminal"
+  },
+  {
+   "layer": "Editor",
+   "choice": "CodeMirror 6, modular, loaded as a lazy chunk; saves carry expectedVersion so a conflict becomes a conflicted copy",
+   "version": "@codemirror/view 6.43.13, state 6.7.6, commands 6.11.1, language 6.12.4, lang-markdown 6.5.2, lang-javascript 6.2.5",
+   "one_line_reason": "87-203 KB gzip and a 3.9 MB heap, and it renders only the viewport. Monaco costs 754 KB gzip and an 8 MB heap and runs its own workers.",
+   "requirement_ids": "VFS-07, VFS-10, OFF-01",
+   "alternatives_rejected": "Monaco 0.56, bare textarea"
+  },
+  {
+   "layer": "Kernel and DSA language",
+   "choice": "Strict TypeScript. The kernel core runs in ONE dedicated module worker and owns nested executor workers. Programs follow init(argv)->state + *run(ctx,state). A 32-byte SharedArrayBuffer control block per executor handles preemption. The watchdog uses terminate() plus respawn. Large DSA structures use struct-of-arrays typed arrays.",
+   "version": "TypeScript 7.0.2 as the type-check gate, with the 6.0 API for tooling; Chrome stable (154 on 2026-09-22) on a 2-week cadence",
+   "one_line_reason": "Syscall p95 is 0.13-0.17 ms from a worker kernel against 9.4 ms on a busy main thread. WASM saves nanoseconds against a roughly 100 us IPC hop and would cost a second coverage toolchain and a language the team does not know.",
+   "requirement_ids": "PROC-01..09, MEM-01..08, SYS-01, DSA s10, BOOT-03",
+   "alternatives_rejected": "Main-thread kernel, SharedWorker kernel (no nested workers, OPFS sync handles or SAB), Rust/wasm-bindgen, AssemblyScript, Go/TinyGo WASM"
+  },
+  {
+   "layer": "IPC / validation",
+   "choice": "Hand-written {id, call, args} -> {id, ok, value|errno} protocol over MessagePort. Caller identity comes from the executor port, never from the message. Valibot schemas live in a shared protocol/ package. Payloads over 64 KB are transferred rather than copied. Server-only @valibot/to-json-schema produces strict LLM tool schemas.",
+   "version": "valibot 1.5.0, @valibot/to-json-schema 1.8.0",
+   "one_line_reason": "2.5 KB gzip, no eval under the CSP, about 0.9 us per validation. One schema drives the kernel dispatcher, Fastify routes and Claude strict tools.",
+   "requirement_ids": "SYS-01, AGT-01, AGT-02, AGT-08",
+   "alternatives_rejected": "Comlink (hides the required envelope), Zod 4, TypeBox, ArkType"
+  },
+  {
+   "layer": "Client storage",
+   "choice": "Native IndexedDB, kernel worker only, holds all transactional state: inodes, dentries keyed by [parent,name], content-addressed blob chunks, quota mirror, outbox, undo, credentials, sessions, telemetry ring and bootlog. There is one strict readwrite transaction per operation, and bulk ops run in two phases. Tier-1 swap uses OPFS FileSystemSyncAccessHandle in a blkio worker, with an IndexedDB fallback. The Cache API is used only by the Service Worker and model caches.",
+   "version": "idb 8.0.3 (readonly helpers; writes use a raw tx() builder)",
+   "one_line_reason": "Multi-store ACID covers rule 5 and DB-02 in 1.6 KB with no WASM on the boot path. On disk, OPFS page-out was 2.4-3.8x faster than IndexedDB.",
+   "requirement_ids": "DB-02 (client mirror), VFS-06, OFF-01, OFF-02, MEM-03, MEM-05, MEM-06, WM-06",
+   "alternatives_rejected": "Dexie 4.4, SQLite-WASM opfs-sahpool (+564 KB gzip, 116-387 ms init), PGlite (5.4 MB gzip), RxDB (no multi-document transactions)"
+  },
+  {
+   "layer": "Service worker / offline shell",
+   "choice": "A hand-written sw.ts using workbox-precaching and workbox-routing through vite-plugin-pwa injectManifest. It is registered after the desktop is interactive, never calls skipWaiting on install, and on 'reboot' broadcasts to tabs, sends SKIP_WAITING and reloads on controllerchange. /api/* and /ws are network-only. /ort and /models are runtime-cached and never precached. Full responses are stored so COOP and COEP survive.",
+   "version": "workbox-precaching 7.4.1, workbox-routing 7.4.1, workbox-window 7.4.1",
+   "one_line_reason": "Gives a versioned shell cache with 'restart to update' and offline boot without delaying the cold boot.",
+   "requirement_ids": "OFF-01, OFF-05, BOOT-09, BOOT-10",
+   "alternatives_rejected": "Workbox generateSW, a fully hand-written manifest reader (fallback)"
+  },
+  {
+   "layer": "Backend runtime",
+   "choice": "Node.js 24 LTS as ONE TypeScript process (modular monolith: auth gateway, sync engine, lock manager, blob/swap store, LLM gateway, metrics). Runs from source with type stripping. Image node:24-trixie-slim pinned by digest. argon2 self-test at startup. CI also runs Node 26.",
+   "version": "Node 24.21.x LTS (security fixes until 2028-04-30)",
+   "one_line_reason": "The same TypeScript as the kernel means one set of protocol and tool schemas, plus a shared vfs/perm.ts. Built-in crypto.argon2 and every required library are available, and the team knows it.",
+   "requirement_ids": "VFS-09, VFS-10, OFF-02, OFF-03, s12.6",
+   "alternatives_rejected": "Bun 1.4 (one-month-old Rust rewrite, no LTS policy), Deno 2.9 LTS, Go 1.27, Rust/Axum, Python/FastAPI"
+  },
+  {
+   "layer": "HTTP / WebSocket framework",
+   "choice": "Fastify with @fastify/websocket (on ws) and @fastify/cookie. Valibot preValidation hook. Our own token-bucket rate limiter. The WS upgrade is authenticated in preValidation with the session cookie plus an Origin allowlist.",
+   "version": "fastify 5.12.5, @fastify/websocket 11.3.1, ws 8.21.3, @fastify/cookie 11.1.2",
+   "one_line_reason": "Plugins map one-to-one onto backend components. fastify.inject and injectWS make testing easy. pino is built in.",
+   "requirement_ids": "VFS-09, OFF-02, AGT-09",
+   "alternatives_rejected": "Hono 4 on Node, Express 5, Socket.IO 4.8 (about 4x memory per connection, at-most-once delivery)"
+  },
+  {
+   "layer": "Transport / protocol",
+   "choice": "Raw WSS with our own versioned JSON protocol v1 on /ws. It carries opId (UUIDv7) and cseq, Lamport ordering, base versions, S/X leases with fencing tokens, and an app heartbeat every 10 s with a 30 s TTL. Control messages run in a separate lane from the serial op queue. Resume uses the per-user change_seq from op_log. Replay uses op.batch with a credit window. Anything over 60 KB goes over HTTPS (/api/ops, /api/blobs, /api/swap). An SSE+POST adapter is pre-designed as the fallback.",
+   "version": "protocol v1 (own), browser-native WebSocket",
+   "one_line_reason": "Server push on one ordered channel. Exactly-once replay has to be built either way, and ws measured 6.8 KB per idle connection.",
+   "requirement_ids": "VFS-09, VFS-10, OFF-02, OFF-04, AGT-09, RAG-02",
+   "alternatives_rejected": "Socket.IO (runner-up if the campus network blocks Upgrade), SSE+POST (fallback adapter), long polling, WebTransport, WebRTC data channels"
+  },
+  {
+   "layer": "Database",
+   "choice": "PostgreSQL 18 with pgvector as the single primary DB. Tree is an adjacency list (dentries PK (parent_ino,name) INCLUDE (ino,d_type)). Q5 uses a recursive CTE. Isolation is READ COMMITTED with the canonical lock order, an acyclicity trigger and EXCLUDE-gist S/X locks. name uses COLLATE pg_c_utf8 plus an NFC check. VACUUM (ANALYZE) runs after seeding. pg_stat_statements and auto_explain are enabled.",
+   "version": "PostgreSQL 18.6 (pgvector/pgvector:0.8.6-pg18-trixie@sha256 digest, mirrored to GHCR)",
+   "one_line_reason": "Prototype: 5/5 fault-injected bulk ops rolled back with zero orphans, Q1-Q5 p95 at or under 2 ms at about 100k inodes, and vectors sit next to live rwx bits.",
+   "requirement_ids": "DB-01..05, VFS-06..11, RAG-03, AGT-05, AGT-08",
+   "alternatives_rejected": "SQLite + Litestream (single writer, alpha-only ANN, no FKs on vec0), MySQL 9.7 (non-transactional DDL, no vector search in Community), MongoDB 8 (no FKs, snapshot-isolation write skew), Neo4j Community (no required constraints)"
+  },
+  {
+   "layer": "ORM / query builder",
+   "choice": "Kysely query builder (no ORM). Hot paths are hand-written SQL through sql``. Types are generated from the migrated database and checked in CI. int8 values are parsed to Number with a safe-integer guard.",
+   "version": "kysely 0.29.6 (pinned exactly), kysely-codegen 0.20.0",
+   "one_line_reason": "Typed WITH RECURSIVE, FOR UPDATE and per-transaction isolation. The SQL it emits is the SQL that runs, with about 10 us build cost.",
+   "requirement_ids": "DB-02, DB-03, DB-05",
+   "alternatives_rejected": "Drizzle 0.45 (no recursive CTE builder, no down migrations), Prisma 7/8 (major version mid-freeze, no FOR UPDATE), TypeORM 1.1, MikroORM 7, raw postgres.js (runner-up)"
+  },
+  {
+   "layer": "Migrations",
+   "choice": "dbmate plain-SQL migrations, each with up and down. They run from the app entrypoint (dbmate --wait up). CI runs a full rollback round-trip and an explicit schema dump through the dbmate image, which ships pg_dump 18.6. Perf-index toggle scripts give the DB-05 'before' state.",
+   "version": "dbmate 2.36.0 (npm production dependency; ghcr.io/amacneil/dbmate:2.36.0 in CI)",
+   "one_line_reason": "Every migration carries its rollback in the same readable SQL file (DB-01). PostgreSQL DDL is transactional.",
+   "requirement_ids": "DB-01",
+   "alternatives_rejected": "Kysely Migrator, drizzle-kit (forward-only), Prisma migrate (manual downs), Atlas CE (no migrate down), graphile-migrate (roll-forward only), node-pg-migrate 9 (reversal)"
+  },
+  {
+   "layer": "Driver",
+   "choice": "node-postgres Pool (max about 10, transaction-scoped advisory locks only) through Kysely PostgresDialect; pgvector npm helpers for vector parameters",
+   "version": "pg 8.23.0, @types/pg 8.23.1, pgvector (npm) 0.3.0",
+   "one_line_reason": "Mature, supports explicit BEGIN ISOLATION LEVEL, and runs on Node 22/24/26. The reversal is a one-file swap to kysely-postgres-js.",
+   "requirement_ids": "DB-03, DB-05, RAG-05",
+   "alternatives_rejected": "postgres.js 3.4.9 (fallback dialect), Bun.sql"
+  },
+  {
+   "layer": "Vector store",
+   "choice": "Two layers. (1) Our own exact client index: Float32Array segments of 1,024 rows (pageable). A readable-ino set is computed from the CURRENT tree, including x on every ancestor, before ranking. dsa/heap gives top-k. Our own BM25 is the offline fallback, and our own Bloom filter covers content hashes. (2) pgvector file_chunks vector(384), FK to inodes ON DELETE CASCADE, the authoritative multi-user copy. Search is an exact scan; HNSW with iterative_scan is added only if measured necessary. Seeds load precomputed vectors.",
+   "version": "pgvector 0.8.6",
+   "one_line_reason": "Zero permission leaks by construction, atomic deletes with rm -r, and a fresh examiner machine searches 10k or more chunks without re-embedding (client scan measured at 3.2 ms p95).",
+   "requirement_ids": "RAG-01..06",
+   "alternatives_rejected": "Qdrant 1.19 (stale ACL copies, no atomic deletes), Chroma, LanceDB, sqlite-vec, client-only index (runner-up)"
+  },
+  {
+   "layer": "Embedding model / runtime",
+   "choice": "MongoDB/mdbr-leaf-ir q8 ONNX (revision 4262131b), MRL-truncated to 384 dimensions, with a query prefix. Runs through Transformers.js on the ORT WASM backend in a dedicated, evictable ai.embed worker: batch size 1, at most 512 tokens, 2 threads when isolated and hwc >= 8. Weights and ORT are self-hosted and loaded after the desktop is interactive. The indexer is a niced process at priority 32, throttled while the user is active and paused while search has focus. Fallback model: Xenova/bge-small-en-v1.5 q8.",
+   "version": "@huggingface/transformers 4.3.0 (onnxruntime-web 1.31.0-dev.20260914 pinned via lockfile; override to stable 1.30.0 as rollback)",
+   "one_line_reason": "Free, private, works offline, and measured about 2x faster than bge-small in WASM (123 vs 262 ms per chunk at 2 threads). Top BEIR score among models of 100M parameters or fewer.",
+   "requirement_ids": "RAG-01, RAG-02, RAG-04, RAG-05, RAG-06, MEM-01, BOOT-10",
+   "alternatives_rejected": "Hosted text-embedding-3-small / Gemini Embedding (offline gap, privacy), EmbeddingGemma-300m and nomic v1.5 (memory and CPU cost), all-MiniLM-L6-v2 (256-token truncation), server-side-only embedding"
+  },
+  {
+   "layer": "LLM",
+   "choice": "Claude through a server-side LLM gateway (/api/llm/*): keys only in the server env, per-uid limits, short reserve/settle budget transactions, llm_requests logging, CI cassettes and no key in CI, fallbacks 'default'. Provisional model claude-opus-5-5 at effort medium (verified live as Anthropic's recommended starting model). Final model is chosen by the Week-3 AGT-40/INJ-20 bake-off under a pre-registered rule. claude-opus-5 is the same-provider fallback. The model only proposes; the kernel validates, dry-runs, confirms and runs one transaction as the caller's uid, then audits it.",
+   "version": "@anthropic-ai/sdk 0.128.0; model claude-opus-5-5 ($4/$20 per MTok, cache reads $0.20)",
+   "one_line_reason": "Best public evidence on multi-step planning and asking for clarification (the dimensions AGT-07 tests), strict tool schemas, and safety that never depends on the model.",
+   "requirement_ids": "AGT-01..10, RAG answer (optional), s12.6",
+   "alternatives_rejected": "Gemini 3.8 Flash (the bake-off challenger; paid key only; price doubles on 2027-01-01), GPT-6 Sol, local Qwen3 8B on Ollama (41.75% on BFCL multi-turn, minutes per plan), WebLLM in-browser"
+  },
+  {
+   "layer": "Predictor",
+   "choice": "Hand-written Witten-Bell interpolated 2nd-order Markov chain with back-off to 1st order, then time-bucket MFU, then global MFU. Uses MFU until 50 launches. Runs as a niced kernel process on an executor, reading a telemetry ring buffer kept on the device. Prefetch fires only when confidence exceeds a threshold, the system is idle and memory is free, and prefetched pages are marked speculative. Categorical naive Bayes is the challenger and ships only if it wins by 2 or more points.",
+   "version": "own code (no ML library)",
+   "one_line_reason": "O(1) update, sub-millisecond prediction, data-efficient, and the spec's baseline that any more complex model must beat.",
+   "requirement_ids": "PRE-01..06",
+   "alternatives_rejected": "Logistic regression, kNN, tiny NN (expected loser)"
+  },
+  {
+   "layer": "Object storage",
+   "choice": "Our own content-addressed FsBlobStore on a Docker volume behind the BlobStore interface (put/get/head/delete). Streams with a SHA-256 tee and atomic rename. Blobs are uploaded before the single DB transaction. GC removes never-referenced blobs after 1 h and dereferenced ones after 14 days. Swap is keyed by owner_uid and served same-origin through /api/swap. Garage v2.4.1 behind the same interface is the reversal option.",
+   "version": "own code; Garage v2.4.1 (reversal only)",
+   "one_line_reason": "v1 uses no S3-only feature. This drops a container, an AGPL component and the AWS SDK, and keeps DB atomicity independent of the store.",
+   "requirement_ids": "MEM-04, MEM-05, DB-02, VFS-06",
+   "alternatives_rejected": "Garage (reversal), RustFS 1.0 (one week old, CVE history), SeaweedFS, Cloudflare R2 as primary (cannot run in the offline examiner clone), MinIO CE (archived April 2026)"
+  },
+  {
+   "layer": "Auth",
+   "choice": "Hand-rolled opaque server-side sessions adapted from Lucia's auth_session.ts (0BSD; Buffer base64url instead of Node 25 APIs). SHA-256 of the secret, 10-day sliding and 30-day absolute expiry. Cookie is __Host-plt_sid in production and plt_sid on localhost, SameSite=Strict, plus a Sec-Fetch-Site check. node:crypto Argon2id (m=19456, t=2, p=1) with at most 2 hashes at once. Offline: PBKDF2-SHA256 600k verifier per uid, never cached for root. su uses 15-min server grants, and the server re-derives the uid for every op. Guest and demo accounts included.",
+   "version": "Node 24 built-in crypto.argon2 / WebCrypto PBKDF2",
+   "one_line_reason": "About 250 lines every member can explain. It fits UNIX uid/gid/su semantics directly and revokes open WebSockets immediately.",
+   "requirement_ids": "OFF-03, BOOT-14, SYS-01, AGT-04, VFS-03, s18",
+   "alternatives_rejected": "Better Auth 1.7.5 (runner-up, with a Week-5 reversal trigger), Auth.js v5 (maintenance mode), JWT with refresh rotation (jose)"
+  },
+  {
+   "layer": "Testing",
+   "choice": "Vitest projects: unit (node, loopback kernel), browser (real Chrome channel via @vitest/browser-playwright for IndexedDB, OPFS, workers and the compositor), integration (node plus compose Postgres: syscalls, fault injection, concurrent moves, leases, replay, auth suite), bench, and ai-eval (replayed cassettes). coverage-v8 with an include list and thresholds of 70% overall and 85% on dsa/vfs/kernel. fast-check property and model tests. Playwright e2e and offline tests (server-kill as the gate test, launchPersistentContext). axe in both themes.",
+   "version": "vitest 5.0.1 (fallback 4.1.11), @vitest/browser-playwright 5.0.1, @vitest/coverage-v8 5.0.1, @playwright/test 1.63.0, fast-check 4.10.2, @solidjs/testing-library 0.8.10, @axe-core/playwright 4.13.0",
+   "one_line_reason": "One runner covers every level in s15.3 in real Chrome, and per-directory coverage thresholds fail the build.",
+   "requirement_ids": "s15.3, DB-02, DB-03, OFF-01, OFF-02, VFS-09, WM-07, AGT-06, AGT-07",
+   "alternatives_rejected": "Jest 30 (experimental ESM, jsdom only), bun test (global coverage thresholds only), Web Test Runner"
+  },
+  {
+   "layer": "Benchmarks",
+   "choice": "Vitest bench (Tinybench) for DSA complexity curves from 10^3 to 10^5, reporting ns/op and bytes/entry. Our own per-op percentile sampler with budgets.json that fails the build. Own seed script (mulberry32) plus a Q1-Q5 harness with EXPLAIN (ANALYZE, BUFFERS) before and after indexing. Playwright CDP frame meter plus LoAF. k6 for WebSocket soak and lock-grant p95. Authoritative runs happen on the lab-spec machine.",
+   "version": "k6 v2.3.0 (standalone binary)",
+   "one_line_reason": "Every p95 target in the spec becomes a CI gate, with per-message WebSocket latency that Artillery cannot report.",
+   "requirement_ids": "SYS-03, DB-05, MEM-05, RAG-05, PRE-01, WM-03, PROC-05, BOOT-10",
+   "alternatives_rejected": "mitata, autocannon (HTTP only), Artillery 2.0 (no per-message WS latency)"
+  },
+  {
+   "layer": "CI",
+   "choice": "GitHub Actions. PR jobs: lint, TS 7 typecheck, gitleaks, unit/browser/integration with coverage summary, bundle budgets, migration round-trip, kysely-codegen --verify. Main/tags: e2e on Chrome stable. Nightly: perf on a self-hosted lab-spec runner, plus a Chrome beta capability probe. Tag v*: multi-arch images to public GHCR, timed clean bring-up with no docker login and Docker Hub blocked (fails over 240 s), Release with coverage and perf reports, SSH deploy after approval by another member. Main is protected with a required review.",
+   "version": "actions/checkout v7.0.1, setup-node v7.0.0, pnpm/action-setup v6.1.0, docker/build-push-action v7.4.0, gitleaks v8.30.1",
+   "one_line_reason": "Free with a public repo or Student Pack plan, and it exercises exactly the examiner's bring-up path.",
+   "requirement_ids": "s13 registration CI, s15.3, s15.4, s17.1, s18",
+   "alternatives_rejected": "GitLab CI, Turborepo remote cache (added only if PR time exceeds 10 min)"
+  },
+  {
+   "layer": "Deployment",
+   "choice": "One compose.yaml for the examiner, CI and production, plus compose.prod.yaml (domain, TLS, restart policies, log rotation, required secrets, memory limits). Four services: web (Caddy + shell), app, db, and nothing else. Hosted on a Hetzner CX33 (4 vCPU, 8 GB) in FSN/NBG, bought early and never recreated. Fallback: OVHcloud VPS-2. Nightly pg_dump -Fc plus rclone of blobs and dumps to Cloudflare R2, with a weekly restore drill.",
+   "version": "Docker Compose >= 2.24 (v5.5.x); Hetzner CX33 EUR 8.49 + EUR 0.50 IPv4",
+   "one_line_reason": "Always on and WebSocket-safe, Postgres on the same host, and one descriptor means no drift between bring-up, CI and production.",
+   "requirement_ids": "s14.2 deployment, s17.1, s17.2, DB-01, MEM-04",
+   "alternatives_rejected": "Fly.io + Neon + R2 (sleep, network hop, pooler limits), Oracle Always Free A1 (reclamation risk; disaster-recovery target only), Render/Railway/Koyeb, k3s + Helm"
+  },
+  {
+   "layer": "Reverse proxy",
+   "choice": "Caddy: automatic HTTPS and HTTP/3, precompressed static shell, COOP same-origin, COEP require-corp, CORP same-origin, a CSP with 'wasm-unsafe-eval' and no 'unsafe-eval', HSTS, no-cache on index.html and sw.js, immutable hashed assets. Proxies /api/* and /ws to app:3000 with lb_try_duration 15s and stream_close_delay. caddy_data and caddy_config volumes. Local port 4717.",
+   "version": "caddy 2.11.4-alpine",
+   "one_line_reason": "No default stream timeout for WebSockets, automatic TLS, a roughly 30-line Caddyfile anyone can defend, and one place for every header.",
+   "requirement_ids": "MEM-01 (cross-origin isolation), OFF-05, VFS-09, s18",
+   "alternatives_rejected": "Nginx 1.30 + certbot (60 s default WS idle kill), Traefik 3.7 (label-based config)"
+  },
+  {
+   "layer": "Observability",
+   "choice": "pino JSON logs with correlation IDs (reqId, uid, osSessionId, opId, pid) and redaction. prom-client /metrics, internal only: ws connections, lock_grant histogram, tx retries, op apply, swap bytes, event-loop delay, LLM tokens and cost. /healthz and /readyz. Client LoAF, errors and the kernel log go to a hand-written ring buffer (dmesg, bootlog, Task Manager). UptimeRobot free checks every 5 minutes.",
+   "version": "pino 10.3.1, prom-client 15.1.3",
+   "one_line_reason": "Produces graded evidence (lock latency, LoAF attribution, LLM cost report) with no extra containers and no data leaving our infrastructure.",
+   "requirement_ids": "PROC-05, VFS-09, s12.6 cost report, BOOT-11",
+   "alternatives_rejected": "Sentry (file paths leave our infrastructure), self-hosted Prometheus/Grafana/GlitchTip (reversal profile), full OpenTelemetry stack"
+  },
+  {
+   "layer": "Monorepo / lint / TypeScript",
+   "choice": "pnpm workspaces with catalogs; packages protocol/, kernel/, dsa/, vfs/, wm/, apps/, ai/, server/, db/. ESLint flat config with typescript-eslint and eslint-plugin-solid (errors, --max-warnings 0) plus local rules (yield-less loops, awaits in IndexedDB builders, app boundary imports/globals, HTML sinks). Prettier. 'typescript' is aliased to @typescript/typescript6 6.0.2 for tooling; @typescript/native (typescript 7.0.2) is the type-check gate.",
+   "version": "pnpm 12.5.1 (fallback 11.27.1, same lockfile), eslint 10.11.0, typescript-eslint 8.70.1, eslint-plugin-solid 0.18.0, prettier 3.9.x",
+   "one_line_reason": "Strict dependency layout catches phantom dependencies. typescript-eslint needs TS below 6.1 while TS 7 builds about 10x faster, and the Solid reactivity lint is the key mitigation for the UI choice.",
+   "requirement_ids": "s15.4 code quality, SYS-01 boundary",
+   "alternatives_rejected": "Biome 2.5 (cannot run the Solid rules), Oxlint + tsgolint (runner-up add-on), npm workspaces, Bun workspaces, Nx/Turborepo"
+  },
+  {
+   "layer": "Docs / diagrams / report",
+   "choice": "Markdown docs in the repo (STACK_DECISION, ARCHITECTURE, DSA, DATABASE, AI, BOOT, TESTING, SECURITY, AI_USAGE, TEAM_CONTRACT, CHANGELOG, THIRD_PARTY). Mermaid for C4 and ERD diagrams. Typst for the report and slides, compiled to PDF in CI. OBS Studio for the demo video.",
+   "version": "Typst (CLI), Mermaid rendered by GitHub",
+   "one_line_reason": "No extra infrastructure, renders on GitHub, and builds reproducibly from tagged sources.",
+   "requirement_ids": "s13 deliverables, s15 docs, DB-01 ERD",
+   "alternatives_rejected": "LaTeX, Google Docs/Slides (not versioned with the tag), Structurizr"
+  }
+ ],
+ "monthly_cost_estimate": "Typical: about US$35-45 per month for the whole team (about US$7-9 per student).\n- VPS: Hetzner CX33 at EUR 8.49 + EUR 0.50 IPv4, about US$10.5.\n- LLM gateway: about US$22-33. Claude Opus 5.5 at effort medium, about 560 plan calls a month including Batch-priced evals at 50% off. Each call is about US$0.04 with a warm cache and US$0.06 cold (4k cached tokens at US$0.20/MTok, 1.5k input at US$4/MTok, about 1.5k output at US$20/MTok).\n- Free at US$0: domain (GitHub Student Pack .me or .tech for year 1), Cloudflare R2 backups (10 GB or less), GitHub Actions and GHCR (public repo, or Student Pack Pro / Teacher Team), UptimeRobot (free plan), and embeddings and predictor (local in the browser).\nSemester (Oct-Feb, 5 months): about US$175-225, including a one-off of about US$25 for the Week-3 multi-provider LLM bake-off.\nHard ceilings, enforced in code or by contract:\n- VPS at EUR 15 a month or less. If no CX33 can be ordered within 72 h, switch to OVHcloud VPS-2 (about US$8.50, IPv4 included).\n- LLM at US$50 a month and US$250 a semester, enforced by the gateway's reserve/settle budget with alerts at 50%, 80% and 100%.\n- Worst case about US$67 a month.\nAsk Anthropic for its academic discount and use new-account credits. CI minute overage (US$0.006 a minute) applies only if the repo is private on GitHub Free.",
+ "bring_up_commands": "1) git clone https://github.com/<org>/plotinium.git\n2) cd plotinium\n3) docker compose up -d --wait\nThen open http://localhost:4717 (use localhost, not a LAN IP). Demo credentials are in the README, and PLOTINIUM_PORT overrides the port.\n- Images: Compose pulls digest-pinned multi-arch (amd64/arm64) images from public GHCR, with mirrors of pgvector and caddy, and falls back to build: if a pull fails.\n- Migrations and seed: the app entrypoint runs dbmate migrations and the demo seed (precomputed vectors included) before /readyz turns healthy.\n- No .env is needed: without ANTHROPIC_API_KEY the AI agent boots degraded and shows an explanation.\n- Prerequisites: Docker Engine or Desktop with Compose 2.24 or newer.\n- CI times the full clean bring-up and fails a release if it takes over 240 s.",
+ "third_party_list": [
+  {
+   "name": "solid-js 1.9.15",
+   "purpose": "UI framework for the shell, window chrome, login and app views",
+   "licence": "MIT"
+  },
+  {
+   "name": "vite 8.3.0 (bundles Rolldown 1.x, Oxc)",
+   "purpose": "Dev server and production build, module workers, build manifest",
+   "licence": "MIT"
+  },
+  {
+   "name": "vite-plugin-solid 2.11.14 (+ babel-preset-solid, @babel/core 7, transitive)",
+   "purpose": "Solid JSX compilation",
+   "licence": "MIT"
+  },
+  {
+   "name": "vite-plugin-pwa 1.3.0",
+   "purpose": "injectManifest precache list and web app manifest",
+   "licence": "MIT"
+  },
+  {
+   "name": "workbox-precaching / workbox-routing / workbox-window 7.4.1",
+   "purpose": "Versioned shell cache, offline navigation, deferred update activation",
+   "licence": "MIT"
+  },
+  {
+   "name": "@xterm/xterm 6.0.0, @xterm/addon-fit 0.11.0 (@xterm/addon-webgl 0.19.0 optional)",
+   "purpose": "Terminal renderer and TTY device",
+   "licence": "MIT"
+  },
+  {
+   "name": "@codemirror/view, state, commands, language, lang-markdown, lang-javascript (6.x) + @lezer/* (transitive)",
+   "purpose": "Text Editor",
+   "licence": "MIT"
+  },
+  {
+   "name": "lucide-solid 1.47.0",
+   "purpose": "UI glyph icons",
+   "licence": "ISC"
+  },
+  {
+   "name": "@ark-ui/solid 5.39.2 (optional) / @tanstack/solid-virtual 3.13.40 (optional)",
+   "purpose": "Accessible primitives and virtual lists, only if a Week-3 spike requires them",
+   "licence": "MIT"
+  },
+  {
+   "name": "valibot 1.5.0, @valibot/to-json-schema 1.8.0",
+   "purpose": "Syscall, WS and op-log schemas; LLM tool JSON Schema (server only)",
+   "licence": "MIT"
+  },
+  {
+   "name": "idb 8.0.3",
+   "purpose": "Promise helpers for readonly IndexedDB access",
+   "licence": "ISC"
+  },
+  {
+   "name": "@huggingface/transformers 4.3.0",
+   "purpose": "Tokenizer and ONNX inference for embeddings (browser worker; Node for eval and fixtures)",
+   "licence": "Apache-2.0"
+  },
+  {
+   "name": "onnxruntime-web 1.31.0-dev.20260914 / onnxruntime-node 1.30.0 (transitive, self-hosted WASM)",
+   "purpose": "WASM inference runtime; Node runtime for eval",
+   "licence": "MIT"
+  },
+  {
+   "name": "MongoDB/mdbr-leaf-ir model weights (rev 4262131b, q8 ONNX + tokenizer)",
+   "purpose": "Primary embedding model, self-hosted under /models",
+   "licence": "Apache-2.0"
+  },
+  {
+   "name": "Xenova/bge-small-en-v1.5 (BAAI) weights q8",
+   "purpose": "Pinned fallback embedding model",
+   "licence": "MIT"
+  },
+  {
+   "name": "fastify 5.12.5, @fastify/websocket 11.3.1, @fastify/cookie 11.1.2",
+   "purpose": "HTTP API, WebSocket routes, session cookies",
+   "licence": "MIT"
+  },
+  {
+   "name": "ws 8.21.3 (via @fastify/websocket)",
+   "purpose": "WebSocket server implementation",
+   "licence": "MIT"
+  },
+  {
+   "name": "pg 8.23.0, @types/pg 8.23.1",
+   "purpose": "PostgreSQL driver and pool",
+   "licence": "MIT"
+  },
+  {
+   "name": "kysely 0.29.6, kysely-codegen 0.20.0 (dev)",
+   "purpose": "Type-safe SQL query builder and generated table types",
+   "licence": "MIT"
+  },
+  {
+   "name": "pgvector (npm) 0.3.0",
+   "purpose": "Vector parameter serialisation and distance helpers",
+   "licence": "MIT"
+  },
+  {
+   "name": "dbmate 2.36.0 (npm binary; ghcr.io/amacneil/dbmate image in CI)",
+   "purpose": "SQL migrations with up/down; schema dump",
+   "licence": "MIT"
+  },
+  {
+   "name": "@anthropic-ai/sdk 0.128.0",
+   "purpose": "Claude API client inside the server-side LLM gateway",
+   "licence": "MIT"
+  },
+  {
+   "name": "pino 10.3.1 (pino-pretty 13.1.3 dev)",
+   "purpose": "Structured logging",
+   "licence": "MIT"
+  },
+  {
+   "name": "prom-client 15.1.3",
+   "purpose": "Internal /metrics endpoint",
+   "licence": "Apache-2.0"
+  },
+  {
+   "name": "Lucia auth_session.ts reference (lucia-auth/lucia code/, July 2026)",
+   "purpose": "Adapted opaque-session create/validate/invalidate and CSRF check (attribute per code/LICENSE)",
+   "licence": "0BSD"
+  },
+  {
+   "name": "@simplewebauthn/server 14.0.2 / @simplewebauthn/browser 14.0.0 (deferred, optional)",
+   "purpose": "Passkey login, Phase-4 stretch goal only",
+   "licence": "MIT"
+  },
+  {
+   "name": "Node.js 24.21.x (docker node:24-trixie-slim; bundles OpenSSL 3.5)",
+   "purpose": "Backend runtime, crypto.argon2",
+   "licence": "MIT (Node.js); Apache-2.0 (OpenSSL); Debian image components under their own licences"
+  },
+  {
+   "name": "PostgreSQL 18.6 (pgvector/pgvector:0.8.6-pg18-trixie) incl. pg_trgm, btree_gist, pg_stat_statements, auto_explain",
+   "purpose": "Primary database and contrib extensions",
+   "licence": "PostgreSQL Licence"
+  },
+  {
+   "name": "pgvector extension 0.8.6",
+   "purpose": "vector type, distance operators, optional HNSW",
+   "licence": "PostgreSQL Licence"
+  },
+  {
+   "name": "Caddy 2.11.4 (docker caddy:2.11.4-alpine)",
+   "purpose": "Reverse proxy, TLS, static shell, security headers",
+   "licence": "Apache-2.0"
+  },
+  {
+   "name": "typescript 7.0.2 (@typescript/native alias) and @typescript/typescript6 6.0.2",
+   "purpose": "Type-check gate; TS 6 API for lint and editors",
+   "licence": "Apache-2.0"
+  },
+  {
+   "name": "eslint 10.11.0, typescript-eslint 8.70.1, eslint-plugin-solid 0.18.0",
+   "purpose": "Linting, including Solid reactivity and boundary rules",
+   "licence": "MIT"
+  },
+  {
+   "name": "prettier 3.9.x",
+   "purpose": "Code formatting",
+   "licence": "MIT"
+  },
+  {
+   "name": "pnpm 12.5.1",
+   "purpose": "Workspace package manager",
+   "licence": "MIT"
+  },
+  {
+   "name": "vitest 5.0.1, @vitest/browser-playwright 5.0.1, @vitest/coverage-v8 5.0.1 (Tinybench transitive)",
+   "purpose": "Unit, browser, integration and bench tests; coverage",
+   "licence": "MIT"
+  },
+  {
+   "name": "@solidjs/testing-library 0.8.10 (fallback @testing-library/dom)",
+   "purpose": "Solid component tests",
+   "licence": "MIT"
+  },
+  {
+   "name": "@playwright/test 1.63.0",
+   "purpose": "E2E, offline, performance and bring-up tests",
+   "licence": "Apache-2.0"
+  },
+  {
+   "name": "@axe-core/playwright 4.13.0 (axe-core)",
+   "purpose": "Automated WCAG 2.2 AA checks",
+   "licence": "MPL-2.0"
+  },
+  {
+   "name": "fast-check 4.10.2",
+   "purpose": "Property and model-based tests",
+   "licence": "MIT"
+  },
+  {
+   "name": "k6 v2.3.0",
+   "purpose": "WebSocket and HTTP load tests with thresholds (tool only, never distributed)",
+   "licence": "AGPL-3.0"
+  },
+  {
+   "name": "gitleaks v8.30.1 (CLI)",
+   "purpose": "Secret scanning of history and the built bundle",
+   "licence": "MIT"
+  },
+  {
+   "name": "rclone v1.75.1",
+   "purpose": "Off-site copy of dumps and blobs to Cloudflare R2",
+   "licence": "MIT"
+  },
+  {
+   "name": "GitHub Actions: actions/checkout, actions/setup-node, pnpm/action-setup",
+   "purpose": "CI plumbing",
+   "licence": "MIT"
+  },
+  {
+   "name": "GitHub Actions: docker/setup-buildx-action, login-action, metadata-action, build-push-action",
+   "purpose": "Multi-arch image build and push to GHCR",
+   "licence": "Apache-2.0"
+  },
+  {
+   "name": "davelosert/vitest-coverage-report-action v2.13.0",
+   "purpose": "Coverage summary comment on PRs",
+   "licence": "MIT"
+  },
+  {
+   "name": "Typst CLI",
+   "purpose": "Technical report and slides compiled to PDF",
+   "licence": "Apache-2.0"
+  },
+  {
+   "name": "Mermaid (rendered by GitHub)",
+   "purpose": "C4 and ERD diagrams in Markdown docs",
+   "licence": "MIT"
+  },
+  {
+   "name": "Garage v2.4.1 (reversal only, not shipped unless triggered)",
+   "purpose": "S3-compatible object store behind BlobStore, only if FsBlobStore is rejected",
+   "licence": "AGPL-3.0 (run unmodified as a separate process)"
+  },
+  {
+   "name": "RAG evaluation corpus documents from third parties (if any)",
+   "purpose": "200 or more docs for Recall@5/MRR evaluation; each source listed with URL",
+   "licence": "Permissive only (MIT, Apache-2.0 or CC-BY with attribution); team-authored notes are team-owned"
+  },
+  {
+   "name": "External services (not code): Anthropic Claude API, Hetzner Cloud, Cloudflare R2, GitHub (Actions/GHCR), UptimeRobot",
+   "purpose": "LLM inference, hosting, backups, CI and registry, uptime monitoring",
+   "licence": "Commercial terms of service (free tiers where noted)"
+  },
+  {
+   "name": "Mandatory DSA (n-ary tree, trie, binary heap, DAG with Kahn's algorithm, LRU, hash table, ring buffer, Bloom filter)",
+   "purpose": "Written from first principles by the team under dsa/; THIRD_PARTY.md states that no library stands in for them",
+   "licence": "Team-owned"
+  }
+ ]
+}

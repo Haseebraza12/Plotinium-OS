@@ -1,0 +1,16 @@
+# pgvector notes
+
+Extension that adds a `vector(n)` column type and distance operators:
+- `<->` L2 distance,
+- `<#>` negative inner product,
+- `<=>` cosine distance.
+
+For unit-length vectors inner product equals cosine similarity, so ordering by `<#>` ascending gives the most similar rows first.
+
+Index types:
+- **IVFFlat:** k-means lists; build after loading data; tune `lists` and `probes`.
+- **HNSW:** graph-based; better recall/speed trade-off, slower to build, more memory. Parameters m, ef_construction, ef_search.
+
+Approximate indexes + a WHERE filter can return fewer than k rows because filtering happens after the index scan. Version 0.8 added iterative scans to keep searching until enough rows pass the filter.
+
+Our plan: exact scan first (fine at 10k chunks), HNSW only if a benchmark says we need it. Permissions are joined at query time; we never copy owner or mode into the chunk table.

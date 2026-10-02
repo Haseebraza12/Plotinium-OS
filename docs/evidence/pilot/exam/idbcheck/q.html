@@ -1,0 +1,4 @@
+<!doctype html><meta charset="utf-8"><title>q</title><script type="module">
+const a = await navigator.storage.estimate(); const p = await navigator.storage.persist(); const b = await navigator.storage.estimate();
+window.__result = { before: a.quota, persistGranted: p, persisted: await navigator.storage.persisted(), after: b.quota };
+</script>

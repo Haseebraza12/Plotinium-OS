@@ -1,0 +1,29 @@
+/**
+ * Replays queued offline mutations in order once the server is reachable again.
+ * A version mismatch is not retried: the local copy is kept as a conflicted copy instead.
+ */
+export type OutboxOp =
+  | { kind: 'write'; ino: string; baseVersion: number; body: Uint8Array }
+  | { kind: 'rename'; ino: string; baseVersion: number; newPath: string }
+  | { kind: 'unlink'; ino: string; baseVersion: number };
+
+export type ReplayResult = 'applied' | 'conflict' | 'gone' | 'retry-later';
+
+export interface OutboxPort {
+  send(op: OutboxOp): Promise<ReplayResult>;
+  keepConflictedCopy(op: Extract<OutboxOp, { kind: 'write' }>): Promise<void>;
+}
+
+export async function replay(queue: OutboxOp[], port: OutboxPort): Promise<OutboxOp[]> {
+  const remaining: OutboxOp[] = [];
+  for (let i = 0; i < queue.length; i++) {
+    const op = queue[i]!;
+    const result = await port.send(op);
+    if (result === 'retry-later') {
+      remaining.push(...queue.slice(i)); // keep order: stop at the first transient failure
+      break;
+    }
+    if (result === 'conflict' && op.kind === 'write') await port.keepConflictedCopy(op);
+  }
+  return remaining;
+}

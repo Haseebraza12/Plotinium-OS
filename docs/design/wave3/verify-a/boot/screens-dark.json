@@ -1,0 +1,57 @@
+[
+  {
+    "name": "UI-069 unsupported has no hard-coded :4717",
+    "ok": true,
+    "detail": "Power-on self testPlotinium cannot start in this browserPlotinium 0.1.0-dev.0 · build 6df55c0 · Chrome 153 on LinuxSecure context localhost:4718PassModule workers new Worker({type:\"module\"})PassIndexedDB indexedDBMissingStorage is disabled or blocked by private modeWeb Locks navigator.locksPassWeb Crypto crypto.subtlePassCross-origin isolation crossOriginIsolatedPassService Worker navigator.servic"
+  },
+  {
+    "name": "UI-013 unsupported card is not 965 px tall",
+    "ok": false,
+    "detail": "card 806px"
+  },
+  {
+    "name": "CSP (unsupported)",
+    "ok": true,
+    "detail": "[]"
+  },
+  {
+    "name": "UI-031 halted card shown, focus on Start, desktop inert, no saved-session claim",
+    "ok": true,
+    "detail": "{\"active\":\"↵Start\",\"inert\":true,\"body\":false}"
+  },
+  {
+    "name": "UI-031 Enter starts the system again",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "CSP (halted)",
+    "ok": true,
+    "detail": "[]"
+  },
+  {
+    "name": "console/page errors (halted)",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "UI-031 takeover card shown in tab 2",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "UI-031 Enter uses the kernel here (tab 1 shows moved, tab 2 reaches login)",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "UI-031 Enter on the moved card reloads",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "CSP (takeover)",
+    "ok": true,
+    "detail": "[]"
+  }
+]

@@ -1,0 +1,909 @@
+/*
+ * Plotinium design tokens: the single source of truth for colour, material, type, shape,
+ * elevation, spacing, layers and motion (PLT-ID-06, DSN-02). Values come from the Plotinium
+ * Glass references in docs/design/stitch/ (desktop-dark, desktop-light and siblings); the
+ * role names keep the --pl-* vocabulary of specs/05-wm/ui-design-system.md §3.3.
+ *
+ * Theme resolution: light is the base; dark applies under prefers-color-scheme unless
+ * [data-theme="light"] forces light, and [data-theme="dark"] forces dark. The attribute also
+ * scopes a theme to any subtree (an always-dark HUD, side-by-side previews). The two dark blocks
+ * below are identical on purpose (a custom-property block cannot be shared between a media
+ * query and an attribute selector without a preprocessor); a unit test keeps them in step.
+ *
+ * Glass: only the menu bar, dock, popovers/menus, Control Centre, notifications, Search,
+ * sheets and HUDs may use the --pl-glass-*-filter values. Windows use the static tint
+ * (--pl-glass-window-*) with no backdrop-filter, to hold 60 FPS with ten windows (WM-03).
+ */
+@layer reset, tokens, shell, apps;
+
+@layer tokens {
+  :root,
+  [data-theme='light'] {
+    color-scheme: light dark;
+
+    /* ---------- accent and states ---------- */
+    --pl-accent: #5856d6;
+    --pl-accent-hover: #4a48c4;
+    --pl-accent-pressed: #3f3db0;
+    --pl-accent-text: #4f4dc9; /* accent used as text: >= 4.5:1 on light glass */
+    --pl-accent-subtle: rgb(88 86 214 / 0.14);
+    --pl-accent-glow: rgb(88 86 214 / 0.35);
+    --pl-on-accent: #ffffff;
+    --pl-focus-color: #5856d6;
+    --pl-focus-ring: 3px solid var(--pl-focus-color);
+    --pl-logo-orbit-a: #5856d6;
+    --pl-logo-core: #4f4dc9;
+    --pl-logo-electron: #5856d6;
+    --pl-focus-offset: 2px;
+
+    --pl-success: #1e7d34;
+    --pl-success-subtle: rgb(52 199 89 / 0.16);
+    --pl-warning: #9a4f00;
+    --pl-warning-subtle: rgb(255 149 0 / 0.18);
+    --pl-danger: #c4000f; /* danger text: >= 4.5:1 on white and on --pl-danger-subtle */
+    --pl-danger-subtle: rgb(255 59 48 / 0.14);
+    --pl-info: #00679a;
+    --pl-info-subtle: rgb(50 173 230 / 0.16);
+    --pl-neutral-subtle: rgb(0 0 0 / 0.06);
+
+    /* Window controls keep their colours in both themes; glyphs carry the meaning. */
+    --pl-traffic-close: #ff5f57;
+    --pl-traffic-minimise: #febc2e;
+    --pl-traffic-zoom: #28c840;
+    --pl-traffic-idle: rgb(0 0 0 / 0.13);
+    --pl-traffic-glyph: rgb(0 0 0 / 0.6);
+
+    /* ---------- labels and lines ---------- */
+    --pl-text: rgb(0 0 0 / 0.86);
+    --pl-text-muted: rgb(0 0 0 / 0.64);
+    /* tertiary: placeholders and section heads, >= 4.5:1 on every light surface */
+    --pl-text-tertiary: rgb(0 0 0 / 0.56);
+    --pl-text-disabled: rgb(0 0 0 / 0.36);
+    --pl-text-inverse: #ffffff;
+    --pl-hairline: rgb(0 0 0 / 0.09);
+    --pl-hairline-subtle: rgb(0 0 0 / 0.055);
+    --pl-border: rgb(0 0 0 / 0.44); /* control boundaries, >= 3:1 (WCAG 1.4.11) */
+    --pl-border-subtle: rgb(0 0 0 / 0.12);
+    --pl-separator: rgb(0 0 0 / 0.1);
+
+    /* ---------- opaque surfaces (also the reduced-transparency fallbacks) ---------- */
+    --pl-bg: #eef0f8;
+    --pl-surface: #ffffff;
+    --pl-surface-2: #f5f5f9;
+    --pl-surface-3: #e8e8ef;
+    --pl-scrim: rgb(20 18 40 / 0.28);
+
+    /* ---------- controls ---------- */
+    --pl-control-bg: rgb(0 0 0 / 0.05);
+    --pl-control-hover: rgb(0 0 0 / 0.08);
+    --pl-control-pressed: rgb(0 0 0 / 0.13);
+    --pl-control-raised: #ffffff; /* segmented thumb, toggle knob, slider thumb */
+    --pl-control-raised-shadow: 0 1px 3px rgb(0 0 0 / 0.18), 0 0 0 0.5px rgb(0 0 0 / 0.08);
+    --pl-toggle-off: rgb(0 0 0 / 0.16);
+    --pl-row-alt: rgb(0 0 0 / 0.022);
+    --pl-selection: rgb(88 86 214 / 0.92); /* selected row in a focused list */
+    --pl-selection-idle: rgb(0 0 0 / 0.08); /* selected row when the list is not focused */
+    --pl-on-selection: #ffffff;
+    --pl-text-selection: rgb(88 86 214 / 0.24);
+
+    /* ---------- component roles (primitives) ---------- */
+    --pl-button-primary-shadow:
+      0 1px 2px rgb(88 86 214 / 0.32), inset 0 0 0 0.5px rgb(0 0 0 / 0.06);
+    --pl-button-primary-sheen: linear-gradient(
+      180deg,
+      rgb(255 255 255 / 0.2),
+      rgb(255 255 255 / 0) 60%
+    );
+    --pl-button-primary-sheen-hover: linear-gradient(
+      180deg,
+      rgb(255 255 255 / 0.3),
+      rgb(255 255 255 / 0.06) 60%
+    );
+    --pl-danger-fill: #d70015; /* destructive push button; white text 5.4:1 */
+    --pl-field-bg: #ffffff;
+    --pl-field-border: rgb(0 0 0 / 0.16);
+    --pl-field-shadow: inset 0 0.5px 1px rgb(0 0 0 / 0.08);
+    --pl-search-bg: rgb(0 0 0 / 0.055);
+    --pl-toggle-on: var(--pl-accent);
+    --pl-toggle-knob: #ffffff;
+    --pl-toggle-knob-shadow: 0 1px 3px rgb(0 0 0 / 0.22), 0 0 0 0.5px rgb(0 0 0 / 0.06);
+    --pl-slider-track: rgb(0 0 0 / 0.12);
+    --pl-slider-large-fill: #ffffff;
+    --pl-slider-large-track: rgb(0 0 0 / 0.1);
+    --pl-progress-track: rgb(0 0 0 / 0.08);
+    --pl-progress-sheen: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.55), transparent);
+    --pl-tooltip-bg: rgb(250 250 252 / 0.97);
+    --pl-tooltip-text: rgb(0 0 0 / 0.86);
+    --pl-kbd-bg: rgb(255 255 255 / 0.8);
+    --pl-kbd-shadow: 0 0.5px 0 rgb(0 0 0 / 0.2), inset 0 0 0 0.5px rgb(0 0 0 / 0.16);
+    --pl-scrim-sheet: rgb(20 18 40 / 0.1);
+    --pl-menu-hover: var(--pl-accent);
+    --pl-on-menu-hover: #ffffff;
+    --pl-status-online: #1e7d34;
+    --pl-status-away: #9a4f00;
+    --pl-status-offline: rgb(0 0 0 / 0.36);
+
+    /* ---------- tints: icon tiles, tag dots, charts (decorative; text never relies on them) ---------- */
+    --pl-tint-indigo: #5856d6;
+    --pl-tint-blue: #0a7cff;
+    --pl-tint-teal: #1fa9c2;
+    --pl-tint-green: #2fb350;
+    --pl-tint-yellow: #f2b600;
+    --pl-tint-orange: #fb8c00;
+    --pl-tint-red: #f2463c;
+    --pl-tint-pink: #f0386b;
+    --pl-tint-purple: #a650d8;
+    --pl-tint-gray: #8a8a94;
+    --pl-on-tint: #ffffff;
+
+    /* ---------- glass materials ---------- */
+    --pl-glass-specular:
+      inset 0 1px 0 rgb(255 255 255 / 0.85), inset 0 0 0 0.5px rgb(255 255 255 / 0.5);
+    --pl-glass-menubar-bg: rgb(255 255 255 / 0.52);
+    --pl-glass-menubar-filter: blur(30px) saturate(180%);
+    --pl-glass-dock-bg: rgb(255 255 255 / 0.4);
+    --pl-glass-dock-filter: blur(40px) saturate(190%);
+    --pl-glass-dock-edge: inset 0 1px 0 rgb(255 255 255 / 0.7), inset 0 0 0 0.5px rgb(0 0 0 / 0.08);
+    --pl-glass-window-bg: rgb(252 252 255 / 0.94); /* static tint, no blur */
+    --pl-glass-window-bg-idle: rgb(246 246 251 / 0.9);
+    --pl-glass-window-dim: rgb(255 255 255 / 0.22); /* overlay on unfocused content */
+    --pl-glass-sidebar-bg: rgb(255 255 255 / 0.55);
+    --pl-glass-sidebar-edge:
+      inset 0 0 0 0.5px rgb(0 0 0 / 0.06), inset 0 1px 0 rgb(255 255 255 / 0.7);
+    --pl-glass-popover-bg: rgb(250 250 255 / 0.84);
+    --pl-glass-popover-filter: blur(30px) saturate(180%);
+    --pl-glass-sheet-bg: rgb(250 250 255 / 0.9);
+    --pl-glass-sheet-filter: blur(40px) saturate(180%);
+    --pl-glass-hud-bg: rgb(245 245 250 / 0.72);
+    --pl-glass-hud-filter: blur(24px) saturate(160%);
+    --pl-glass-card-bg: rgb(255 255 255 / 0.62);
+
+    /* ---------- wallpaper (decorative, aria-hidden) ---------- */
+    --pl-wallpaper:
+      radial-gradient(900px 620px at 78% 18%, rgb(94 92 230 / 0.35), transparent 62%),
+      radial-gradient(760px 520px at 12% 88%, rgb(150 130 255 / 0.4), transparent 62%),
+      radial-gradient(620px 460px at 94% 92%, rgb(236 120 200 / 0.22), transparent 62%),
+      linear-gradient(158deg, #eef0fb 0%, #dcdcf7 48%, #c9c3f1 100%);
+
+    /* ---------- avatars (initials backgrounds) ---------- */
+    --pl-avatar-1: linear-gradient(160deg, #7c95ff, #4b3fd6);
+    --pl-avatar-2: linear-gradient(160deg, #2fe0c4, #0b8b86);
+    --pl-avatar-3: linear-gradient(160deg, #ffb35c, #d9621b);
+    --pl-avatar-4: linear-gradient(160deg, #ff7eb3, #c02f76);
+    --pl-avatar-5: linear-gradient(160deg, #8ee07a, #2c8f3d);
+    --pl-avatar-6: linear-gradient(160deg, #9a9aa6, #46464f);
+
+    /* ---------- elevation (window tiers: focused, unfocused, dragging) ---------- */
+    --pl-shadow-1: 0 1px 2px rgb(40 30 90 / 0.1);
+    --pl-shadow-win-focus: 0 30px 70px rgb(40 30 90 / 0.24), 0 8px 22px rgb(40 30 90 / 0.12);
+    --pl-shadow-win: 0 12px 30px rgb(40 30 90 / 0.14);
+    --pl-shadow-win-drag: 0 10px 24px rgb(40 30 90 / 0.18);
+    --pl-shadow-pop: 0 16px 40px rgb(40 30 90 / 0.2), 0 2px 6px rgb(40 30 90 / 0.08);
+    --pl-shadow-dialog: 0 30px 80px rgb(40 30 90 / 0.3), 0 8px 24px rgb(40 30 90 / 0.14);
+    --pl-shadow-dock: 0 18px 50px rgb(40 30 90 / 0.22);
+    --pl-shadow-tooltip: 0 6px 18px rgb(40 30 90 / 0.18);
+
+    /* ---------- typography (D15: fonts.css, docs/design/fonts/DECISION.md) ---------- */
+    /* Inter 4 with its opsz axis (Text at 13 px, Display at the clock); JetBrains Mono (UI-004). */
+    --pl-font-ui:
+      'Inter Variable', 'Inter', system-ui, 'Segoe UI', Roboto, Ubuntu, 'Noto Sans', sans-serif;
+    --pl-font-mono:
+      'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, 'Cascadia Mono', Consolas,
+      'DejaVu Sans Mono', monospace;
+    /* The fontsource Inter build has no cv/ss features: default glyphs (double-storey a). */
+    --pl-font-features: normal;
+    --pl-text-xs: 12px;
+    --pl-text-sm: 13px;
+    --pl-text-md: 14px;
+    --pl-text-lg: 16px;
+    --pl-text-xl: 20px;
+    --pl-text-2xl: 28px;
+    --pl-text-3xl: 36px;
+    --pl-text-4xl: 64px; /* lock-screen clock */
+    --pl-leading: 1.45;
+    --pl-leading-tight: 1.2;
+    --pl-leading-mono: 1.6;
+    --pl-weight-thin: 200; /* the lock-screen clock */
+    --pl-weight-regular: 400;
+    --pl-weight-medium: 500;
+    --pl-weight-semibold: 600;
+    --pl-weight-bold: 700;
+    /* SF-like tracking by size: open at 11 px, none at 12-16 px, tighter above (the opsz Display
+       cut already tightens large text, so these are half of Inter's dynamic metrics). */
+    --pl-tracking-open: 0.005em; /* 11 px and smaller */
+    --pl-tracking-title: -0.008em; /* 20-22 px */
+    --pl-tracking-tight: -0.01em; /* 28-36 px */
+    --pl-tracking-display: -0.02em; /* 64 px and larger */
+    --pl-tracking-caps: 0.04em;
+    /* type roles: use as `font: var(--pl-type-*)` */
+    --pl-type-display: var(--pl-weight-bold) var(--pl-text-4xl) / 1 var(--pl-font-ui);
+    --pl-type-large-title: var(--pl-weight-bold) var(--pl-text-2xl) / var(--pl-leading-tight)
+      var(--pl-font-ui);
+    --pl-type-title: var(--pl-weight-semibold) var(--pl-text-xl) / var(--pl-leading-tight)
+      var(--pl-font-ui);
+    --pl-type-headline: var(--pl-weight-semibold) var(--pl-text-md) / var(--pl-leading)
+      var(--pl-font-ui);
+    --pl-type-body: var(--pl-weight-regular) var(--pl-text-sm) / var(--pl-leading) var(--pl-font-ui);
+    --pl-type-callout: var(--pl-weight-medium) var(--pl-text-sm) / var(--pl-leading)
+      var(--pl-font-ui);
+    --pl-type-caption: var(--pl-weight-regular) var(--pl-text-xs) / var(--pl-leading)
+      var(--pl-font-ui);
+    --pl-type-section: var(--pl-weight-semibold) var(--pl-text-xs) / var(--pl-leading)
+      var(--pl-font-ui);
+    --pl-type-mono: var(--pl-weight-regular) var(--pl-text-sm) / var(--pl-leading-mono)
+      var(--pl-font-mono);
+
+    /* ---------- spacing (4-pt scale plus a 2 px half step) ---------- */
+    --pl-space-0: 0;
+    --pl-space-half: 2px;
+    --pl-space-1: 4px;
+    --pl-space-2: 8px;
+    --pl-space-3: 12px;
+    --pl-space-4: 16px;
+    --pl-space-5: 20px;
+    --pl-space-6: 24px;
+    --pl-space-8: 32px;
+    --pl-space-10: 40px;
+    --pl-space-12: 48px;
+
+    /* ---------- shape ---------- */
+    --pl-radius-xs: 4px;
+    --pl-radius-sm: 6px;
+    --pl-radius-ctl: 7px;
+    --pl-radius-md: 10px;
+    --pl-radius-lg: 12px; /* popovers, menus, app icons at 52 px */
+    --pl-radius-win: 14px;
+    --pl-radius-sheet: 16px;
+    --pl-radius-tile: 14px;
+    --pl-radius-dock: 22px;
+    --pl-radius-pill: 999px;
+    --pl-radius-icon: 23%; /* app-icon squircle, relative to size */
+    --pl-hairline-width: 0.5px;
+
+    /* ---------- fixed sizes ---------- */
+    --pl-menubar-h: 28px;
+    --pl-titlebar-h: 38px;
+    --pl-toolbar-h: 52px;
+    --pl-control-h: 28px;
+    --pl-control-h-sm: 22px;
+    --pl-control-h-lg: 34px;
+    --pl-press-scale: 0.97;
+    --pl-toggle-w: 38px;
+    --pl-toggle-h: 22px;
+    --pl-toggle-knob-size: 18px;
+    --pl-toggle-travel: 16px; /* toggle-w minus toggle-h */
+    --pl-checkbox-size: 16px;
+    --pl-slider-track-h: 4px;
+    --pl-slider-thumb: 18px;
+    --pl-slider-large-h: 28px; /* Control Centre slider */
+    --pl-progress-h-sm: 4px;
+    --pl-progress-h: 6px;
+    --pl-menu-item-h: 24px;
+    --pl-menu-min-w: 200px;
+    --pl-popover-max-w: 360px;
+    --pl-tooltip-max-w: 260px;
+    --pl-dialog-w: 440px;
+    --pl-sheet-w: 520px;
+    --pl-avatar-sm: 24px;
+    --pl-avatar-md: 32px;
+    --pl-avatar-lg: 48px;
+    --pl-avatar-xl: 96px;
+    --pl-spinner-sm: 16px;
+    --pl-spinner-md: 24px;
+    --pl-spinner-lg: 36px;
+    --pl-badge-h: 18px;
+    --pl-status-dot: 8px;
+    --pl-row-h: 28px;
+    --pl-target-min: 24px;
+    --pl-traffic-size: 12px;
+    --pl-traffic-gap: 8px;
+    --pl-dock-icon: 52px;
+    --pl-dock-reserve: 84px;
+    --pl-sidebar-w: 210px;
+    --pl-icon-sm: 16px;
+    --pl-icon-md: 20px;
+    --pl-icon-lg: 24px;
+    --pl-icon-app: 52px;
+    --pl-resize-hit: 8px;
+    --pl-resize-corner: 16px;
+    --pl-boot-logo: 96px;
+    --pl-boot-bar-w: 240px;
+    --pl-boot-bar-h: 4px;
+
+    /* ---------- layers ---------- */
+    --pl-z-desktop: 0;
+    --pl-z-windows: 100;
+    --pl-z-snap-preview: 9000;
+    --pl-z-dock: 10000;
+    --pl-z-taskbar: 10000; /* alias kept for window-manager.md */
+    --pl-z-menubar: 10010;
+    --pl-z-overview: 10020;
+    --pl-z-dialog: 10040; /* app-modal dialogs; popovers opened from a dialog stay above */
+    --pl-z-popover: 10050;
+    --pl-z-search: 10060;
+    --pl-z-notify: 10100;
+    --pl-z-hud: 10120;
+    --pl-z-meter: 10150;
+    --pl-z-tooltip: 10180;
+    --pl-z-secure: 10200;
+    --pl-z-boot: 10300;
+
+    /* ---------- motion (zeroed under reduced motion, DSN-05) ---------- */
+    --pl-k: 1; /* duration multiplier for calc() in keyframe timings */
+    --pl-motion-press: 90ms;
+    --pl-motion-fast: 120ms;
+    --pl-motion-med: 200ms;
+    --pl-motion-slow: 320ms;
+    --pl-motion-xslow: 480ms;
+    --pl-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+    --pl-ease-in: cubic-bezier(0.4, 0, 1, 1);
+    --pl-ease-out: cubic-bezier(0, 0, 0.2, 1);
+    --pl-ease-genie: cubic-bezier(0.5, 0, 0.7, 0.4);
+    --pl-ease-spring: linear(
+      0,
+      0.009,
+      0.035 2.1%,
+      0.141 4.4%,
+      0.723 12.9%,
+      0.938 16.7%,
+      1.017 19.4%,
+      1.067,
+      1.089 24.9%,
+      1.085 27.6%,
+      1.043 34.9%,
+      1.005 45.3%,
+      0.994 52.3%,
+      1.001 72.3%,
+      1
+    );
+    --pl-ease-spring-bouncy: linear(
+      0,
+      0.013 0.6%,
+      0.05 1.2%,
+      0.2 2.6%,
+      0.936 8.6%,
+      1.109 11.4%,
+      1.179 13.5%,
+      1.186 14.9%,
+      1.146 17.2%,
+      0.99 22.2%,
+      0.951 24.6%,
+      0.945 26.9%,
+      0.99 33.3%,
+      1.012 37.8%,
+      1.011 43.6%,
+      0.998 56.3%,
+      1
+    );
+    --pl-ease-spring-soft: cubic-bezier(0.32, 1.28, 0.5, 1);
+  }
+
+  /* Browsers without linear() fall back to overshooting cubic-bezier springs. */
+  @supports not (transition-timing-function: linear(0, 1)) {
+    :root {
+      --pl-ease-spring: cubic-bezier(0.34, 1.36, 0.64, 1);
+      --pl-ease-spring-bouncy: cubic-bezier(0.34, 1.7, 0.64, 1);
+    }
+  }
+
+  :root[data-theme='light'],
+  [data-theme='light'] {
+    color-scheme: light;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      color-scheme: dark;
+      --pl-accent: #5e5ce6;
+      --pl-accent-hover: #7472ff;
+      --pl-accent-pressed: #4f4dd0;
+      --pl-accent-text: #a5a4ff;
+      --pl-accent-subtle: rgb(94 92 230 / 0.28);
+      --pl-accent-glow: rgb(94 92 230 / 0.45);
+      --pl-focus-color: #8b89ff;
+      --pl-logo-orbit-a: #b3b1ff;
+      --pl-logo-core: #ffffff;
+      --pl-logo-electron: #cfceff;
+      --pl-success: #30d158;
+      --pl-success-subtle: rgb(48 209 88 / 0.18);
+      --pl-warning: #ff9f0a;
+      --pl-warning-subtle: rgb(255 159 10 / 0.18);
+      --pl-danger: #ff6961;
+      --pl-danger-subtle: rgb(255 69 58 / 0.2);
+      --pl-info: #64d2ff;
+      --pl-info-subtle: rgb(100 210 255 / 0.16);
+      --pl-neutral-subtle: rgb(255 255 255 / 0.1);
+      --pl-traffic-idle: rgb(255 255 255 / 0.16);
+      --pl-text: rgb(255 255 255 / 0.92);
+      --pl-text-muted: rgb(255 255 255 / 0.66);
+      --pl-text-tertiary: rgb(255 255 255 / 0.55);
+      --pl-text-disabled: rgb(255 255 255 / 0.36);
+      --pl-text-inverse: #000000;
+      --pl-hairline: rgb(255 255 255 / 0.1);
+      --pl-hairline-subtle: rgb(255 255 255 / 0.06);
+      --pl-border: rgb(255 255 255 / 0.4);
+      --pl-border-subtle: rgb(255 255 255 / 0.12);
+      --pl-separator: rgb(255 255 255 / 0.1);
+      --pl-bg: #0b0d1f;
+      --pl-surface: #1e1e26;
+      --pl-surface-2: #26262f;
+      --pl-surface-3: #31313c;
+      --pl-scrim: rgb(0 0 0 / 0.5);
+      --pl-control-bg: rgb(255 255 255 / 0.07);
+      --pl-control-hover: rgb(255 255 255 / 0.13);
+      --pl-control-pressed: rgb(255 255 255 / 0.18);
+      --pl-control-raised: rgb(255 255 255 / 0.24);
+      --pl-control-raised-shadow: 0 1px 3px rgb(0 0 0 / 0.3), inset 0 1px 0 rgb(255 255 255 / 0.12);
+      --pl-toggle-off: rgb(255 255 255 / 0.16);
+      --pl-row-alt: rgb(255 255 255 / 0.025);
+      --pl-selection: rgb(94 92 230 / 0.85);
+      --pl-selection-idle: rgb(255 255 255 / 0.12);
+      --pl-text-selection: rgb(94 92 230 / 0.4);
+      --pl-button-primary-shadow:
+        0 1px 2px rgb(0 0 0 / 0.4), inset 0 0.5px 0 rgb(255 255 255 / 0.22);
+      --pl-button-primary-sheen: linear-gradient(
+        180deg,
+        rgb(255 255 255 / 0.16),
+        rgb(255 255 255 / 0) 60%
+      );
+      --pl-button-primary-sheen-hover: linear-gradient(
+        180deg,
+        rgb(255 255 255 / 0.24),
+        rgb(255 255 255 / 0.05) 60%
+      );
+      --pl-danger-fill: #c9342b;
+      --pl-field-bg: rgb(255 255 255 / 0.06);
+      --pl-field-border: rgb(255 255 255 / 0.14);
+      --pl-field-shadow: inset 0 0.5px 1px rgb(0 0 0 / 0.3);
+      --pl-search-bg: rgb(255 255 255 / 0.08);
+      --pl-toggle-knob: #ffffff;
+      --pl-toggle-knob-shadow: 0 1px 3px rgb(0 0 0 / 0.45);
+      --pl-slider-track: rgb(255 255 255 / 0.16);
+      --pl-slider-large-fill: rgb(255 255 255 / 0.92);
+      --pl-slider-large-track: rgb(255 255 255 / 0.12);
+      --pl-progress-track: rgb(255 255 255 / 0.1);
+      --pl-progress-sheen: linear-gradient(
+        90deg,
+        transparent,
+        rgb(255 255 255 / 0.35),
+        transparent
+      );
+      --pl-tooltip-bg: rgb(44 44 54 / 0.97);
+      --pl-tooltip-text: rgb(255 255 255 / 0.92);
+      --pl-kbd-bg: rgb(255 255 255 / 0.1);
+      --pl-kbd-shadow: 0 0.5px 0 rgb(0 0 0 / 0.5), inset 0 0 0 0.5px rgb(255 255 255 / 0.16);
+      --pl-scrim-sheet: rgb(0 0 0 / 0.25);
+      --pl-status-online: #30d158;
+      --pl-status-away: #ff9f0a;
+      --pl-status-offline: rgb(255 255 255 / 0.4);
+      --pl-tint-indigo: #5e5ce6;
+      --pl-tint-blue: #1f8cff;
+      --pl-tint-teal: #3fc3dc;
+      --pl-tint-green: #30d158;
+      --pl-tint-yellow: #ffd60a;
+      --pl-tint-orange: #ff9f0a;
+      --pl-tint-red: #ff5a50;
+      --pl-tint-pink: #ff4f7b;
+      --pl-tint-purple: #bf5af2;
+      --pl-tint-gray: #8e8e98;
+      --pl-glass-specular:
+        inset 0 1px 0 rgb(255 255 255 / 0.1), inset 0 0 0 0.5px rgb(255 255 255 / 0.04);
+      --pl-glass-menubar-bg: rgb(20 20 30 / 0.5);
+      --pl-glass-dock-bg: rgb(44 44 58 / 0.4);
+      --pl-glass-dock-edge:
+        inset 0 1px 0 rgb(255 255 255 / 0.16), inset 0 0 0 0.5px rgb(255 255 255 / 0.12);
+      --pl-glass-window-bg: rgb(30 30 38 / 0.94);
+      --pl-glass-window-bg-idle: rgb(34 34 42 / 0.9);
+      --pl-glass-window-dim: rgb(8 8 16 / 0.16);
+      --pl-glass-sidebar-bg: rgb(255 255 255 / 0.05);
+      --pl-glass-sidebar-edge:
+        inset 0 0 0 0.5px rgb(255 255 255 / 0.06), inset 0 1px 0 rgb(255 255 255 / 0.05);
+      --pl-glass-popover-bg: rgb(34 34 44 / 0.8);
+      --pl-glass-sheet-bg: rgb(36 36 46 / 0.88);
+      --pl-glass-hud-bg: rgb(30 30 40 / 0.7);
+      --pl-glass-card-bg: rgb(255 255 255 / 0.05);
+      --pl-wallpaper:
+        radial-gradient(900px 620px at 78% 18%, rgb(94 92 230 / 0.55), transparent 62%),
+        radial-gradient(760px 520px at 12% 88%, rgb(70 48 170 / 0.7), transparent 62%),
+        radial-gradient(620px 460px at 94% 92%, rgb(196 64 170 / 0.26), transparent 62%),
+        radial-gradient(560px 380px at 30% 14%, rgb(40 96 210 / 0.32), transparent 60%),
+        linear-gradient(158deg, #0b0d1f 0%, #13113a 44%, #251b63 100%);
+      --pl-shadow-1: 0 1px 2px rgb(0 0 0 / 0.4);
+      --pl-shadow-win-focus: 0 30px 80px rgb(0 0 0 / 0.55), 0 10px 28px rgb(0 0 0 / 0.35);
+      --pl-shadow-win: 0 14px 38px rgb(0 0 0 / 0.4);
+      --pl-shadow-win-drag: 0 12px 28px rgb(0 0 0 / 0.42);
+      --pl-shadow-pop: 0 16px 40px rgb(0 0 0 / 0.45), 0 2px 6px rgb(0 0 0 / 0.2);
+      --pl-shadow-dialog: 0 30px 80px rgb(0 0 0 / 0.6), 0 10px 28px rgb(0 0 0 / 0.35);
+      --pl-shadow-dock: 0 18px 50px rgb(0 0 0 / 0.45);
+      --pl-shadow-tooltip: 0 6px 18px rgb(0 0 0 / 0.35);
+    }
+  }
+
+  :root[data-theme='dark'],
+  [data-theme='dark'] {
+    color-scheme: dark;
+    --pl-accent: #5e5ce6;
+    --pl-accent-hover: #7472ff;
+    --pl-accent-pressed: #4f4dd0;
+    --pl-accent-text: #a5a4ff;
+    --pl-accent-subtle: rgb(94 92 230 / 0.28);
+    --pl-accent-glow: rgb(94 92 230 / 0.45);
+    --pl-focus-color: #8b89ff;
+    --pl-logo-orbit-a: #b3b1ff;
+    --pl-logo-core: #ffffff;
+    --pl-logo-electron: #cfceff;
+    --pl-success: #30d158;
+    --pl-success-subtle: rgb(48 209 88 / 0.18);
+    --pl-warning: #ff9f0a;
+    --pl-warning-subtle: rgb(255 159 10 / 0.18);
+    --pl-danger: #ff6961;
+    --pl-danger-subtle: rgb(255 69 58 / 0.2);
+    --pl-info: #64d2ff;
+    --pl-info-subtle: rgb(100 210 255 / 0.16);
+    --pl-neutral-subtle: rgb(255 255 255 / 0.1);
+    --pl-traffic-idle: rgb(255 255 255 / 0.16);
+    --pl-text: rgb(255 255 255 / 0.92);
+    --pl-text-muted: rgb(255 255 255 / 0.66);
+    --pl-text-tertiary: rgb(255 255 255 / 0.55);
+    --pl-text-disabled: rgb(255 255 255 / 0.36);
+    --pl-text-inverse: #000000;
+    --pl-hairline: rgb(255 255 255 / 0.1);
+    --pl-hairline-subtle: rgb(255 255 255 / 0.06);
+    --pl-border: rgb(255 255 255 / 0.4);
+    --pl-border-subtle: rgb(255 255 255 / 0.12);
+    --pl-separator: rgb(255 255 255 / 0.1);
+    --pl-bg: #0b0d1f;
+    --pl-surface: #1e1e26;
+    --pl-surface-2: #26262f;
+    --pl-surface-3: #31313c;
+    --pl-scrim: rgb(0 0 0 / 0.5);
+    --pl-control-bg: rgb(255 255 255 / 0.07);
+    --pl-control-hover: rgb(255 255 255 / 0.13);
+    --pl-control-pressed: rgb(255 255 255 / 0.18);
+    --pl-control-raised: rgb(255 255 255 / 0.24);
+    --pl-control-raised-shadow: 0 1px 3px rgb(0 0 0 / 0.3), inset 0 1px 0 rgb(255 255 255 / 0.12);
+    --pl-toggle-off: rgb(255 255 255 / 0.16);
+    --pl-row-alt: rgb(255 255 255 / 0.025);
+    --pl-selection: rgb(94 92 230 / 0.85);
+    --pl-selection-idle: rgb(255 255 255 / 0.12);
+    --pl-text-selection: rgb(94 92 230 / 0.4);
+    --pl-button-primary-shadow: 0 1px 2px rgb(0 0 0 / 0.4), inset 0 0.5px 0 rgb(255 255 255 / 0.22);
+    --pl-button-primary-sheen: linear-gradient(
+      180deg,
+      rgb(255 255 255 / 0.16),
+      rgb(255 255 255 / 0) 60%
+    );
+    --pl-button-primary-sheen-hover: linear-gradient(
+      180deg,
+      rgb(255 255 255 / 0.24),
+      rgb(255 255 255 / 0.05) 60%
+    );
+    --pl-danger-fill: #c9342b;
+    --pl-field-bg: rgb(255 255 255 / 0.06);
+    --pl-field-border: rgb(255 255 255 / 0.14);
+    --pl-field-shadow: inset 0 0.5px 1px rgb(0 0 0 / 0.3);
+    --pl-search-bg: rgb(255 255 255 / 0.08);
+    --pl-toggle-knob: #ffffff;
+    --pl-toggle-knob-shadow: 0 1px 3px rgb(0 0 0 / 0.45);
+    --pl-slider-track: rgb(255 255 255 / 0.16);
+    --pl-slider-large-fill: rgb(255 255 255 / 0.92);
+    --pl-slider-large-track: rgb(255 255 255 / 0.12);
+    --pl-progress-track: rgb(255 255 255 / 0.1);
+    --pl-progress-sheen: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.35), transparent);
+    --pl-tooltip-bg: rgb(44 44 54 / 0.97);
+    --pl-tooltip-text: rgb(255 255 255 / 0.92);
+    --pl-kbd-bg: rgb(255 255 255 / 0.1);
+    --pl-kbd-shadow: 0 0.5px 0 rgb(0 0 0 / 0.5), inset 0 0 0 0.5px rgb(255 255 255 / 0.16);
+    --pl-scrim-sheet: rgb(0 0 0 / 0.25);
+    --pl-status-online: #30d158;
+    --pl-status-away: #ff9f0a;
+    --pl-status-offline: rgb(255 255 255 / 0.4);
+    --pl-tint-indigo: #5e5ce6;
+    --pl-tint-blue: #1f8cff;
+    --pl-tint-teal: #3fc3dc;
+    --pl-tint-green: #30d158;
+    --pl-tint-yellow: #ffd60a;
+    --pl-tint-orange: #ff9f0a;
+    --pl-tint-red: #ff5a50;
+    --pl-tint-pink: #ff4f7b;
+    --pl-tint-purple: #bf5af2;
+    --pl-tint-gray: #8e8e98;
+    --pl-glass-specular:
+      inset 0 1px 0 rgb(255 255 255 / 0.1), inset 0 0 0 0.5px rgb(255 255 255 / 0.04);
+    --pl-glass-menubar-bg: rgb(20 20 30 / 0.5);
+    --pl-glass-dock-bg: rgb(44 44 58 / 0.4);
+    --pl-glass-dock-edge:
+      inset 0 1px 0 rgb(255 255 255 / 0.16), inset 0 0 0 0.5px rgb(255 255 255 / 0.12);
+    --pl-glass-window-bg: rgb(30 30 38 / 0.94);
+    --pl-glass-window-bg-idle: rgb(34 34 42 / 0.9);
+    --pl-glass-window-dim: rgb(8 8 16 / 0.16);
+    --pl-glass-sidebar-bg: rgb(255 255 255 / 0.05);
+    --pl-glass-sidebar-edge:
+      inset 0 0 0 0.5px rgb(255 255 255 / 0.06), inset 0 1px 0 rgb(255 255 255 / 0.05);
+    --pl-glass-popover-bg: rgb(34 34 44 / 0.8);
+    --pl-glass-sheet-bg: rgb(36 36 46 / 0.88);
+    --pl-glass-hud-bg: rgb(30 30 40 / 0.7);
+    --pl-glass-card-bg: rgb(255 255 255 / 0.05);
+    --pl-wallpaper:
+      radial-gradient(900px 620px at 78% 18%, rgb(94 92 230 / 0.55), transparent 62%),
+      radial-gradient(760px 520px at 12% 88%, rgb(70 48 170 / 0.7), transparent 62%),
+      radial-gradient(620px 460px at 94% 92%, rgb(196 64 170 / 0.26), transparent 62%),
+      radial-gradient(560px 380px at 30% 14%, rgb(40 96 210 / 0.32), transparent 60%),
+      linear-gradient(158deg, #0b0d1f 0%, #13113a 44%, #251b63 100%);
+    --pl-shadow-1: 0 1px 2px rgb(0 0 0 / 0.4);
+    --pl-shadow-win-focus: 0 30px 80px rgb(0 0 0 / 0.55), 0 10px 28px rgb(0 0 0 / 0.35);
+    --pl-shadow-win: 0 14px 38px rgb(0 0 0 / 0.4);
+    --pl-shadow-win-drag: 0 12px 28px rgb(0 0 0 / 0.42);
+    --pl-shadow-pop: 0 16px 40px rgb(0 0 0 / 0.45), 0 2px 6px rgb(0 0 0 / 0.2);
+    --pl-shadow-dialog: 0 30px 80px rgb(0 0 0 / 0.6), 0 10px 28px rgb(0 0 0 / 0.35);
+    --pl-shadow-dock: 0 18px 50px rgb(0 0 0 / 0.45);
+    --pl-shadow-tooltip: 0 6px 18px rgb(0 0 0 / 0.35);
+  }
+
+  /* ---------- accent colour (Settings > Appearance writes <html data-accent>, UI-039) ----------
+     Violet is the base above. Every other accent sets its fill and its text colour per theme;
+     the rest follows from the fill. Each fill carries white text at 4.5:1 or more (also as the
+     92 %/85 % selection), and each text colour reaches 4.5:1 on every surface and on its own
+     subtle tint (tokens.test.ts checks every accent). The focus ring uses the text colour. */
+  :root[data-accent]:not([data-accent='violet']) {
+    --pl-accent-hover: color-mix(in srgb, var(--pl-accent) 86%, #000);
+    --pl-accent-pressed: color-mix(in srgb, var(--pl-accent) 74%, #000);
+    --pl-accent-subtle: color-mix(in srgb, var(--pl-accent) 14%, transparent);
+    --pl-accent-glow: color-mix(in srgb, var(--pl-accent) 35%, transparent);
+    --pl-focus-color: var(--pl-accent-text);
+    --pl-selection: color-mix(in srgb, var(--pl-accent) 92%, transparent);
+    --pl-text-selection: color-mix(in srgb, var(--pl-accent) 24%, transparent);
+    --pl-button-primary-shadow:
+      0 1px 2px color-mix(in srgb, var(--pl-accent) 32%, transparent),
+      inset 0 0 0 0.5px rgb(0 0 0 / 0.06);
+  }
+  :root[data-accent='blue'] {
+    --pl-accent: #0066d6;
+    --pl-accent-text: #0062c8;
+  }
+  :root[data-accent='purple'] {
+    --pl-accent: #a233ca;
+    --pl-accent-text: #9a2ec2;
+  }
+  :root[data-accent='pink'] {
+    --pl-accent: #d21767;
+    --pl-accent-text: #c0155f;
+  }
+  :root[data-accent='red'] {
+    --pl-accent: #d9151f;
+    --pl-accent-text: #c4131c;
+  }
+  :root[data-accent='orange'] {
+    --pl-accent: #b04c00;
+    --pl-accent-text: #a84800;
+  }
+  :root[data-accent='yellow'] {
+    --pl-accent: #8c5f00;
+    --pl-accent-text: #875c00;
+  }
+  :root[data-accent='green'] {
+    --pl-accent: #1c7835;
+    --pl-accent-text: #1b7433;
+  }
+  :root[data-accent='graphite'] {
+    --pl-accent: #66666f;
+    --pl-accent-text: #64646c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light'])[data-accent]:not([data-accent='violet']) {
+      --pl-accent-hover: color-mix(in srgb, var(--pl-accent) 84%, #fff);
+      --pl-accent-subtle: color-mix(in srgb, var(--pl-accent) 28%, transparent);
+      --pl-accent-glow: color-mix(in srgb, var(--pl-accent) 45%, transparent);
+      --pl-selection: color-mix(in srgb, var(--pl-accent) 85%, transparent);
+      --pl-text-selection: color-mix(in srgb, var(--pl-accent) 40%, transparent);
+      --pl-button-primary-shadow:
+        0 1px 2px rgb(0 0 0 / 0.4), inset 0 0.5px 0 rgb(255 255 255 / 0.22);
+    }
+    :root:not([data-theme='light'])[data-accent='blue'] {
+      --pl-accent: #006ee4;
+      --pl-accent-text: #6cb2ff;
+    }
+    :root:not([data-theme='light'])[data-accent='purple'] {
+      --pl-accent: #a63fcc;
+      --pl-accent-text: #d7a1ec;
+    }
+    :root:not([data-theme='light'])[data-accent='pink'] {
+      --pl-accent: #d8186b;
+      --pl-accent-text: #f28cb9;
+    }
+    :root:not([data-theme='light'])[data-accent='red'] {
+      --pl-accent: #e0161f;
+      --pl-accent-text: #f58e94;
+    }
+    :root:not([data-theme='light'])[data-accent='orange'] {
+      --pl-accent: #bd5200;
+      --pl-accent-text: #ff8a2e;
+    }
+    :root:not([data-theme='light'])[data-accent='yellow'] {
+      --pl-accent: #996800;
+      --pl-accent-text: #f5aa00;
+    }
+    :root:not([data-theme='light'])[data-accent='green'] {
+      --pl-accent: #1e823b;
+      --pl-accent-text: #34d160;
+    }
+    :root:not([data-theme='light'])[data-accent='graphite'] {
+      --pl-accent: #71717b;
+      --pl-accent-text: #b2b2b8;
+    }
+  }
+  :root[data-theme='dark'][data-accent]:not([data-accent='violet']) {
+    --pl-accent-hover: color-mix(in srgb, var(--pl-accent) 84%, #fff);
+    --pl-accent-subtle: color-mix(in srgb, var(--pl-accent) 28%, transparent);
+    --pl-accent-glow: color-mix(in srgb, var(--pl-accent) 45%, transparent);
+    --pl-selection: color-mix(in srgb, var(--pl-accent) 85%, transparent);
+    --pl-text-selection: color-mix(in srgb, var(--pl-accent) 40%, transparent);
+    --pl-button-primary-shadow: 0 1px 2px rgb(0 0 0 / 0.4), inset 0 0.5px 0 rgb(255 255 255 / 0.22);
+  }
+  :root[data-theme='dark'][data-accent='blue'] {
+    --pl-accent: #006ee4;
+    --pl-accent-text: #6cb2ff;
+  }
+  :root[data-theme='dark'][data-accent='purple'] {
+    --pl-accent: #a63fcc;
+    --pl-accent-text: #d7a1ec;
+  }
+  :root[data-theme='dark'][data-accent='pink'] {
+    --pl-accent: #d8186b;
+    --pl-accent-text: #f28cb9;
+  }
+  :root[data-theme='dark'][data-accent='red'] {
+    --pl-accent: #e0161f;
+    --pl-accent-text: #f58e94;
+  }
+  :root[data-theme='dark'][data-accent='orange'] {
+    --pl-accent: #bd5200;
+    --pl-accent-text: #ff8a2e;
+  }
+  :root[data-theme='dark'][data-accent='yellow'] {
+    --pl-accent: #996800;
+    --pl-accent-text: #f5aa00;
+  }
+  :root[data-theme='dark'][data-accent='green'] {
+    --pl-accent: #1e823b;
+    --pl-accent-text: #34d160;
+  }
+  :root[data-theme='dark'][data-accent='graphite'] {
+    --pl-accent: #71717b;
+    --pl-accent-text: #b2b2b8;
+  }
+
+  /* ---------- reduced motion (DSN-05, BOOT-13) ---------- */
+  @media (prefers-reduced-motion: reduce) {
+    :root {
+      --pl-k: 0;
+      --pl-motion-press: 0ms;
+      --pl-motion-fast: 0ms;
+      --pl-motion-med: 0ms;
+      --pl-motion-slow: 0ms;
+      --pl-motion-xslow: 0ms;
+      --pl-press-scale: 1;
+    }
+  }
+  :root[data-motion='reduce'] {
+    --pl-k: 0;
+    --pl-motion-press: 0ms;
+    --pl-motion-fast: 0ms;
+    --pl-motion-med: 0ms;
+    --pl-motion-slow: 0ms;
+    --pl-motion-xslow: 0ms;
+    --pl-press-scale: 1;
+  }
+
+  /* ---------- no backdrop-filter support: glass becomes solid surfaces ---------- */
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    :root,
+    [data-theme] {
+      --pl-glass-menubar-bg: var(--pl-surface-2);
+      --pl-glass-dock-bg: var(--pl-surface-2);
+      --pl-glass-popover-bg: var(--pl-surface);
+      --pl-glass-sheet-bg: var(--pl-surface);
+      --pl-glass-hud-bg: var(--pl-surface);
+    }
+  }
+
+  /* ---------- reduced transparency: glass becomes solid surfaces ---------- */
+  @media (prefers-reduced-transparency: reduce) {
+    :root {
+      --pl-glass-menubar-bg: var(--pl-surface-2);
+      --pl-glass-dock-bg: var(--pl-surface-2);
+      --pl-glass-window-bg: var(--pl-surface);
+      --pl-glass-window-bg-idle: var(--pl-surface-2);
+      --pl-glass-sidebar-bg: var(--pl-surface-2);
+      --pl-glass-popover-bg: var(--pl-surface);
+      --pl-glass-sheet-bg: var(--pl-surface);
+      --pl-glass-hud-bg: var(--pl-surface);
+      --pl-glass-card-bg: var(--pl-surface-2);
+      --pl-tooltip-bg: var(--pl-surface);
+      --pl-glass-menubar-filter: none;
+      --pl-glass-dock-filter: none;
+      --pl-glass-popover-filter: none;
+      --pl-glass-sheet-filter: none;
+      --pl-glass-hud-filter: none;
+    }
+  }
+  :root[data-transparency='reduce'] {
+    --pl-glass-menubar-bg: var(--pl-surface-2);
+    --pl-glass-dock-bg: var(--pl-surface-2);
+    --pl-glass-window-bg: var(--pl-surface);
+    --pl-glass-window-bg-idle: var(--pl-surface-2);
+    --pl-glass-sidebar-bg: var(--pl-surface-2);
+    --pl-glass-popover-bg: var(--pl-surface);
+    --pl-glass-sheet-bg: var(--pl-surface);
+    --pl-glass-hud-bg: var(--pl-surface);
+    --pl-glass-card-bg: var(--pl-surface-2);
+    --pl-tooltip-bg: var(--pl-surface);
+    --pl-glass-menubar-filter: none;
+    --pl-glass-dock-filter: none;
+    --pl-glass-popover-filter: none;
+    --pl-glass-sheet-filter: none;
+    --pl-glass-hud-filter: none;
+  }
+
+  /* ---------- forced colours: shadows become borders, focus maps to system colours ---------- */
+  @media (forced-colors: active) {
+    :root {
+      --pl-focus-color: Highlight;
+      --pl-border: CanvasText;
+      --pl-hairline: CanvasText;
+      --pl-shadow-win-focus: 0 0 0 1px CanvasText;
+      --pl-shadow-win: 0 0 0 1px CanvasText;
+      --pl-shadow-win-drag: 0 0 0 1px CanvasText;
+      --pl-shadow-pop: 0 0 0 1px CanvasText;
+      --pl-shadow-dialog: 0 0 0 1px CanvasText;
+      --pl-shadow-dock: 0 0 0 1px CanvasText;
+    }
+  }
+}
+
+@layer reset {
+  :where(html) {
+    font-family: var(--pl-font-ui);
+    font-size: var(--pl-text-sm);
+    line-height: var(--pl-leading);
+    font-feature-settings: var(--pl-font-features);
+    font-optical-sizing: auto; /* Inter's opsz axis follows the font size */
+    color: var(--pl-text);
+    background: var(--pl-bg);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  /* Tables, grids and meters line their digits up ('tnum'). A component's `font:` shorthand
+     resets font-variant-numeric, so rows and cells get it back here. */
+  :where(
+    table,
+    meter,
+    progress,
+    [role='table'],
+    [role='grid'],
+    [role='treegrid'],
+    [role='row'],
+    [role='cell'],
+    [role='gridcell'],
+    [role='columnheader'],
+    [role='rowheader'],
+    [role='meter'],
+    [role='progressbar']
+  ) {
+    font-variant-numeric: tabular-nums;
+  }
+  :where(*, *::before, *::after) {
+    box-sizing: border-box;
+  }
+  :where(button, input, select, textarea) {
+    font: inherit;
+    color: inherit;
+  }
+  ::selection {
+    background: var(--pl-text-selection);
+  }
+  :where(:focus-visible) {
+    outline: var(--pl-focus-ring);
+    outline-offset: var(--pl-focus-offset);
+  }
+}

@@ -1,0 +1,51 @@
+"""Simulate FIFO, LRU and second-chance (clock) eviction on a reference string and count faults."""
+from collections import OrderedDict, deque
+
+
+def fifo(refs, frames):
+    mem, q, faults = set(), deque(), 0
+    for p in refs:
+        if p not in mem:
+            faults += 1
+            if len(mem) == frames:
+                mem.remove(q.popleft())
+            mem.add(p)
+            q.append(p)
+    return faults
+
+
+def lru(refs, frames):
+    mem, faults = OrderedDict(), 0
+    for p in refs:
+        if p in mem:
+            mem.move_to_end(p)
+        else:
+            faults += 1
+            if len(mem) == frames:
+                mem.popitem(last=False)
+            mem[p] = True
+    return faults
+
+
+def clock(refs, frames):
+    slots = [None] * frames
+    ref = [0] * frames
+    hand, faults = 0, 0
+    for p in refs:
+        if p in slots:
+            ref[slots.index(p)] = 1
+            continue
+        faults += 1
+        while ref[hand]:
+            ref[hand] = 0
+            hand = (hand + 1) % frames
+        slots[hand], ref[hand] = p, 1
+        hand = (hand + 1) % frames
+    return faults
+
+
+if __name__ == "__main__":
+    s = [1, 2, 3, 4, 1, 2, 5, 1, 2, 3, 4, 5]
+    for n in (3, 4):
+        print(n, "frames:", "FIFO", fifo(s, n), "LRU", lru(s, n), "clock", clock(s, n))
+    # FIFO gives 9 then 10: more frames, more faults (Belady)

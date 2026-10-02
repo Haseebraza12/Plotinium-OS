@@ -1,0 +1,14 @@
+# Transformers and attention
+
+Self-attention: each token builds a query q, key k and value v (linear projections). Output for token i = Σ_j softmax(q_i · k_j / √d) v_j. Every token can look at every other token, so cost is O(n²) in sequence length.
+
+Multi-head: several attention heads in parallel with smaller dimensions, concatenated.
+
+Positional information: sinusoidal or learned position embeddings, or rotary embeddings (RoPE) applied to q and k.
+
+Encoder-only (BERT): bidirectional, good for classification and embeddings; 512-token limit in the original.
+Decoder-only (GPT): causal mask, generates text left to right.
+
+Layer: attention → add & norm → feed-forward → add & norm. Stack 6–96 of them.
+
+Why the 512-token limit matters for us: the embedding model truncates anything longer, so the chunker must keep every chunk (plus its header) under the limit.

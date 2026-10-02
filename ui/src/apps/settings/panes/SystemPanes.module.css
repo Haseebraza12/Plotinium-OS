@@ -1,0 +1,58 @@
+/* Settings › Memory and Scheduler. */
+.pane {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pl-space-5);
+}
+.usage {
+  color: var(--pl-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.usageBar {
+  position: relative;
+  display: block;
+  height: var(--pl-progress-h);
+  overflow: visible;
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-progress-track);
+}
+.usageFill {
+  --pl-fill: 0;
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--pl-accent), var(--pl-tint-teal));
+  transform: scaleX(var(--pl-fill));
+  transform-origin: left center;
+  transition: transform var(--pl-motion-slow) var(--pl-ease-out);
+}
+.mark,
+.markHigh {
+  --pl-at: 0;
+  position: absolute;
+  top: calc(var(--pl-space-1) * -1);
+  bottom: calc(var(--pl-space-1) * -1);
+  left: calc(var(--pl-at) * 100%);
+  border-left: 1px dashed var(--pl-text-muted);
+}
+.markHigh {
+  border-left: 1px solid var(--pl-warning);
+}
+.formula {
+  font-family: var(--pl-font-mono);
+  font-size: calc(var(--pl-text-xs) - 1px);
+}
+.bound {
+  font: var(--pl-type-title);
+  color: var(--pl-accent-text);
+  font-variant-numeric: tabular-nums;
+}
+.footer {
+  display: flex;
+  justify-content: flex-end;
+}
+@media (prefers-reduced-motion: reduce) {
+  .usageFill {
+    transition: none;
+  }
+}

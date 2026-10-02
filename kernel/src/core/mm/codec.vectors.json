@@ -1,0 +1,60 @@
+{
+  "$comment": "MEM-03 codec vectors (memory-and-paging.md §3.8). Shared by codec.test.ts and the MEM-03 page-in test. Regenerating them requires a review: any change breaks byte-identity with pages already in swap.",
+  "plain": [
+    {
+      "name": "empty object",
+      "inputJson": "{}",
+      "canonical": "{}",
+      "bodySha256": "8afd5fe75184a37ae08509f42674251007a81d9b7b2cb367b39c873ae16f9167",
+      "bodyBytes": 8
+    },
+    {
+      "name": "key order by UTF-16 code units",
+      "inputJson": "{\"b\":1,\"a\":2,\"B\":3,\"aa\":4,\"\\u00e9\":5,\"z\":6,\"10\":7,\"9\":8}",
+      "canonical": "{\"10\":7,\"9\":8,\"B\":3,\"a\":2,\"aa\":4,\"b\":1,\"z\":6,\"é\":5}",
+      "bodySha256": "86cdd0483ab1347050583b61179a981432ac212b10f01b847d1b0c9dbd6bfbcc",
+      "bodyBytes": 56
+    },
+    {
+      "name": "negative zero is written as 0",
+      "inputJson": "{\"x\":-0,\"y\":[-0,0]}",
+      "canonical": "{\"x\":0,\"y\":[0,0]}",
+      "bodySha256": "0586279acce263b5bb38bb030389e9e1c86d82ded4c69aa913059f807675778f",
+      "bodyBytes": 24
+    },
+    {
+      "name": "numbers use the ECMAScript form",
+      "inputJson": "[1e21,1e-7,0.1,100,-1.5,123456789012345680000,5e-324]",
+      "canonical": "[1e+21,1e-7,0.1,100,-1.5,123456789012345680000,5e-324]",
+      "bodySha256": "ffca0de5df9f313fa1233c8a0e16b658d59490dc5de8eb0a2c188301bbb8dbb5",
+      "bodyBytes": 56
+    },
+    {
+      "name": "string escaping",
+      "inputJson": "[\"\\u0000\\u001f\",\"quote\\\"\",\"back\\\\slash\",\"\\u2028\",\"emoji \\ud83d\\ude00\",\"tab\\t\"]",
+      "canonical": "[\"\\u0000\\u001f\",\"quote\\\"\",\"back\\\\slash\",\" \",\"emoji 😀\",\"tab\\t\"]",
+      "bodySha256": "112e191aff76576a9902f88687c625a3790d26b72b994a5b28945780d0ef9a0a",
+      "bodyBytes": 72
+    },
+    {
+      "name": "nested arrays and nulls",
+      "inputJson": "{\"a\":[null,true,false,[[]],{}],\"n\":null}",
+      "canonical": "{\"a\":[null,true,false,[[]],{}],\"n\":null}",
+      "bodySha256": "9851e27fc6fbbf19276dc11c45ef981111f0b85dceb746b0755f367f29b70b59",
+      "bodyBytes": 40
+    },
+    {
+      "name": "unicode keys",
+      "inputJson": "{\"\\ud83d\\ude00\":1,\"\\uffff\":2,\"\\u0100\":3}",
+      "canonical": "{\"Ā\":3,\"😀\":1,\"￿\":2}",
+      "bodySha256": "db0fff9a8fe49feb46fa90441bfa50dfa2f16fdf4c0ef0ec41a5cf7f33ff4a10",
+      "bodyBytes": 32
+    }
+  ],
+  "segments": {
+    "canonical": "{\"ab\":{\"$seg\":0,\"$t\":\"ab\"},\"bytes\":{\"$seg\":1,\"$t\":\"u8\"},\"dv\":{\"$seg\":2,\"$t\":\"dv\"},\"f\":{\"$seg\":3,\"$t\":\"f64\"},\"i16\":{\"$seg\":4,\"$t\":\"i16\"},\"name\":\"x\"}",
+    "bodySha256": "26ad535569f40b0a8d5e8aa9592cd6dbe49617a4ead4bc61938a61022fb39869",
+    "bodyBytes": 248,
+    "headerHex": "504c54500100010040000000930000000500000000000000f80000000000000026ad535569f40b0a8d5e8aa9592cd6dbe49617a4ead4bc61938a61022fb39869"
+  }
+}

@@ -1,0 +1,362 @@
+/*
+ * Overview (docs/design/stitch/overview-switcher): windows tiled over a dimmed desktop. Each tile
+ * zooms from its real window rectangle into its slot with a FLIP (translate + scale from origin
+ * 0 0, will-change set only for the length of the zoom) and back on exit. The backdrop is a
+ * scrim whose opacity fades; nothing here uses a live blur (Overview is not on the DSN-24 list).
+ */
+.layer {
+  position: fixed;
+  inset: 0;
+  z-index: var(--pl-z-overview);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--pl-space-6);
+  padding: var(--pl-space-4) var(--pl-space-8) var(--pl-space-8);
+  overflow: hidden;
+  outline: none;
+}
+.contained {
+  position: absolute;
+  z-index: auto;
+  border-radius: inherit;
+}
+.backdrop {
+  position: absolute;
+  inset: 0;
+  background: var(--pl-scrim);
+}
+@keyframes backdropIn {
+  from {
+    opacity: 0;
+  }
+}
+.backdropIn {
+  animation: backdropIn calc(280ms * var(--pl-k)) var(--pl-ease-out) backwards;
+}
+
+/* ---------- top: desktops strip and key hint ---------- */
+.top {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  min-height: var(--pl-space-10);
+  pointer-events: none;
+}
+.top > * {
+  pointer-events: auto;
+}
+.hint {
+  position: absolute;
+  top: var(--pl-space-2);
+  right: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pl-space-2);
+  margin: 0;
+  padding: var(--pl-space-1) var(--pl-space-3) var(--pl-space-1) var(--pl-space-1);
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-glass-hud-bg);
+  box-shadow: inset 0 0 0 var(--pl-hairline-width) var(--pl-hairline);
+  font: var(--pl-type-caption);
+  color: var(--pl-text-muted);
+}
+@keyframes desktopsIn {
+  from {
+    opacity: 0;
+    transform: translateY(-24px);
+  }
+}
+.desktops {
+  display: flex;
+  align-items: center;
+  gap: var(--pl-space-4);
+  padding: var(--pl-space-3) var(--pl-space-4);
+  border-radius: calc(var(--pl-radius-sheet) + 4px);
+  background: var(--pl-glass-hud-bg);
+  box-shadow:
+    var(--pl-shadow-pop),
+    var(--pl-glass-specular),
+    inset 0 0 0 var(--pl-hairline-width) var(--pl-hairline);
+}
+.desktopsIn {
+  animation: desktopsIn calc(360ms * var(--pl-k)) var(--pl-ease-spring) calc(60ms * var(--pl-k))
+    backwards;
+}
+.desktopTabs {
+  display: flex;
+  gap: var(--pl-space-3);
+}
+.desktop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--pl-space-2);
+  padding: 0;
+  border: 0;
+  border-radius: var(--pl-radius-md);
+  background: none;
+  color: var(--pl-text-muted);
+  font: var(--pl-type-caption);
+  font-weight: var(--pl-weight-semibold);
+  cursor: default;
+}
+.desktop[aria-selected='true'] {
+  color: var(--pl-text);
+}
+.desktopPreview {
+  position: relative;
+  display: block;
+  width: 152px;
+  height: 86px;
+  overflow: hidden;
+  border-radius: var(--pl-radius-md);
+  background: var(--pl-wallpaper);
+  box-shadow: inset 0 0 0 var(--pl-hairline-width) var(--pl-hairline);
+  transition: transform var(--pl-motion-med) var(--pl-ease-spring-soft);
+}
+.desktop[aria-selected='true'] .desktopPreview {
+  box-shadow:
+    0 0 0 2px var(--pl-accent),
+    0 0 18px var(--pl-accent-glow);
+}
+.desktop:hover .desktopPreview {
+  transform: scale(1.04);
+}
+.addDesktop {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-control-bg);
+  box-shadow: inset 0 0 0 1px var(--pl-hairline);
+  color: var(--pl-text);
+  cursor: default;
+  transition: transform var(--pl-motion-med) var(--pl-ease-spring-soft);
+}
+.addDesktop:active:not([aria-disabled='true']) {
+  transform: scale(var(--pl-press-scale));
+}
+.addDesktop[aria-disabled='true'] {
+  color: var(--pl-text-disabled);
+}
+
+/* ---------- window grid ---------- */
+.grid {
+  --pl-cols: 3;
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-content: center;
+  justify-content: center;
+  gap: var(--pl-space-12) var(--pl-space-10);
+  width: 100%;
+  max-width: 1400px;
+  min-height: 0;
+  padding: var(--pl-space-2);
+}
+.tile {
+  position: relative;
+  flex: 0 1 calc((100% - (var(--pl-cols) - 1) * var(--pl-space-10)) / var(--pl-cols));
+  min-width: 0;
+  max-width: 440px;
+}
+.option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--pl-space-3);
+  outline: none;
+  cursor: default;
+}
+.frame {
+  --pl-aspect: 1.6;
+  position: relative;
+  width: 100%;
+  aspect-ratio: var(--pl-aspect);
+  border-radius: var(--pl-radius-lg);
+  background: var(--pl-glass-window-bg);
+  box-shadow:
+    var(--pl-shadow-win),
+    inset 0 0 0 var(--pl-hairline-width) var(--pl-hairline);
+  transition: transform var(--pl-motion-med) var(--pl-ease-spring-soft);
+}
+.content {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+}
+.option:hover .frame,
+.option[data-selected='true'] .frame {
+  transform: scale(1.03);
+}
+@keyframes zoomIn {
+  from {
+    transform: translate(var(--pl-flip-x, 0px), var(--pl-flip-y, 0px))
+      scale(var(--pl-flip-sx, 1), var(--pl-flip-sy, 1));
+  }
+}
+@keyframes zoomOut {
+  to {
+    transform: translate(var(--pl-flip-x, 0px), var(--pl-flip-y, 0px))
+      scale(var(--pl-flip-sx, 1), var(--pl-flip-sy, 1));
+  }
+}
+.zoomIn {
+  transform-origin: 0 0;
+  animation: zoomIn calc(420ms * var(--pl-k)) var(--pl-ease-spring) backwards;
+}
+.frame.zoomOut {
+  transform-origin: 0 0;
+  animation: zoomOut calc(340ms * var(--pl-k)) var(--pl-ease-spring) forwards;
+}
+/* Selection: a 3 px accent outline with a dark 2 px gap, so it reads on any thumbnail. */
+.outline {
+  position: absolute;
+  inset: -2px;
+  border-radius: calc(var(--pl-radius-lg) + 2px);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--pl-bg) 80%, transparent),
+    0 0 0 5px var(--pl-accent),
+    0 0 28px var(--pl-accent-glow);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity calc(140ms * var(--pl-k)) var(--pl-ease);
+}
+.option:hover .outline {
+  opacity: 0.55;
+}
+.option[data-selected='true'] .outline,
+.option:focus-visible .outline {
+  opacity: 1;
+}
+@keyframes captionIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+.caption {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pl-space-2);
+  max-width: min(100%, 260px);
+  padding: var(--pl-space-1) var(--pl-space-3) var(--pl-space-1) var(--pl-space-2);
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-glass-hud-bg);
+  box-shadow:
+    var(--pl-shadow-1),
+    inset 0 0 0 var(--pl-hairline-width) var(--pl-hairline);
+  font: var(--pl-type-caption);
+  font-weight: var(--pl-weight-semibold);
+  color: var(--pl-text);
+  animation: captionIn var(--pl-motion-med) var(--pl-ease-out) calc(160ms * var(--pl-k)) backwards;
+}
+.option[data-selected='true'] .caption {
+  background:
+    linear-gradient(var(--pl-accent-subtle), var(--pl-accent-subtle)), var(--pl-glass-hud-bg);
+  box-shadow:
+    var(--pl-shadow-1),
+    inset 0 0 0 1px color-mix(in srgb, var(--pl-accent) 60%, transparent);
+}
+.captionText {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.captionState {
+  flex: none;
+  font-weight: var(--pl-weight-regular);
+  color: var(--pl-text-muted);
+}
+.tile[data-state='minimised'] .frame {
+  opacity: 0.7;
+}
+.close {
+  position: absolute;
+  top: -10px;
+  left: -10px;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: var(--pl-target-min);
+  height: var(--pl-target-min);
+  border: 0;
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-surface-3);
+  box-shadow:
+    var(--pl-shadow-pop),
+    inset 0 0 0 var(--pl-hairline-width) var(--pl-hairline);
+  color: var(--pl-text);
+  opacity: 0;
+  transform: scale(0.8);
+  cursor: default;
+  transition:
+    opacity calc(140ms * var(--pl-k)) var(--pl-ease),
+    transform var(--pl-motion-med) var(--pl-ease-spring-soft);
+}
+.tile:hover .close,
+.tile:has(.option[data-selected='true']) .close {
+  opacity: 1;
+  transform: none;
+}
+
+/* ---------- empty ---------- */
+.empty {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--pl-space-4);
+}
+.emptyTitle {
+  margin: 0;
+  padding: var(--pl-space-2) var(--pl-space-4);
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-glass-hud-bg);
+  font: var(--pl-type-title);
+  color: var(--pl-text);
+}
+.emptyActions {
+  display: flex;
+  gap: var(--pl-space-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .backdropIn,
+  .desktopsIn,
+  .zoomIn,
+  .frame.zoomOut,
+  .caption {
+    animation: none;
+  }
+  .frame,
+  .outline,
+  .close,
+  .desktopPreview,
+  .addDesktop {
+    transition: none;
+  }
+  .option:hover .frame,
+  .option[data-selected='true'] .frame {
+    transform: none;
+  }
+}
+@media (forced-colors: active) {
+  .frame,
+  .caption {
+    border: 1px solid CanvasText;
+  }
+  .outline {
+    outline: 3px solid Highlight;
+  }
+}

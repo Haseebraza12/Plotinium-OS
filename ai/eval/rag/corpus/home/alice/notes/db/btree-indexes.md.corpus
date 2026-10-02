@@ -1,0 +1,25 @@
+# B-tree and B+ tree indexes
+
+## Why not a binary tree
+
+Disk and SSD reads come in pages (8 KiB in Postgres). A node with hundreds of keys per page keeps the tree 3–4 levels deep even for hundreds of millions of rows.
+
+## B+ tree specifics
+
+- all values (or row pointers) live in the **leaves**; internal nodes hold only separator keys;
+- leaves are linked left to right, so a range scan finds the start and then walks the leaf chain;
+- fan-out is high because internal nodes are small.
+
+## Insert and split
+
+Insert into the correct leaf. If it overflows, split it into two half-full leaves, copy the first key of the right leaf up into the parent as a new separator. If the parent overflows, split it too and **push** the middle key up. A split of the root adds a level; that is the only way the tree grows taller, so it stays balanced.
+
+## Delete
+
+Remove from the leaf; if it underflows, borrow from a sibling or merge with it and remove a separator from the parent. Many real systems skip merging and just let pages be sparse.
+
+## Practical
+
+- Composite index (a, b) helps `WHERE a = ?` and `WHERE a = ? AND b > ?`, not `WHERE b = ?` alone.
+- Covering / index-only scans avoid heap lookups (Postgres needs the visibility map).
+- Fill factor < 100 leaves room for inserts and reduces splits.

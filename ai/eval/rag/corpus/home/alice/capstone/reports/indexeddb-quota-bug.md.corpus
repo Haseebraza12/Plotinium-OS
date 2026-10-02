@@ -1,0 +1,11 @@
+# Bug: silent write failure when storage is full
+
+Reported by Esha while filling the disk in a stress test.
+
+Writing a 50 MB file after the origin's quota was reached showed "saved" in the editor, but the file was empty after reload.
+
+Cause: the IndexedDB transaction's `QuotaExceededError` was caught in a generic handler that logged it and resolved the promise anyway.
+
+Fix: the VFS maps QuotaExceededError to EDQUOT and aborts the whole transaction; the editor shows "Not saved: storage is full". Added a test that fills the quota with a fake storage manager.
+
+Also: request persistent storage (`navigator.storage.persist()`) after login so the browser doesn't evict our data under pressure.

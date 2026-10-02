@@ -1,0 +1,39 @@
+{
+  "v": 1,
+  "t": "hello",
+  "id": 1,
+  "body": {
+    "proto": 1,
+    "build": {
+      "name": "Plotinium",
+      "version": "0.1.0",
+      "build": "a1f93c2",
+      "date": "2026-09-24"
+    },
+    "osSessionId": "0192f0c1-9000-7000-8000-000000000001",
+    "deviceId": "0192f0c1-9000-7000-8000-000000000002",
+    "kernelEpoch": 3,
+    "lamport": 40,
+    "outbox": {
+      "pending": 2,
+      "held": 0
+    },
+    "heldLeases": [
+      {
+        "leaseId": "0192f0c1-9000-7000-8000-000000000004",
+        "ino": "0192f0c1-8a3b-7c4d-8e5f-0123456789ab",
+        "fence": 5
+      }
+    ],
+    "resume": [
+      {
+        "ownerUid": 1001,
+        "fromSeq": 120
+      },
+      {
+        "ownerUid": 1002,
+        "fromSeq": 0
+      }
+    ]
+  }
+}

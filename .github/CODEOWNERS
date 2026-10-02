@@ -1,0 +1,107 @@
+# CODEOWNERS: every path has a primary owner and a named secondary reviewer (spec §4.2; C15).
+#
+# On each line the FIRST handle is the primary owner and the SECOND is the secondary reviewer.
+# GitHub requests review from every listed owner, and with "Require review from Code Owners"
+# enabled on main, a PR needs approval from one of them who is not its author, which in
+# practice is the secondary reviewer. Later lines override earlier ones for the same path.
+#
+# HOW TO REPLACE THE PLACEHOLDERS (Week 2, when TEAM_CONTRACT.md is signed):
+#   Option A (recommended): create five GitHub teams in the organisation, named r1-kernel,
+#     r2-vfs-db, r3-wm-ui, r4-ai and r5-qa-devops, each with one member, and replace
+#     "plotinium-org" below with the organisation name.
+#   Option B: replace each team handle with the member's GitHub username, for example
+#     "@plotinium-org/r1-kernel" -> "@ali-khan".
+# Until then GitHub shows these owners as unknown; nothing else breaks.
+#
+#   R1 Kernel / Systems Architect         @plotinium-org/r1-kernel
+#   R2 VFS / Database Engineer            @plotinium-org/r2-vfs-db
+#   R3 WM / UI Subsystem Lead             @plotinium-org/r3-wm-ui
+#   R4 AI Pipeline Specialist             @plotinium-org/r4-ai
+#   R5 QA / DevOps & Integration Engineer @plotinium-org/r5-qa-devops
+
+# Fallback for anything not listed below
+*                                   @plotinium-org/r5-qa-devops @plotinium-org/r1-kernel
+
+# Protocol: an ABI change affects every consumer, so R2 and R4 both review
+/protocol/                          @plotinium-org/r1-kernel @plotinium-org/r2-vfs-db @plotinium-org/r4-ai
+
+# Data structures: each owner; the reviewer is a member who does not own the structure
+/dsa/                               @plotinium-org/r1-kernel @plotinium-org/r5-qa-devops
+/dsa/src/heap/                      @plotinium-org/r1-kernel @plotinium-org/r3-wm-ui
+/dsa/src/hashtable/                 @plotinium-org/r1-kernel @plotinium-org/r2-vfs-db
+/dsa/src/lru/                       @plotinium-org/r1-kernel @plotinium-org/r4-ai
+/dsa/src/tree/                      @plotinium-org/r2-vfs-db @plotinium-org/r1-kernel
+/dsa/src/trie/                      @plotinium-org/r3-wm-ui @plotinium-org/r2-vfs-db
+/dsa/src/zorder/                    @plotinium-org/r3-wm-ui @plotinium-org/r5-qa-devops
+/dsa/src/bloom/                     @plotinium-org/r4-ai @plotinium-org/r3-wm-ui
+/dsa/src/dag/                       @plotinium-org/r5-qa-devops @plotinium-org/r4-ai
+/dsa/src/ringbuffer/                @plotinium-org/r5-qa-devops @plotinium-org/r2-vfs-db
+
+# Kernel
+/kernel/                            @plotinium-org/r1-kernel @plotinium-org/r5-qa-devops
+/kernel/src/core/mm/                @plotinium-org/r1-kernel @plotinium-org/r2-vfs-db
+/kernel/src/blkio/                  @plotinium-org/r1-kernel @plotinium-org/r2-vfs-db
+
+# VFS (the syncd client is R5's second subsystem)
+/vfs/                               @plotinium-org/r2-vfs-db @plotinium-org/r1-kernel
+/vfs/src/sync/                      @plotinium-org/r5-qa-devops @plotinium-org/r2-vfs-db
+/vfs/src/locks/                     @plotinium-org/r2-vfs-db @plotinium-org/r5-qa-devops
+
+# Services and boot (shared boot surface: each reviews the other)
+/services/                          @plotinium-org/r5-qa-devops @plotinium-org/r3-wm-ui
+
+# Window manager and UI
+/wm/                                @plotinium-org/r3-wm-ui @plotinium-org/r1-kernel
+/wm/src/boot-ui/                    @plotinium-org/r3-wm-ui @plotinium-org/r5-qa-devops
+
+# Apps
+/apps/                              @plotinium-org/r3-wm-ui @plotinium-org/r1-kernel
+/apps/terminal/                     @plotinium-org/r3-wm-ui @plotinium-org/r4-ai
+/apps/shell/                        @plotinium-org/r3-wm-ui @plotinium-org/r4-ai
+/apps/coreutils/                    @plotinium-org/r2-vfs-db @plotinium-org/r1-kernel @plotinium-org/r3-wm-ui
+/apps/demo/                         @plotinium-org/r1-kernel @plotinium-org/r5-qa-devops
+
+# AI (R3 co-owns the BM25 keyword search and citations in ai/src/search)
+/ai/                                @plotinium-org/r4-ai @plotinium-org/r2-vfs-db
+/ai/src/embed/                      @plotinium-org/r4-ai @plotinium-org/r1-kernel
+/ai/src/predictor/                  @plotinium-org/r4-ai @plotinium-org/r1-kernel
+/ai/src/search/                     @plotinium-org/r4-ai @plotinium-org/r3-wm-ui
+
+# Server (one Node process; each plugin has its own owner)
+/server/                            @plotinium-org/r2-vfs-db @plotinium-org/r5-qa-devops
+/server/src/storage/                @plotinium-org/r1-kernel @plotinium-org/r2-vfs-db
+/server/src/swap/                   @plotinium-org/r1-kernel @plotinium-org/r2-vfs-db
+/server/src/gateway/                @plotinium-org/r5-qa-devops @plotinium-org/r2-vfs-db
+/server/src/index/                  @plotinium-org/r2-vfs-db @plotinium-org/r4-ai
+/server/src/llm/                    @plotinium-org/r4-ai @plotinium-org/r2-vfs-db
+/server/src/obs/                    @plotinium-org/r5-qa-devops @plotinium-org/r1-kernel
+
+# Database
+/db/                                @plotinium-org/r2-vfs-db @plotinium-org/r5-qa-devops
+
+# Web entry, Service Worker and build
+/web/                               @plotinium-org/r5-qa-devops @plotinium-org/r3-wm-ui
+
+# CI, operations, tooling and cross-package tests
+/.github/                           @plotinium-org/r5-qa-devops @plotinium-org/r1-kernel
+/ops/                               @plotinium-org/r5-qa-devops @plotinium-org/r1-kernel
+/tools/                             @plotinium-org/r5-qa-devops @plotinium-org/r1-kernel
+/tests/                             @plotinium-org/r5-qa-devops @plotinium-org/r1-kernel
+
+# Root documents (spec §15.2): the editor of each document first
+/README.md                          @plotinium-org/r3-wm-ui @plotinium-org/r5-qa-devops
+/ARCHITECTURE.md                    @plotinium-org/r1-kernel @plotinium-org/r5-qa-devops
+/DSA.md                             @plotinium-org/r1-kernel @plotinium-org/r2-vfs-db
+/DATABASE.md                        @plotinium-org/r2-vfs-db @plotinium-org/r5-qa-devops
+/SECURITY.md                        @plotinium-org/r2-vfs-db @plotinium-org/r4-ai
+/AI.md                              @plotinium-org/r4-ai @plotinium-org/r2-vfs-db
+/AI_USAGE.md                        @plotinium-org/r4-ai @plotinium-org/r5-qa-devops
+/BOOT.md                            @plotinium-org/r5-qa-devops @plotinium-org/r3-wm-ui
+/TESTING.md                         @plotinium-org/r5-qa-devops @plotinium-org/r1-kernel
+/STACK_DECISION.md                  @plotinium-org/r5-qa-devops @plotinium-org/r1-kernel
+/TEAM_CONTRACT.md                   @plotinium-org/r5-qa-devops @plotinium-org/r1-kernel
+/CHANGELOG.md                       @plotinium-org/r5-qa-devops @plotinium-org/r1-kernel
+/THIRD_PARTY.md                     @plotinium-org/r5-qa-devops @plotinium-org/r1-kernel
+
+# Identity kit
+/docs/identity/                     @plotinium-org/r3-wm-ui @plotinium-org/r5-qa-devops

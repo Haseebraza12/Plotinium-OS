@@ -1,0 +1,11 @@
+{
+  "name": "ai.agent",
+  "description": "Agent registered; health probe runs after interactive",
+  "requires": ["vfs", "sched", "sync"],
+  "critical": false,
+  "weight": 1,
+  "timeoutMs": 2000,
+  "priority": 20,
+  "safeMode": false,
+  "onDegradedDependency": "start-degraded"
+}

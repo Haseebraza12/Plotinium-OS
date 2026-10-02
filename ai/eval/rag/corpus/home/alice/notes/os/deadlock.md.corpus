@@ -1,0 +1,25 @@
+# Deadlock
+
+A set of processes is deadlocked when each one waits for an event that only another process in the set can cause.
+
+## Coffman conditions (all four needed)
+
+1. **Mutual exclusion** – at least one resource is held in a non-shareable way.
+2. **Hold and wait** – a process holds one resource while requesting another.
+3. **No preemption** – resources are released only voluntarily.
+4. **Circular wait** – there is a cycle P1 → P2 → … → Pn → P1 in the wait-for graph.
+
+Break any one and the deadlock cannot happen.
+
+## Strategies
+
+- **Prevention:** remove a condition. Lock ordering (always take lock A before lock B) kills circular wait and is what we actually do in code. Requesting everything up front kills hold and wait but wastes resources.
+- **Avoidance:** only grant a request if the system stays in a safe state (Banker's algorithm, see the other note).
+- **Detection and recovery:** let it happen, find cycles in the resource allocation graph, then kill a process or roll one back. Databases do this.
+- **Ostrich:** ignore it. Most desktop OSes, honestly.
+
+## Resource allocation graph
+
+With single-instance resources, a cycle means deadlock. With multiple instances a cycle is necessary but not sufficient.
+
+Quiz question I got wrong: "Can a system with only one process deadlock?" Yes, if it waits for itself, e.g. taking a non-recursive mutex twice.

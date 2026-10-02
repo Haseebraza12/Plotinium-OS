@@ -1,0 +1,21 @@
+# Readers–writers
+
+Many readers can share the data; a writer needs it alone.
+
+**First variant (reader preference):** readers never wait while another reader is in. Writers can starve if readers keep arriving.
+
+```
+wait(mutex); readcount++; if (readcount == 1) wait(wrt); signal(mutex);
+  ... read ...
+wait(mutex); readcount--; if (readcount == 0) signal(wrt); signal(mutex);
+```
+
+**Second variant (writer preference):** once a writer is waiting, new readers queue behind it. Readers can starve.
+
+**Fair version:** a turnstile semaphore that everyone passes through in arrival order.
+
+Real APIs: `pthread_rwlock_t`, Java's `ReentrantReadWriteLock`, Rust's `RwLock`. Many of them let you choose the policy.
+
+Databases solve the same thing with shared and exclusive locks, or avoid it with MVCC (readers see a snapshot and never block writers).
+
+In our capstone, the VFS allows concurrent reads of a file but serialises writes per inode through the IndexedDB transaction.

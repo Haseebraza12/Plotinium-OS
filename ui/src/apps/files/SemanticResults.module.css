@@ -1,0 +1,334 @@
+/*
+ * Semantic results. Cards are static tinted glass (no backdrop-filter inside windows). They
+ * enter once, staggered by --pl-stagger-index (capped at 6); the relevance bar draws by
+ * scaleX. Nothing loops: the skeleton is static.
+ */
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pl-space-3);
+  height: 100%;
+  min-height: 0;
+  padding: var(--pl-space-4) var(--pl-space-4) 0;
+}
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--pl-space-3);
+  flex-wrap: wrap;
+}
+.titles {
+  min-width: 0;
+}
+.title {
+  margin: 0;
+  font: var(--pl-type-headline);
+  font-size: var(--pl-text-lg);
+}
+.subtitle {
+  margin: 0;
+  color: var(--pl-text-muted);
+  font: var(--pl-type-caption);
+  font-variant-numeric: tabular-nums;
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--pl-space-2);
+}
+.chip {
+  --chip-tone: var(--pl-warning);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pl-space-2);
+  height: var(--pl-control-h-sm);
+  padding: 0 var(--pl-space-3) 0 var(--pl-space-2);
+  border-radius: var(--pl-radius-pill);
+  background: color-mix(in srgb, var(--chip-tone) 16%, var(--pl-glass-window-bg));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--chip-tone) 45%, transparent);
+  color: var(--pl-text);
+  font: var(--pl-type-caption);
+  font-weight: var(--pl-weight-medium);
+  animation: chip-in var(--pl-motion-med) var(--pl-ease-spring) both;
+}
+.chip > svg {
+  color: var(--chip-tone);
+}
+.chip[data-kind='model-ready'] {
+  --chip-tone: var(--pl-success);
+}
+.chip[data-kind='unavailable'] {
+  --chip-tone: var(--pl-danger);
+}
+.chip[data-kind='shared-hidden'],
+.chip[data-kind='truncated'] {
+  --chip-tone: var(--pl-text-muted);
+}
+.popIcon {
+  animation: pop var(--pl-motion-med) var(--pl-ease-spring-bouncy) both;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pl-space-2);
+  flex: 1;
+  min-height: 0;
+  margin: 0 calc(var(--pl-space-2) * -1);
+  padding: var(--pl-space-1) var(--pl-space-2) var(--pl-space-4);
+  overflow: auto;
+  outline: none;
+}
+.list:focus-visible {
+  outline: var(--pl-focus-ring);
+  outline-offset: calc(var(--pl-focus-offset) * -1);
+  border-radius: var(--pl-radius-lg);
+}
+.card {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--pl-space-3);
+  padding: var(--pl-space-3) var(--pl-space-4);
+  border-radius: var(--pl-radius-lg);
+  background: var(--pl-glass-card-bg);
+  box-shadow:
+    inset 0 0 0 var(--pl-hairline-width) var(--pl-hairline),
+    var(--pl-glass-specular);
+  cursor: default;
+  isolation: isolate;
+  animation: card-in var(--pl-motion-med) var(--pl-ease-spring) both;
+  animation-delay: calc(var(--pl-stagger-index, 0) * 30ms * var(--pl-k));
+  transition: transform var(--pl-motion-fast) var(--pl-ease);
+}
+.card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  box-shadow: var(--pl-shadow-pop);
+  opacity: 0;
+  transition: opacity var(--pl-motion-fast) var(--pl-ease);
+}
+.card:hover {
+  transform: translateY(-1px);
+}
+.card:hover::after {
+  opacity: 0.45;
+}
+.card:active {
+  transform: scale(0.99);
+}
+.card[aria-selected='true'] {
+  background: color-mix(in srgb, var(--pl-accent) 10%, var(--pl-glass-card-bg));
+  box-shadow:
+    inset 0 0 0 1px var(--pl-accent),
+    var(--pl-glass-specular);
+}
+.list:focus-visible .card[aria-selected='true'] {
+  box-shadow:
+    inset 0 0 0 2px var(--pl-focus-color),
+    var(--pl-glass-specular);
+}
+.cardStale {
+  opacity: 0.8;
+}
+.cardIcon {
+  display: grid;
+  place-items: center;
+  width: var(--pl-control-h-lg);
+  height: var(--pl-control-h-lg);
+  border-radius: var(--pl-radius-md);
+  background: var(--pl-control-bg);
+}
+.cardMain {
+  min-width: 0;
+}
+.cardTop {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  column-gap: var(--pl-space-3);
+  row-gap: var(--pl-space-half);
+}
+.name {
+  font-weight: var(--pl-weight-semibold);
+}
+.citation {
+  color: var(--pl-accent-text);
+  font-family: var(--pl-font-mono);
+  font-size: var(--pl-text-xs);
+  font-variant-numeric: tabular-nums;
+}
+.verified,
+.updating {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pl-space-half);
+  padding: 0 var(--pl-space-1);
+  border-radius: var(--pl-radius-xs);
+  background: var(--pl-success-subtle);
+  font: var(--pl-type-caption);
+}
+.updating {
+  background: var(--pl-neutral-subtle);
+  color: var(--pl-text-muted);
+}
+.snippet {
+  display: -webkit-box;
+  margin: var(--pl-space-1) 0 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  color: var(--pl-text-muted);
+}
+/* Matches: accent text plus an underline and weight, never colour alone. */
+.mark {
+  background: transparent;
+  color: var(--pl-accent-text);
+  font-weight: var(--pl-weight-semibold);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--pl-accent) 55%, transparent);
+  text-underline-offset: 3px;
+}
+.cardSide {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--pl-space-2);
+}
+.relevance {
+  display: flex;
+  align-items: center;
+  gap: var(--pl-space-2);
+}
+.meter {
+  position: relative;
+  width: calc(var(--pl-icon-app) + var(--pl-space-6));
+  height: var(--pl-progress-h-sm);
+  overflow: hidden;
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-progress-track);
+}
+.meterFill {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--pl-accent);
+  transform: scaleX(var(--score, 0));
+  transform-origin: left center;
+  animation: fill-in var(--pl-motion-slow) var(--pl-ease-spring) both;
+  animation-delay: calc((var(--pl-stagger-index, 0) * 30ms + 60ms) * var(--pl-k));
+}
+.score {
+  min-width: 3ch;
+  color: var(--pl-text);
+  font: var(--pl-type-caption);
+  font-weight: var(--pl-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+.stale .meterFill {
+  background: var(--pl-text-tertiary);
+}
+.stale .score {
+  color: var(--pl-text-tertiary);
+}
+.owner {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pl-space-2);
+  color: var(--pl-text-muted);
+  font: var(--pl-type-caption);
+}
+.skeletonCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pl-space-2);
+  animation: none;
+}
+.skeletonLine {
+  display: block;
+  width: 80%;
+  height: var(--pl-space-2);
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-neutral-subtle);
+}
+.skeletonShort {
+  width: 45%;
+}
+.error {
+  display: flex;
+  align-items: center;
+  gap: var(--pl-space-3);
+  padding: var(--pl-space-2) var(--pl-space-3);
+  border-radius: var(--pl-radius-md);
+  background: var(--pl-danger-subtle);
+  color: var(--pl-text);
+}
+.error > svg {
+  color: var(--pl-danger);
+  flex: none;
+}
+.error > span {
+  flex: 1;
+}
+.errno {
+  font-family: var(--pl-font-mono);
+  font-size: var(--pl-text-xs);
+  color: var(--pl-text-muted);
+}
+.emptyMark {
+  opacity: 0.3;
+}
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@keyframes fill-in {
+  from {
+    transform: scaleX(0);
+  }
+}
+@keyframes chip-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+@keyframes pop {
+  from {
+    transform: scale(0.6);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .meterFill,
+  .chip,
+  .popIcon {
+    animation: none;
+  }
+  .card,
+  .card::after {
+    transition: none;
+  }
+  .card:hover,
+  .card:active {
+    transform: none;
+  }
+}
+@media (forced-colors: active) {
+  .card[aria-selected='true'] {
+    outline: 2px solid Highlight;
+  }
+  .meterFill {
+    background: CanvasText;
+  }
+}

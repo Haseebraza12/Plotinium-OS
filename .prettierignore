@@ -1,0 +1,27 @@
+# Generated or vendored
+node_modules/
+pnpm-lock.yaml
+dist/
+coverage/
+test-results/
+playwright-report/
+**/*.gen.ts
+db/schema.sql
+
+# Research inputs, pilot evidence and specs are written by other processes and kept verbatim
+docs/research/
+docs/evidence/
+specs/
+# Google Stitch exports (screen.json, reference.html) and their generation records, kept verbatim
+docs/design/stitch/
+
+# Downloaded model and ONNX runtime files, pinned by SHA-256 (ai/scripts/fetch-models.ts):
+# reformatting one would break its pin
+web/public/models/
+web/public/ort/
+
+# The capstone specification
+*.pdf
+
+# Lint fixtures are deliberately broken
+tools/eslint-rules/fixtures/

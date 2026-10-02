@@ -1,0 +1,11 @@
+{
+  "frame": {
+    "v": 1,
+    "t": "op.batch",
+    "id": 1,
+    "body": {
+      "ops": []
+    }
+  },
+  "issue": "body.ops"
+}

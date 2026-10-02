@@ -1,0 +1,24 @@
+# Decision record: embedding model for semantic search
+
+**Status:** accepted 18 Sep 2026. **Owner:** Alice (R4).
+
+## Context
+
+Semantic file search needs a local model small enough to run in a browser worker, fast enough for p95 ≤ 500 ms retrieval, and good enough for Recall@5 ≥ 0.80.
+
+## Options
+
+1. MongoDB/mdbr-leaf-ir, 768-d output truncated to 384 (Matryoshka), q8 quantised.
+2. Xenova/bge-small-en-v1.5, 384-d, q8.
+3. No model: BM25 only.
+
+## Decision
+
+Option 1 as primary, option 2 as fallback. Both are 384-d in storage and use the same uncased WordPiece vocabulary and the same query prefix, so switching needs no schema change, only a background re-index.
+
+## Consequences
+
+- Weights are self-hosted under /models; nothing is fetched from the internet at run time.
+- The model loads only after the desktop is interactive.
+- Switch rule: move to the fallback if leaf's Recall@5 on our 200-document set is below 0.80, or more than 0.03 below bge-small.
+- Keyword search stays as the fallback path whenever the model is unavailable.

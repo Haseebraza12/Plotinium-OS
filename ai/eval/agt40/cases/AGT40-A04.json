@@ -1,0 +1,23 @@
+{
+  "id": "AGT40-A04",
+  "category": "ambiguous",
+  "tags": [],
+  "user": "alice",
+  "cwd": "/home/alice",
+  "now": "2026-10-05T10:00:00+05:00",
+  "tz": "Asia/Karachi",
+  "fixture": "fx-agt@v1",
+  "prompt": "rename the photo",
+  "clarificationAnswer": "photo1.jpg to beach.jpg",
+  "expect": {
+    "kind": "clarify"
+  },
+  "reference": {
+    "tool": "ask_clarification",
+    "input": {
+      "question": "Which photo, and what should its new name be?",
+      "options": ["~/Downloads/photo1.jpg", "~/Downloads/photo2.jpg"],
+      "reason": "missing_argument"
+    }
+  }
+}

@@ -1,0 +1,22 @@
+# SQL joins cheat sheet
+
+```sql
+-- inner: only matching pairs
+SELECT s.name, e.grade FROM student s JOIN enrolment e ON e.student_id = s.id;
+
+-- left: every student, grade NULL if not enrolled
+SELECT s.name, e.grade FROM student s LEFT JOIN enrolment e ON e.student_id = s.id;
+
+-- anti-join: students with no enrolment
+SELECT s.name FROM student s
+WHERE NOT EXISTS (SELECT 1 FROM enrolment e WHERE e.student_id = s.id);
+
+-- self join: pairs of students in the same section
+SELECT a.name, b.name FROM student a JOIN student b
+  ON a.section = b.section AND a.id < b.id;
+```
+
+- `NOT IN` with a subquery that can return NULL returns nothing; prefer `NOT EXISTS`.
+- `USING (col)` merges the join column into one output column.
+- Filters on the right table of a LEFT JOIN belong in the ON clause, otherwise the WHERE turns it into an inner join.
+- `LATERAL` lets a subquery refer to columns of earlier FROM items (top-3 per group).

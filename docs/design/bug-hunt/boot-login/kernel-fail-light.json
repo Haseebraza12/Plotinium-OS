@@ -1,0 +1,18 @@
+{
+  "which": "kernel-fail",
+  "console": ["error: Failed to load resource: net::ERR_CONNECTION_RESET"],
+  "pageErrors": [],
+  "failed": ["FAILED GET /assets/kernel.worker-CcF02b_s.js net::ERR_CONNECTION_RESET"],
+  "text": "Plotinium | is starting | dev build version 0.1.0-dev.0 · build 0000000 | checking system | Loading kernel | verbose boot | [    0.000] firmware: Plotinium 0.1.0-dev.0 · POST ok (workers, indexeddb, crypto, isolated) | Esc | Boot menu | V | Verbose log | BOOTLOADER | Could not load the kernel | Plotinium 0.1.0-dev.0 · build 0000000 | The kernel image did not download. Check that the Plotinium server is running, then retry. After one successful visit Plotinium also starts offline. | Failed to fetch | T | Retry | D | Diagnostics | Could not load the kernel. The kernel image did not download. Check that the Plotinium server ",
+  "active": "TRetry",
+  "rects": [
+    "svg.[object SVGAnimatedString] 235 h61",
+    "P.plb-over 322 h17",
+    "H1.plb-h 382 h32",
+    "P.plb-meta 457 h14",
+    "P.plb-lead 509 h41",
+    "P.plb-meta 588 h14",
+    "DIV.plb-actions 626 h40",
+    "P.plb-sr 247 h1"
+  ]
+}

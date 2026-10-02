@@ -1,0 +1,69 @@
+/*
+ * Self-hosted fonts (C10: no third-party font request; OFL-1.1, listed in THIRD_PARTY.md).
+ * D15 Typography (docs/design/fonts/DECISION.md, specs/15-decisions/stack-decisions.md):
+ *
+ * - Inter 4, variable, with the optical-size axis (opsz 14-32, wght 100-900), from
+ *   @fontsource-variable/inter. With font-optical-sizing: auto the 13 px UI gets the Text design
+ *   and the clock and headlines the tighter Display design, as SF Pro Text/Display do.
+ * - JetBrains Mono, variable (wght 100-800), from @fontsource-variable/jetbrains-mono, for the
+ *   Terminal, the Editor, paths and pids (UI-004: Geist Mono drew `r` like `ɪ` at 12-14 px on 1x
+ *   screens). Its contextual ligatures are switched off here (`calt` 0), so `->`, `!=` and the
+ *   `--` of `rwxr--r--` stay the characters that were typed. The fontsource subsets have no
+ *   box-drawing glyphs: `tree` rules come from the system mono face, and xterm sizes each fallback
+ *   glyph to its cell.
+ *
+ * Only the Latin and Latin Extended subsets are declared: the woff2 for a range is fetched only
+ * when a character in it is on screen (unicode-range), and every other script falls back to the
+ * system stack of --pl-font-ui / --pl-font-mono character by character. The family names are
+ * the fontsource ones. font-display: swap paints the fallback stack first, so text is never
+ * invisible. Nothing preloads these files: the host stylesheet starts the Inter download long
+ * before the login screen (DECISION.md §8).
+ */
+@font-face {
+  font-family: 'Inter Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('@fontsource-variable/inter/files/inter-latin-opsz-normal.woff2')
+    format('woff2-variations');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Inter Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('@fontsource-variable/inter/files/inter-latin-ext-opsz-normal.woff2')
+    format('woff2-variations');
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+    U+A720-A7FF;
+}
+@font-face {
+  font-family: 'JetBrains Mono Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 800;
+  font-feature-settings: 'calt' 0;
+  src: url('@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2')
+    format('woff2-variations');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'JetBrains Mono Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 800;
+  font-feature-settings: 'calt' 0;
+  src: url('@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-ext-wght-normal.woff2')
+    format('woff2-variations');
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+    U+A720-A7FF;
+}

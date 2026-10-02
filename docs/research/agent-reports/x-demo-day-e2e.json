@@ -1,0 +1,79 @@
+{
+ "files_changed": [
+  "/home/haseeb-raza/Desktop/Plotinium OS/tests/e2e/demo-day/00-bringup.spec.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/tests/e2e/demo-day/01-boot.spec.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/tests/e2e/demo-day/02-hidden-ai.spec.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/tests/e2e/demo-day/03-cpu-drag.spec.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/tests/e2e/demo-day/04-memory.spec.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/tests/e2e/demo-day/05-fault-rm.spec.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/tests/e2e/demo-day/06-lock-contention.spec.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/tests/e2e/demo-day/parse.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/tests/e2e/demo-day/parse.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/tests/e2e/demo-day/protocol.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/tests/e2e/demo-day/protocol.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/tests/e2e/demo-day/compose.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/tests/e2e/demo-day/compose.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/tests/e2e/demo-day/env.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/tests/e2e/demo-day/env.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/tests/e2e/demo-day/session.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/tests/e2e/demo-day/report.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/tests/e2e/demo-day/README.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/docs/demo/REHEARSAL.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/docs/demo/EXAMINER-CARD.md"
+ ],
+ "verification": [
+  {
+   "command": "node_modules/.bin/tsc -p tests/tsconfig.json --noEmit",
+   "outcome": "exit 0 with no errors; --listFiles confirms the 17 demo-day .ts files are in the program"
+  },
+  {
+   "command": "node_modules/.bin/vitest run --config tests/vitest.config.ts --project harness e2e/demo-day",
+   "outcome": "4 files, 58 tests passed. Parsers are checked against the specs' own sample outputs; schedule and order (AIS-11), record and report (TST-18), Compose plan and fake-runner calls, credential resolution, and switches are also covered"
+  },
+  {
+   "command": "node_modules/.bin/eslint tests/e2e/demo-day --max-warnings 0",
+   "outcome": "exit 0"
+  },
+  {
+   "command": "node_modules/.bin/prettier --check tests/e2e/demo-day docs/demo",
+   "outcome": "All matched files use Prettier code style"
+  },
+  {
+   "command": "playwright test -c tests/playwright.config.ts --project e2e --list demo-day",
+   "outcome": "Total: 41 tests in 7 files, in protocol order (00-bringup \u2026 06-lock-contention)"
+  },
+  {
+   "command": "playwright test ... --reporter=line --output=<scratchpad> demo-day (with and without PLT_DEMO_DAY=1; no UI or Docker gate)",
+   "outcome": "41 skipped in both runs (skip without PLT_DEMO_DAY; fixme with it); no browser launched and no rehearsal record written"
+  },
+  {
+   "command": "PLT_DEMO_DAY=1 PLT_DEMO_BRINGUP=1 playwright test ... demo-day/00-bringup --grep 'starting from nothing' (real Docker, Compose v5.0.2)",
+   "outcome": "Refused by design: the running 'plotinium' stack was detected and the test failed with 'stop it and delete its data with docker compose down -v (destroys local data), or set PLT_DEMO_PROJECT'. Nothing was touched"
+  },
+  {
+   "command": "PLT_DEMO_DAY=1 PLT_DEMO_BRINGUP=1 playwright test ... demo-day/00-bringup --grep OPS-02 (real stack)",
+   "outcome": "1 passed: readyz answers on 127.0.0.1:4717 and the stack does not answer on the machine's LAN addresses"
+  },
+  {
+   "command": "node <scratchpad>/check-creds.ts (parseCredentials over real `docker compose logs app`; passwords never printed)",
+   "outcome": "Found root, demo, alice, bob, examiner1..3, each 20 characters; FIRST-START CREDENTIALS block printed exactly once"
+  },
+  {
+   "command": "node tests/e2e/demo-day/report.ts --in <scratchpad>/record/rehearsal.jsonl",
+   "outcome": "Rendered the Markdown rehearsal record: machine, network, Chrome, per-check table with measurements, and scripted time per \u00a717.1 segment"
+  },
+  {
+   "command": "node tools/traceability.ts --json",
+   "outcome": "All 99 demo-day titles (41 Playwright + 58 Vitest) begin with an ID. OPS-02, OPS-05 and TST-18 are reported as unregistered prefixes (a warning while the spec is Draft)"
+  }
+ ],
+ "integration_notes": "How to run: see tests/e2e/demo-day/README.md. The suite lives under tests/e2e, so the `e2e` project collects it, but every test is skipped unless PLT_DEMO_DAY=1, so CI on main is unaffected. The bring-up has its own Docker gate (PLT_DEMO_BRINGUP=1). UI-dependent steps are fixme until PLT_E2E_UI=1. Steps that need selectors not yet in the contract are fixme until PLT_DEMO_PROPOSED_TIDS=1. The agent tests are fixme until PLT_DEMO_AI=1 (a planner is reachable); without a planner, the AIS-02 \"unavailable, nothing was run\" test runs instead. Fault injection is skipped for any base URL that is not loopback (C7).\n\nRequests for other owners:\n(1) tests/e2e/SELECTORS.md and tests/support/selectors.ts (R5/R3): adopt the proposed ids frame-meter (data-p95-ms, data-loaf-ours), task-manager-tab (data-tab), task-manager-memory-row (data-pid, data-faults, data-bytes-out), task-manager-prediction-row (data-app, data-confidence), window-restoring, files-search and files-search-result (data-path, data-line-start). They are defined in PROPOSED_TID in env.ts. The scripts also type the su password into input[type=\"password\"] inside the secure-prompt test id; please make that part of the contract.\n(2) tools/traceability/ids.ts: the TST prefix is registered in requirements-traceability \u00a73.13 but missing from the regex (so are SHL, DBD and SRV). OPS-nn from deployment-and-ci needs registering in \u00a73.13 and ids.ts.\n(3) Shell spec \u00a73.14 (R3): there is no `edit PATH` or `open` command, but E5 and demo item 7 open the Editor with `edit` (TODO(R3) already in lock-contention.spec.ts).\n(4) predictive-prefetch \u00a73.9 (R4): `predict --latency` has no fixed output layout, so parseLaunchLatency is heuristic. The `predict` table also differs between shell \u00a73.14.48 and predictive-prefetch \u00a73.8; the parser accepts both.\n(5) Spec conflict: `ai` exit status when unavailable is 1 in the shell spec and 4 in agentic-shell \u00a73.3. The script asserts only a non-zero status.\n(6) server/src/seed/demo.ts (R2, W8): ~/fixtures/tree1000 for alice and /home/shared/plan.md (mode 664, group team) are not seeded yet. Items 6 and 7 fail with that message until they are.\n(7) UI/kernel: the scripts need the PLT_TEST_BUILD=1 hooks window.__plt.terminal.text()/idle(), bootlog() and oracle.snapshot(). terminal.text() must return the active buffer during `top`'s alternate screen (the pre-fetch watch relies on it). Clicking a dock item is assumed to open a new window (the same assumption as openApp).\n(8) CI workflows owner: an optional nightly lab job could run `PLT_DEMO_DAY=1 PLT_E2E_UI=1 xvfb-run -a pnpm exec playwright test -c tests/playwright.config.ts --project e2e demo-day`; item 4 runs headed.\n(9) Root docs agent: README and TESTING.md could link docs/demo/REHEARSAL.md and docs/demo/EXAMINER-CARD.md.\n(10) Environment note: compose.yaml pins the subnet 172.30.47.0/24, so only one Plotinium Compose project can run at a time. The bring-up test never deletes a stack; it refuses and explains how to clear it.\n(11) Heads-up: tests/playwright.config.ts's html and junit reporters write repo-root playwright-report/ and test-results/ even for `--list`. I removed the two artifacts my runs created (both were born during my session and held only demo-day results); use --reporter=line to avoid this.",
+ "problems": [
+  "None of the 35 UI-dependent scripts could run: the browser shell is still a placeholder, so they are fixme until PLT_E2E_UI=1. Their selectors, the window.__plt hook use and the flows (su secure prompt, agent-confirm, top alternate screen) are unverified against a real UI.",
+  "The full OPS-05 bring-up timing (clone \u2192 up --wait \u2192 desktop \u2264 240 s) was not executed. A 'plotinium' stack is running on this machine, and the test refuses by design rather than run `docker compose down -v`, which destroys data. A timed run needs a clean machine or that explicit teardown by the user.",
+  "parseLaunchLatency is heuristic until predictive-prefetch \u00a73.9 fixes the `predict --latency` layout.",
+  "`ai` exit status for 'unavailable' conflicts between the shell spec (1) and agentic-shell (4), so the script asserts only a non-zero status.",
+  "`pnpm traceability` warns on the OPS-02, OPS-05 and TST-18 prefixes until tools/traceability/ids.ts registers them. The 'no fixme without an issue link' lint in the DoD cannot be met yet (no tracker link); reasons cite the spec, env.ts and README instead.",
+  "Items 6 and 7 depend on the unfinished demo seed (~/fixtures/tree1000, /home/shared/plan.md) and fail with an explicit message until R2's W8 seed lands."
+ ]
+}

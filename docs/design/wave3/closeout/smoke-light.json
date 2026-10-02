@@ -1,0 +1,160 @@
+{
+  "base": "http://localhost:4718",
+  "theme": "light",
+  "results": [
+    {
+      "path": "session",
+      "name": "boot splash shows the Bohr P logo (stem, shell, nucleus, electron)",
+      "ok": true,
+      "detail": "{\"stem\":true,\"shell\":true,\"core\":true,\"electron\":true,\"label\":\"Plotinium logo\"}"
+    },
+    {
+      "path": "session",
+      "name": "desktop: menu bar, Dock and desktop-interactive mark, no login screen",
+      "ok": true,
+      "detail": "{\"menubar\":true,\"dock\":true,\"items\":[\"files\",\"terminal\",\"editor\",\"task-manager\",\"settings\"],\"menubarLogo\":true,\"login\":false,\"mark\":1}"
+    },
+    {
+      "path": "session",
+      "name": "menu bar shows the Bohr P logo",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "path": "session",
+      "name": "open files: window and its root [data-testid=\"files\"]",
+      "ok": true,
+      "detail": "window=true root=1 stopped=false"
+    },
+    {
+      "path": "session",
+      "name": "open terminal: window and its root [data-testid=\"terminal\"]",
+      "ok": true,
+      "detail": "window=true root=1 stopped=false"
+    },
+    {
+      "path": "session",
+      "name": "open editor: window and its root [data-testid=\"editor\"]",
+      "ok": true,
+      "detail": "window=true root=1 stopped=false"
+    },
+    {
+      "path": "session",
+      "name": "open task-manager: window and its root [data-testid=\"task-manager\"]",
+      "ok": true,
+      "detail": "window=true root=1 stopped=false"
+    },
+    {
+      "path": "session",
+      "name": "open settings: window and its root [data-testid=\"settings\"]",
+      "ok": true,
+      "detail": "window=true root=1 stopped=false"
+    },
+    {
+      "path": "session",
+      "name": "Dock click brings the Terminal forward with focus inside it",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "path": "session",
+      "name": "Terminal 'ls -la /' lists the root with modes",
+      "ok": true,
+      "detail": "drwxr-xr-x 10 root root 0 2026-09-30 05:00 . / drwxr-xr-x 10 root root 0 2026-09-30 05:00 .. / drwxr-xr-x  2 root root 0 2026-09-30 05:00 bin / drwxr-xr-x  3 root root 0 2026-09-30 21:41 home"
+    },
+    {
+      "path": "session",
+      "name": "Terminal 'echo hi | cat' prints hi",
+      "ok": true,
+      "detail": "drwxr-xr-x  3 root root 0 2026-09-30 05:00 usr / examiner3@plotinium:~$ echo hi | cat / hi / examiner3@plotinium:~$  "
+    },
+    {
+      "path": "session",
+      "name": "CSP violations (enforced) = 0",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "path": "session",
+      "name": "CSP violations (report-only) = 0",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "path": "session",
+      "name": "console errors / page errors / failed requests = 0",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "path": "guest",
+      "name": "boot splash shows the Bohr P logo (stem, shell, nucleus, electron)",
+      "ok": true,
+      "detail": "{\"stem\":true,\"shell\":true,\"core\":true,\"electron\":true,\"label\":\"Plotinium logo\"}"
+    },
+    {
+      "path": "guest",
+      "name": "login screen shows the Bohr P logo",
+      "ok": true,
+      "detail": "shapes=1"
+    },
+    {
+      "path": "guest",
+      "name": "Guest sign-in leaves the login screen",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "path": "guest",
+      "name": "desktop: menu bar, Dock and desktop-interactive mark, no login screen",
+      "ok": true,
+      "detail": "{\"menubar\":true,\"dock\":true,\"items\":[\"files\",\"terminal\",\"editor\",\"task-manager\",\"settings\"],\"menubarLogo\":true,\"login\":false,\"mark\":1}"
+    },
+    {
+      "path": "guest",
+      "name": "menu bar shows the Bohr P logo",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "path": "guest",
+      "name": "Guest Terminal opens and whoami answers",
+      "ok": true,
+      "detail": "guest-lijx@plotinium:~$ whoami / guest-lijx / guest-lijx@plotinium:~$  "
+    },
+    {
+      "path": "guest",
+      "name": "CSP violations (enforced) = 0",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "path": "guest",
+      "name": "CSP violations (report-only) = 0",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "path": "guest",
+      "name": "console errors / page errors / failed requests = 0",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "summary": {
+    "session": {
+      "csp": 0,
+      "enforced": 0,
+      "reported": 0,
+      "errors": [],
+      "warnings": []
+    },
+    "guest": {
+      "csp": 0,
+      "enforced": 0,
+      "reported": 0,
+      "errors": [],
+      "warnings": []
+    }
+  }
+}

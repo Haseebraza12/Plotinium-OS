@@ -1,0 +1,3 @@
+after chip click: verbose=true chip=true
+after V key #1: verbose=true chip=true
+after V key #2: verbose=false chip=false

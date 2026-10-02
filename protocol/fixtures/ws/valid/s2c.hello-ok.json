@@ -1,0 +1,57 @@
+{
+  "v": 1,
+  "t": "hello.ok",
+  "id": 1,
+  "body": {
+    "proto": 1,
+    "osSessionId": "0192f0c1-9000-7000-8000-000000000001",
+    "server": {
+      "name": "Plotinium",
+      "version": "0.1.0",
+      "build": "a1f93c2",
+      "date": "2026-09-24"
+    },
+    "serverTime": "2026-09-24T10:00:00.000Z",
+    "lamport": 900,
+    "auth": {
+      "uid": 1001,
+      "username": "alice",
+      "gids": [100, 200],
+      "kind": "user",
+      "suGrants": []
+    },
+    "limits": {
+      "maxPayload": 65536,
+      "opEnvelopeMax": 61440,
+      "maxBatch": 32,
+      "creditWindow": 16,
+      "feedWindow": 256,
+      "maxLeases": 256,
+      "maxWatches": 256
+    },
+    "timers": {
+      "leaseTtlMs": 30000,
+      "hbMs": 10000,
+      "deadManMs": 25000
+    },
+    "owners": [
+      {
+        "ownerUid": 1001,
+        "fromSeq": 120,
+        "headSeq": 130,
+        "horizonSeq": 1,
+        "mode": "stream"
+      }
+    ],
+    "keptLeases": [
+      {
+        "leaseId": "0192f0c1-9000-7000-8000-000000000004",
+        "ino": "0192f0c1-8a3b-7c4d-8e5f-0123456789ab",
+        "fence": 5,
+        "mode": "X",
+        "expiresAt": "2026-09-24T10:00:00.000Z"
+      }
+    ],
+    "lostLeases": []
+  }
+}

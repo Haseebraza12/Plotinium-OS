@@ -1,0 +1,11 @@
+# Performance budget report — Phase 3
+
+| Metric | Budget | Measured (p95) | OK |
+|---|---|---|---|
+| frame time, 10 windows dragging | 16.7 ms | 9.8 ms | yes |
+| syscall round trip | 2 ms | 0.6 ms | yes |
+| `ls` of 1,000 entries | 100 ms | 41 ms | yes |
+| search retrieval, 10k chunks | 500 ms | 88 ms | yes |
+| initial JS bundle (gzip) | 250 KB | 231 KB | yes (tight) |
+
+The bundle is the one to watch: the terminal and editor are already lazy; next candidates are the Settings app and the charts in Task Manager.

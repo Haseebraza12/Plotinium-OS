@@ -1,0 +1,12 @@
+{
+  "name": "desktop",
+  "description": "Shell mounted; first input-ready frame gives desktop-interactive",
+  "requires": ["session", "wm"],
+  "critical": true,
+  "weight": 3,
+  "timeoutMs": 3000,
+  "priority": 10,
+  "safeMode": true,
+  "runsIn": "main",
+  "caps": ["window", "auth.session", "proc"]
+}

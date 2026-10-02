@@ -1,0 +1,15 @@
+# Query planning notes
+
+`EXPLAIN (ANALYZE, BUFFERS)` shows the chosen plan with real row counts and timings.
+
+Scan types:
+- Seq Scan: read the whole table; best when a large fraction of rows match;
+- Index Scan: walk the index, fetch each heap row;
+- Index Only Scan: answer from the index (needs an all-visible page);
+- Bitmap Heap Scan: collect matching TIDs from one or more indexes, sort by page, then read pages once.
+
+Join methods: nested loop (small outer, indexed inner), hash join (equality, fits in work_mem), merge join (both inputs sorted).
+
+The planner estimates cost from statistics (`ANALYZE`): row counts, most common values, histograms, correlation. Bad estimates → bad plans. Typical fix: `ANALYZE`, extended statistics for correlated columns, or rewriting the query.
+
+Rule of thumb from the lab: compare "rows=" estimated vs "actual rows=". A 100x mismatch is where to look.

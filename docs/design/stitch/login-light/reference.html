@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plotinium Login</title>
+<!-- Hand-built reference render (NOT a Stitch export). Stitch generation did not return a screen; see notes.md. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  /* ---------- Tokens ---------- */
+  :root {
+    --font: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, monospace;
+    --accent: #5E5CE6;
+    --ease-spring: linear(0, 0.009, 0.035 2.1%, 0.141, 0.281 6.7%, 0.723 12.9%, 0.938 16.7%, 1.017, 1.077 20.4%, 1.121, 1.149 24.3%, 1.159, 1.163 27%, 1.154, 1.129 32.8%, 1.051 39.6%, 1.017 43.1%, 0.991, 0.977 51%, 0.974 53.8%, 0.975 57.1%, 0.997 69.8%, 1.003 76.9%, 1);
+    --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+    --ease-snappy: cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  :root[data-theme="dark"] {
+    --bg: #0B0A1A;
+    --label: rgba(255,255,255,.92);
+    --label-2: rgba(255,255,255,.68);
+    --label-3: rgba(255,255,255,.64);
+    --glass: rgba(255,255,255,.12);
+    --glass-hover: rgba(255,255,255,.18);
+    --glass-active: rgba(255,255,255,.24);
+    --glass-edge: rgba(255,255,255,.18);
+    --glass-top: rgba(255,255,255,.22);
+    --glass-shadow: 0 10px 30px rgba(0,0,0,.35), 0 1px 2px rgba(0,0,0,.3);
+    --accent-hover: #7472FF;
+    --halo: rgba(94,92,230,.55);
+    --focus: rgba(94,92,230,.55);
+    --scrim: rgba(4,3,14,.18);
+    --badge-bg: rgba(28,22,10,.55);
+    --badge-text: #FFC766;
+    --badge-dot: #FFB340;
+    --link: #B9B8FF;
+    --danger: #FF453A;
+  }
+  :root[data-theme="light"] {
+    --bg: #EEEBFF;
+    --label: rgba(28,27,46,.92);
+    --label-2: rgba(28,27,46,.72);
+    --label-3: rgba(28,27,46,.62);
+    --glass: rgba(255,255,255,.55);
+    --glass-hover: rgba(255,255,255,.70);
+    --glass-active: rgba(255,255,255,.80);
+    --glass-edge: rgba(28,27,46,.07);
+    --glass-top: rgba(255,255,255,.9);
+    --glass-shadow: 0 10px 30px rgba(60,50,140,.14), 0 1px 2px rgba(28,27,46,.08);
+    --accent-hover: #4B49D6;
+    --halo: rgba(94,92,230,.38);
+    --focus: rgba(94,92,230,.55);
+    --scrim: rgba(255,255,255,.0);
+    --badge-bg: rgba(255,255,255,.55);
+    --badge-text: rgba(28,27,46,.78);
+    --badge-dot: #28A745;
+    --link: #5E5CE6;
+    --danger: #D70015;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--label);
+    font-family: var(--font);
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+    min-width: 1024px;
+  }
+  .lock { position: relative; width: 100vw; height: 100vh; min-height: 760px; overflow: hidden; }
+
+  /* ---------- Wallpaper ---------- */
+  .wall { position: absolute; inset: -60px; pointer-events: none; animation: wall-in 900ms var(--ease-out-soft) both; }
+  .blob { position: absolute; border-radius: 50%; filter: blur(90px); will-change: transform; }
+  [data-theme="dark"] .wall { background: radial-gradient(120% 90% at 50% 48%, #231C5E 0%, #120F30 45%, #0B0A1A 80%); }
+  [data-theme="dark"] .b0 { width: 560px; height: 420px; left: calc(50% - 280px); top: 36%; background: radial-gradient(circle, rgba(140,138,255,.75) 0%, rgba(94,92,230,0) 70%); animation: drift-c 22s linear infinite alternate; }
+  [data-theme="dark"] .b1 { width: 900px; height: 700px; left: 14%; top: 18%; background: radial-gradient(circle, #5E5CE6 0%, rgba(94,92,230,0) 70%); opacity: .95; animation: drift-a 24s linear infinite alternate; }
+  [data-theme="dark"] .b2 { width: 680px; height: 560px; right: 6%; top: 2%; background: radial-gradient(circle, #B04BD8 0%, rgba(176,75,216,0) 70%); opacity: .7; animation: drift-b 28s linear infinite alternate; }
+  [data-theme="dark"] .b3 { width: 700px; height: 540px; left: 44%; bottom: -6%; background: radial-gradient(circle, #3A5BD9 0%, rgba(58,91,217,0) 70%); opacity: .6; animation: drift-c 32s linear infinite alternate; }
+  [data-theme="dark"] .b4 { width: 420px; height: 420px; left: 4%; bottom: 6%; background: radial-gradient(circle, #6B2FA8 0%, rgba(107,47,168,0) 70%); opacity: .5; animation: drift-b 26s linear infinite alternate-reverse; }
+  [data-theme="light"] .wall { background: linear-gradient(160deg, #F6F4FF 0%, #E6E2FF 45%, #EEE4FA 100%); }
+  [data-theme="light"] .b1 { width: 820px; height: 620px; left: 16%; top: 26%; background: radial-gradient(circle, rgba(142,140,242,.85) 0%, rgba(142,140,242,0) 70%); animation: drift-a 28s linear infinite alternate; }
+  [data-theme="light"] .b2 { width: 640px; height: 520px; right: 4%; top: 2%; background: radial-gradient(circle, #C9C6FF 0%, rgba(201,198,255,0) 70%); animation: drift-b 30s linear infinite alternate; }
+  [data-theme="light"] .b3 { width: 720px; height: 560px; right: -4%; bottom: -10%; background: radial-gradient(circle, #FFD2E4 0%, rgba(255,217,232,0) 70%); animation: drift-c 34s linear infinite alternate; }
+  [data-theme="light"] .b4 { width: 520px; height: 440px; left: 0%; bottom: 0%; background: radial-gradient(circle, #FFE3D1 0%, rgba(255,230,213,0) 70%); opacity: .8; animation: drift-b 26s linear infinite alternate-reverse; }
+  .haze { position: absolute; inset: 0; pointer-events: none; }
+  [data-theme="dark"] .haze { background: radial-gradient(140% 100% at 50% 50%, rgba(0,0,0,0) 50%, rgba(0,0,0,.5) 100%), var(--scrim); }
+  [data-theme="light"] .haze { background: linear-gradient(180deg, rgba(255,255,255,.55) 0%, rgba(255,255,255,0) 38%); animation: haze-in 900ms var(--ease-out-soft) both; }
+  .grain { position: absolute; inset: 0; pointer-events: none; opacity: .07; mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"); }
+
+  /* ---------- Glass material ---------- */
+  .glass {
+    background: var(--glass);
+    -webkit-backdrop-filter: blur(30px) saturate(180%);
+    backdrop-filter: blur(30px) saturate(180%);
+    box-shadow: inset 0 1px 0 var(--glass-top), inset 0 0 0 1px var(--glass-edge), var(--glass-shadow);
+  }
+
+  svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+  /* ---------- Top-right status ---------- */
+  .status-cluster { position: absolute; top: 14px; right: 22px; display: flex; gap: 16px; align-items: center; font-size: 13px; font-weight: 500; color: var(--label-2); animation: fade-down 600ms var(--ease-spring) 120ms both; }
+  .status-cluster span { display: inline-flex; align-items: center; gap: 6px; }
+  .kbd { padding: 1px 6px; border-radius: 5px; border: 1px solid currentColor; font-size: 11px; font-weight: 600; letter-spacing: .04em; opacity: .9; }
+
+  /* ---------- Clock ---------- */
+  header.clock { position: absolute; top: 64px; left: 0; right: 0; text-align: center; animation: fade-down 600ms var(--ease-spring) 120ms both; }
+  .date { font-size: 21px; font-weight: 500; color: var(--label-2); letter-spacing: .005em; }
+  .time { display: block; font-size: 132px; line-height: 1; font-weight: 200; letter-spacing: -.035em; margin-top: 6px; color: var(--label); font-variant-numeric: tabular-nums; }
+  [data-theme="dark"] .time { text-shadow: 0 0 40px rgba(160,158,255,.35); }
+  [data-theme="light"] .time { color: rgba(28,27,46,.86); }
+
+  /* ---------- User picker ---------- */
+  main { position: absolute; left: 0; right: 0; top: 330px; display: flex; flex-direction: column; align-items: center; }
+  .users { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; width: 100%; column-gap: 44px; }
+  .users .side { display: flex; gap: 40px; align-items: center; }
+  .users .left { justify-content: flex-end; }
+  .users .right { justify-content: flex-start; }
+  .user { all: unset; display: flex; flex-direction: column; align-items: center; gap: 10px; cursor: pointer; border-radius: 16px; padding: 6px; opacity: .72;
+    transition: opacity 180ms var(--ease-out-soft), transform 180ms var(--ease-snappy); animation: rise 520ms var(--ease-spring) both; }
+  .user:nth-child(1) { animation-delay: 220ms; }
+  .user:hover { opacity: 1; transform: scale(1.06); }
+  .user:active { transform: scale(.96); transition-duration: 90ms; }
+  .user:focus-visible { opacity: 1; outline: 3px solid var(--focus); outline-offset: 3px; }
+  .avatar { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; font-size: 26px; font-weight: 500; color: #fff; position: relative;
+    box-shadow: 0 6px 18px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.35); }
+  .avatar.alice { background: linear-gradient(145deg, #FF9EC4, #F0736E 70%, #E8A15B); }
+  .avatar.bob { background: linear-gradient(145deg, #5BD1E8, #3D8BF0 70%, #4B5FD6); }
+  .avatar.guest { color: var(--label); }
+  .avatar.guest svg.i { width: 28px; height: 28px; }
+  .user .name { font-size: 14px; font-weight: 500; color: var(--label-2); }
+  .user.selected { opacity: 1; animation-delay: 280ms; }
+  .user.selected:hover { transform: scale(1.02); }
+  .user.selected .avatar { width: 112px; height: 112px; font-size: 44px; font-weight: 400;
+    background: radial-gradient(120% 120% at 30% 20%, #A9A7FF 0%, #5E5CE6 45%, #2F2A8F 100%);
+    box-shadow: 0 0 0 2px rgba(255,255,255,.85), 0 14px 40px rgba(0,0,0,.30); }
+  .user.selected .avatar::before { content: ""; position: absolute; inset: -22px; border-radius: 50%; background: radial-gradient(circle, var(--halo) 0%, rgba(94,92,230,0) 68%); z-index: -1; animation: breathe 3.2s ease-in-out infinite alternate; }
+  .user.selected .name { font-size: 18px; font-weight: 600; color: var(--label); }
+  .online-dot { position: absolute; right: 6px; bottom: 6px; width: 14px; height: 14px; border-radius: 50%; background: #30D158; box-shadow: 0 0 0 2.5px var(--bg); }
+  [data-theme="light"] .online-dot { background: #28A745; box-shadow: 0 0 0 2.5px #fff; }
+  .users .side .user:nth-child(1) { animation-delay: 340ms; }
+  .users .side .user:nth-child(2) { animation-delay: 400ms; }
+  .users .left .user:nth-child(1) { animation-delay: 220ms; }
+
+  /* ---------- Password pill ---------- */
+  form.auth { margin-top: 22px; display: flex; flex-direction: column; align-items: center; gap: 10px; animation: rise-sm 360ms var(--ease-spring) 380ms both; }
+  .pill { position: relative; width: 264px; height: 40px; border-radius: 999px; display: flex; align-items: center; padding: 0 5px 0 18px; transition: background-color 160ms var(--ease-out-soft); }
+  .pill:hover { background: var(--glass-hover); }
+  .pill:focus-within { background: var(--glass-active); outline: 3px solid var(--focus); outline-offset: 2px; }
+  .pill input { all: unset; flex: 1; font: 500 14px var(--font); color: var(--label); caret-color: var(--accent); min-width: 0; }
+  .pill input::placeholder { color: var(--label-3); }
+  .pill .eye { all: unset; color: var(--label-3); display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; cursor: pointer; opacity: 0; transition: opacity 160ms var(--ease-out-soft); }
+  .pill:hover .eye, .pill:focus-within .eye { opacity: 1; }
+  .go { all: unset; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: #fff; cursor: pointer; margin-left: 4px;
+    box-shadow: 0 4px 14px rgba(94,92,230,.45), inset 0 1px 0 rgba(255,255,255,.35); transition: transform 180ms var(--ease-snappy), background-color 160ms, opacity 200ms; }
+  .go svg.i { width: 16px; height: 16px; stroke-width: 2.2; }
+  .go[aria-disabled="true"] { opacity: .55; cursor: default; }
+  .go:not([aria-disabled="true"]):hover { background: var(--accent-hover); transform: scale(1.06); }
+  .go:active { transform: scale(.92); }
+  .go:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+  .pill.error { animation: shake 420ms cubic-bezier(.36,.07,.19,.97) both; box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--danger) 60%, transparent), var(--glass-shadow); }
+  .hint { font-size: 12px; color: var(--label-3); display: flex; gap: 10px; align-items: center; }
+  .hint a { color: var(--link); text-decoration: none; font-weight: 500; border-radius: 4px; }
+  .hint a:hover { text-decoration: underline; }
+  .hint a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .hint .sep { opacity: .5; }
+  .hint[data-state="error"] .msg { color: var(--danger); }
+
+  /* ---------- Status badge ---------- */
+  .badge { margin-top: 20px; display: inline-flex; align-items: center; gap: 8px; height: 28px; padding: 0 12px 0 10px; border-radius: 999px; font-size: 12px; font-weight: 500; color: var(--badge-text);
+    background: var(--badge-bg); -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%);
+    box-shadow: inset 0 1px 0 var(--glass-top), inset 0 0 0 1px var(--glass-edge), var(--glass-shadow); animation: pop 280ms var(--ease-spring) 460ms both; }
+  [data-theme="dark"] .badge { box-shadow: inset 0 1px 0 rgba(255,200,120,.18), inset 0 0 0 1px rgba(255,179,64,.22), 0 8px 24px rgba(0,0,0,.3); }
+  .badge svg.i { width: 15px; height: 15px; }
+  .dot { position: relative; width: 7px; height: 7px; border-radius: 50%; background: var(--badge-dot); }
+  .dot::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: var(--badge-dot); animation: ripple 2.4s var(--ease-out-soft) infinite; }
+
+  /* ---------- Power ---------- */
+  nav.power { position: absolute; left: 0; right: 0; bottom: 56px; display: flex; justify-content: center; gap: 44px; }
+  .pbtn { all: unset; display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; animation: rise 420ms var(--ease-spring) both; }
+  .pbtn:nth-child(1) { animation-delay: 500ms; } .pbtn:nth-child(2) { animation-delay: 550ms; } .pbtn:nth-child(3) { animation-delay: 600ms; }
+  .pbtn .circle { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; color: var(--label); transition: transform 180ms var(--ease-snappy), background-color 160ms; }
+  .pbtn .circle svg.i { width: 20px; height: 20px; }
+  .pbtn .lbl { font-size: 12px; font-weight: 500; color: var(--label-2); }
+  .pbtn:hover .circle { background: var(--glass-hover); transform: translateY(-2px) scale(1.04); }
+  .pbtn:active .circle { background: var(--glass-active); transform: scale(.94); transition-duration: 90ms; }
+  .pbtn:focus-visible .circle { outline: 3px solid var(--focus); outline-offset: 3px; }
+
+  /* ---------- Footer ---------- */
+  footer.brand { position: absolute; left: 24px; bottom: 22px; display: flex; align-items: center; gap: 10px; animation: fade 600ms var(--ease-out-soft) 650ms both; }
+  footer.brand .t1 { font-size: 12px; font-weight: 600; color: var(--label-2); letter-spacing: -.005em; }
+  footer.brand .t2 { font: 400 11px var(--mono); color: var(--label-3); margin-top: 2px; }
+  .atom { width: 30px; height: 30px; }
+  .atom .orbit { fill: none; stroke: #7A78FF; stroke-width: 1.1; }
+  [data-theme="light"] .atom .orbit { stroke: #5E5CE6; }
+  .atom .spin { transform-origin: 16px 16px; animation: orbit 18s linear infinite; }
+
+  .corner { position: absolute; right: 22px; bottom: 22px; display: flex; gap: 10px; animation: fade 600ms var(--ease-out-soft) 650ms both; }
+  .cbtn { all: unset; height: 32px; min-width: 32px; padding: 0 10px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; font-weight: 500; color: var(--label-2); cursor: pointer;
+    transition: background-color 160ms, transform 160ms var(--ease-snappy); }
+  .cbtn.glass { background: var(--glass); -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%);
+    box-shadow: inset 0 1px 0 var(--glass-top), inset 0 0 0 1px var(--glass-edge), var(--glass-shadow); }
+  .cbtn.icon { padding: 0; width: 32px; }
+  .cbtn svg.i { width: 16px; height: 16px; }
+  .cbtn:hover { background: var(--glass-hover); color: var(--label); }
+  .cbtn:active { transform: scale(.94); }
+  .cbtn:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+  /* ---------- Keyframes (transform + opacity only) ---------- */
+  @keyframes wall-in { from { opacity: 0; transform: scale(1.08); } to { opacity: 1; transform: scale(1); } }
+  @keyframes haze-in { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: none; } }
+  @keyframes drift-a { from { transform: translate(-24px, 10px) rotate(-4deg); } to { transform: translate(24px, -14px) rotate(4deg); } }
+  @keyframes drift-b { from { transform: translate(20px, -12px) scale(1); } to { transform: translate(-22px, 16px) scale(1.05); } }
+  @keyframes drift-c { from { transform: translate(-16px, -10px); } to { transform: translate(22px, 12px); } }
+  @keyframes fade-down { from { opacity: 0; transform: translateY(-12px); } to { opacity: 1; transform: none; } }
+  @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes rise { from { opacity: 0; transform: translateY(16px) scale(.9); } to { opacity: 1; transform: none; } }
+  @keyframes rise-sm { from { opacity: 0; transform: translateY(8px) scale(.96); } to { opacity: 1; transform: none; } }
+  @keyframes pop { from { opacity: 0; transform: translateY(6px) scale(.9); } to { opacity: 1; transform: none; } }
+  @keyframes breathe { from { opacity: .6; transform: scale(1); } to { opacity: 1; transform: scale(1.04); } }
+  @keyframes ripple { from { opacity: .55; transform: scale(1); } to { opacity: 0; transform: scale(2.4); } }
+  @keyframes orbit { to { transform: rotate(360deg); } }
+  @keyframes shake { 0%,100% { transform: translateX(0); } 15% { transform: translateX(-10px); } 30% { transform: translateX(9px); } 45% { transform: translateX(-7px); } 60% { transform: translateX(5px); } 75% { transform: translateX(-3px); } }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 150ms !important; animation-iteration-count: 1 !important; transition-duration: 120ms !important; }
+    .blob, .user.selected .avatar::before, .dot::after, .atom .spin { animation: none !important; }
+    .user:hover, .pbtn:hover .circle, .go:hover { transform: none !important; }
+    .pill.error { animation: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="lock">
+  <div class="wall" aria-hidden="true">
+    <div class="blob b0"></div><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div><div class="blob b4"></div>
+  </div>
+  <div class="haze" aria-hidden="true"></div>
+  <div class="grain" aria-hidden="true"></div>
+
+  <div class="status-cluster" aria-hidden="true">
+    <span><svg class="i" viewBox="0 0 24 24"><path d="M12 20h.01"/><path d="M2 8.82a15 15 0 0 1 20 0"/><path d="M5 12.859a10 10 0 0 1 14 0"/><path d="M8.5 16.429a5 5 0 0 1 7 0"/></svg></span>
+    <span>
+      <svg class="i" viewBox="0 0 24 24" style="width:22px"><rect x="2" y="7" width="17" height="10" rx="2.5"/><path d="M22 11v2"/><rect x="4" y="9" width="11" height="6" rx="1" fill="currentColor" stroke="none"/></svg>
+      82%
+    </span>
+    <span class="kbd">EN</span>
+  </div>
+
+  <header class="clock" aria-live="off">
+    <div class="date">Thursday, 24 September</div>
+    <time class="time" datetime="2026-09-24T10:42">10:42</time>
+  </header>
+
+  <main aria-label="Sign in to Plotinium">
+    <div class="users" role="radiogroup" aria-label="Choose user">
+      <div class="side left">
+        <button class="user" role="radio" aria-checked="false" tabindex="-1">
+          <span class="avatar alice" aria-hidden="true">A</span><span class="name">alice</span>
+        </button>
+      </div>
+      <button class="user selected" role="radio" aria-checked="true" tabindex="0">
+        <span class="avatar" aria-hidden="true">S<span class="online-dot"></span></span><span class="name">student</span>
+      </button>
+      <div class="side right">
+        <button class="user" role="radio" aria-checked="false" tabindex="-1">
+          <span class="avatar bob" aria-hidden="true">B</span><span class="name">bob</span>
+        </button>
+        <button class="user" role="radio" aria-checked="false" tabindex="-1">
+          <span class="avatar guest glass" aria-hidden="true"><svg class="i" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span><span class="name">Guest</span>
+        </button>
+      </div>
+    </div>
+
+    <form class="auth" aria-label="Password for student" onsubmit="return false">
+      <div class="pill glass" id="pill">
+        <input id="pw" type="password" placeholder="Enter password" autocomplete="current-password" aria-label="Password" aria-describedby="hint status">
+        <button type="button" class="eye" aria-label="Show password" aria-pressed="false"><svg class="i" viewBox="0 0 24 24" style="width:16px;height:16px"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg></button>
+        <button type="submit" class="go" aria-label="Sign in" aria-disabled="true"><svg class="i" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></button>
+      </div>
+      <div class="hint" id="hint" role="alert"><span class="msg">Press Enter to sign in</span><span class="sep">·</span><a href="#" onclick="return false">Forgot password?</a></div>
+    </form>
+
+    <div class="badge" id="status" role="status" tabindex="0" title="student — since 08:15"><span class="dot" aria-hidden="true"></span><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Signed-in sessions: 1</div>
+  </main>
+
+  <nav class="power" aria-label="Power">
+    <button class="pbtn" aria-label="Sleep"><span class="circle glass"><svg class="i" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg></span><span class="lbl" aria-hidden="true">Sleep</span></button>
+    <button class="pbtn" aria-label="Restart"><span class="circle glass"><svg class="i" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></span><span class="lbl" aria-hidden="true">Restart</span></button>
+    <button class="pbtn" aria-label="Shut Down"><span class="circle glass"><svg class="i" viewBox="0 0 24 24"><path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.77.04"/></svg></span><span class="lbl" aria-hidden="true">Shut Down</span></button>
+  </nav>
+
+  <footer class="brand">
+    <svg class="atom" viewBox="0 0 32 32" role="img" aria-label="Plotinium">
+      <defs>
+        <radialGradient id="nuc" cx="50%" cy="50%" r="50%">
+          <stop offset="0" stop-color="#FFFFFF"/><stop offset=".45" stop-color="#C8C6FF"/><stop offset="1" stop-color="#5E5CE6" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <g class="spin">
+        <ellipse class="orbit" cx="16" cy="16" rx="13" ry="5"/>
+        <ellipse class="orbit" cx="16" cy="16" rx="13" ry="5" transform="rotate(60 16 16)"/>
+        <ellipse class="orbit" cx="16" cy="16" rx="13" ry="5" transform="rotate(-60 16 16)"/>
+      </g>
+      <circle cx="16" cy="16" r="6" fill="url(#nuc)"/>
+      <circle cx="16" cy="16" r="2.2" fill="#fff"/>
+    </svg>
+    <div><div class="t1">Plotinium 0.3.0</div><div class="t2">build a1f93c2</div></div>
+  </footer>
+
+  <div class="corner">
+    <button class="cbtn icon glass" aria-label="Accessibility options" aria-haspopup="dialog" aria-expanded="false"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1"/><path d="m9 20 3-6 3 6"/><path d="m6 8 6 2 6-2"/><path d="M12 10v4"/></svg></button>
+    <button class="cbtn glass" aria-label="Language: English" aria-haspopup="listbox" aria-expanded="false"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>English</button>
+  </div>
+</div>
+
+<script>
+  // Reference-only behaviour: enable the arrow when the field has text,
+  // shake + error hint on submit, roving tabindex on the user picker.
+  const pw = document.getElementById('pw'), go = document.querySelector('.go'),
+        pill = document.getElementById('pill'), hint = document.getElementById('hint');
+  pw.addEventListener('input', () => go.setAttribute('aria-disabled', pw.value ? 'false' : 'true'));
+  document.querySelector('form.auth').addEventListener('submit', () => {
+    if (!pw.value) return;
+    pill.classList.remove('error'); void pill.offsetWidth; pill.classList.add('error');
+    hint.dataset.state = 'error';
+    hint.querySelector('.msg').textContent = 'Incorrect password — 2 attempts before a 30 s wait';
+    pw.value = ''; go.setAttribute('aria-disabled', 'true');
+  });
+  const radios = [...document.querySelectorAll('[role=radio]')];
+  document.querySelector('[role=radiogroup]').addEventListener('keydown', e => {
+    const i = radios.indexOf(document.activeElement); if (i < 0) return;
+    const d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0; if (!d) return;
+    e.preventDefault(); const n = radios[(i + d + radios.length) % radios.length];
+    radios.forEach(r => r.tabIndex = -1); n.tabIndex = 0; n.focus();
+  });
+</script>
+</body>
+</html>

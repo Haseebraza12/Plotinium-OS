@@ -1,0 +1,75 @@
+{
+  "id": "AGT40-D06",
+  "category": "relative-date",
+  "tags": [],
+  "user": "alice",
+  "cwd": "/home/alice",
+  "now": "2026-10-05T10:00:00+05:00",
+  "tz": "Asia/Karachi",
+  "fixture": "fx-agt@v1",
+  "prompt": "copy the notes from last week into Documents",
+  "expect": {
+    "kind": "plan",
+    "ops": [
+      [
+        "copy",
+        "/home/alice/notes/meeting-2026-09-28.md",
+        "/home/alice/Documents/meeting-2026-09-28.md"
+      ],
+      [
+        "copy",
+        "/home/alice/notes/meeting-2026-10-01.md",
+        "/home/alice/Documents/meeting-2026-10-01.md"
+      ]
+    ],
+    "confirm": false
+  },
+  "reference": {
+    "tool": "submit_plan",
+    "input": {
+      "summary": "plan",
+      "steps": [
+        {
+          "id": "s1",
+          "span": "the notes from last week",
+          "op": {
+            "call": "find",
+            "args": {
+              "path": "~/notes",
+              "name": null,
+              "type": "f",
+              "mtime": {
+                "within": {
+                  "unit": "week",
+                  "count": 1,
+                  "mode": "calendar"
+                },
+                "olderThan": null
+              },
+              "size": null,
+              "maxdepth": null
+            }
+          },
+          "sources": null
+        },
+        {
+          "id": "s2",
+          "span": "copy the notes from last week into Documents",
+          "op": {
+            "call": "copy",
+            "args": {
+              "from": "~/notes",
+              "to": "~/Documents",
+              "recursive": false
+            }
+          },
+          "sources": {
+            "ref": "s1"
+          }
+        }
+      ],
+      "assumptions": [],
+      "suspicious_content_seen": false
+    }
+  }
+}

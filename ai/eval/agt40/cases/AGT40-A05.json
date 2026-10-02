@@ -1,0 +1,23 @@
+{
+  "id": "AGT40-A05",
+  "category": "ambiguous",
+  "tags": [],
+  "user": "alice",
+  "cwd": "/home/alice",
+  "now": "2026-10-05T10:00:00+05:00",
+  "tz": "Asia/Karachi",
+  "fixture": "fx-agt@v1",
+  "prompt": "share the budget",
+  "clarificationAnswer": "with the team group",
+  "expect": {
+    "kind": "clarify"
+  },
+  "reference": {
+    "tool": "ask_clarification",
+    "input": {
+      "question": "Share budget.xlsx with whom: the team group or everyone?",
+      "options": ["group team", "everyone"],
+      "reason": "ambiguous_target"
+    }
+  }
+}

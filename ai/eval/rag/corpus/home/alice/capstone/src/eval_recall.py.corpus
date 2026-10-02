@@ -1,0 +1,33 @@
+"""Pilot evaluation script (Week 3): Recall@5 and MRR from a JSON file of ranked results.
+
+input: [{"query": "...", "relevant": ["a.md"], "ranked": ["b.md", "a.md", ...]}, ...]
+"""
+import json
+import sys
+
+
+def recall_at(rel, ranked, k=5):
+    top = []
+    for r in ranked:
+        if r not in top:
+            top.append(r)
+    top = set(top[:k])
+    return len(set(rel) & top) / len(set(rel)) if rel else 0.0
+
+
+def reciprocal_rank(rel, ranked, depth=10):
+    seen = []
+    for r in ranked:
+        if r not in seen:
+            seen.append(r)
+    for i, r in enumerate(seen[:depth]):
+        if r in rel:
+            return 1 / (i + 1)
+    return 0.0
+
+
+if __name__ == "__main__":
+    rows = json.load(open(sys.argv[1]))
+    n = len(rows)
+    print("Recall@5", round(sum(recall_at(r["relevant"], r["ranked"]) for r in rows) / n, 3))
+    print("MRR", round(sum(reciprocal_rank(r["relevant"], r["ranked"]) for r in rows) / n, 3))

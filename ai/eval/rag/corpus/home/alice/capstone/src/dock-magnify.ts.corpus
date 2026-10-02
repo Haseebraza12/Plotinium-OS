@@ -1,0 +1,50 @@
+/**
+ * Dock magnification: icons near the pointer grow with a cosine falloff.
+ * ONE listener for the whole dock, registered on mount and removed on cleanup.
+ */
+const BASE = 48;
+const MAX = 84;
+const RANGE = 160; // px from the icon centre where scaling stops
+
+export function iconSize(distance: number): number {
+  if (distance >= RANGE) return BASE;
+  const t = Math.cos((distance / RANGE) * (Math.PI / 2));
+  return BASE + (MAX - BASE) * t;
+}
+
+export function attachMagnifier(dock: HTMLElement, icons: () => HTMLElement[]): () => void {
+  const controller = new AbortController();
+  let frame = 0;
+  let pointerX: number | undefined;
+
+  const apply = (): void => {
+    frame = 0;
+    for (const icon of icons()) {
+      const r = icon.getBoundingClientRect();
+      const size = pointerX === undefined ? BASE : iconSize(Math.abs(pointerX - (r.left + r.width / 2)));
+      icon.style.setProperty('--size', `${size}px`);
+    }
+  };
+
+  dock.addEventListener(
+    'pointermove',
+    (e) => {
+      pointerX = e.clientX;
+      frame ||= requestAnimationFrame(apply);
+    },
+    { signal: controller.signal },
+  );
+  dock.addEventListener(
+    'pointerleave',
+    () => {
+      pointerX = undefined;
+      frame ||= requestAnimationFrame(apply);
+    },
+    { signal: controller.signal },
+  );
+
+  return () => {
+    controller.abort();
+    if (frame) cancelAnimationFrame(frame);
+  };
+}

@@ -1,0 +1,30 @@
+{
+  "tries": 1,
+  "console": [],
+  "pageErrors": [],
+  "failed": ["401 GET /api/auth/me"],
+  "rects": {
+    "card": [340, 48, 760, 804],
+    "cardScroll": [802, 802],
+    "medal": [381, 89, 56, 26],
+    "h": [381, 150, 678, 32],
+    "lead": [381, 231, 548, 20],
+    "code": [381, 293, 678, 389],
+    "actions": [381, 710, 678, 44],
+    "hint": [381, 782, 678, 17],
+    "foot": [24, 864, 1392, 16]
+  },
+  "focused": "RRecovery console",
+  "role": "alertdialog",
+  "tabOrder": [
+    "BUTTON.plb-btn SSafe mode",
+    "BUTTON.plb-btn DDump diagnostics",
+    "BODY. Plotinium Kernel panicA critic",
+    "PRE.plb-code [    0.000] firmware: Plotiniu",
+    "BUTTON.plb-btn plb-primary RRecovery console",
+    "BUTTON.plb-btn SSafe mode"
+  ],
+  "download": "plotinium-boot-t0-1790483147168.json",
+  "after": "login",
+  "url": "http://localhost:4718/"
+}

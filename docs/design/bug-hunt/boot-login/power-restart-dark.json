@@ -1,0 +1,88 @@
+{
+  "which": "restart",
+  "nav": ["http://localhost:4718/", "http://localhost:4718/"],
+  "console": [],
+  "pageErrors": [],
+  "failed": ["401 GET /api/auth/me", "401 GET /api/auth/me"],
+  "confirmButtons": ["Restart?", "Cancel"],
+  "frames": [
+    {
+      "login": true,
+      "plb": ["plb plb-splash"],
+      "text": "Plotinium | is starting | dev build version 0.1.0-dev.0 · build 0000000 | login: waiting for the user | mm: loading the memory budget | Service start · 6 of 9 | verbose boot | [    0.125] proc: pid 1 READY → R",
+      "active": ""
+    },
+    {
+      "login": true,
+      "plb": ["plb plb-splash"],
+      "text": "Plotinium | is starting | dev build version 0.1.0-dev.0 · build 0000000 | login: waiting for the user | mm: loading the memory budget | Service start · 6 of 9 | verbose boot | [    0.125] proc: pid 1 READY → R",
+      "active": ""
+    },
+    {
+      "login": true,
+      "plb": [],
+      "text": "Sunday, 27 September | 0 | 9 | : | 3 | 7 | D | demo | A | alice | B | bob | Guest | Press Enter to sign in | Sleep | Restart | Shut Down | Plotinium 0.1.0-dev.0 | build 0000000",
+      "active": ""
+    },
+    {
+      "login": true,
+      "plb": [],
+      "text": "Sunday, 27 September | 0 | 9 | : | 3 | 7 | D | demo | A | alice | B | bob | Guest | Press Enter to sign in | Sleep | Restart | Shut Down | Plotinium 0.1.0-dev.0 | build 0000000",
+      "active": ""
+    },
+    {
+      "login": true,
+      "plb": [],
+      "text": "Sunday, 27 September | 0 | 9 | : | 3 | 7 | D | demo | A | alice | B | bob | Guest | Press Enter to sign in | Sleep | Restart | Shut Down | Plotinium 0.1.0-dev.0 | build 0000000",
+      "active": ""
+    },
+    {
+      "login": true,
+      "plb": [],
+      "text": "Sunday, 27 September | 0 | 9 | : | 3 | 7 | D | demo | A | alice | B | bob | Guest | Press Enter to sign in | Sleep | Restart | Shut Down | Plotinium 0.1.0-dev.0 | build 0000000",
+      "active": ""
+    },
+    {
+      "login": true,
+      "plb": [],
+      "text": "Sunday, 27 September | 0 | 9 | : | 3 | 7 | D | demo | A | alice | B | bob | Guest | Press Enter to sign in | Sleep | Restart | Shut Down | Plotinium 0.1.0-dev.0 | build 0000000",
+      "active": ""
+    },
+    {
+      "login": true,
+      "plb": [],
+      "text": "Sunday, 27 September | 0 | 9 | : | 3 | 7 | D | demo | A | alice | B | bob | Guest | Press Enter to sign in | Sleep | Restart | Shut Down | Plotinium 0.1.0-dev.0 | build 0000000",
+      "active": ""
+    },
+    {
+      "login": true,
+      "plb": [],
+      "text": "Sunday, 27 September | 0 | 9 | : | 3 | 8 | D | demo | A | alice | B | bob | Guest | Press Enter to sign in | Sleep | Restart | Shut Down | Plotinium 0.1.0-dev.0 | build 0000000",
+      "active": ""
+    },
+    {
+      "login": true,
+      "plb": [],
+      "text": "Sunday, 27 September | 0 | 9 | : | 3 | 8 | D | demo | A | alice | B | bob | Guest | Press Enter to sign in | Sleep | Restart | Shut Down | Plotinium 0.1.0-dev.0 | build 0000000",
+      "active": ""
+    },
+    {
+      "login": true,
+      "plb": [],
+      "text": "Sunday, 27 September | 0 | 9 | : | 3 | 8 | D | demo | A | alice | B | bob | Guest | Press Enter to sign in | Sleep | Restart | Shut Down | Plotinium 0.1.0-dev.0 | build 0000000",
+      "active": ""
+    },
+    {
+      "login": true,
+      "plb": [],
+      "text": "Sunday, 27 September | 0 | 9 | : | 3 | 8 | D | demo | A | alice | B | bob | Guest | Press Enter to sign in | Sleep | Restart | Shut Down | Plotinium 0.1.0-dev.0 | build 0000000",
+      "active": ""
+    }
+  ],
+  "end": {
+    "login": true,
+    "plb": [],
+    "text": "Sunday, 27 September | 0 | 9 | : | 3 | 8 | D | demo | A | alice | B | bob | Guest | Press Enter to sign in | Sleep | Restart | Shut Down | Plotinium 0.1.0-dev.0 | build 0000000",
+    "active": ""
+  }
+}

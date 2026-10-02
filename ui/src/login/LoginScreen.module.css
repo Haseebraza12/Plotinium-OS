@@ -1,0 +1,894 @@
+/*
+ * Login and lock screen (docs/design/stitch/login-dark and login-light). The wallpaper is a
+ * pre-blurred glow field built from tokens (a caller's picture gets a static blur), so the
+ * glass controls use static tints, not a live backdrop-filter (the lock screen is not on the
+ * DSN-24 list). Mount, selection, shake and unlock move only transform and opacity; nothing
+ * loops, and every timing is a token or calc(ms * --pl-k), so reduced motion keeps only the
+ * words and the colours (DSN-30).
+ */
+.screen {
+  position: fixed;
+  inset: 0;
+  z-index: var(--pl-z-secure);
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: hidden;
+  padding: var(--pl-space-12) var(--pl-space-6) 0;
+  background: var(--pl-bg);
+  color: var(--pl-text);
+  font-family: var(--pl-font-ui);
+}
+.contained {
+  position: relative;
+  inset: auto;
+  z-index: auto;
+  width: 100%;
+  height: 100%;
+  min-height: 680px;
+  border-radius: inherit;
+}
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---------- wallpaper ---------- */
+@keyframes wallIn {
+  from {
+    opacity: 0;
+    transform: scale(1.08);
+  }
+}
+.wallpaper {
+  position: absolute;
+  inset: calc(var(--pl-space-10) * -1);
+  z-index: -2;
+  background:
+    radial-gradient(34% 40% at 50% 47%, var(--pl-accent-glow), transparent 72%),
+    radial-gradient(60% 62% at 50% 50%, var(--pl-accent-subtle), transparent 78%),
+    radial-gradient(
+      30% 34% at 77% 22%,
+      color-mix(in srgb, var(--pl-tint-purple) 30%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      36% 40% at 20% 80%,
+      color-mix(in srgb, var(--pl-tint-indigo) 34%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      30% 30% at 88% 92%,
+      color-mix(in srgb, var(--pl-tint-pink) 20%, transparent),
+      transparent 70%
+    ),
+    var(--pl-bg);
+  animation: wallIn calc(900ms * var(--pl-k)) var(--pl-ease-out) backwards;
+}
+.wallpaperImage {
+  background-size: cover;
+  background-position: center;
+  filter: blur(48px) saturate(1.15);
+}
+.vignette {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(
+      ellipse 85% 78% at 50% 45%,
+      transparent 55%,
+      color-mix(in srgb, var(--pl-bg) 62%, transparent)
+    ),
+    linear-gradient(to bottom, color-mix(in srgb, var(--pl-bg) 34%, transparent), transparent 32%);
+  pointer-events: none;
+}
+
+/* ---------- status cluster ---------- */
+.statusBar {
+  position: absolute;
+  top: var(--pl-space-3);
+  right: var(--pl-space-5);
+  display: flex;
+  align-items: center;
+  gap: var(--pl-space-4);
+  font: var(--pl-type-caption);
+  font-weight: var(--pl-weight-medium);
+  color: var(--pl-text);
+}
+.battery {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pl-space-1);
+  font-variant-numeric: tabular-nums;
+}
+.layout {
+  padding: 0 var(--pl-space-1);
+  border-radius: var(--pl-radius-xs);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pl-text) 60%, transparent);
+  font-size: calc(var(--pl-text-xs) - 1px);
+  font-weight: var(--pl-weight-semibold);
+  letter-spacing: var(--pl-tracking-caps);
+}
+
+/* ---------- clock ---------- */
+@keyframes clockIn {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+}
+.clock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: var(--pl-space-2);
+  animation: clockIn calc(600ms * var(--pl-k)) var(--pl-ease-spring) calc(120ms * var(--pl-k))
+    backwards;
+}
+.date {
+  margin: 0;
+  font-size: var(--pl-text-xl);
+  font-weight: var(--pl-weight-medium);
+  color: var(--pl-text-muted);
+}
+.time {
+  display: flex;
+  font-size: calc(var(--pl-text-4xl) * 1.875);
+  font-weight: calc(var(--pl-weight-regular) / 2);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  text-shadow: 0 0 30px color-mix(in srgb, var(--pl-accent) 30%, transparent);
+}
+.digits {
+  display: flex;
+}
+@keyframes digitIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+.digit {
+  display: inline-block;
+  animation: digitIn var(--pl-motion-slow) var(--pl-ease-out) backwards;
+}
+.colon {
+  transform: translateY(-0.06em);
+  animation: none;
+}
+
+/* ---------- centre column ---------- */
+.center {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 0;
+  padding-bottom: 6vh;
+}
+.users {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+.userRow {
+  display: flex;
+  gap: 28px;
+  transition: transform calc(420ms * var(--pl-k)) var(--pl-ease-spring);
+}
+@keyframes userIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.9);
+  }
+}
+.user {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 116px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--pl-radius-sheet);
+  background: none;
+  color: var(--pl-text);
+  cursor: default;
+  outline: none;
+  animation: userIn calc(520ms * var(--pl-k)) var(--pl-ease-spring) backwards;
+  animation-delay: calc((220ms + var(--pl-stagger-index, 0) * 60ms) * var(--pl-k));
+}
+/* Other users are smaller, not faded: fading would take the initials below 3:1 (UI-070). */
+.avatarBox {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 112px;
+  height: 112px;
+  transform: scale(0.57);
+  transition:
+    transform calc(420ms * var(--pl-k)) var(--pl-ease-spring),
+    opacity var(--pl-motion-med) var(--pl-ease);
+}
+/* The selected ring and halo live on a layer whose opacity crossfades. */
+.avatarBox::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--pl-radius-pill);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--pl-on-accent) 88%, transparent),
+    0 0 44px 6px var(--pl-accent-glow);
+  opacity: 0;
+  transition: opacity var(--pl-motion-slow) var(--pl-ease);
+}
+/* Focus ring (3 px accent at 55 %, offset 3 px), scaled with the avatar. */
+.avatarBox::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: var(--pl-radius-pill);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--pl-focus-color) 70%, transparent);
+  opacity: 0;
+  transition: opacity var(--pl-motion-fast) var(--pl-ease);
+}
+.user:focus-visible .avatarBox::after {
+  opacity: 1;
+}
+.user:hover:not([data-selected='true'], [aria-disabled='true']) .avatarBox {
+  opacity: 1;
+  transform: scale(0.6);
+}
+.user:active:not([data-selected='true'], [aria-disabled='true']) .avatarBox {
+  transform: scale(0.55);
+  transition-duration: var(--pl-motion-press);
+}
+.user[data-selected='true'] .avatarBox {
+  opacity: 1;
+  transform: none;
+}
+.user[data-selected='true'] .avatarBox::before {
+  opacity: 1;
+}
+.user[aria-disabled='true'] .avatarBox {
+  opacity: 0.4;
+}
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: var(--pl-radius-pill);
+  color: var(--pl-on-accent);
+  font-size: 48px;
+  font-weight: var(--pl-weight-regular);
+  line-height: 1;
+  box-shadow:
+    inset 0 2px 0 color-mix(in srgb, var(--pl-on-accent) 30%, transparent),
+    inset 0 -8px 20px color-mix(in srgb, var(--pl-text-inverse) 12%, transparent);
+}
+/* The initials are large text (48 px, at least 27 px when scaled down), so they need 3:1
+   against every part of the gradient behind them (UI-070, WCAG 1.4.3). The avatar gradients'
+   light ends reach only 1.6:1 with white, so a fixed shade sits between the gradient and the
+   initials; with it the worst pixel under any initial measures at least 3:1 in both themes. */
+.c1,
+.c2,
+.c3,
+.c4,
+.c5,
+.c6 {
+  --login-initials-shade: linear-gradient(rgb(0 0 0 / 0.3), rgb(0 0 0 / 0.3));
+}
+.c1 {
+  background: var(--login-initials-shade), var(--pl-avatar-1);
+}
+.c2 {
+  background: var(--login-initials-shade), var(--pl-avatar-2);
+}
+.c3 {
+  background: var(--login-initials-shade), var(--pl-avatar-3);
+}
+.c4 {
+  background: var(--login-initials-shade), var(--pl-avatar-4);
+}
+.c5 {
+  background: var(--login-initials-shade), var(--pl-avatar-5);
+}
+.c6 {
+  background: var(--login-initials-shade), var(--pl-avatar-6);
+}
+.avatarGlass {
+  background: linear-gradient(var(--pl-control-bg), var(--pl-control-bg)), var(--pl-glass-card-bg);
+  box-shadow:
+    inset 0 0 0 1.5px color-mix(in srgb, var(--pl-text) 16%, transparent),
+    inset 0 2px 0 color-mix(in srgb, var(--pl-on-accent) 22%, transparent);
+  color: var(--pl-text);
+}
+.avatarGlass svg {
+  width: 48px;
+  height: 48px;
+}
+.avatarImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.signedIn {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-status-online);
+  box-shadow: 0 0 0 3px var(--pl-surface);
+}
+.lockBadge {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-surface-3);
+  color: var(--pl-text);
+}
+.userName {
+  margin-top: var(--pl-space-2);
+  white-space: nowrap;
+  font-size: calc(var(--pl-text-lg) + 2px);
+  font-weight: var(--pl-weight-semibold);
+  opacity: 0.72;
+  transform: translateY(-24px) scale(0.78);
+  transition:
+    transform calc(420ms * var(--pl-k)) var(--pl-ease-spring),
+    opacity var(--pl-motion-med) var(--pl-ease);
+}
+.user[data-selected='true'] .userName {
+  opacity: 1;
+  transform: none;
+}
+
+/* ---------- password pill ---------- */
+.auth {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--pl-space-4);
+  margin-top: var(--pl-space-4);
+}
+.form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--pl-space-3);
+  animation: pillIn calc(360ms * var(--pl-k)) var(--pl-ease-spring) calc(380ms * var(--pl-k))
+    backwards;
+}
+@keyframes pillIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+}
+.pill,
+.guestButton,
+.badge,
+.powerIcon,
+.roundButton,
+.languageButton,
+.confirmNo {
+  background: linear-gradient(var(--pl-control-bg), var(--pl-control-bg)), var(--pl-glass-card-bg);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--pl-on-accent) 22%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--pl-text) 12%, transparent),
+    0 8px 24px color-mix(in srgb, var(--pl-accent-glow) 40%, transparent);
+}
+.pill {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--pl-space-1);
+  width: 264px;
+  height: 40px;
+  padding: 0 var(--pl-space-1) 0 var(--pl-space-4);
+  overflow: hidden;
+  border-radius: var(--pl-radius-pill);
+}
+.pill:focus-within {
+  outline: 3px solid color-mix(in srgb, var(--pl-focus-color) 60%, transparent);
+  outline-offset: 2px;
+}
+.pill[data-error='true'] {
+  box-shadow:
+    inset 0 0 0 1.5px color-mix(in srgb, var(--pl-danger) 70%, transparent),
+    0 8px 24px color-mix(in srgb, var(--pl-danger) 18%, transparent);
+}
+.sweep {
+  position: absolute;
+  inset: 0;
+  background: var(--pl-progress-sheen);
+  pointer-events: none;
+}
+.input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--pl-text);
+  font-size: calc(var(--pl-text-md) + 1px);
+  caret-color: var(--pl-accent);
+  outline: none;
+}
+.input::placeholder {
+  color: var(--pl-text-muted);
+}
+.input[type='password']:not(:placeholder-shown) {
+  letter-spacing: 0.12em;
+}
+.caps {
+  display: grid;
+  place-items: center;
+  color: var(--pl-text-muted);
+}
+.eye,
+.go {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--pl-radius-pill);
+  cursor: default;
+}
+.eye {
+  background: none;
+  color: var(--pl-text-muted);
+  opacity: 0;
+  transition: opacity var(--pl-motion-fast) var(--pl-ease);
+}
+.pill:hover .eye,
+.pill:focus-within .eye,
+.eye[aria-pressed='true'] {
+  opacity: 1;
+}
+.go {
+  background: var(--pl-accent);
+  color: var(--pl-on-accent);
+  opacity: 0.5;
+  transform: scale(0.9);
+  transition:
+    opacity var(--pl-motion-med) var(--pl-ease),
+    transform var(--pl-motion-med) var(--pl-ease-spring-soft);
+}
+.go[data-ready='true'] {
+  opacity: 1;
+  transform: none;
+}
+.go[data-ready='true']:hover {
+  transform: scale(1.06);
+}
+.go[data-ready='true']:active {
+  transform: scale(0.92);
+  transition-duration: var(--pl-motion-press);
+}
+.go:focus-visible,
+.eye:focus-visible {
+  outline: 2px solid var(--pl-on-accent);
+  outline-offset: 1px;
+  box-shadow: 0 0 0 5px var(--pl-accent-glow);
+}
+@keyframes hintIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+.hint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pl-space-2);
+  min-height: var(--pl-target-min);
+  margin: 0;
+  font: var(--pl-type-caption);
+  color: var(--pl-text-muted);
+  animation: hintIn var(--pl-motion-med) var(--pl-ease-out) backwards;
+}
+.hint[data-tone='error'] {
+  color: var(--pl-danger);
+  font-weight: var(--pl-weight-medium);
+}
+.hint[data-tone='stage'] {
+  color: var(--pl-text);
+}
+.dotSep {
+  color: var(--pl-text-tertiary);
+}
+.link {
+  min-height: var(--pl-target-min);
+  padding: 0 var(--pl-space-1);
+  border: 0;
+  border-radius: var(--pl-radius-sm);
+  background: none;
+  color: var(--pl-accent-text);
+  font: var(--pl-type-caption);
+  font-weight: var(--pl-weight-medium);
+  cursor: default;
+}
+.link:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.guest {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--pl-space-2);
+}
+.guestButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pl-space-2);
+  height: 40px;
+  padding: 0 var(--pl-space-5);
+  border: 0;
+  border-radius: var(--pl-radius-pill);
+  color: var(--pl-text);
+  font: var(--pl-type-callout);
+  cursor: default;
+  animation: pillIn calc(360ms * var(--pl-k)) var(--pl-ease-spring) backwards;
+  transition: transform var(--pl-motion-med) var(--pl-ease-spring-soft);
+}
+.guestButton:active:not([aria-disabled='true']) {
+  transform: scale(var(--pl-press-scale));
+}
+.guestButton:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--pl-focus-color) 60%, transparent);
+  outline-offset: 2px;
+}
+/* A refused guest sign-in (429 back-off, 403 disabled) marks the button like a wrong password. */
+.guestButton[data-error='true'] {
+  box-shadow:
+    inset 0 0 0 1.5px color-mix(in srgb, var(--pl-danger) 70%, transparent),
+    0 8px 24px color-mix(in srgb, var(--pl-danger) 18%, transparent);
+}
+.guestButton[aria-disabled='true'] {
+  color: var(--pl-text-muted);
+}
+
+/* "Forgot password?" (D-17): a text bubble under the hint that never moves the layout. */
+.forgotAnchor {
+  position: relative;
+  width: 100%;
+  height: 0;
+  margin-top: calc(var(--pl-space-3) * -1);
+}
+@keyframes forgotIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -4px);
+  }
+}
+.forgot {
+  position: absolute;
+  top: var(--pl-space-1);
+  left: 50%;
+  z-index: 1;
+  width: max-content;
+  max-width: 300px;
+  margin: 0;
+  padding: var(--pl-space-2) var(--pl-space-3);
+  border-radius: var(--pl-radius-md);
+  background: linear-gradient(var(--pl-control-bg), var(--pl-control-bg)), var(--pl-glass-card-bg);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--pl-text) 12%, transparent),
+    var(--pl-shadow-pop);
+  color: var(--pl-text);
+  font: var(--pl-type-caption);
+  text-align: center;
+  transform: translateX(-50%);
+  animation: forgotIn var(--pl-motion-med) var(--pl-ease-out) backwards;
+}
+
+/* ---------- status badge ---------- */
+@keyframes badgeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.9);
+  }
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pl-space-2);
+  height: 28px;
+  margin: 0;
+  padding: 0 var(--pl-space-3);
+  border-radius: var(--pl-radius-pill);
+  font: var(--pl-type-caption);
+  font-weight: var(--pl-weight-medium);
+  color: var(--pl-text);
+  animation: badgeIn calc(280ms * var(--pl-k)) var(--pl-ease-spring) calc(460ms * var(--pl-k))
+    backwards;
+}
+.badgeOffline {
+  color: var(--pl-warning);
+  background:
+    linear-gradient(var(--pl-warning-subtle), var(--pl-warning-subtle)), var(--pl-glass-card-bg);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pl-warning) 40%, transparent);
+}
+.badgeDot {
+  width: var(--pl-status-dot);
+  height: var(--pl-status-dot);
+  border-radius: var(--pl-radius-pill);
+  background: currentColor;
+}
+.badgeDotOk {
+  background: var(--pl-status-online);
+}
+
+/* ---------- power ---------- */
+.power {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  gap: 44px;
+  min-height: 76px;
+  margin-bottom: var(--pl-space-12);
+}
+@keyframes powerIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+.powerButton {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--pl-space-2);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--pl-text);
+  cursor: default;
+  outline: none;
+  animation: powerIn calc(420ms * var(--pl-k)) var(--pl-ease-spring) backwards;
+  animation-delay: calc((500ms + var(--pl-stagger-index, 0) * 50ms) * var(--pl-k));
+}
+.powerButton:disabled {
+  opacity: 0.35;
+}
+.powerIcon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--pl-radius-pill);
+  transition: transform calc(180ms * var(--pl-k)) var(--pl-ease-spring-soft);
+}
+.powerButton:hover:not(:disabled) .powerIcon {
+  transform: translateY(-2px) scale(1.04);
+}
+.powerButton:active:not(:disabled) .powerIcon {
+  transform: scale(0.94);
+  transition-duration: var(--pl-motion-press);
+}
+.powerButton:focus-visible .powerIcon {
+  outline: var(--pl-focus-ring);
+  outline-offset: var(--pl-focus-offset);
+}
+.powerLabel {
+  font: var(--pl-type-caption);
+  font-weight: var(--pl-weight-medium);
+  color: var(--pl-text-muted);
+}
+@keyframes confirmIn {
+  from {
+    opacity: 0;
+    transform: scaleX(0.8);
+  }
+}
+.confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--pl-space-2) var(--pl-space-3);
+  max-width: 360px;
+  animation: confirmIn calc(300ms * var(--pl-k)) var(--pl-ease-spring) backwards;
+}
+.confirmYes,
+.confirmNo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pl-space-2);
+  height: 40px;
+  padding: 0 var(--pl-space-5);
+  border: 0;
+  border-radius: var(--pl-radius-pill);
+  font: var(--pl-type-callout);
+  font-weight: var(--pl-weight-semibold);
+  cursor: default;
+}
+.confirmYes {
+  background: var(--pl-danger-fill);
+  color: var(--pl-on-accent);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--pl-danger-fill) 35%, transparent);
+}
+.confirmNo {
+  color: var(--pl-text);
+}
+.confirmNote {
+  flex-basis: 100%;
+  margin: 0;
+  text-align: center;
+  font: var(--pl-type-caption);
+  font-weight: var(--pl-weight-medium);
+  color: var(--pl-warning);
+}
+
+/* ---------- corners ---------- */
+.brand {
+  position: absolute;
+  left: var(--pl-space-6);
+  bottom: var(--pl-space-5);
+  display: flex;
+  /* End, not centre: the two text lines are ~32.7 px tall, so centring put the 32 px mark on a
+     third of a pixel and blurred it at 1x. The bottom edge is whole, so the mark is too. */
+  align-items: flex-end;
+  gap: var(--pl-space-3);
+}
+.brandText {
+  display: flex;
+  flex-direction: column;
+}
+.brandName {
+  font: var(--pl-type-caption);
+  font-weight: var(--pl-weight-semibold);
+  color: var(--pl-text-muted);
+}
+.brandBuild {
+  font-family: var(--pl-font-mono);
+  font-size: calc(var(--pl-text-xs) - 1px);
+  color: var(--pl-text-tertiary);
+}
+.corner {
+  position: absolute;
+  right: var(--pl-space-5);
+  bottom: var(--pl-space-5);
+  display: flex;
+  align-items: center;
+  gap: var(--pl-space-3);
+}
+.roundButton,
+.languageButton {
+  border: 0;
+  color: var(--pl-text);
+  cursor: default;
+  transition: transform var(--pl-motion-med) var(--pl-ease-spring-soft);
+}
+.roundButton {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--pl-radius-pill);
+}
+.languageButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pl-space-2);
+  height: 32px;
+  padding: 0 var(--pl-space-3) 0 var(--pl-space-2);
+  border-radius: var(--pl-radius-pill);
+  font: var(--pl-type-caption);
+  font-weight: var(--pl-weight-medium);
+}
+.roundButton:active,
+.languageButton:active {
+  transform: scale(0.94);
+}
+.roundButton:focus-visible,
+.languageButton:focus-visible {
+  outline: var(--pl-focus-ring);
+  outline-offset: var(--pl-focus-offset);
+}
+.roundButton[aria-expanded='true'] {
+  color: var(--pl-accent-text);
+}
+
+/* Accessibility popover: two switches that apply at once (the shell writes them on <html>). */
+.a11yAnchor {
+  position: relative;
+}
+@keyframes a11yIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.96);
+  }
+}
+.a11yPop {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + var(--pl-space-2));
+  display: flex;
+  flex-direction: column;
+  gap: var(--pl-space-1);
+  min-width: 240px;
+  padding: var(--pl-space-2) var(--pl-space-3);
+  border-radius: var(--pl-radius-lg);
+  background: linear-gradient(var(--pl-control-bg), var(--pl-control-bg)), var(--pl-glass-card-bg);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--pl-text) 12%, transparent),
+    var(--pl-shadow-pop);
+  transform-origin: bottom right;
+  animation: a11yIn var(--pl-motion-med) var(--pl-ease-spring) backwards;
+}
+.a11yRow {
+  width: 100%;
+  font: var(--pl-type-caption);
+  font-weight: var(--pl-weight-medium);
+}
+
+@media (height < 760px) {
+  .screen {
+    padding-top: var(--pl-space-6);
+  }
+  .time {
+    font-size: var(--pl-text-4xl);
+  }
+  .power {
+    margin-bottom: var(--pl-space-8);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wallpaper,
+  .clock,
+  .digit,
+  .user,
+  .form,
+  .guestButton,
+  .badge,
+  .hint,
+  .powerButton,
+  .confirm,
+  .forgot,
+  .a11yPop {
+    animation: none;
+  }
+  .userRow,
+  .avatarBox,
+  .avatarBox::before,
+  .userName,
+  .go,
+  .powerIcon {
+    transition: none;
+  }
+}
+@media (forced-colors: active) {
+  .pill,
+  .badge,
+  .powerIcon,
+  .guestButton {
+    border: 1px solid CanvasText;
+  }
+  .user[data-selected='true'] .avatar {
+    outline: 3px solid Highlight;
+  }
+}

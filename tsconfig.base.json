@@ -1,0 +1,40 @@
+{
+  // Shared compiler options for every Plotinium package (C14).
+  // Type-check gate: TypeScript 7 (`tsc`, package alias @typescript/native).
+  // Tooling (typescript-eslint, editors) uses the TypeScript 6 API (`typescript` alias, `tsc6`).
+  // Both reject baseUrl, moduleResolution node10 and target ES5, so none of them appear here.
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    // Language and output
+    "target": "ES2024",
+    "lib": ["ES2024"],
+    "module": "Preserve",
+    "moduleResolution": "bundler",
+    "moduleDetection": "force",
+    "resolveJsonModule": true,
+    "noEmit": true,
+    // Relative imports MUST carry the .ts extension so the server (and the shared
+    // protocol, dsa and vfs/path, vfs/perm modules it imports) can run from source
+    // under Node 24 type stripping (C9). Vite resolves the same specifiers.
+    "allowImportingTsExtensions": true,
+
+    // Only syntax that type stripping can erase: no enums, namespaces or parameter properties.
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "erasableSyntaxOnly": true,
+
+    // Strictness
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+
+    // Ambient types are opt-in per package: each package lists the lib and types of the
+    // environments it runs in (for example, no Node types in the browser packages). ESLint adds
+    // the finer rules, such as no DOM-only or Node globals in protocol/ and dsa/.
+    "types": [],
+    "skipLibCheck": true
+  }
+}

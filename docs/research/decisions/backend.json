@@ -1,0 +1,948 @@
+{
+ "key": "backend",
+ "title": "Backend runtime & HTTP/WebSocket framework",
+ "record": {
+  "decision_title": "DR-03: Backend runtime and HTTP/WebSocket framework: Node.js 24 LTS + Fastify 5 + @fastify/websocket (ws), run as one TypeScript process",
+  "context_constraints_ranked": [
+   "1. Multi-user consistency (the server has the final say): the backend owns locks, quotas and op-log replay (VFS-09 lease locks with EBUSY and crash expiry, VFS-10 conflicted copies, OFF-02 exactly-once replay, DB-02/DB-03 one transaction per user-visible op with retry). The runtime must make explicit transactions, retry on serialization failure, ordered processing per session and broadcast only after commit easy to write and test.",
+   "2. Team delivery and defence: 5 BS-CS students who know JS/TS and some Node/React, 18 weeks, stack frozen after the Week-4 defence. Every member is examined on the whole system (s4, s14.4, s17 viva). A backend that only one member can explain counts as undefended.",
+   "3. One source of truth for protocol types: the syscall ABI ({id, call, args} -> {id, ok, value|errno}), errno codes, WebSocket and op-log messages, and the AI agent's tool JSON schemas (AGT-01) are shared by the browser kernel and the server. Permission and path logic should behave the same on both sides.",
+   "4. Real-time capacity: thousands of long-lived WebSockets (s14.2). Lock grants, sync acks and process events reach up to about 20 per second per client during bulk operations (s14.3). Needs heartbeats (25 s in the spec example), resumable sessions, backpressure and low idle cost.",
+   "5. Library coverage for each backend component (s8): Postgres with explicit transactions, LISTEN and pgvector; S3-compatible streaming for blobs and remote swap (MEM-04, MEM-05: 5 MB page-in from remote <= 2 s p95); Argon2id password hashing (auth, OFF-03); LLM provider SDK with keys held on the server, rate limits, cost and audit (s12.6); cookie sessions.",
+   "6. Testing and CI (s15): coverage >= 70% overall reported on every PR, integration tests against a real DB with fault injection, and performance budgets that fail the build.",
+   "7. Deployment (s14.2, s17): examiner bring-up in <= 3 commands within 5 minutes, a cheap VPS on a Pakistani student budget, small images, WebSocket support.",
+   "8. Observability: tokens and cost logged per LLM request, audit log, server metrics for lock latency and event-loop health."
+  ],
+  "options": [
+   {
+    "name": "A. Node.js 24 LTS + Fastify 5 + @fastify/websocket (ws)",
+    "current_version": "node 24.21.0 'Krypton' (Active LTS until 2026-10-20, security fixes until 2028-04-30); fastify 5.12.5; @fastify/websocket 11.3.1; ws 8.21.3",
+    "summary": "One event loop per process (libuv/epoll). Each socket is a file descriptor plus a small JS object; there is no thread per connection. Fastify plugins map one-to-one onto the backend components. Route hooks authenticate the WebSocket upgrade. pino logging is built in. TypeScript runs directly through Node's type stripping, which is stable since 24.12.",
+    "status_notes": "The Fastify 5.x CI matrix covers Node 20/22/24/26. Fastify 6.0.0-alpha.4 exists, and under the LTS policy v5 keeps security fixes for 6 months after v6 ships. Node 24 moves to Maintenance LTS on 2026-10-20 and still gets security fixes until 2028-04-30."
+   },
+   {
+    "name": "B. Node.js 24 LTS + Hono 4 (@hono/node-server + @hono/node-ws)",
+    "current_version": "hono 4.13.8; @hono/node-server 2.1.1; @hono/node-ws 1.3.1 (last published 2026-05-01)",
+    "summary": "A framework built on Web-standard Request/Response. The same code can move to Bun or Deno, and it has a typed RPC client. On Node, every request passes through an adapter layer, and WebSocket support is a thin wrapper over ws.",
+    "status_notes": "Framework runner-up. Its main advantage (portability across runtimes) is worth nothing once the stack is frozen on Node."
+   },
+   {
+    "name": "C. Bun 1.4 + Bun.serve native WebSocket pub/sub (+ Hono or Elysia 1.4)",
+    "current_version": "bun 1.4.2 (2026-09-05); elysia 1.4.30",
+    "summary": "Native WebSocket server derived from uWS, with topic pub/sub. Also built in: Postgres (Bun.sql), S3 (Bun.s3), argon2id (Bun.password) and bun test. Fewest dependencies of any option.",
+    "status_notes": "1.4 (2026-08-20) is the first release after the Zig-to-Rust rewrite. 1.4.2 already fixed regressions affecting Elysia and AsyncLocalStorage. Bun has no defined support/LTS policy. It joined Anthropic on 2025-12-02. Node compatibility is partial (async_hooks mostly stubs, diagnostics_channel partial), and OpenTelemetry Fastify/Express instrumentation issue #26536 is still open."
+   },
+   {
+    "name": "D. Deno 2.9 LTS + Hono 4 (Deno.serve + upgradeWebSocket)",
+    "current_version": "deno 2.9.7 (2026-09-16); LTS channel on the 2.9 line from 2.9.3, maintained until 2027-01-31",
+    "summary": "Rust/tokio runtime with native TypeScript, a permission sandbox, built-in test/coverage/OpenTelemetry, and npm compatibility.",
+    "status_notes": "The LTS window just covers v1.0.0. We found no published per-connection WebSocket memory figure, so it would need to be measured."
+   },
+   {
+    "name": "E. Go 1.27 + net/http + coder/websocket + pgx",
+    "current_version": "go1.27.1; github.com/coder/websocket v1.8.15; jackc/pgx v5.11.0; pgvector-go v0.4.1; anthropic-sdk-go v1.75.0",
+    "summary": "One goroutine per connection on a preemptive M:N scheduler that uses every core. Mature Postgres driver, ships as a static binary, strong compatibility promise.",
+    "status_notes": "The team does not know Go. TS types would have to be generated from JSON Schema, giving two toolchains in CI."
+   },
+   {
+    "name": "F. Rust + Axum 0.8 + tokio + sqlx",
+    "current_version": "axum 0.8.9; tokio 1.53.1; sqlx 0.9.0; tokio-tungstenite 0.30.0",
+    "summary": "Async tasks on a multi-threaded work-stealing runtime. Best memory use and tail latency of all options.",
+    "status_notes": "Steep learning curve. No official Anthropic Rust SDK (official SDKs: Python, TS, C#, Go, Java, PHP, Ruby). Types would have to be code-generated for the client."
+   },
+   {
+    "name": "G. Python 3.14 + FastAPI + Uvicorn (expected to lose)",
+    "current_version": "fastapi 0.141.1; uvicorn 0.53.0; starlette 1.7.0; asyncpg 0.31.0",
+    "summary": "One asyncio event loop per worker, with Pydantic models. Strongest AI/ML library ecosystem.",
+    "status_notes": "Types cannot be shared with the TS client. The websockets library uses 64 KiB per connection by default (14 KiB with compression off)."
+   }
+  ],
+  "criteria": [
+   {
+    "name": "C1 Team skill and viva defensibility",
+    "weight": 15,
+    "why": "5 students who know JS/TS, 18 weeks, and every member examined on every decision (s14.4, s17). The spec allows 'we already knew it' as one weighted factor but never as the only justification, so it is capped at 15."
+   },
+   {
+    "name": "C2 Shared types and code with the TS browser kernel",
+    "weight": 15,
+    "why": "The syscall ABI, errno, op-log and WebSocket messages, and AI tool JSON schemas (AGT-01) must match exactly on client and server. Server-side permission checks should reuse the client's code, and the hand-written dsa/ heap can be reused for lease expiry."
+   },
+   {
+    "name": "C3 Library ecosystem for the required components",
+    "weight": 15,
+    "why": "Postgres driver with explicit transactions, SERIALIZABLE retry, LISTEN and pgvector; S3 streaming for blobs and swap (MEM-04/05); Argon2id; an official LLM SDK; cookie sessions; rate limiting (s8, s12.6)."
+   },
+   {
+    "name": "C4 WebSocket concurrency model and memory per connection",
+    "weight": 15,
+    "why": "s14.2 requires thousands of long-lived sockets with about 20 msg/s per client in bursts (s14.3), plus heartbeats, backpressure and low idle cost."
+   },
+   {
+    "name": "C5 Maturity, support window and compatibility risk",
+    "weight": 15,
+    "why": "The stack freezes at W4 and must hold until v1.0.0 (~Jan 2027). A runtime regression mid-semester threatens every gate, and an unmet gate caps the project mark (s13)."
+   },
+   {
+    "name": "C6 Testing and observability tooling",
+    "weight": 10,
+    "why": "Coverage has to be reported in CI on every PR (s15), with integration tests against real Postgres, WebSocket tests and performance budgets. Token and cost logging plus metrics are needed for the LLM gateway and lock latency."
+   },
+   {
+    "name": "C7 Raw throughput and latency headroom",
+    "weight": 10,
+    "why": "Lock-grant latency and broadcast fan-out under load; the defence includes live contention (s17)."
+   },
+   {
+    "name": "C8 Deployment footprint",
+    "weight": 5,
+    "why": "Image size, idle RAM on a cheap VPS, and <= 3-command bring-up in under 5 minutes (s17). Every option meets the bar, so the weight is low."
+   }
+  ],
+  "scores": [
+   {
+    "option": "A. Node.js 24 LTS + Fastify 5 + @fastify/websocket (ws)",
+    "per_criterion": [
+     {
+      "criterion": "C1 Team skill and viva defensibility",
+      "score": 5,
+      "reason": "The language and runtime the team already uses, so every member can explain the event loop and the plugins."
+     },
+     {
+      "criterion": "C2 Shared types and code with the TS browser kernel",
+      "score": 5,
+      "reason": "Same TS everywhere. TypeBox schemas are simultaneously the TS types, Fastify's JSON-Schema validation and the LLM tool schemas. The server can import vfs/ permission functions and dsa/heap directly."
+     },
+     {
+      "criterion": "C3 Library ecosystem for the required components",
+      "score": 5,
+      "reason": "pg + pgvector, @aws-sdk/client-s3 + lib-storage streaming, node:crypto argon2 (built in since 24.7), official @anthropic-ai/sdk, @fastify/rate-limit, cookie, helmet, under-pressure."
+     },
+     {
+      "criterion": "C4 WebSocket concurrency model and memory per connection",
+      "score": 4,
+      "reason": "A plain Node WS server measured 3.6 KB RSS / 6.6 KB total per connection (99,770 connections on 1 vCPU/1 GB). JS runs on one core, so CPU-heavy work must stay off the event loop."
+     },
+     {
+      "criterion": "C5 Maturity, support window and compatibility risk",
+      "score": 5,
+      "reason": "Security support until 2028-04-30. Fastify 5.x CI covers Node 24. ws 8.x has been stable for years."
+     },
+     {
+      "criterion": "C6 Testing and observability tooling",
+      "score": 5,
+      "reason": "Vitest 5 with v8 coverage, fastify.inject and injectWS, Testcontainers Postgres. pino is built in, and official OpenTelemetry instrumentation (@fastify/otel, instrumentation-pg) is available."
+     },
+     {
+      "criterion": "C7 Raw throughput and latency headroom",
+      "score": 3,
+      "reason": "Fastify 97,595 req/s (vendor benchmark), but Node+ws manages about 100k msg/s against Bun's claimed 700k in a chat benchmark."
+     },
+     {
+      "criterion": "C8 Deployment footprint",
+      "score": 3,
+      "reason": "node:24-alpine is 61.6 MB compressed, plus node_modules."
+     }
+    ],
+    "weighted_total": 91
+   },
+   {
+    "option": "B. Node.js 24 LTS + Hono 4 (@hono/node-server + @hono/node-ws)",
+    "per_criterion": [
+     {
+      "criterion": "C1 Team skill and viva defensibility",
+      "score": 5,
+      "reason": "Express-like API on a familiar runtime."
+     },
+     {
+      "criterion": "C2 Shared types and code with the TS browser kernel",
+      "score": 5,
+      "reason": "Same TS, plus a typed RPC client for HTTP routes."
+     },
+     {
+      "criterion": "C3 Library ecosystem for the required components",
+      "score": 4,
+      "reason": "Same npm libraries, but fewer maintained first-party middlewares on Node (rate limiting is third-party; nothing like under-pressure). The node-ws adapter is less active."
+     },
+     {
+      "criterion": "C4 WebSocket concurrency model and memory per connection",
+      "score": 4,
+      "reason": "Uses ws underneath, so the same as A."
+     },
+     {
+      "criterion": "C5 Maturity, support window and compatibility risk",
+      "score": 4,
+      "reason": "Hono itself is stable, but it adds an adapter layer, and @hono/node-ws was last published 2026-05."
+     },
+     {
+      "criterion": "C6 Testing and observability tooling",
+      "score": 4,
+      "reason": "app.request() makes testing easy, but logging and tracing have to be assembled by hand."
+     },
+     {
+      "criterion": "C7 Raw throughput and latency headroom",
+      "score": 3,
+      "reason": "88,525 req/s against Fastify's 97,595 on the same benchmark."
+     },
+     {
+      "criterion": "C8 Deployment footprint",
+      "score": 3,
+      "reason": "Same Node base image as A."
+     }
+    ],
+    "weighted_total": 83
+   },
+   {
+    "option": "C. Bun 1.4 + Bun.serve native WebSocket pub/sub (+ Hono or Elysia 1.4)",
+    "per_criterion": [
+     {
+      "criterion": "C1 Team skill and viva defensibility",
+      "score": 4,
+      "reason": "Still TS, but Bun-specific APIs are new to the team."
+     },
+     {
+      "criterion": "C2 Shared types and code with the TS browser kernel",
+      "score": 5,
+      "reason": "Same TS; Elysia's Eden gives end-to-end types."
+     },
+     {
+      "criterion": "C3 Library ecosystem for the required components",
+      "score": 4,
+      "reason": "Built-in SQL, S3 and argon2. pgvector and the Anthropic SDK support Bun. Node compatibility is not 100%."
+     },
+     {
+      "criterion": "C4 WebSocket concurrency model and memory per connection",
+      "score": 5,
+      "reason": "Native uWS-style sockets with built-in pub/sub. Vendor benchmark claims about 7x the messages per second of Node+ws."
+     },
+     {
+      "criterion": "C5 Maturity, support window and compatibility risk",
+      "score": 2,
+      "reason": "The Rust rewrite shipped 2026-08-20, regressions were fixed within 2 weeks, and there is no LTS or support policy. It would be frozen for 4 months."
+     },
+     {
+      "criterion": "C6 Testing and observability tooling",
+      "score": 3,
+      "reason": "bun test is fast and has coverage. OpenTelemetry HTTP/Fastify instrumentation is broken (#26536 open), and native Bun.otel had not been merged."
+     },
+     {
+      "criterion": "C7 Raw throughput and latency headroom",
+      "score": 5,
+      "reason": "Best of the JS runtimes on the vendor's WebSocket benchmarks."
+     },
+     {
+      "criterion": "C8 Deployment footprint",
+      "score": 4,
+      "reason": "oven/bun:1-alpine is 42.3 MB, with fewer dependencies."
+     }
+    ],
+    "weighted_total": 80
+   },
+   {
+    "option": "D. Deno 2.9 LTS + Hono 4 (Deno.serve + upgradeWebSocket)",
+    "per_criterion": [
+     {
+      "criterion": "C1 Team skill and viva defensibility",
+      "score": 4,
+      "reason": "TS, but the permission flags and Deno APIs are new."
+     },
+     {
+      "criterion": "C2 Shared types and code with the TS browser kernel",
+      "score": 5,
+      "reason": "Same TS."
+     },
+     {
+      "criterion": "C3 Library ecosystem for the required components",
+      "score": 3,
+      "reason": "npm compatibility is good but unproven for our exact set. crypto.argon2 parity with Node is unclear, so we might need an N-API addon."
+     },
+     {
+      "criterion": "C4 WebSocket concurrency model and memory per connection",
+      "score": 4,
+      "reason": "The tokio-backed WebSocket is efficient, but no published per-connection figure was found."
+     },
+     {
+      "criterion": "C5 Maturity, support window and compatibility risk",
+      "score": 4,
+      "reason": "The 2.9 LTS runs until 2027-01-31, just covering the project."
+     },
+     {
+      "criterion": "C6 Testing and observability tooling",
+      "score": 4,
+      "reason": "Built-in test, coverage and OpenTelemetry (OTEL_DENO)."
+     },
+     {
+      "criterion": "C7 Raw throughput and latency headroom",
+      "score": 4,
+      "reason": "Faster than Node for HTTP in general; slower than Bun or Go."
+     },
+     {
+      "criterion": "C8 Deployment footprint",
+      "score": 4,
+      "reason": "denoland/deno:alpine is 49.2 MB."
+     }
+    ],
+    "weighted_total": 80
+   },
+   {
+    "option": "E. Go 1.27 + net/http + coder/websocket + pgx",
+    "per_criterion": [
+     {
+      "criterion": "C1 Team skill and viva defensibility",
+      "score": 2,
+      "reason": "A new language for 5 students mid-semester, and every member must defend it in the viva."
+     },
+     {
+      "criterion": "C2 Shared types and code with the TS browser kernel",
+      "score": 2,
+      "reason": "Needs JSON Schema to Go code generation, with a risk of the two drifting apart. Permission logic would be written twice."
+     },
+     {
+      "criterion": "C3 Library ecosystem for the required components",
+      "score": 4,
+      "reason": "pgx v5, pgvector-go, aws-sdk-go-v2, official anthropic-sdk-go, x/crypto/argon2."
+     },
+     {
+      "criterion": "C4 WebSocket concurrency model and memory per connection",
+      "score": 5,
+      "reason": "Uses every core through goroutines. A naive server costs about 24 KB per connection but has no event loop to block."
+     },
+     {
+      "criterion": "C5 Maturity, support window and compatibility risk",
+      "score": 5,
+      "reason": "Go 1 compatibility promise; 1.27.1 is current."
+     },
+     {
+      "criterion": "C6 Testing and observability tooling",
+      "score": 4,
+      "reason": "go test -cover, race detector, pprof, but that is a second CI toolchain."
+     },
+     {
+      "criterion": "C7 Raw throughput and latency headroom",
+      "score": 5,
+      "reason": "Multi-core and compiled."
+     },
+     {
+      "criterion": "C8 Deployment footprint",
+      "score": 5,
+      "reason": "Static binary on a distroless or scratch image."
+     }
+    ],
+    "weighted_total": 77
+   },
+   {
+    "option": "F. Rust + Axum 0.8 + tokio + sqlx",
+    "per_criterion": [
+     {
+      "criterion": "C1 Team skill and viva defensibility",
+      "score": 1,
+      "reason": "The ownership and borrow checker plus async learning curve does not fit into 18 weeks for 5 people."
+     },
+     {
+      "criterion": "C2 Shared types and code with the TS browser kernel",
+      "score": 2,
+      "reason": "Would need ts-rs or typeshare code generation."
+     },
+     {
+      "criterion": "C3 Library ecosystem for the required components",
+      "score": 3,
+      "reason": "sqlx, pgvector and aws-sdk-s3 are fine, but there is no official Anthropic SDK."
+     },
+     {
+      "criterion": "C4 WebSocket concurrency model and memory per connection",
+      "score": 5,
+      "reason": "Best memory use per connection."
+     },
+     {
+      "criterion": "C5 Maturity, support window and compatibility risk",
+      "score": 4,
+      "reason": "tokio is stable, but axum is still pre-1.0 (0.8.x)."
+     },
+     {
+      "criterion": "C6 Testing and observability tooling",
+      "score": 3,
+      "reason": "cargo test plus an extra tool (llvm-cov) for coverage; tracing is good."
+     },
+     {
+      "criterion": "C7 Raw throughput and latency headroom",
+      "score": 5,
+      "reason": "Highest throughput."
+     },
+     {
+      "criterion": "C8 Deployment footprint",
+      "score": 5,
+      "reason": "Static binary."
+     }
+    ],
+    "weighted_total": 66
+   },
+   {
+    "option": "G. Python 3.14 + FastAPI + Uvicorn (expected to lose)",
+    "per_criterion": [
+     {
+      "criterion": "C1 Team skill and viva defensibility",
+      "score": 3,
+      "reason": "Known from coursework, but async Python is less familiar."
+     },
+     {
+      "criterion": "C2 Shared types and code with the TS browser kernel",
+      "score": 1,
+      "reason": "No TS sharing. Pydantic and TS models would be duplicated or generated from OpenAPI, which does not cover WebSocket messages."
+     },
+     {
+      "criterion": "C3 Library ecosystem for the required components",
+      "score": 4,
+      "reason": "asyncpg, pgvector, boto3, argon2-cffi and the official anthropic SDK."
+     },
+     {
+      "criterion": "C4 WebSocket concurrency model and memory per connection",
+      "score": 2,
+      "reason": "One asyncio loop per worker with the GIL. The websockets library uses 64 KiB per connection by default."
+     },
+     {
+      "criterion": "C5 Maturity, support window and compatibility risk",
+      "score": 4,
+      "reason": "Stable, although FastAPI is still 0.x."
+     },
+     {
+      "criterion": "C6 Testing and observability tooling",
+      "score": 4,
+      "reason": "pytest, coverage.py and OpenTelemetry for Python."
+     },
+     {
+      "criterion": "C7 Raw throughput and latency headroom",
+      "score": 2,
+      "reason": "Slowest of the options."
+     },
+     {
+      "criterion": "C8 Deployment footprint",
+      "score": 3,
+      "reason": "python:3.14-slim is 43.5 MB, plus dependencies."
+     }
+    ],
+    "weighted_total": 57
+   }
+  ],
+  "evidence": [
+   {
+    "claim": "Node.js 24 'Krypton' is Active LTS at 24.21.0, with active support ending 2026-10-20 and security support ending 2028-04-30. Node 26 (released 2026-05-05) is Current at 26.10.0.",
+    "source": "https://endoflife.date/nodejs ; https://nodejs.org/en/about/previous-releases",
+    "verified": true
+   },
+   {
+    "claim": "Type stripping is Stability 2 (stable) since v24.12.0 and on by default since v23.6. Enums, namespaces with runtime code, parameter properties, tsconfig paths and TS files under node_modules are not supported. Node recommends erasableSyntaxOnly, verbatimModuleSyntax and rewriteRelativeImportExtensions.",
+    "source": "https://nodejs.org/docs/latest-v24.x/api/typescript.html",
+    "verified": true
+   },
+   {
+    "claim": "node:crypto gained crypto.argon2()/argon2Sync() ('Added in: v24.7.0'), supporting argon2d/argon2i/argon2id, so password hashing needs no native addon.",
+    "source": "https://nodejs.org/docs/latest-v24.x/api/crypto.html ; https://nodejs.org/en/blog/release/v24.7.0",
+    "verified": true
+   },
+   {
+    "claim": "OWASP minimum for Argon2id: 19 MiB of memory, 2 iterations, parallelism 1.",
+    "source": "https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html",
+    "verified": true
+   },
+   {
+    "claim": "Fastify's own benchmark (Node, single instance, updated 2026-09-02): Fastify 5.12.1 at 97,595 req/s, Hono 4.13.5 at 88,525, Express 5.2.1 at 59,651. This is a vendor benchmark.",
+    "source": "https://fastify.dev/benchmarks/",
+    "verified": true
+   },
+   {
+    "claim": "The Fastify 5.x branch CI tests Node 20, 22, 24 and 26. LTS policy: a major keeps security updates for six months after the next major ships. v6.0.0-alpha.4 exists (2026-09-17). Latest v5 is 5.12.5.",
+    "source": "https://raw.githubusercontent.com/fastify/fastify/5.x/.github/workflows/ci.yml ; https://fastify.dev/docs/latest/Reference/LTS/ ; https://github.com/fastify/fastify/releases",
+    "verified": true
+   },
+   {
+    "claim": "In @fastify/websocket, onRequest, preParsing, preValidation and preHandler hooks run before the upgrade, so unauthenticated upgrades can be rejected with 401. Handlers must attach message listeners synchronously or messages can be silently dropped. injectWS is provided for tests.",
+    "source": "https://github.com/fastify/fastify-websocket",
+    "verified": true
+   },
+   {
+    "claim": "ws disables permessage-deflate on the server by default and warns that Node zlib under concurrency 'can lead to catastrophic memory fragmentation'. Its README shows a ping/pong heartbeat that terminates dead sockets.",
+    "source": "https://github.com/websockets/ws",
+    "verified": true
+   },
+   {
+    "claim": "A plain Node WebSocket server on a $6 DigitalOcean droplet (1 shared vCPU, 1 GB) held 99,770 connections: 3.6 KB process RSS per connection, 6.6 KB including kernel socket buffers. Memory ran out before CPU did. This is a third-party blog post and does not name the library.",
+    "source": "https://dev.to/remdore/how-many-websocket-connections-can-a-6-server-hold-99770-and-memory-is-the-wall-5d4k",
+    "verified": true
+   },
+   {
+    "claim": "AnyCable 2026 benchmark on 32 vCPU / 32 GB: uWebSockets.js held 1,018,366 idle connections in about 5.45 GB (~5.4 KB/conn); Socket.io was about 52 KB/conn. This is a vendor benchmark.",
+    "source": "https://anycable.io/compare/nodejs-websocket/",
+    "verified": true
+   },
+   {
+    "claim": "Bun's docs claim about 700,000 msg/s for Bun against about 100,000 msg/s for Node+ws in a chatroom benchmark. They also document native topic pub/sub, a 120 s default idleTimeout and a 16 MB default maxPayloadLength.",
+    "source": "https://bun.com/docs/runtime/http/websockets",
+    "verified": true
+   },
+   {
+    "claim": "Bun 1.4 (2026-08-20) is the first release after the Zig-to-Rust rewrite and claims 13-48% lower HTTP-server memory. Bun 1.4.2 (2026-09-05) fixes 'two regressions impacting Elysia and AsyncLocalStorage'. Bun joined Anthropic on 2025-12-02.",
+    "source": "https://bun.com/blog ; https://bun.com/blog/bun-v1.4 ; https://bun.com/blog/bun-in-rust",
+    "verified": true
+   },
+   {
+    "claim": "endoflife.date says 'Bun does not have a clearly defined support policy'. The latest release is 1.4.2.",
+    "source": "https://endoflife.date/bun",
+    "verified": true
+   },
+   {
+    "claim": "In Bun, node:async_hooks hook creation and tracking are stubs (only AsyncLocalStorage and AsyncResource are implemented), and node:diagnostics_channel is partial.",
+    "source": "https://bun.com/docs/runtime/nodejs-compat",
+    "verified": true
+   },
+   {
+    "claim": "OpenTelemetry Fastify/Express instrumentation hooks never fire under Bun (issue #26536, open since 2026-01-28). The native Bun.otel PR #39965 was still open on 2026-08-21.",
+    "source": "https://github.com/oven-sh/bun/issues/26536 ; https://github.com/oven-sh/bun/pull/39965",
+    "verified": true
+   },
+   {
+    "claim": "Deno's latest release is 2.9.7. Its LTS channel covers the 2.9 line from v2.9.3 until 2027-01-31.",
+    "source": "https://docs.deno.com/runtime/fundamentals/stability_and_releases/ ; https://dl.deno.land/release-latest.txt",
+    "verified": true
+   },
+   {
+    "claim": "Go 1.27 was released 2026-08-19 and go1.27.1 is current. Current module versions: coder/websocket v1.8.15, pgx v5.11.0, pgvector-go v0.4.1, anthropic-sdk-go v1.75.0.",
+    "source": "https://go.dev/blog/go1.27 ; https://proxy.golang.org (@latest queries 2026-09-23)",
+    "verified": true
+   },
+   {
+    "claim": "A naive goroutine-per-connection Go WebSocket server needed about 72 GB for 3M connections (~24 KB each: two goroutine stacks, 4 KB read and 4 KB write buffers, and upgrade buffers). Optimisation brought it to about 24 GB. The article is old but the mechanism still applies.",
+    "source": "https://www.freecodecamp.org/news/million-websockets-and-go-cc58418460bb/",
+    "verified": true
+   },
+   {
+    "claim": "The Python websockets library uses 64 KiB per connection with default settings and 14 KiB with compression disabled.",
+    "source": "https://websockets.readthedocs.io/en/stable/topics/memory.html",
+    "verified": true
+   },
+   {
+    "claim": "Anthropic's official SDKs cover Python, TypeScript, C#, Go, Java, PHP and Ruby. There is no official Rust SDK.",
+    "source": "https://platform.claude.com/docs/en/cli-sdks-libraries/overview",
+    "verified": true
+   },
+   {
+    "claim": "Postgres NOTIFY payloads must be under 8000 bytes by default. Notifications are delivered only when the transaction commits, and in commit order. The queue is 8 GB.",
+    "source": "https://www.postgresql.org/docs/current/sql-notify.html (PostgreSQL 18.6 docs)",
+    "verified": true
+   },
+   {
+    "claim": "A transaction that issued NOTIFY takes a global lock at commit, which serialises commits and caused outages under many concurrent writers.",
+    "source": "https://www.recall.ai/blog/postgres-listen-notify-does-not-scale",
+    "verified": true
+   },
+   {
+    "claim": "Compressed amd64 image sizes on Docker Hub (Sept 2026): node:24-alpine 61.6 MB, node:24-slim 80.8 MB, oven/bun:1-alpine 42.3 MB, denoland/deno:alpine 49.2 MB, python:3.14-slim 43.5 MB. golang:1.27-alpine is 75.2 MB but is only the build image.",
+    "source": "https://hub.docker.com/v2/repositories/<repo>/tags/<tag> (queried 2026-09-23)",
+    "verified": true
+   },
+   {
+    "claim": "Vitest 5.0 is released (5.0.1 current) and requires Node >= 22.12. Node's built-in test runner still gates coverage behind --experimental-test-coverage in Node 24.",
+    "source": "https://vitest.dev/blog/vitest-5.html ; https://nodejs.org/docs/latest-v24.x/api/test.html",
+    "verified": true
+   },
+   {
+    "claim": "TypeScript 7.0, with the Go-native compiler, is in the regular typescript package (7.0.2 on npm) and builds roughly 8-12x faster.",
+    "source": "https://www.infoq.com/news/2026/08/typescript-7-released/ ; npm view typescript",
+    "verified": true
+   },
+   {
+    "claim": "The MinIO community repository is archived (maintenance mode since 2025-12, archived in 2026). This affects which object store we pick, not the runtime: @aws-sdk/client-s3 works with any S3-compatible store.",
+    "source": "https://github.com/minio/minio/issues/21714 ; https://stormdevelopments.ca/blog/minio-s-community-edition-is-archived-what-still-runs-in-2026/",
+    "verified": true
+   },
+   {
+    "claim": "npm registry versions on 2026-09-23: fastify 5.12.5, @fastify/websocket 11.3.1 (depends on ws ^8.16), ws 8.21.3, pg 8.23.0, pgvector 0.3.0 ('Node.js, Deno, and Bun'), @aws-sdk/client-s3 3.1138.0, @anthropic-ai/sdk 0.128.0, typebox 1.3.34, @fastify/type-provider-typebox 6.1.0 (peer typebox ^1.0.13), vitest 5.0.1, @testcontainers/postgresql 12.1.0, pino 10.3.1, prom-client 15.1.3.",
+    "source": "npm view <pkg> version license (run 2026-09-23)",
+    "verified": true
+   },
+   {
+    "claim": "Our own numbers on the target VPS (per-connection memory, lock-grant p95, event-loop delay under 1,000 clients at 20 msg/s, and 5 MB remote page-in p95 from Lahore) do not exist yet. They must come from prototypes P1-P4 before the Week-4 defence, because the spec rejects copied claims as final evidence.",
+    "source": "team_prototype (to be run in weeks 2-3)",
+    "verified": false
+   }
+  ],
+  "recommendation": "Use Node.js 24 LTS (pinned node:24-alpine) with Fastify 5.12.x and @fastify/websocket 11 (built on ws 8). Run the backend as ONE TypeScript process: a modular monolith where each backend component (auth gateway, sync engine, lock manager, blob/swap store, LLM gateway, metrics) is its own Fastify plugin.\n\n1. **Shared protocol package.** A protocol/ package holds the syscall ABI, errno, WebSocket and op-log messages, and AI tool schemas as TypeBox JSON Schemas. The browser kernel and the server both import it. The same schemas drive Fastify validation and the LLM tool definitions (AGT-01).\n2. **Libraries.**\n   - Postgres: pg + pgvector. pg is the driver the OpenTelemetry pg instrumentation supports; the ORM or query builder is left to the DB record.\n   - Object storage: @aws-sdk/client-s3 + lib-storage, behind a BlobStore interface with a local-filesystem adapter as well.\n   - Passwords: argon2id from node:crypto (m=19 MiB, t=2, p=1).\n   - LLM: the provider's official SDK, called only inside the server-side LLM gateway.\n3. **Tooling.** Vitest 5 with v8 coverage and Testcontainers Postgres for tests; pino and prom-client for logs and metrics.\n4. **No broker.** No Redis/Valkey and no LISTEN/NOTIFY: one process fans out in memory after COMMIT. Postgres LISTEN/NOTIFY is added only if a second server process ever becomes necessary.\n5. **Freeze conditions.** Freeze this choice at W4 only if prototype P1 meets the stated budgets on our VPS.",
+  "runner_up": "Bun 1.4 (Bun.serve, native WebSocket pub/sub, with Hono) at 80, tied on score with Deno 2.9 LTS + Hono. Bun is the stronger challenger: native WebSocket pub/sub, a claimed ~7x Node+ws message rate, and built-in SQL, S3 and argon2. It loses on maturity. 1.4 is the first release of a one-month-old Rust rewrite with regressions already patched, there is no support policy, and OpenTelemetry instrumentation is broken. Freezing it for four months is too risky. Among Node frameworks, Hono 4 (83) is second to Fastify: its portability is worth nothing after the freeze, and its Node WebSocket adapter is less active.",
+  "chat_reason": "Node.js 24 LTS with Fastify lets all five of you write the server in the same TypeScript as the browser OS, so syscall, sync and AI-tool schemas are defined once and shared. It holds thousands of idle WebSockets cheaply (published figures are roughly 4-7 KB each), has every library we need (Postgres + pgvector, S3, Argon2, the official LLM SDK), and gets security fixes until April 2028. Bun is faster but was rewritten in Rust only a month ago and has no LTS. Go and Rust would add a second language and generated types, and Python loses on both counts.",
+  "gave_up": "1. **Raw WebSocket throughput.** Bun claims ~7x the messages per second of Node+ws, and Go/Rust use every core, while Node runs JS on one core. On a 2-vCPU VPS the second core goes to Postgres anyway.\n2. **Smallest images and built-ins.** Go/Rust ship as static binaries, and Bun has built-in SQL/S3/password APIs; we have more npm dependencies and a ~62 MB base image.\n3. **No event-loop discipline needed.** Go's preemptive scheduler would forgive CPU-heavy handlers; we must keep CPU work off the event loop.\n4. **Runtime portability.** Hono could move to Bun or Deno later.\n5. **Horizontal scale out of the box.** A single process is a single point of failure, which we accept and mitigate with reconnect, resume and durable leases.",
+  "risks": [
+   {
+    "risk": "CPU-bound work blocks the single event loop (large op batches, sync hashing, JSON parsing of big payloads, synchronous argon2) and every socket's lock latency spikes, failing the live lock-contention demo.",
+    "mitigation": "Only async crypto (argon2 runs on the libuv threadpool, UV_THREADPOOL_SIZE=8). Hash streams with createHash. WebSocket maxPayload of 1 MiB, with bulk bytes over HTTPS streams. @fastify/under-pressure returns 503 when event-loop delay exceeds 200 ms. An eventloop_delay_p99 metric has a nightly CI budget of <= 20 ms. Any server-side CPU task goes to worker_threads."
+   },
+   {
+    "risk": "A single process is a single point of failure: a crash or deploy drops every socket.",
+    "mitigation": "Clients reconnect with exponential backoff (0.5-30 s, full jitter) and send hello{resumeFrom: serverSeq}. The durable outbox plus op_log idempotency makes replay lossless (OFF-02). Leases live in the locks table with TTL, so they survive restarts. close-with-grace sends 'bye' before exit. Compose uses restart: unless-stopped."
+   },
+   {
+    "risk": "Node 24 enters Maintenance LTS on 2026-10-20, around the freeze, and Node 26 becomes LTS in late Oct 2026.",
+    "mitigation": "Maintenance LTS still gets security fixes until 2028-04-30, well past v1.0.0. Pin by image digest, take patch updates only, and consider Node 26 only after v1.0.0 through a new decision record."
+   },
+   {
+    "risk": "Fastify 6 goes GA mid-semester and plugin majors move with it.",
+    "mitigation": "Pin fastify ^5.12 and the plugin majors that match v5. The LTS policy gives v5 at least 6 months of security fixes after v6. Dependabot is limited to patch/minor after the freeze."
+   },
+   {
+    "risk": "Type-stripping limits: no enums, namespaces, parameter properties or path aliases, and no TS inside node_modules paths. This may bite workspace packages.",
+    "mitigation": "tsconfig uses erasableSyntaxOnly, verbatimModuleSyntax and rewriteRelativeImportExtensions. Use string-literal unions instead of enums, and package.json 'imports' or workspace packages instead of paths. Prototype P3 verifies that symlinked workspaces resolve outside node_modules. Fallback: bundle the server with tsdown for the image."
+   },
+   {
+    "risk": "The MEM-05 remote target (5 MB page-in <= 2 s p95) depends on the network from Lahore to the VPS, not on the runtime. 5 MB at 20 Mbps is already 2 s.",
+    "mitigation": "Stream end to end without buffering, gzip pages client-side with CompressionStream (serialized state compresses well), and use keep-alive. Choose the VPS region by the RTT and bandwidth measured in P2, and prefetch speculative pages (PRE)."
+   },
+   {
+    "risk": "Examiners probe event-loop internals and backpressure in the viva, and a member cannot explain them.",
+    "mitigation": "Every member owns one server plugin as a secondary author. Hold one internal session on the event loop, backpressure (ws bufferedAmount) and transaction retry, and write a one-page primer in ARCHITECTURE.md."
+   },
+   {
+    "risk": "Supply-chain risk and dependency sprawl on npm.",
+    "mitigation": "About 15 direct server dependencies, no native addons (argon2 is built in), npm ci --ignore-scripts, npm audit in CI, lockfile committed, every dependency listed in THIRD_PARTY.md."
+   },
+   {
+    "risk": "Idle sockets get dropped by NATs or proxies, and permessage-deflate fragments memory.",
+    "mitigation": "25 s ws ping, terminate after 2 missed pongs, lease TTL 15 s renewed every 5 s. Keep perMessageDeflate off (the server default) and send small JSON frames."
+   }
+  ],
+  "reversal_trigger": "Revisit this decision if P1 or the nightly soak on the production-size VPS shows any of the following:\n- more than 32 KB of total system memory per idle socket at 5,000 sockets;\n- server-side lock-grant p95 above 50 ms, or event-loop delay p99 above 50 ms, at 1,000 clients x 20 msg/s;\n- a need to run more than one server process.\n\nFirst response: replace ws with uWebSockets.js behind the Transport interface and keep Node/Fastify. If that still fails, re-run P1 against the then-current Bun 1.4.x and Go 1.27 and submit a new decision record for instructor approval.\n\nAlso revisit if a required library (pg + pgvector, the S3 client or the LLM SDK) breaks on Node 24 with no fix within 7 days.",
+  "team_prototype": "Weeks 2-3. Owner: QA/DevOps; secondary: Kernel; reviewer: VFS/DB. Run on the same VPS size the deployment record picks (e.g. 2 vCPU / 4 GB), with the load generator on a separate machine. Commit the scripts under tests/performance/ and raw CSVs plus a results table under docs/evidence/.\n\n**P1: WebSocket lock-server soak (decides this record)**\n- Implement the same ~150-line lock server three times: Node 24 + Fastify + @fastify/websocket, Bun 1.4 Bun.serve, and Go 1.27 + coder/websocket (Deno optional).\n- Protocol: JSON hello, lock.acquire, lock.renew, lock.release, grant/deny; 25 s ping; 15 s lease; leases written to Postgres.\n- Script:\n  1. Ramp 0 to 5,000 sockets at 100/s and hold idle for 3 min.\n  2. Run 1,000 sockets doing 20 lock ops/s each for 3 min.\n  3. SIGKILL 100 clients and check their leases expire within the TTL (VFS-09).\n- Record per runtime: RSS and kernel socket memory per connection (process.memoryUsage, ss -tm, /proc/meminfo); server-side lock-grant p50/p95/p99 from a histogram; client RTT; event-loop delay p99 (perf_hooks.monitorEventLoopDelay); CPU%; dropped messages; reconnect time.\n- Pass budgets for Node: <= 16 KB system memory per idle socket; server lock-grant p95 <= 20 ms; event-loop delay p99 <= 20 ms.\n\n**P2: Remote swap page-in**\n- 100 GETs of a 5 MB swap page (raw and gzip) streamed by Fastify from the fs adapter and from the S3 adapter, to Chrome on a lab PC in Lahore.\n- Report p50/p95 against MEM-05's 2 s, plus the measured RTT and bandwidth to candidate regions.\n\n**P3: Type-sharing smoke test**\n- protocol/ is imported by the Vite client and by `node server/src/main.ts` (type stripping through the workspace symlink).\n- Rename one message field and show that `tsc --noEmit` (TS 7) fails on both sides in CI.\n\n**P4: Argon2id burst**\n- 50 concurrent logins with node:crypto argon2id (19 MiB, t=2, p=1).\n- Record hash-time p95 and event-loop delay p99 during the burst.\n\nPresent the P1/P2 tables at the Week-4 defence as this record's evidence, replacing the cited third-party numbers.",
+  "requirement_ids_served": [
+   "VFS-09",
+   "VFS-10",
+   "OFF-02",
+   "OFF-03",
+   "OFF-04",
+   "DB-02",
+   "DB-03",
+   "DB-05",
+   "MEM-04",
+   "MEM-05",
+   "BOOT-05",
+   "BOOT-06",
+   "AGT-01",
+   "AGT-02",
+   "AGT-04",
+   "AGT-05",
+   "AGT-08",
+   "RAG-03",
+   "RAG-05",
+   "PRE-05",
+   "s8 boundary 3 (server authoritative for shared state)",
+   "s12.6 (server-side keys, rate limits, cost cap, graceful degradation, recorded responses)",
+   "s14.2 Backend runtime",
+   "s15 testing and coverage",
+   "s17 <=3-command bring-up"
+  ],
+  "packages": [
+   {
+    "name": "Node.js (runtime, image node:24-alpine pinned by digest)",
+    "version": "24.21.0",
+    "purpose": "Server runtime, Active LTS; native TS type stripping; built-in crypto.argon2",
+    "licence": "MIT"
+   },
+   {
+    "name": "fastify",
+    "version": "5.12.5",
+    "purpose": "HTTP framework: plugins per backend component, hooks for auth and tenancy, JSON-Schema validation, pino logger",
+    "licence": "MIT"
+   },
+   {
+    "name": "@fastify/websocket",
+    "version": "11.3.1",
+    "purpose": "WebSocket routes on the same server; auth runs in preValidation before upgrade; injectWS for tests",
+    "licence": "MIT"
+   },
+   {
+    "name": "ws",
+    "version": "8.21.3",
+    "purpose": "WebSocket implementation under @fastify/websocket; direct devDependency for the load generator and tests",
+    "licence": "MIT"
+   },
+   {
+    "name": "typebox",
+    "version": "1.3.34",
+    "purpose": "Shared protocol schemas that give TS types, runtime validation and JSON Schema for LLM tool definitions",
+    "licence": "MIT"
+   },
+   {
+    "name": "@fastify/type-provider-typebox",
+    "version": "6.1.0",
+    "purpose": "Infers Fastify route types from the TypeBox schemas",
+    "licence": "MIT"
+   },
+   {
+    "name": "@fastify/cookie",
+    "version": "11.1.2",
+    "purpose": "httpOnly session cookies, also used to authenticate the WebSocket upgrade",
+    "licence": "MIT"
+   },
+   {
+    "name": "@fastify/rate-limit",
+    "version": "11.2.0",
+    "purpose": "Per-uid HTTP rate limits, including the LLM routes",
+    "licence": "MIT"
+   },
+   {
+    "name": "@fastify/helmet",
+    "version": "13.1.1",
+    "purpose": "Security headers",
+    "licence": "MIT"
+   },
+   {
+    "name": "@fastify/under-pressure",
+    "version": "9.2.0",
+    "purpose": "Event-loop delay and heap load shedding, plus health route",
+    "licence": "MIT"
+   },
+   {
+    "name": "close-with-grace",
+    "version": "2.5.0",
+    "purpose": "Graceful shutdown: send bye to sockets, drain, end the pool",
+    "licence": "MIT"
+   },
+   {
+    "name": "pg",
+    "version": "8.23.0",
+    "purpose": "Postgres driver with explicit BEGIN ISOLATION LEVEL, LISTEN support and OpenTelemetry instrumentation; ORM or query builder layered on top per the DB record",
+    "licence": "MIT"
+   },
+   {
+    "name": "pgvector",
+    "version": "0.3.0",
+    "purpose": "Vector type (de)serialisation for file_chunks.embedding",
+    "licence": "MIT"
+   },
+   {
+    "name": "@aws-sdk/client-s3",
+    "version": "3.1138.0",
+    "purpose": "S3-compatible object storage for blobs and remote swap pages",
+    "licence": "Apache-2.0"
+   },
+   {
+    "name": "@aws-sdk/lib-storage",
+    "version": "3.1138.0",
+    "purpose": "Streaming multipart upload with bounded memory",
+    "licence": "Apache-2.0"
+   },
+   {
+    "name": "node:crypto argon2 (built-in)",
+    "version": "Node >= 24.7.0",
+    "purpose": "Argon2id password hashing without a native addon; fallback @node-rs/argon2 2.2.1 (MIT)",
+    "licence": "MIT (Node.js)"
+   },
+   {
+    "name": "@anthropic-ai/sdk",
+    "version": "0.128.0",
+    "purpose": "LLM gateway provider client, called only on the server (swap for the provider chosen in the AI-models record)",
+    "licence": "MIT"
+   },
+   {
+    "name": "pino",
+    "version": "10.3.1",
+    "purpose": "Structured JSON logs; Fastify's built-in logger",
+    "licence": "MIT"
+   },
+   {
+    "name": "prom-client",
+    "version": "15.1.3",
+    "purpose": "/metrics: ws_connections, lock_grant_ms, op_apply_ms, txn_retries, eventloop_delay, llm_tokens and cost",
+    "licence": "Apache-2.0"
+   },
+   {
+    "name": "vitest + @vitest/coverage-v8",
+    "version": "5.0.1",
+    "purpose": "One test runner for client and server with coverage thresholds in CI",
+    "licence": "MIT"
+   },
+   {
+    "name": "@testcontainers/postgresql",
+    "version": "12.1.0",
+    "purpose": "Integration and fault-injection tests against real Postgres + pgvector in CI",
+    "licence": "MIT"
+   },
+   {
+    "name": "fast-check",
+    "version": "4.10.2",
+    "purpose": "Property-based tests (random op sequences keep fsck clean)",
+    "licence": "MIT"
+   },
+   {
+    "name": "typescript",
+    "version": "7.0.2",
+    "purpose": "Type checking only (tsc --noEmit) with the Go-native compiler",
+    "licence": "Apache-2.0"
+   },
+   {
+    "name": "@types/node",
+    "version": "24.13.6",
+    "purpose": "Node 24 typings",
+    "licence": "MIT"
+   },
+   {
+    "name": "@fastify/otel + @opentelemetry/sdk-node (optional)",
+    "version": "0.21.0 / 0.222.0",
+    "purpose": "Tracing, only if metrics and logs prove insufficient",
+    "licence": "MIT / Apache-2.0"
+   },
+   {
+    "name": "uWebSockets.js (NOT installed; reversal path)",
+    "version": "v20.71.0 (GitHub tag, not on npm)",
+    "purpose": "Drop-in transport if the P1 memory or latency budgets fail",
+    "licence": "Apache-2.0"
+   }
+  ],
+  "design_notes": "1. TOPOLOGY (fewest moving parts)\n- Docker Compose runs three things:\n  - server: one Node 24 process running the Fastify app;\n  - db: Postgres with pgvector;\n  - objects: any S3-compatible store (MinIO CE is archived; the store is chosen in the deployment record), or none if the FsBlobStore adapter on a VPS volume is chosen.\n- No Redis/Valkey and no message broker.\n- The reverse proxy (deployment record) must pass Upgrade/Connection headers and use idle timeouts longer than 60 s.\n- Capacity math:\n  - Idle sockets: 5,000 x 6.6 KB (published plain-Node figure) is about 33 MB. Even a pessimistic 64 KB each is about 320 MB, which fits a 4 GB VPS next to Postgres.\n  - Active load: 1,000 clients x 20 msg/s = 20k msg/s, against the ~100k msg/s published for Node+ws: about 5x headroom, to be confirmed by P1.\n  - So one process is enough, and a single authority keeps lock ordering linearizable.\n\n2. REPO LAYOUT (backend part, s15.1)\nprotocol/ (shared by the browser kernel and the server; pure TS, erasable syntax only):\n- syscall.ts: SyscallReq/SyscallRes, Errno union ('ENOENT'|'EEXIST'|...|'EBUSY'|'EDQUOT'|...)\n- ws.ts: ClientMsg and ServerMsg discriminated unions\n- oplog.ts: VfsOp union (mkdir, unlink{recursive}, rename, chmod{recursive}, write{blobSha, expectVersion}, ...)\n- tools.ts: agent tool schemas (the same TypeBox objects become the LLM tool input_schema, AGT-01)\n\nvfs/perm.ts and vfs/path.ts are pure functions imported by the client kernel AND the server, so EACCES/ENOENT behave identically on both sides.\n\ndsa/heap is the team's hand-written min-heap. It is reused server-side as the lease-expiry queue (it is not a library, so the DSA rule is respected).\n\nserver/src/:\n- app.ts: buildApp(cfg); tests call it with fastify.inject() and injectWS\n- main.ts: listen and close-with-grace\n- plugins/db.ts: pg Pool, tx() helper, fault injector\n- gateway/auth.ts: sessions, argon2id, req.user {uid, gids}, tenancy\n- gateway/ratelimit.ts\n- sync/ws.ts: GET /ws {websocket:true}, connection registry Map<uid, Set<Conn>>\n- sync/engine.ts: apply op in one txn, op_log idempotency, broadcast after commit\n- locks/manager.ts: leases; Postgres is authoritative, the heap only drives expiry\n- storage/blobstore.ts: interface BlobStore { put(key, Readable, sha256): Promise<void>; get(key): Promise<Readable>; delete(key) }, implemented by FsBlobStore and S3BlobStore\n- swap/routes.ts: PUT/GET /api/swap/:session/:pid/:page\n- llm/gateway.ts: POST /api/llm/plan, POST /api/llm/embed (if hosted embeddings)\n- obs/metrics.ts: GET /metrics, /healthz, /readyz\n\n3. WEBSOCKET PROTOCOL v1\n- Encoding: JSON text frames, readable in Chrome DevTools. maxPayload 1 MiB; bulk bytes always go over HTTPS.\n- Client to server:\n  - hello{proto:1, sessionId, resumeFrom:serverSeq}\n  - op{opId: uuidv7 (the idempotency key), seq: per-session counter, lamport, op: VfsOp, expect: {ino: version}}\n  - lock.acquire{reqId, ino, mode: 'S'|'X'}\n  - lock.renew{leaseIds}\n  - lock.release{leaseId}\n- Server to client:\n  - welcome{serverSeq, leaseTtlMs: 15000, heartbeatMs: 25000}\n  - ack{opId, serverSeq, result}\n  - nack{opId, errno, conflict?: {ino, theirVersion, conflictCopyPath}}\n  - lock.granted{reqId, leaseId, expiresAt}\n  - lock.denied{reqId, errno: 'EBUSY', holder}\n  - event{serverSeq, kind: 'vfs.changed'|'lock.released'|'quota'|'session', ...}\n  - bye{reason}\n- Ordering:\n  - Within a session: TCP keeps frame order, and each connection processes messages serially (conn.chain = conn.chain.then(() => handle(msg))). A seq gap gets a nack and forces a resync.\n  - Across sessions: the DB serialises transactions, and serverSeq (a bigint from the events table) orders the broadcasts.\n- Exactly-once replay (OFF-02): INSERT INTO op_log(op_id, ...) runs inside the SAME transaction as the operation. On a unique conflict, the server returns the stored result instead of re-applying.\n- Broadcast only after COMMIT resolves, from the in-process bus. This is the same guarantee NOTIFY gives, without the global commit lock.\n- If a second process is ever needed: NOTIFY plotinium, '<serverSeq>' inside the transaction (payload < 8000 B), and every process LISTENs and reads the event row.\n- Heartbeats:\n  - The server sends a ws ping every 25 s and calls terminate() after 2 missed pongs.\n  - Leases have a 15 s TTL renewed every 5 s. A socket close releases that session's leases at once; the TTL covers crashed holders (VFS-09).\n- Reconnect: exponential backoff 0.5 s to 30 s with full jitter. The server replays events after resumeFrom from a bounded ring buffer (the hand-written ring buffer earns extra credit), or answers 'resync' if resumeFrom is too old.\n- Attach socket.on('message') synchronously in the route handler (@fastify/websocket drops messages otherwise). Authenticate in preValidation using the session cookie and check the Origin header, which prevents cross-site WebSocket hijacking.\n- Per-connection token bucket: 50 msg/s with a burst of 200.\n\n4. TRANSACTION HELPER\nThe isolation level is set by the DB record; this helper supports SERIALIZABLE with retry.\n\nexport async function tx<T>(pool: Pool, fn: (c: PoolClient) => Promise<T>, max = 5): Promise<T> {\n  for (let attempt = 0; ; attempt++) {\n    const c = await pool.connect();\n    try {\n      await c.query('BEGIN ISOLATION LEVEL SERIALIZABLE');\n      const out = await fn(c);\n      await c.query('COMMIT');\n      return out;\n    } catch (e: any) {\n      await c.query('ROLLBACK').catch(() => {});\n      if ((e.code === '40001' || e.code === '40P01') && attempt < max) { await sleep(Math.random() * 10 * 2 ** attempt); continue; }\n      throw e;\n    } finally { c.release(); }\n  }\n}\n\nFault injection: bulk ops call fault.tick() after every node operation. When a request carries faultAfter=N (root-only, enabled by a server flag for the demo account and in CI), the Nth tick throws, the transaction rolls back, and the tree checksum, orphan probes and quota stay unchanged (DB-02).\n\n5. BLOBS AND REMOTE SWAP (MEM-04/05)\n- Upload: PUT with application/octet-stream through a pass-through content-type parser. stream.pipeline(req -> sha256 tee -> lib-storage Upload) keeps memory bounded. Verify the checksum, THEN insert the swap_pages or blobs row in a transaction.\n- Download: GET streams the store's Readable to the reply. The server never buffers a whole 5 MB page.\n- The client gzips pages with CompressionStream before upload. The checksum is taken over the uncompressed bytes (MEM-03 byte-identical page-in).\n\n6. LLM GATEWAY (s12.6)\n- The API key exists only in the server env (.env is gitignored; CI uses secrets).\n- Handler sequence:\n  1. auth;\n  2. per-uid token bucket;\n  3. budget check: SELECT ... FOR UPDATE on llm_budget;\n  4. provider call with temperature 0 and tool schemas from protocol/tools.ts;\n  5. record input/output tokens and cost in audit_log / llm_calls;\n  6. return the plan as data, validated against the schemas and never eval'd.\n- Budget exhausted or rate-limited: return 429/503 with an errno, and the client falls back to keyword search or the plain terminal.\n- CI swaps in a RecordedLlmClient that looks up fixtures by sha256 of the request.\n\n7. AUTH\n- argon2id through the async crypto.argon2 (memory 19456 KiB, passes 2, parallelism 1, 16-byte random nonce), stored as a PHC-style string.\n- Session row plus an httpOnly, Secure, SameSite=Strict cookie. The same cookie authenticates /ws.\n- A guest/demo account is seeded.\n\n8. EVENT-LOOP HYGIENE AND OBSERVABILITY\n- under-pressure sheds load at maxEventLoopDelay 200 ms.\n- Nightly performance budget: eventloop p99 <= 20 ms and lock_grant p95 <= 20 ms at 1,000 x 20 msg/s.\n- pino logs carry reqId, uid, sessionId, opId and pid.\n- prom-client histograms power the Task-Manager-style server panel and the defence evidence.\n\n9. TOOLING\n- tsconfig compilerOptions: erasableSyntaxOnly, verbatimModuleSyntax, rewriteRelativeImportExtensions, module nodenext, noEmit.\n- Dev runs `node --watch server/src/main.ts`; CI runs `tsc -b --noEmit`.\n- Vitest projects: server (node) and client (browser) with v8 coverage thresholds of 70% overall and 85% for dsa/, vfs/ and kernel/.\n- Testcontainers provides Postgres for integration and fault-injection tests.\n\n10. DOCKER AND BRING-UP\n- Multi-stage node:24-alpine build (61.6 MB compressed base), npm ci --omit=dev --ignore-scripts, USER node, HEALTHCHECK on /readyz.\n- Examiner bring-up (3 commands):\n  1. cp .env.example .env\n  2. docker compose up -d --build\n  3. docker compose exec server node db/migrate.ts up --seed\n- No native addons, so the build succeeds on any x86/ARM machine.",
+  "open_questions": [
+   "VPS region and provider (deployment record): the measured Lahore-to-VPS RTT and bandwidth decide whether MEM-05's remote 5 MB <= 2 s p95 is reachable.",
+   "Object store now that MinIO CE is archived: self-hosted SeaweedFS, Garage or RustFS, Cloudflare R2's free tier, or the FsBlobStore adapter on the VPS volume. Does the instructor accept a filesystem-backed object store for MEM-04?",
+   "Schema library for protocol/: TypeBox (JSON Schema first; fits Fastify and LLM tool schemas) or Zod 4 (z.toJSONSchema, smaller client bundle with zod/mini). Settle this in the syscall/UI record after measuring client bundle cost against the boot budget.",
+   "ORM/query builder over pg (Drizzle 0.45.3, Kysely 0.29.6 or raw SQL) and the isolation level: this belongs to the DB record. The tx() helper supports either.",
+   "Will embeddings be computed server-side (hosted API through the LLM gateway, network-bound) or client-side in a worker? The first adds gateway traffic but no CPU load on the event loop.",
+   "Does the instructor allow a runtime minor/major bump after the freeze (e.g. to Node 26 LTS in late Oct 2026) as a security-only change, or does it need a new decision record?"
+  ]
+ },
+ "examiner_review": {
+  "verdict": "upheld_with_changes",
+  "factual_errors": [
+   {
+    "claim": "Reversal path: 'uWebSockets.js ... Drop-in transport if the P1 memory or latency budgets fail', while the image stays node:24-alpine, and 'replace ws with uWebSockets.js behind the Transport interface and keep Node/Fastify'.",
+    "correction": "uWebSockets.js is not a drop-in under Fastify. It runs its own native HTTP/WS listener, so it would be a separate listener that the reverse proxy routes /ws to. Its prebuilt binaries are also built for glibc only: on Alpine (musl), even with gcompat, the addon fails to load or crashes with SIGSEGV. The fallback therefore does not work on the chosen node:24-alpine base. Use node:24-slim (80.8 MB compressed, against 61.6 MB for alpine), or accept a base-image change as part of the reversal. The latest tag v20.71.0 is confirmed.",
+    "source": "https://github.com/uNetworking/uWebSockets.js/discussions/158 ; https://api.github.com/repos/uNetworking/uWebSockets.js/tags ; hub.docker.com/v2/repositories/library/node/tags/24-slim (80.8 MB, queried 2026-09-23)"
+   },
+   {
+    "claim": "Design note 3: 'Across sessions: the DB serialises transactions, and serverSeq (a bigint from the events table) orders the broadcasts', with replay 'after resumeFrom'.",
+    "correction": "A Postgres sequence or identity value is handed out when nextval() is called, not when the transaction commits, and the numbers are explicitly not gapless. Two concurrent transactions can commit in the opposite order to their serverSeq values. A client can then receive seq 11, disconnect, resume from 11 and never see seq 10. SERIALIZABLE isolation does not change this. NOTIFY does guarantee commit order, but an in-process broadcast whose sequence number came from the DB does not. Fix: assign serverSeq in the single server process when COMMIT resolves (a monotonic counter plus a boot epoch), or take a counter row that the transaction already locks FOR UPDATE.",
+    "source": "https://www.postgresql.org/docs/current/functions-sequence.html ('PostgreSQL sequence objects cannot be used to obtain gapless sequences'); https://www.postgresql.org/docs/current/sql-notify.html (PostgreSQL 18.6)"
+   },
+   {
+    "claim": "'Fastify 6.0.0-alpha.4 exists (2026-09-17)'.",
+    "correction": "npm records the publish of 6.0.0-alpha.4 at 2026-09-16T10:23Z, the same day as 5.12.5 (07:37Z). This is a small date slip and does not change the analysis.",
+    "source": "npm view fastify time (queried 2026-09-23)"
+   },
+   {
+    "claim": "'The native Bun.otel PR #39965 was still open on 2026-08-21.'",
+    "correction": "The PR was opened on 2026-08-21 and is still open on 2026-09-23. Issue #26536, open since 2026-01-28, is also still open. The record understates the point, which actually strengthens its case against Bun.",
+    "source": "https://api.github.com/repos/oven-sh/bun/pulls/39965 ; https://api.github.com/repos/oven-sh/bun/issues/26536"
+   },
+   {
+    "claim": "Package list: 'typescript 7.0.2: type checking only (tsc --noEmit)', presented as a drop-in for the monorepo's typescript package.",
+    "correction": "TypeScript 7.0 has no stable programmatic API; the TS team expects one in 7.1. typescript-eslint 8.70.1, the current release, declares peer typescript >=4.8.4 <6.1.0, so type-aware linting breaks if typescript resolves to 7.0.2. Microsoft's workaround is @typescript/typescript6, installed side by side through an npm alias, or the team can lint with a tool that does not depend on the TS API (oxlint). The version number itself is correct.",
+    "source": "npm view typescript-eslint peerDependencies (8.70.1: typescript '>=4.8.4 <6.1.0'); https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/ ; https://github.com/typescript-eslint/typescript-eslint/issues/12518"
+   },
+   {
+    "claim": "Package list: '@fastify/helmet 13.1.1: Security headers', with no configuration given, next to MEM-01 (measureUserAgentSpecificMemory) and a WASM/Worker AI runtime.",
+    "correction": "Helmet leaves Cross-Origin-Embedder-Policy unset by default, so the page is not cross-origin isolated and performance.measureUserAgentSpecificMemory(), which MEM-01's validation needs, is unavailable. Helmet's default CSP (default-src 'self'; script-src 'self') has no 'wasm-unsafe-eval', which blocks WebAssembly compilation for a WASM/ONNX embedding worker, and no blob: worker-src. The defaults must be overridden explicitly.",
+    "source": "https://github.com/helmetjs/helmet (README: COEP 'not set by default'; default CSP directives); spec s9.2 MEM-01 ('requires cross-origin isolation')"
+   }
+  ],
+  "spec_gaps": [
+   "Multi-tab (spec s2: 'Several tabs, devices and users can change the same data at the same time') is not addressed. The protocol keys the per-session seq, leases and 'socket close releases that session's leases' on sessionId. Two tabs sharing a session would interleave seq numbers, and closing one tab would release the other tab's locks. Fix: one session per tab (tabId in hello), and one leader tab chosen with the Web Locks API drains the shared IndexedDB outbox.",
+   "COOP/COEP and CSP (MEM-01; the WASM/WebGPU AI runtime; OFF-05) are missing. The record never says who serves the client shell, and never requires COOP: same-origin + COEP: require-corp (or credentialless) + CORP. Without them self.crossOriginIsolated is false and MEM-01's validation path is lost. There is also no Cache-Control policy for index.html and sw.js (no-cache) versus hashed assets (immutable), which the versioned 'restart to update' Service Worker relies on.",
+   "Chrome background-tab throttling versus VFS-09 is not addressed. After a tab has been hidden for 5 minutes, Chrome's intensive wake-up throttling fires main-thread timers only once a minute, and an open WebSocket is NOT an exemption. A 5 s JS renew of a 15 s lease would therefore lapse, and a user who switches tabs silently loses an exclusive lock. Protocol-level pongs are answered by the browser's network stack without JS, so they should count as implicit renewal. Explicit renewals should run from the sync worker, not the main thread.",
+   "BOOT-12 (warm <=1.5 s, cold <=3.0 s): the record claims BOOT-05/06 but never keeps server round trips (session check, TLS + WS handshake from Lahore to the VPS region, often 150-250 ms RTT) off the boot critical path. The auth and sync services must be non-critical in the boot DAG, the desktop must become interactive from local state, and the WS should connect afterwards.",
+   "AGT-09 (agent killed mid-plan, txn rolled back): there is no cancel path. Worse, conn.chain serialises ALL messages on a connection, so a cancel{opId} (or a lock.renew) waits in the queue behind the very bulk operation it should abort. Operations and control messages need separate lanes, and the fault.tick() checkpoint should double as the cancellation point.",
+   "MEM-04 ('a remotely swapped state can be paged in from a new browser session'): routes are keyed /api/swap/:session/:pid/:page, but the new session has a new session_id. Authorisation and lookup must go by owner_uid, with a listing of the previous session's pages. Orphaned swap pages also need garbage collection and quota accounting.",
+   "Resumable sessions (s14.3: 'resumable sessions using sequence numbers'): releasing leases on ANY socket close means a Wi-Fi blip during the live two-user lock demo (s17) hands the lock to the other user. Leases should be released immediately only on a clean close/bye; after an abnormal close they should be held until the TTL expires.",
+   "s17 clean bring-up ('<=3 commands finishing within 5 minutes' on a machine the team does not control): 'docker compose up -d --build' runs npm ci and the Vite build from source on the examiner's network. The third command, 'exec server node db/migrate.ts', can race Postgres readiness. The fix is prebuilt multi-arch images on GHCR plus a one-shot migrate service gated on the db healthcheck.",
+   "Code Quality (10%) and CI: no lint toolchain is chosen, and the chosen TS 7.0.2 is incompatible with typescript-eslint until TS 7.1.",
+   "s12.6 cost cap: design note 6 performs 'budget check: SELECT ... FOR UPDATE on llm_budget' and then 'provider call'. If both run in one transaction, a Postgres row lock and a pool connection are held across a multi-second external call. That serialises every LLM request that shares the budget row and can exhaust the pool.",
+   "OFF-03 (offline login with a salted verifier): the server-side argon2id is specified, but the browser must be able to recompute whatever verifier the server issues. Chrome's WebCrypto has PBKDF2 but not Argon2, so the choice is argon2 in WASM inside the auth worker or a separate PBKDF2 verifier. The record claims OFF-03 without settling this.",
+   "Backpressure (s14.2 'thousands of long-lived WebSockets'): ws bufferedAmount is mentioned only as a viva topic. There is no slow-consumer policy (threshold, resync, close code), and @fastify/under-pressure only sheds HTTP requests and new upgrades, not messages on sockets already open."
+  ],
+  "weaknesses": [
+   "The evidence is entirely third-party today, and the scores that decide the ranking (C4, C7) rest on vendor benchmarks: Bun's own docs, fastify.dev's own page and AnyCable. s14.1 accepts cited benchmarks, but the record admits P1-P4 have not run. If the W4 defence happens before P1, C4/C7 are unevidenced for THIS workload and THIS VPS.",
+   "P1 measures the database rather than the runtime. 1,000 clients x 20 lock ops/s with every lease written to Postgres is about 20k write transactions/s (60-80k pg round trips) on a 2-vCPU VPS shared with Node. That is a Postgres and pg-driver limit, and it is not a spec target: s14.3 says ~20 events/s per client during bulk operations, and the spec's own example trigger is '200 ms under 50 clients'. The reversal trigger would fire for a DB reason, and its first response (swap ws for uWS) would not fix it. The transport soak with in-memory leases should be split from an end-to-end test with Postgres leases and a realistic mix.",
+   "C4 lumps together 'concurrency model' and 'memory per connection'. Go scores 5 with the record's own ~24 KB/conn figure while Node scores 4 with 6.6 KB/conn, which is inconsistent on the memory half. s14.2 names memory per connection explicitly, so it deserves its own measured criterion.",
+   "C1 (team skill) and C2 (shared types) together hold 30% of the weight and both mostly reward 'it is TypeScript'. That is defensible, but with no sensitivity analysis the matrix looks reverse-engineered to an examiner. Our check: Node still wins at C1=C2=10 and C4=25 (Node 89, Go 83, Bun 81, Hono 81, Deno 79). Bun wins only if maturity and testing fall to 5% each (Bun 90, Node 87). Go wins only if team skill and shared types fall to 5% each and throughput rises to 20% (Go 89, Node 85). The record should show this.",
+   "Node C5=5 even though Node 24 moves to Maintenance LTS on 2026-10-20, weeks after the freeze. Node 26 becomes Active LTS in late October 2026 (active until 2027-10-27, security until 2029-04-30), and Node.js moves to annual majors from 27. A 4 would not change the ranking, but the record gives away an easy examiner point.",
+   "The per-connection 'conn.chain' serialisation is applied to every message type. It blocks lease renewals and cancels behind long bulk operations, including SERIALIZABLE retry backoff.",
+   "The lease design contradicts itself: 'resumable sessions' and 'leases survive restarts' sit next to 'a socket close releases that session's leases at once'.",
+   "The tx() helper calls release() without the error on connection-level failures, so a broken client goes back to the pool. It also does not forbid non-DB side effects inside fn, yet those effects re-run on every retry (broadcasts, heap mutations, blob deletes).",
+   "The mitigation 'UV_THREADPOOL_SIZE=8' oversubscribes a 2-vCPU VPS. The libuv pool is shared by argon2, fs (FsBlobStore and swap streaming) and dns.lookup, so a login burst delays MEM-05 page-ins. A semaphore on concurrent hashes is better, and P4 should measure page-in p95 during a burst.",
+   "The capacity math uses a plain-ws figure (6.6 KB/conn). @fastify/websocket keeps the Fastify request, headers and a child logger alive per socket, so P1's budget must be measured through Fastify, not bare ws.",
+   "requirement_ids_served overclaims. DB-05, RAG-05, PRE-05 and BOOT-05/06 are not delivered by the runtime choice, and examiners penalise loose traceability.",
+   "The Fastify LTS policy notes that security fixes can ship as breaking minor releases. 'Dependabot limited to patch/minor after the freeze' should therefore mean minors are merged by hand after reading the release notes."
+  ],
+  "amended_recommendation": "Use Node.js 24 LTS (24.21.x; image node:24-slim pinned by digest, NOT alpine) with Fastify 5.12.x and @fastify/websocket 11.3 (built on ws 8.21). Run the backend as ONE TypeScript process: a modular monolith where each backend component (auth gateway, sync engine, lock manager, blob/swap store, LLM gateway, metrics, static shell) is its own Fastify plugin.\n\n**Runtime line.** CI runs the server suite on Node 24 AND Node 26 from day one. This frozen record pre-declares, for instructor approval at the defence, that the team may move to Node 26 after its late-October 2026 LTS promotion, but only before v0.2.0 and only if the matrix and the P1 soak are green. Otherwise we stay on Node 24 through v1.0.0; it gets security fixes until 2028-04-30.\n\n1. **Shared protocol package.** protocol/ holds, as TypeBox JSON Schemas:\n   - the syscall ABI;\n   - errno;\n   - WebSocket and op-log messages;\n   - AI tool schemas.\n\n   The browser kernel and the server both import it. The same schemas drive Fastify validation and the LLM tool definitions (AGT-01). vfs/perm.ts and vfs/path.ts are pure, environment-neutral modules shared by client and server. dsa/heap is reused server-side as the lease-expiry queue and is rebuilt from the locks table at startup.\n\n2. **Libraries.**\n   - Postgres: pg + pgvector; the ORM or query builder belongs to the DB record.\n   - Object storage: @aws-sdk/client-s3 + lib-storage behind a BlobStore interface, with an FsBlobStore adapter as well.\n   - LLM: the provider's official SDK, only inside the server-side gateway.\n   - Passwords: node:crypto argon2id (m=19 MiB, t=2, p=1), stored as a PHC string and verified with timingSafeEqual. At most 2 hashes run at once (semaphore); do NOT raise UV_THREADPOOL_SIZE to 8 on 2 vCPUs. Fallback: @node-rs/argon2.\n   - Offline verifier (OFF-03): must be something Chrome can recompute (argon2 in WASM inside the auth worker, or PBKDF2-SHA-256 via WebCrypto); settle it in SECURITY.md.\n\n3. **Tooling.**\n   - Tests: Vitest 5 with v8 coverage (70% overall; 85% for dsa/, vfs/ and kernel/) and Testcontainers Postgres.\n   - Logs and metrics: pino and prom-client.\n   - Type checking: TypeScript 7.0 runs `tsc -b --noEmit`. TypeScript 6.0 stays installed under the `typescript` name (@typescript/typescript6 via an npm alias) for typescript-eslint, whose peer range is <6.1.0, until TS 7.1 ships a stable API. Alternative: lint with oxlint.\n   - tsconfig: erasableSyntaxOnly, verbatimModuleSyntax, rewriteRelativeImportExtensions. Dev runs `node --watch server/src/main.ts`.\n\n4. **No broker.** No Redis/Valkey and no LISTEN/NOTIFY. The single process fans out in memory after COMMIT. NOTIFY, which is commit-ordered, is added only if a second process ever becomes necessary.\n\n5. **Sync protocol v1, with these corrections.**\n   a. **serverSeq.** The single server process assigns serverSeq when COMMIT resolves: a monotonic in-memory counter prefixed by a boot epoch. The event goes into the hand-written ring buffer at that moment. serverSeq is never taken from a Postgres sequence, because sequence values are not in commit order. A resume with an unknown epoch or a resumeFrom older than the buffer gets 'resync'. op_log idempotency, where the op_id is inserted in the same transaction as the operation, gives exactly-once replay (OFF-02).\n   b. **Two lanes per connection.** 'op' messages are processed serially per session. Control messages (lock.acquire, lock.renew, lock.release, cancel) are handled at once. cancel{opId} sets an abort flag that is checked at the same fault.tick() checkpoint used for fault injection, so a killed agent process rolls back mid-transaction (AGT-09).\n   c. **Lease liveness.** Any inbound frame, including a protocol-level pong, renews the session's leases. The server pings sockets that hold leases every 5 s and idle sockets every 25 s. The reason: Chrome throttles hidden-tab main-thread timers to once a minute, and WebSocket is not an exemption. Explicit lock.renew is sent from the sync worker as a fallback. Lease TTL is 15 s.\n   d. **Lease release.** On a clean close or 'bye', release the session's leases at once. On an abnormal close, keep them until the TTL expires, so a reconnect with the same sessionId resumes them. A crashed holder still expires within the TTL (VFS-09).\n   e. **Tabs.** One session per tab (hello carries tabId). One leader tab, chosen with the Web Locks API, drains the shared outbox. Broadcasts go to every other session of the uid.\n   f. **Backpressure.** If a socket's bufferedAmount goes above 1 MiB, stop sending it events and mark it resync-required. Above 4 MiB, close it with code 4008.\n   g. **Load limits.** Each connection has a token bucket of 50 msg/s with a burst of 200. maxPayload is 1 MiB; bulk bytes always go over HTTPS. perMessageDeflate stays off. @fastify/under-pressure (200 ms) guards HTTP routes and new upgrades only.\n   h. **Upgrade security.** Authenticate in preValidation with the httpOnly SameSite=Strict session cookie and check the Origin header. Attach message listeners synchronously.\n\n6. **Transactions.** The tx() helper runs SERIALIZABLE with retry on 40001/40P01 and jittered backoff; the isolation level itself is confirmed by the DB record.\n   - Call c.release(err) on connection-level errors.\n   - Allow no non-DB side effects inside fn. Broadcasts, heap updates and blob deletions go on a post-commit effects queue.\n   - Set statement_timeout and idle_in_transaction_session_timeout.\n   - Size the pool from P1 measurements.\n   - Fault injection: faultAfter=N works only for root and only behind a server flag (DB-02).\n\n7. **LLM gateway (s12.6).** The key exists only in the server env. Each call:\n   - authenticates and applies the per-uid token bucket;\n   - reserves the estimated maximum cost in a SHORT transaction;\n   - calls the provider OUTSIDE any transaction, at temperature 0, with the schemas from protocol/tools.ts;\n   - settles actual tokens and cost in a second short transaction (llm_calls / audit_log);\n   - returns the plan as data and never evals it.\n\n   When the budget is exhausted or the user is rate-limited, return 429/503 with an errno; the client falls back to keyword search or the plain terminal. CI uses a RecordedLlmClient.\n\n8. **Headers and static shell.** The server, or the proxy if the deployment record says so, serves the client with:\n   - COOP: same-origin, COEP: require-corp (or credentialless) and CORP: same-origin, so that crossOriginIsolated is true (MEM-01 measureUserAgentSpecificMemory);\n   - a CSP with script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src 'self' plus the model CDN if weights are fetched cross-origin;\n   - index.html and sw.js with Cache-Control: no-cache, and hashed assets as immutable (OFF-05).\n\n   An e2e test asserts that self.crossOriginIsolated === true.\n\n9. **Blobs and remote swap (MEM-04/05).**\n   - Transfers stream end to end with stream.pipeline and a sha256 tee; verify the checksum, then insert the row.\n   - The client gzips pages with CompressionStream; the checksum is taken over the uncompressed bytes.\n   - Swap routes authorise by owner_uid, not the current session, and can list a previous session's pages, so a new browser session can page state in.\n   - Orphaned pages are garbage-collected and count toward quota.\n\n10. **Boot budget.** Auth and sync are non-critical services in the boot DAG. The desktop becomes interactive from local state and the WebSocket connects afterwards, so no server round trip sits on the warm/cold boot critical path.\n\n11. **Deployment and bring-up.** CI publishes multi-arch (amd64 + arm64) node:24-slim images to GHCR for each tag. Compose pulls them by default and building is the fallback. A one-shot migrate service (depends_on db: service_healthy) runs the migrations and the seed, and the server depends on it having completed successfully. Bring-up is:\n    1. cp .env.example .env\n    2. docker compose up -d\n\n    Other settings: npm ci --ignore-scripts, lockfile committed, about 15 direct server dependencies, all listed in THIRD_PARTY.md, npm audit in CI.\n\n12. **Evidence and freeze conditions.**\n    - **P1a, transport soak** (in-memory leases; Node+Fastify vs Bun.serve vs Go): 5,000 idle sockets, then 1,000 at 20 msg/s. Budgets: <=16 KB system memory per idle socket measured THROUGH Fastify; server lock-grant p95 <=20 ms; event-loop delay p99 <=20 ms.\n    - **P1b, end to end** (leases in Postgres, renewals batched into one UPDATE per tick): 5,000 idle, 200 bursting at 20 msg/s, and 50 clients contending for the same inodes. Budget: lock-grant p95 <=50 ms. Then SIGKILL 100 clients and check their leases expire within the TTL.\n    - **P2:** 5 MB remote page-in p95 from Lahore, per candidate region.\n    - **P3:** type sharing through the workspace, including a failing rename in CI.\n    - **P4:** argon2 burst, measuring event-loop delay AND swap page-in p95 during the burst.\n    - **Matrix:** commit the criteria before the scores (git timestamps), split C4 into 'memory per connection (measured)' and 'concurrency/CPU isolation', and append the sensitivity analysis.\n    - **Freeze:** only if P1a and P1b meet their budgets on the production-size VPS.\n\n**Reversal trigger.** Revisit this record if P1 or the nightly soak shows any of:\n- more than 32 KB system memory per idle socket at 5,000 sockets;\n- server lock-grant p95 above 50 ms, or event-loop delay p99 above 50 ms, attributable to the runtime or transport (P1a);\n- a need for more than one server process.\n\nFirst response for a transport failure: run uWebSockets.js as a separate listener that the reverse proxy routes /ws to, which needs the glibc slim image. If the bottleneck is the database (P1b), fix batching, indexes and pool size, not the runtime. If the runtime still fails, re-run P1a against the then-current Bun 1.4.x and Go 1.27 and submit a new decision record. Also revisit if pg + pgvector, the S3 client or the LLM SDK breaks on Node 24 with no fix within 7 days.",
+  "amended_chat_reason": "The choice holds up: Node.js 24 LTS with Fastify 5 is still the right backend for a five-person TypeScript team. It shares one set of protocol and tool schemas with the browser OS, holds thousands of mostly idle WebSockets at a few KB each, covers every library the spec needs, and gets security fixes until April 2028. Bun is a month past a full Rust rewrite and has no support policy. Go or Rust would force a second language and generated types. Every version fact we checked is correct. The record needs these fixes before the defence:\n- **Event order:** number server events in the one server process when each commit finishes, not from a Postgres sequence.\n- **Locks:** keep a lock through a brief disconnect, and renew it from WebSocket pongs, because Chrome throttles background tabs.\n- **Two lanes:** handle cancel and lock messages separately from queued file operations.\n- **Headers:** set the COOP/COEP and CSP headers that memory measurement and WebAssembly need.\n- **Base image:** use node:24-slim so the uWebSockets.js fallback still works.\n- **Linting:** keep TypeScript 6 installed for the linter, since typescript-eslint does not support TypeScript 7 yet.\n- **Bring-up:** ship prebuilt images so examiners can start the system in 5 minutes.\n- **Prototype:** split P1 so the test measures the runtime, not Postgres.",
+  "defence_qa": [
+   {
+    "question": "Node runs your JavaScript on one thread. How can one process serve thousands of WebSockets, and what happens to everyone else's lock latency while someone runs rm -r on a 1,000-node tree?",
+    "strong_answer": "Our server work is I/O-bound. An idle socket is a file descriptor plus a small object that epoll watches, which is why we measured X KB per idle socket through Fastify in P1a. The rm -r is one Postgres transaction. The event loop only sends the queries and awaits them, and the node-by-node work runs inside Postgres. The CPU-heavy pieces run elsewhere: argon2 on the libuv pool behind a semaphore, hashing as streams, and anything larger in worker_threads. Each connection has two lanes, so lock requests and cancels are never queued behind a bulk operation. We export event-loop delay as a metric. P1 measured p99 = Y ms at 1,000 clients x 20 msg/s, and CI fails the nightly build above 20 ms. under-pressure sheds new HTTP requests above 200 ms."
+   },
+   {
+    "question": "Team skill and shared types together carry 30% of your weights, and both favour TypeScript. Didn't you choose the weights after picking Node?",
+    "strong_answer": "The criteria file was committed in <hash> on <date>, before the scoring commit, and git shows the order. We also ran a sensitivity analysis. Drop both TS criteria to 10% and raise WebSocket concurrency and memory to 25%, and Node still leads: 89, against Go 83, Bun 81, Hono 81 and Deno 79. Bun wins only if maturity and testing each fall to 5% (Bun 90, Node 87). That cannot be justified for a stack frozen for four months, where an unmet gate caps our mark. Go wins only if team skill and shared types each fall to 5% and throughput rises to 20%. Yet s4 and s14.4 examine every member on the whole system, and AGT-01 requires identical tool schemas on client and server. The spec's own backend factors (concurrency, ecosystem, memory per connection) carry 30%, the same as the TypeScript pair."
+   },
+   {
+    "question": "Bun is now backed by Anthropic and claims seven times Node's WebSocket message rate. Why pass it up?",
+    "strong_answer": "Throughput is not our bottleneck. Our peak is about 1,000 clients x 20 msg/s = 20k msg/s. Published Node+ws figures are about 100k msg/s, and our P1a measured Z. Maturity is the risk. Bun 1.4.0 (20 Aug 2026) is the first release after a Zig-to-Rust rewrite, 1.4.1 and 1.4.2 followed within days to fix regressions affecting Elysia and AsyncLocalStorage, and endoflife.date says Bun has no defined support policy. OpenTelemetry HTTP/Fastify instrumentation is broken under Bun (issue #26536, open since January), and native Bun.otel is still an open PR. We would be freezing a one-month-old runtime until January. Bun remains our measured alternative in P1a, and our reversal trigger names it."
+   },
+   {
+    "question": "Node 24 leaves Active LTS on 20 October 2026, just after your freeze. Why not Node 26?",
+    "strong_answer": "At the defence Node 26 is still a 'Current' release, and production should run LTS lines. Maintenance LTS still gets security fixes, until 30 April 2028, long after our January v1.0.0. Fastify 5's CI already tests Node 20, 22, 24 and 26, and our own CI runs the server suite on 24 and 26 from day one. The frozen record asks you to pre-approve one move to Node 26 after its late-October LTS promotion, before v0.2.0, and only if the matrix and the P1 soak stay green. We asked at freeze time so it does not need a surprise decision record later. Everything we depend on (type stripping, stable since 24.12, and crypto.argon2, added in 24.7) exists in both lines."
+   },
+   {
+    "question": "A student's laptop drops Wi-Fi for three seconds during the lock-contention demo. Walk us through what happens to their lock, their pending edits and the events they missed.",
+    "strong_answer": "The socket closes abnormally, so the server keeps the student's leases until the 15 s TTL runs out. Only a clean 'bye' releases them at once, so the other user still gets EBUSY. The client reconnects with jittered backoff and sends hello{sessionId, resumeFrom: epoch:seq}. The server assigns seq in its one process when each commit finishes, so the stream has no gaps. It replays everything after that seq from the ring buffer, or answers 'resync' if the epoch changed. The client then replays its IndexedDB outbox. Each op carries a uuidv7 idempotency key that is inserted into op_log in the same transaction, so an op the server already applied returns its stored result instead of running twice (OFF-02). If the student had been away longer than the TTL, the lock would have expired. Their write would then carry a stale inode version and become a conflicted copy, never a silent overwrite (VFS-10)."
+   },
+   {
+    "question": "Why not Socket.IO? It already has reconnection, rooms and acknowledgements.",
+    "strong_answer": "Three reasons. First, memory: AnyCable's 2026 benchmark puts Socket.IO at roughly 52 KB per connection, against about 5-7 KB for uWS and plain ws, and s14.2 asks us to defend memory per connection. Second, its connection-state recovery does not survive a server restart, while our resume semantics have to match the op_log, inode versions and lease table in Postgres. So we would still write our own seq, idempotency and resync logic on top of it. Third, it adds its own framing, which makes it harder to show in DevTools and to share schemas. Our JSON protocol is about ten message types, all defined once in protocol/ws.ts and validated on both sides. The hard parts of reconnection (jittered backoff, resumeFrom, 25 s heartbeats) are about 150 lines, and we test them with injectWS."
+   }
+  ],
+  "extra_risks": [
+   {
+    "risk": "Event-sequence gaps: serverSeq taken from a Postgres sequence is not in commit order, so a client that resumes from the highest seq it saw can silently miss an earlier-numbered event that committed later. The result is stale trees and wrong lock state in other sessions.",
+    "mitigation": "Assign serverSeq in the single process when COMMIT resolves (a monotonic counter plus a boot epoch) and store the event in the ring buffer at that moment. A mismatched epoch or a too-old resumeFrom gets 'resync'. A property test runs concurrent writers, random disconnects and resumes, and asserts every client converges to the DB state."
+   },
+   {
+    "risk": "Chrome intensive wake-up throttling: after 5 minutes hidden, main-thread timers fire once a minute, and an open WebSocket is not an exemption. A lease renewed by a JS timer every 5 s against a 15 s TTL lapses, and the user silently loses an exclusive lock.",
+    "mitigation": "Treat any inbound frame, including a protocol-level pong (answered by the browser without running JS), as a lease renewal. Ping lease-holding sockets every 5 s. Send explicit renewals from the sync worker, never the main thread. Add an e2e test that hides the tab for 6 minutes and asserts the lock is still held."
+   },
+   {
+    "risk": "Head-of-line blocking: conn.chain serialises every message, so lock.renew and cancel wait behind a long bulk operation or SERIALIZABLE retry backoff. AGT-09 (kill mid-plan) and lease renewal both fail under load.",
+    "mitigation": "Serialise only 'op' messages per session, and handle lock.* and cancel immediately. The cancel flag is checked at the fault.tick() checkpoint, and an integration test kills an agent midway through a 500-file rename and asserts a rollback."
+   },
+   {
+    "risk": "Transient network drop during the live two-user lock demo releases the holder's lock immediately (socket close \u2192 release), handing it to the other user.",
+    "mitigation": "Release immediately only on a clean close or 'bye'. After an abnormal close, hold the leases until the TTL and let a reconnect with the same sessionId resume them. A crashed holder still expires within the TTL (VFS-09)."
+   },
+   {
+    "risk": "Cross-origin isolation or CSP misconfiguration: Helmet's defaults leave COEP unset and omit 'wasm-unsafe-eval', so crossOriginIsolated is false (no measureUserAgentSpecificMemory for MEM-01) and the WASM embedding worker is blocked.",
+    "mitigation": "Set COOP, COEP and CORP and a CSP with 'wasm-unsafe-eval', worker-src blob: and the model CDN in connect-src, in one headers module. Serve cross-origin model weights with CORS. An e2e test asserts self.crossOriginIsolated and a successful WASM instantiation."
+   },
+   {
+    "risk": "Toolchain break: TypeScript 7.0.2 has no stable programmatic API, and typescript-eslint 8.70.1 requires typescript <6.1.0, so lint (and anything that imports the TS API) fails in CI.",
+    "mitigation": "Install TypeScript 7 for tsc and keep TypeScript 6 under the `typescript` name with the @typescript/typescript6 npm alias (or use oxlint). Pin both, and revisit when TS 7.1 ships its API."
+   },
+   {
+    "risk": "The reversal path is unusable: uWebSockets.js prebuilt binaries do not support Alpine/musl, and uWS is not an in-process drop-in for Fastify.",
+    "mitigation": "Use node:24-slim (glibc) from the start, which costs about 19 MB compressed. Keep a Transport interface so uWS could run as a separate listener behind the proxy on /ws, and smoke-test that path once in P1a."
+   },
+   {
+    "risk": "Examiner bring-up exceeds 5 minutes or fails. Building from source runs npm ci for the whole monorepo and a Vite build on an unknown network, npm's optional per-platform native bindings (Rolldown, esbuild, the TS 7 binaries) can be missing from the lockfile, and a migrate 'exec' can race Postgres readiness.",
+    "mitigation": "Publish multi-arch images to GHCR for each tag and pull them by default. Run a one-shot migrate service gated on the db healthcheck. A weekly CI job times a clean-clone bring-up on a fresh runner and fails above 4 minutes."
+   },
+   {
+    "risk": "The LLM gateway holds a FOR UPDATE row lock and a pool connection across a multi-second provider call, which serialises LLM requests and exhausts the pg pool during the AI demo.",
+    "mitigation": "Reserve the estimated cost in a short transaction, call the provider outside any transaction, and settle the actual cost in a second short transaction. idle_in_transaction_session_timeout catches regressions."
+   },
+   {
+    "risk": "An argon2 login burst saturates the shared libuv threadpool (also used by fs streams and dns.lookup), so remote swap page-ins from FsBlobStore stall past MEM-05's 2 s.",
+    "mitigation": "Run at most 2 hashes at once behind a semaphore, keep UV_THREADPOOL_SIZE at 4-6 on 2 vCPUs, and have P4 measure page-in p95 during a 50-login burst."
+   },
+   {
+    "risk": "Two tabs of one user share a sessionId or both drain the same IndexedDB outbox, which interleaves per-session seq numbers, triggers spurious resyncs and double-sends ops.",
+    "mitigation": "One session per tab (tabId in hello). A single outbox leader is chosen with navigator.locks, and the other tabs forward ops over BroadcastChannel. op_log idempotency is the safety net."
+   },
+   {
+    "risk": "Per-socket memory is higher than the plain-ws figure used in the capacity math, because @fastify/websocket keeps the request object, headers and a child logger alive for each socket.",
+    "mitigation": "P1a measures the Fastify variant, not bare ws. Disable per-request child loggers on /ws, hold only {uid, sessionId, tabId} per connection, and keep the 32 KB/socket reversal trigger."
+   }
+  ]
+ }
+}

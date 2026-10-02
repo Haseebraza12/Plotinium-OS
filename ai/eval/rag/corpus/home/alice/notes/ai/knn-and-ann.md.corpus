@@ -1,0 +1,13 @@
+# Nearest neighbour search
+
+Exact k-NN: compute the distance to every vector. O(N·d) per query; with N = 10,000 and d = 384 that is ~4 million multiply-adds, a few milliseconds in plain JavaScript. Exact is fine at our scale.
+
+Approximate (ANN) methods trade recall for speed:
+- **IVF:** cluster vectors with k-means; search only the nearest few clusters;
+- **HNSW:** layered proximity graph; greedy search from the top layer down; excellent recall/latency, memory hungry;
+- **Product quantisation:** compress vectors into codes; distances from lookup tables;
+- **LSH:** random hyperplanes; mostly of historical interest now.
+
+Measure ANN quality as recall against the exact top-k.
+
+Keeping the top k while scanning: a min-heap of size k; replace the root when a better score arrives.

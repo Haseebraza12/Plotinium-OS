@@ -1,0 +1,9 @@
+// vite.config.ts, vitest.config.ts and build/ run on Node at build and test time.
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2024"],
+    "types": ["node"]
+  },
+  "include": ["vite.config.ts", "vitest.config.ts", "build/**/*.ts"]
+}

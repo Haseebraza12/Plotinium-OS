@@ -1,0 +1,45 @@
+/* Reusable barrier for N threads built from two POSIX semaphores and a mutex (turnstile pattern).
+ * Every thread prints phase 1, waits for all, prints phase 2. */
+#include <pthread.h>
+#include <semaphore.h>
+#include <stdio.h>
+
+#define N 4
+
+static int count = 0;
+static pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
+static sem_t gate1, gate2;
+
+static void barrier(void) {
+    pthread_mutex_lock(&m);
+    if (++count == N)
+        for (int i = 0; i < N; i++) sem_post(&gate1);
+    pthread_mutex_unlock(&m);
+    sem_wait(&gate1);
+
+    pthread_mutex_lock(&m);
+    if (--count == 0)
+        for (int i = 0; i < N; i++) sem_post(&gate2);
+    pthread_mutex_unlock(&m);
+    sem_wait(&gate2);
+}
+
+static void *worker(void *arg) {
+    long id = (long)arg;
+    for (int round = 0; round < 3; round++) {
+        printf("thread %ld: phase 1 of round %d\n", id, round);
+        barrier();
+        printf("thread %ld: phase 2 of round %d\n", id, round);
+        barrier();
+    }
+    return NULL;
+}
+
+int main(void) {
+    pthread_t t[N];
+    sem_init(&gate1, 0, 0);
+    sem_init(&gate2, 0, 0);
+    for (long i = 0; i < N; i++) pthread_create(&t[i], NULL, worker, (void *)i);
+    for (int i = 0; i < N; i++) pthread_join(t[i], NULL);
+    return 0;
+}

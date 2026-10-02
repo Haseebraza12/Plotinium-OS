@@ -1,0 +1,112 @@
+[
+  {
+    "id": "UI-094 Window menu with no window: Overview enabled",
+    "ok": true,
+    "detail": [
+      "MinimiseAlt+M (disabled)",
+      "ZoomAlt+Shift+↑ (disabled)",
+      "Full Screen (disabled)",
+      "Move (disabled)",
+      "Size (disabled)",
+      "Move to Left HalfAlt+Shift+← (disabled)",
+      "Move to Right HalfAlt+Shift+→ (disabled)",
+      "Bring All to Front (disabled)",
+      "OverviewAlt+O",
+      "Close WindowAlt+Q (disabled)"
+    ]
+  },
+  {
+    "id": "UI-156 open grows from the Dock icon",
+    "ok": true,
+    "detail": {
+      "origin": "581px 778px",
+      "abs": [621, 846],
+      "icon": [622, 858],
+      "first": "matrix(0.94, 0, 0, 0.94, 0, 9.4)",
+      "mid": "matrix(1.00006, 0, 0, 1.00006, 0, -0.00936134)"
+    }
+  },
+  {
+    "id": "UI-094 right-click title bar opens window menu with Move/Size/Full Screen",
+    "ok": true,
+    "detail": [
+      "Move",
+      "Size",
+      "Move to Left HalfAlt+Shift+←",
+      "Move to Right HalfAlt+Shift+→",
+      "ZoomAlt+Shift+↑",
+      "Full Screen",
+      "MinimiseAlt+M",
+      "CloseAlt+Q"
+    ]
+  },
+  {
+    "id": "UI-094 Esc after right-click menu returns focus to content",
+    "ok": true,
+    "detail": {
+      "tag": "TEXTAREA",
+      "label": "Terminal input",
+      "cls": "xterm-helper-textarea",
+      "inView": true,
+      "win": "terminal"
+    }
+  },
+  {
+    "id": "UI-094 Esc after Alt+W menu keeps focus in content",
+    "ok": true,
+    "detail": {
+      "a": {
+        "tag": "TEXTAREA",
+        "label": "Terminal input",
+        "cls": "xterm-helper-textarea",
+        "inView": true,
+        "win": "terminal"
+      },
+      "altw": ["Move", "Size", "Move to Left HalfAlt+Shift+←", "Move to Right HalfAlt+Shift+→"]
+    }
+  },
+  {
+    "id": "UI-094 keyboard Move: arrows 16px, Shift 1px, announced",
+    "ok": true,
+    "detail": {
+      "d": [48, 1],
+      "live": [
+        "AI unavailable · plain shell",
+        "Moved to 88, 41",
+        "Sync is degraded. connecting (sync)"
+      ]
+    }
+  },
+  {
+    "id": "UI-094 Esc reverts keyboard move",
+    "ok": true,
+    "detail": [88, 69]
+  },
+  {
+    "id": "UI-094 Full Screen covers viewport",
+    "ok": true,
+    "detail": {
+      "app": "terminal",
+      "wid": "1",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "vw": 1440,
+      "vh": 862,
+      "snap": null,
+      "state": "fullscreen",
+      "focused": "true"
+    }
+  },
+  {
+    "id": "UI-094 Esc Esc leaves full screen",
+    "ok": true,
+    "detail": "normal"
+  },
+  {
+    "id": "UI-155 ten windows have distinct origins",
+    "ok": true,
+    "detail": "40,68 64,92 88,116 112,140 136,164 160,188 184,68 208,92 232,116 256,140"
+  }
+]

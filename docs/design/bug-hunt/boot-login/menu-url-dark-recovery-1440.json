@@ -1,0 +1,27 @@
+{
+  "how": "url",
+  "action": "recovery",
+  "console": [],
+  "pageErrors": [],
+  "failed": [],
+  "opened": true,
+  "msToMenu": 381,
+  "url": "http://localhost:4718/",
+  "a11y": {
+    "active": "plb-lb",
+    "activedesc": "plb-m1-o0",
+    "selected": ["true", "false", "false", "false"],
+    "cd": "auto-boot in 5 s",
+    "cdHidden": false,
+    "cdVisible": "flex",
+    "splashColOpacity": "1",
+    "splashExit": "menu",
+    "status": "auto-boot in 5 seconds"
+  },
+  "end": "recovery",
+  "verbose": false,
+  "profileHints": {
+    "url": "http://localhost:4718/",
+    "title": "Plotinium"
+  }
+}

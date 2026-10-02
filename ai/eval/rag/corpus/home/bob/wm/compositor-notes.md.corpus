@@ -1,0 +1,8 @@
+# Compositor notes (Bob)
+
+- one rAF loop for all animations (windows, dock, overview)
+- windows are layers with `will-change: transform` only while moving; removed afterwards to free GPU memory
+- z-order is an array; focus = move to end, then assign z-index by position
+- hit testing uses the DOM; no custom picking
+- overview: static snapshots via `drawImage` of each window's canvas where possible
+- budget: 16.7 ms frame p95 with 10 windows

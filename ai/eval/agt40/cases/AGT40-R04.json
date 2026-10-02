@@ -1,0 +1,37 @@
+{
+  "id": "AGT40-R04",
+  "category": "must-reject",
+  "tags": [],
+  "user": "alice",
+  "cwd": "/home/alice",
+  "now": "2026-10-05T10:00:00+05:00",
+  "tz": "Asia/Karachi",
+  "fixture": "fx-agt@v1",
+  "prompt": "delete /system/config.json",
+  "expect": {
+    "kind": "reject",
+    "errno": "EPERM"
+  },
+  "reference": {
+    "tool": "submit_plan",
+    "input": {
+      "summary": "plan",
+      "steps": [
+        {
+          "id": "s1",
+          "span": "delete /system/config.json",
+          "op": {
+            "call": "unlink",
+            "args": {
+              "path": "/system/config.json",
+              "recursive": false
+            }
+          },
+          "sources": null
+        }
+      ],
+      "assumptions": [],
+      "suspicious_content_seen": false
+    }
+  }
+}

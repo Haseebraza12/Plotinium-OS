@@ -1,0 +1,27 @@
+# Logging and crash recovery (DB lecture 11)
+
+## The rule
+
+Write-ahead logging: a change is described in the log, and that log record is flushed to stable storage, **before** the modified page itself may be written to disk. At commit, the log up to the commit record is forced; the data pages can follow whenever the buffer manager likes.
+
+This gives the buffer manager freedom:
+- **steal:** a dirty page of an uncommitted transaction may be written out (so recovery needs UNDO);
+- **no-force:** committed changes need not be on disk at commit (so recovery needs REDO).
+
+## Log records
+
+Each has an LSN (log sequence number), the transaction id, the page, and before/after images or a logical description. Every page stores the LSN of the last record applied to it (pageLSN), which makes redo idempotent.
+
+## ARIES in three passes
+
+1. **Analysis:** scan forward from the last checkpoint; rebuild the dirty page table and the table of transactions that were active at the crash.
+2. **Redo:** repeat history. Reapply every logged change whose LSN is newer than the page's pageLSN, including changes of losers.
+3. **Undo:** roll back the losers in reverse LSN order, writing compensation log records (CLRs) so that a crash during recovery doesn't undo things twice.
+
+## Checkpoints
+
+Fuzzy checkpoints record the dirty page table and active transactions without stopping the world, which bounds how far back analysis has to go.
+
+## PostgreSQL
+
+Calls it WAL too; `synchronous_commit`, `fsync` and full-page writes (to survive torn pages) are the knobs. Replication streams the same log to standbys.

@@ -1,0 +1,126 @@
+/* Editor status bar (24 px): quiet text items that read as buttons on hover. */
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--pl-space-3);
+  flex: none;
+  height: calc(var(--pl-control-h-sm) + var(--pl-space-half));
+  padding: 0 var(--pl-space-3);
+  background: var(--pl-glass-window-bg);
+  box-shadow: inset 0 var(--pl-hairline-width) 0 var(--pl-separator);
+  color: var(--pl-text-muted);
+  font: var(--pl-type-caption);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.start,
+.end,
+.live {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.end {
+  gap: var(--pl-space-3);
+}
+.item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pl-space-1);
+  padding: 0 var(--pl-space-1);
+  border: 0;
+  border-radius: var(--pl-radius-xs);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: default;
+}
+.item:not([aria-disabled='true']):hover {
+  background: var(--pl-control-bg);
+  color: var(--pl-text);
+}
+.item:focus-visible,
+.askAi:focus-visible {
+  outline: var(--pl-focus-ring);
+}
+.sep {
+  color: var(--pl-text-tertiary);
+  white-space: pre;
+}
+.sync {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pl-space-1);
+  padding: 0 var(--pl-space-1);
+  color: var(--pl-text-muted);
+}
+.syncIcon {
+  display: inline-flex;
+}
+.check {
+  color: var(--pl-success);
+  animation: check-in var(--pl-motion-med) var(--pl-ease-spring) both;
+}
+/* One rotation per sync operation, never a loop (WCAG 2.2.2). */
+.spinOnce {
+  animation: spin-once var(--pl-motion-slow) var(--pl-ease) 1;
+}
+.warning {
+  color: var(--pl-warning);
+}
+.muted {
+  color: var(--pl-text-tertiary);
+}
+.danger {
+  color: var(--pl-danger);
+}
+.readOnly {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pl-space-1);
+  color: var(--pl-warning);
+}
+.askAi {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pl-space-1);
+  height: calc(var(--pl-control-h-sm) - var(--pl-space-1));
+  padding: 0 var(--pl-space-2);
+  border: 0;
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-accent);
+  color: var(--pl-on-accent);
+  font: inherit;
+  font-weight: var(--pl-weight-semibold);
+  box-shadow: var(--pl-button-primary-shadow);
+  transition: transform var(--pl-motion-fast) var(--pl-ease-spring);
+}
+.askAi:hover {
+  background: var(--pl-accent-hover);
+}
+.askAi:active {
+  transform: scale(var(--pl-press-scale));
+}
+
+@keyframes check-in {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+}
+@keyframes spin-once {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .check,
+  .spinOnce {
+    animation: none;
+  }
+  .askAi {
+    transition: none;
+  }
+}

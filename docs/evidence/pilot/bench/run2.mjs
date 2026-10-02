@@ -1,0 +1,10 @@
+import { chromium } from 'playwright-core';
+const browser = await chromium.launch({ executablePath: '/usr/bin/google-chrome', headless: true });
+const ctx = await browser.newContext();
+const page = await ctx.newPage();
+page.on('console', m => console.error('console:', m.text()));
+await page.goto('http://localhost:18923/index2.html');
+await page.waitForFunction(() => window.__result, null, { timeout: 600000, polling: 500 });
+const r = await page.evaluate(() => window.__result);
+console.log(JSON.stringify(r, null, 1));
+await browser.close();

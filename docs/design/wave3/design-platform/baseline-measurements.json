@@ -1,0 +1,753 @@
+{
+  "measuredOn": "2026-09-30, QA copy :4718, Chrome (Playwright channel chrome, headless), 1440x900",
+  "method": "Glass chrome hidden via CSSOM, screenshot of the wallpaper, downsampled 4x, 3-pass box blur approximating the material blur (menu bar 30px, Dock 40px, HUD 24px, popover 30px), CSS saturate() matrix in sRGB, glass token composited over it, text token composited over that, WCAG 2.x ratio per pixel. anyBackdropMin = the same over pure black and pure white backdrops.",
+  "cspViolations": 0,
+  "results": [
+    {
+      "theme": "light",
+      "accent": "violet",
+      "surfaces": {
+        "menubar": {
+          "bg": "rgb(255 255 255 / 0.52)",
+          "text": {
+            "--pl-text": {
+              "min": 12.74,
+              "median": 13.95,
+              "backdropLuminance": [0.561, 0.824]
+            },
+            "--pl-text-muted": {
+              "min": 6.12,
+              "median": 6.38,
+              "backdropLuminance": [0.561, 0.824]
+            }
+          },
+          "anyBackdropMin": {
+            "--pl-text": 5.03,
+            "--pl-text-muted": 3.57
+          }
+        },
+        "dock": {
+          "bg": "rgb(255 255 255 / 0.4)",
+          "text": {
+            "--pl-text": {
+              "min": 12.45,
+              "median": 12.65,
+              "backdropLuminance": [0.603, 0.639]
+            }
+          },
+          "anyBackdropMin": {
+            "--pl-text": 3.36
+          }
+        },
+        "controlCentre": {
+          "bg": "rgb(245 245 250 / 0.72)",
+          "text": {
+            "--pl-text": {
+              "min": 12.82,
+              "median": 13.25,
+              "backdropLuminance": [0.48, 0.646]
+            },
+            "--pl-text-muted": {
+              "min": 6.14,
+              "median": 6.23,
+              "backdropLuminance": [0.48, 0.646]
+            },
+            "--pl-text-tertiary": {
+              "min": 4.63,
+              "median": 4.68,
+              "backdropLuminance": [0.48, 0.646]
+            },
+            "--pl-accent-text": {
+              "min": 5.1,
+              "median": 5.31,
+              "backdropLuminance": [0.48, 0.646]
+            }
+          },
+          "anyBackdropMin": {
+            "--pl-text": 8.19,
+            "--pl-text-muted": 4.85,
+            "--pl-text-tertiary": 3.88,
+            "--pl-accent-text": 3.01
+          }
+        },
+        "popoverAnywhere": {
+          "bg": "rgb(250 250 255 / 0.84)",
+          "text": {
+            "--pl-text": {
+              "min": 13.99,
+              "median": 14.38,
+              "backdropLuminance": [0.481, 0.829]
+            },
+            "--pl-text-muted": {
+              "min": 6.39,
+              "median": 6.47,
+              "backdropLuminance": [0.481, 0.829]
+            }
+          },
+          "anyBackdropMin": {
+            "--pl-text": 11.13,
+            "--pl-text-muted": 5.72
+          }
+        }
+      }
+    },
+    {
+      "theme": "light",
+      "accent": "yellow",
+      "surfaces": {
+        "menubar": {
+          "bg": "rgb(255 255 255 / 0.52)",
+          "text": {
+            "--pl-text": {
+              "min": 12.74,
+              "median": 13.95,
+              "backdropLuminance": [0.561, 0.824]
+            },
+            "--pl-text-muted": {
+              "min": 6.12,
+              "median": 6.38,
+              "backdropLuminance": [0.561, 0.824]
+            }
+          },
+          "anyBackdropMin": {
+            "--pl-text": 5.03,
+            "--pl-text-muted": 3.57
+          }
+        },
+        "dock": {
+          "bg": "rgb(255 255 255 / 0.4)",
+          "text": {
+            "--pl-text": {
+              "min": 12.45,
+              "median": 12.65,
+              "backdropLuminance": [0.603, 0.639]
+            }
+          },
+          "anyBackdropMin": {
+            "--pl-text": 3.36
+          }
+        },
+        "controlCentre": {
+          "bg": "rgb(245 245 250 / 0.72)",
+          "text": {
+            "--pl-text": {
+              "min": 12.82,
+              "median": 13.25,
+              "backdropLuminance": [0.48, 0.646]
+            },
+            "--pl-text-muted": {
+              "min": 6.14,
+              "median": 6.23,
+              "backdropLuminance": [0.48, 0.646]
+            },
+            "--pl-text-tertiary": {
+              "min": 4.63,
+              "median": 4.68,
+              "backdropLuminance": [0.48, 0.646]
+            },
+            "--pl-accent-text": {
+              "min": 4.64,
+              "median": 4.82,
+              "backdropLuminance": [0.48, 0.646]
+            }
+          },
+          "anyBackdropMin": {
+            "--pl-text": 8.19,
+            "--pl-text-muted": 4.85,
+            "--pl-text-tertiary": 3.88,
+            "--pl-accent-text": 2.74
+          }
+        },
+        "popoverAnywhere": {
+          "bg": "rgb(250 250 255 / 0.84)",
+          "text": {
+            "--pl-text": {
+              "min": 13.99,
+              "median": 14.39,
+              "backdropLuminance": [0.481, 0.829]
+            },
+            "--pl-text-muted": {
+              "min": 6.39,
+              "median": 6.47,
+              "backdropLuminance": [0.481, 0.829]
+            }
+          },
+          "anyBackdropMin": {
+            "--pl-text": 11.13,
+            "--pl-text-muted": 5.72
+          }
+        }
+      }
+    },
+    {
+      "theme": "light",
+      "accent": "graphite",
+      "surfaces": {
+        "menubar": {
+          "bg": "rgb(255 255 255 / 0.52)",
+          "text": {
+            "--pl-text": {
+              "min": 12.74,
+              "median": 13.95,
+              "backdropLuminance": [0.561, 0.824]
+            },
+            "--pl-text-muted": {
+              "min": 6.12,
+              "median": 6.38,
+              "backdropLuminance": [0.561, 0.824]
+            }
+          },
+          "anyBackdropMin": {
+            "--pl-text": 5.03,
+            "--pl-text-muted": 3.57
+          }
+        },
+        "dock": {
+          "bg": "rgb(255 255 255 / 0.4)",
+          "text": {
+            "--pl-text": {
+              "min": 12.45,
+              "median": 12.65,
+              "backdropLuminance": [0.603, 0.639]
+            }
+          },
+          "anyBackdropMin": {
+            "--pl-text": 3.36
+          }
+        },
+        "controlCentre": {
+          "bg": "rgb(245 245 250 / 0.72)",
+          "text": {
+            "--pl-text": {
+              "min": 12.82,
+              "median": 13.25,
+              "backdropLuminance": [0.48, 0.646]
+            },
+            "--pl-text-muted": {
+              "min": 6.14,
+              "median": 6.23,
+              "backdropLuminance": [0.48, 0.646]
+            },
+            "--pl-text-tertiary": {
+              "min": 4.63,
+              "median": 4.68,
+              "backdropLuminance": [0.48, 0.646]
+            },
+            "--pl-accent-text": {
+              "min": 4.61,
+              "median": 4.8,
+              "backdropLuminance": [0.48, 0.646]
+            }
+          },
+          "anyBackdropMin": {
+            "--pl-text": 8.19,
+            "--pl-text-muted": 4.85,
+            "--pl-text-tertiary": 3.88,
+            "--pl-accent-text": 2.72
+          }
+        },
+        "popoverAnywhere": {
+          "bg": "rgb(250 250 255 / 0.84)",
+          "text": {
+            "--pl-text": {
+              "min": 13.99,
+              "median": 14.39,
+              "backdropLuminance": [0.481, 0.829]
+            },
+            "--pl-text-muted": {
+              "min": 6.39,
+              "median": 6.48,
+              "backdropLuminance": [0.481, 0.829]
+            }
+          },
+          "anyBackdropMin": {
+            "--pl-text": 11.13,
+            "--pl-text-muted": 5.72
+          }
+        }
+      }
+    },
+    {
+      "theme": "light",
+      "accent": "pink",
+      "surfaces": {
+        "menubar": {
+          "bg": "rgb(255 255 255 / 0.52)",
+          "text": {
+            "--pl-text": {
+              "min": 12.74,
+              "median": 13.95,
+              "backdropLuminance": [0.561, 0.824]
+            },
+            "--pl-text-muted": {
+              "min": 6.12,
+              "median": 6.38,
+              "backdropLuminance": [0.561, 0.824]
+            }
+          },
+          "anyBackdropMin": {
+            "--pl-text": 5.03,
+            "--pl-text-muted": 3.57
+          }
+        },
+        "dock": {
+          "bg": "rgb(255 255 255 / 0.4)",
+          "text": {
+            "--pl-text": {
+              "min": 12.45,
+              "median": 12.65,
+              "backdropLuminance": [0.603, 0.639]
+            }
+          },
+          "anyBackdropMin": {
+            "--pl-text": 3.36
+          }
+        },
+        "controlCentre": {
+          "bg": "rgb(245 245 250 / 0.72)",
+          "text": {
+            "--pl-text": {
+              "min": 12.82,
+              "median": 13.25,
+              "backdropLuminance": [0.48, 0.646]
+            },
+            "--pl-text-muted": {
+              "min": 6.14,
+              "median": 6.23,
+              "backdropLuminance": [0.48, 0.646]
+            },
+            "--pl-text-tertiary": {
+              "min": 4.63,
+              "median": 4.68,
+              "backdropLuminance": [0.48, 0.646]
+            },
+            "--pl-accent-text": {
+              "min": 4.7,
+              "median": 4.89,
+              "backdropLuminance": [0.48, 0.646]
+            }
+          },
+          "anyBackdropMin": {
+            "--pl-text": 8.19,
+            "--pl-text-muted": 4.85,
+            "--pl-text-tertiary": 3.88,
+            "--pl-accent-text": 2.78
+          }
+        },
+        "popoverAnywhere": {
+          "bg": "rgb(250 250 255 / 0.84)",
+          "text": {
+            "--pl-text": {
+              "min": 13.99,
+              "median": 14.38,
+              "backdropLuminance": [0.481, 0.829]
+            },
+            "--pl-text-muted": {
+              "min": 6.39,
+              "median": 6.47,
+              "backdropLuminance": [0.481, 0.829]
+            }
+          },
+          "anyBackdropMin": {
+            "--pl-text": 11.13,
+            "--pl-text-muted": 5.72
+          }
+        }
+      }
+    },
+    {
+      "theme": "dark",
+      "accent": "violet",
+      "surfaces": {
+        "menubar": {
+          "bg": "rgb(20 20 30 / 0.5)",
+          "text": {
+            "--pl-text": {
+              "min": 12.73,
+              "median": 14.45,
+              "backdropLuminance": [0.01, 0.047]
+            },
+            "--pl-text-muted": {
+              "min": 7.17,
+              "median": 7.93,
+              "backdropLuminance": [0.01, 0.047]
+            }
+          },
+          "anyBackdropMin": {
+            "--pl-text": 3.19,
+            "--pl-text-muted": 2.41
+          }
+        },
+        "dock": {
+          "bg": "rgb(44 44 58 / 0.4)",
+          "text": {
+            "--pl-text": {
+              "min": 12.08,
+              "median": 12.52,
+              "backdropLuminance": [0.022, 0.029]
+            }
+          },
+          "anyBackdropMin": {
+            "--pl-text": 2.17
+          }
+        },
+        "controlCentre": {
+          "bg": "rgb(30 30 40 / 0.7)",
+          "text": {
+            "--pl-text": {
+              "min": 12.31,
+              "median": 13.27,
+              "backdropLuminance": [0.019, 0.07]
+            },
+            "--pl-text-muted": {
+              "min": 7.05,
+              "median": 7.48,
+              "backdropLuminance": [0.019, 0.07]
+            },
+            "--pl-text-tertiary": {
+              "min": 5.36,
+              "median": 5.63,
+              "backdropLuminance": [0.019, 0.07]
+            },
+            "--pl-accent-text": {
+              "min": 6.37,
+              "median": 6.9,
+              "backdropLuminance": [0.019, 0.07]
+            }
+          },
+          "anyBackdropMin": {
+            "--pl-text": 5.47,
+            "--pl-text-muted": 3.71,
+            "--pl-text-tertiary": 3.09,
+            "--pl-accent-text": 2.72
+          }
+        },
+        "popoverAnywhere": {
+          "bg": "rgb(34 34 44 / 0.8)",
+          "text": {
+            "--pl-text": {
+              "min": 12.46,
+              "median": 13.43,
+              "backdropLuminance": [0.007, 0.074]
+            },
+            "--pl-text-muted": {
+              "min": 7.14,
+              "median": 7.56,
+              "backdropLuminance": [0.007, 0.074]
+            }
+          },
+          "anyBackdropMin": {
+            "--pl-text": 7.27,
+            "--pl-text-muted": 4.67
+          }
+        }
+      }
+    },
+    {
+      "theme": "dark",
+      "accent": "yellow",
+      "surfaces": {
+        "menubar": {
+          "bg": "rgb(20 20 30 / 0.5)",
+          "text": {
+            "--pl-text": {
+              "min": 12.73,
+              "median": 14.45,
+              "backdropLuminance": [0.01, 0.047]
+            },
+            "--pl-text-muted": {
+              "min": 7.17,
+              "median": 7.93,
+              "backdropLuminance": [0.01, 0.047]
+            }
+          },
+          "anyBackdropMin": {
+            "--pl-text": 3.19,
+            "--pl-text-muted": 2.41
+          }
+        },
+        "dock": {
+          "bg": "rgb(44 44 58 / 0.4)",
+          "text": {
+            "--pl-text": {
+              "min": 12.08,
+              "median": 12.52,
+              "backdropLuminance": [0.022, 0.029]
+            }
+          },
+          "anyBackdropMin": {
+            "--pl-text": 2.17
+          }
+        },
+        "controlCentre": {
+          "bg": "rgb(30 30 40 / 0.7)",
+          "text": {
+            "--pl-text": {
+              "min": 12.31,
+              "median": 13.27,
+              "backdropLuminance": [0.018, 0.07]
+            },
+            "--pl-text-muted": {
+              "min": 7.05,
+              "median": 7.48,
+              "backdropLuminance": [0.018, 0.07]
+            },
+            "--pl-text-tertiary": {
+              "min": 5.36,
+              "median": 5.63,
+              "backdropLuminance": [0.018, 0.07]
+            },
+            "--pl-accent-text": {
+              "min": 7.24,
+              "median": 7.84,
+              "backdropLuminance": [0.018, 0.07]
+            }
+          },
+          "anyBackdropMin": {
+            "--pl-text": 5.47,
+            "--pl-text-muted": 3.71,
+            "--pl-text-tertiary": 3.09,
+            "--pl-accent-text": 3.09
+          }
+        },
+        "popoverAnywhere": {
+          "bg": "rgb(34 34 44 / 0.8)",
+          "text": {
+            "--pl-text": {
+              "min": 12.46,
+              "median": 13.46,
+              "backdropLuminance": [0.006, 0.074]
+            },
+            "--pl-text-muted": {
+              "min": 7.14,
+              "median": 7.58,
+              "backdropLuminance": [0.006, 0.074]
+            }
+          },
+          "anyBackdropMin": {
+            "--pl-text": 7.27,
+            "--pl-text-muted": 4.67
+          }
+        }
+      }
+    },
+    {
+      "theme": "dark",
+      "accent": "graphite",
+      "surfaces": {
+        "menubar": {
+          "bg": "rgb(20 20 30 / 0.5)",
+          "text": {
+            "--pl-text": {
+              "min": 12.73,
+              "median": 14.45,
+              "backdropLuminance": [0.01, 0.047]
+            },
+            "--pl-text-muted": {
+              "min": 7.17,
+              "median": 7.93,
+              "backdropLuminance": [0.01, 0.047]
+            }
+          },
+          "anyBackdropMin": {
+            "--pl-text": 3.19,
+            "--pl-text-muted": 2.41
+          }
+        },
+        "dock": {
+          "bg": "rgb(44 44 58 / 0.4)",
+          "text": {
+            "--pl-text": {
+              "min": 12.08,
+              "median": 12.52,
+              "backdropLuminance": [0.022, 0.029]
+            }
+          },
+          "anyBackdropMin": {
+            "--pl-text": 2.17
+          }
+        },
+        "controlCentre": {
+          "bg": "rgb(30 30 40 / 0.7)",
+          "text": {
+            "--pl-text": {
+              "min": 12.31,
+              "median": 13.27,
+              "backdropLuminance": [0.019, 0.07]
+            },
+            "--pl-text-muted": {
+              "min": 7.05,
+              "median": 7.48,
+              "backdropLuminance": [0.019, 0.07]
+            },
+            "--pl-text-tertiary": {
+              "min": 5.36,
+              "median": 5.63,
+              "backdropLuminance": [0.019, 0.07]
+            },
+            "--pl-accent-text": {
+              "min": 6.78,
+              "median": 7.34,
+              "backdropLuminance": [0.019, 0.07]
+            }
+          },
+          "anyBackdropMin": {
+            "--pl-text": 5.47,
+            "--pl-text-muted": 3.71,
+            "--pl-text-tertiary": 3.09,
+            "--pl-accent-text": 2.89
+          }
+        },
+        "popoverAnywhere": {
+          "bg": "rgb(34 34 44 / 0.8)",
+          "text": {
+            "--pl-text": {
+              "min": 12.46,
+              "median": 13.43,
+              "backdropLuminance": [0.007, 0.074]
+            },
+            "--pl-text-muted": {
+              "min": 7.14,
+              "median": 7.56,
+              "backdropLuminance": [0.007, 0.074]
+            }
+          },
+          "anyBackdropMin": {
+            "--pl-text": 7.27,
+            "--pl-text-muted": 4.67
+          }
+        }
+      }
+    },
+    {
+      "theme": "dark",
+      "accent": "pink",
+      "surfaces": {
+        "menubar": {
+          "bg": "rgb(20 20 30 / 0.5)",
+          "text": {
+            "--pl-text": {
+              "min": 12.73,
+              "median": 14.45,
+              "backdropLuminance": [0.01, 0.047]
+            },
+            "--pl-text-muted": {
+              "min": 7.17,
+              "median": 7.93,
+              "backdropLuminance": [0.01, 0.047]
+            }
+          },
+          "anyBackdropMin": {
+            "--pl-text": 3.19,
+            "--pl-text-muted": 2.41
+          }
+        },
+        "dock": {
+          "bg": "rgb(44 44 58 / 0.4)",
+          "text": {
+            "--pl-text": {
+              "min": 12.08,
+              "median": 12.52,
+              "backdropLuminance": [0.022, 0.029]
+            }
+          },
+          "anyBackdropMin": {
+            "--pl-text": 2.17
+          }
+        },
+        "controlCentre": {
+          "bg": "rgb(30 30 40 / 0.7)",
+          "text": {
+            "--pl-text": {
+              "min": 12.31,
+              "median": 13.27,
+              "backdropLuminance": [0.018, 0.07]
+            },
+            "--pl-text-muted": {
+              "min": 7.05,
+              "median": 7.48,
+              "backdropLuminance": [0.018, 0.07]
+            },
+            "--pl-text-tertiary": {
+              "min": 5.36,
+              "median": 5.63,
+              "backdropLuminance": [0.018, 0.07]
+            },
+            "--pl-accent-text": {
+              "min": 6.29,
+              "median": 6.81,
+              "backdropLuminance": [0.018, 0.07]
+            }
+          },
+          "anyBackdropMin": {
+            "--pl-text": 5.47,
+            "--pl-text-muted": 3.71,
+            "--pl-text-tertiary": 3.09,
+            "--pl-accent-text": 2.68
+          }
+        },
+        "popoverAnywhere": {
+          "bg": "rgb(34 34 44 / 0.8)",
+          "text": {
+            "--pl-text": {
+              "min": 12.46,
+              "median": 13.48,
+              "backdropLuminance": [0.006, 0.074]
+            },
+            "--pl-text-muted": {
+              "min": 7.14,
+              "median": 7.58,
+              "backdropLuminance": [0.006, 0.074]
+            }
+          },
+          "anyBackdropMin": {
+            "--pl-text": 7.27,
+            "--pl-text-muted": 4.67
+          }
+        }
+      }
+    }
+  ],
+  "dockSweep": {
+    "note": "rAF deltas in page while Playwright sweeps the pointer across the Dock (30+120+120 steps); headless, so smoke only",
+    "run1_cold": {
+      "frames": 335,
+      "p50": 16.7,
+      "p95": 33.3,
+      "max": 50,
+      "over20ms": 23
+    },
+    "run2_warm": {
+      "frames": 304,
+      "p50": 16.7,
+      "p95": 16.7,
+      "max": 16.7,
+      "over20ms": 0
+    },
+    "run3_warm": {
+      "frames": 304,
+      "p50": 16.7,
+      "p95": 16.7,
+      "max": 16.7,
+      "over20ms": 0
+    },
+    "cspViolations": 0
+  },
+  "dockDrift": {
+    "note": "ui/src/shell/dock/magnify.ts evaluated for the QA Dock (5 apps, separator, Trash; icon 52, gap 8), pointer swept 1 px at a time",
+    "centreAnchored_1_5x": {
+      "maxDriftPx": 15.1,
+      "meanDriftPx": 3.5
+    },
+    "centreAnchored_2_0x": {
+      "maxDriftPx": 30.2,
+      "meanDriftPx": 7
+    },
+    "pointerAnchored_1_5x": {
+      "maxDriftPx": 0,
+      "meanDriftPx": 0,
+      "maxNeighbourMovePerPointerPx": 0.52
+    },
+    "centreAnchored_1_5x_neighbourMovePerPointerPx": 0.39
+  }
+}

@@ -1,0 +1,11 @@
+# Weekly sync — 2 Oct 2026
+
+- Updated architecture document submitted (Dan + Alice).
+- Carol: offline outbox replay works for create/write/unlink. Rename conflicts still open.
+- Bob: dock magnification done; windows snap to half-screen. Started on the Files app.
+- Alice: chunker handles markdown headings and code blocks. Wrote the 20 injection fixtures.
+- Esha: Docker Compose brings up Postgres + server; first e2e test logs in and opens Terminal.
+
+Risks: Bob and Carol both touching the Files app; agreed Carol owns the data layer and Bob the view.
+
+Next week: first integration day on Wednesday.

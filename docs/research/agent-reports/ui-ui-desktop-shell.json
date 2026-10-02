@@ -1,0 +1,95 @@
+{
+ "files_changed": [
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/shell/index.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/shell/types.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/shell/format.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/shell/format.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/shell/wallpaper/Wallpaper.tsx",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/shell/wallpaper/Wallpaper.module.css",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/shell/menubar/MenuBar.tsx",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/shell/menubar/StatusItems.tsx",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/shell/menubar/glyphs.tsx",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/shell/menubar/MenuBar.module.css",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/shell/menubar/MenuBar.test.tsx",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/shell/dock/Dock.tsx",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/shell/dock/DockIcon.tsx",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/shell/dock/magnify.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/shell/dock/Dock.module.css",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/shell/dock/Dock.test.tsx",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/shell/window/WindowFrame.tsx",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/shell/window/WindowFrame.module.css",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/shell/window/WindowFrame.test.tsx",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/shell/control-centre/ControlCentre.tsx",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/shell/control-centre/ControlCentre.module.css",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/shell/control-centre/ControlCentre.test.tsx",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/shell/notifications/NotificationCard.tsx",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/shell/notifications/NotificationCenter.tsx",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/shell/notifications/NotificationToasts.tsx",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/shell/notifications/leaving.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/shell/notifications/Notifications.module.css",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/src/shell/notifications/Notifications.test.tsx",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/gallery/pages/shell.tsx",
+  "/home/haseeb-raza/Desktop/Plotinium OS/ui/gallery/pages/shell.module.css"
+ ],
+ "verification": [
+  {
+   "command": "Inventory of assigned paths (resume check)",
+   "outcome": "ui/src/shell/ did not exist and there was no gallery page, so the interrupted run had left nothing in my paths. Everything was built fresh on top of the foundation. The \"1 TypeScript error\" the task mentions was not in my paths: when I started, tsc on ui was already clean. One error later appeared in another agent's ui/src/overlays/search/SearchPalette.tsx, and its owner has since fixed it."
+  },
+  {
+   "command": "pnpm exec tsc -p ui/tsconfig.json --noEmit",
+   "outcome": "PASS, exit 0, 0 errors across all of ui."
+  },
+  {
+   "command": "pnpm exec vitest run --config ui/vitest.config.ts",
+   "outcome": "PASS: 57 files and 408 tests across the whole ui package, other agents' tests included. The shell alone is 6 files and 58 tests (menu bar 11, dock 9, window chrome 11, Control Centre 7, notifications, toasts and wallpaper 9, and 11 for the format helpers and magnification maths). The foundation's token and motion guards, which scan every *.module.css, pass on my stylesheets: only defined tokens, no hex colours, transform and opacity only, a reduced-motion path, and no static will-change."
+  },
+  {
+   "command": "pnpm exec vitest run --project ui (root config, the command the task specified)",
+   "outcome": "FAIL, but not because of the shell: 47 of 57 files fail to compile across all of ui. The root vitest.config.ts declares the ui project without vite-plugin-solid, so JSX fails with \"Failed to parse source \u2026 jsx to preserve\". This is the same root-config blocker the foundation reported, and root configs are outside my paths."
+  },
+  {
+   "command": "pnpm exec eslint ui --max-warnings 0",
+   "outcome": "PASS, exit 0, for all of ui at the time of the final run, with eslint-plugin-solid at error level and the SYS-01 boundary rules. My own paths (eslint ui/src/shell ui/gallery/pages/shell.tsx) also pass on their own."
+  },
+  {
+   "command": "pnpm exec prettier --check ui/src/shell ui/gallery/pages/shell.tsx ui/gallery/pages/shell.module.css",
+   "outcome": "PASS: all of these files use Prettier style."
+  },
+  {
+   "command": "pnpm --filter @plotinium/ui gallery:build",
+   "outcome": "PASS: builds in about 6 s."
+  },
+  {
+   "command": "Playwright (Chromium) screenshots of the built gallery page #/shell in both themes, compared with docs/design/stitch/desktop-dark, desktop-light and control-centre-notifications reference.png",
+   "outcome": "Visually close to the references, with no page errors. The first pass showed three layout bugs, now fixed: the Control Centre toggle tiles were cramped, the light scene's Files list columns collided, and a disabled zoom light stayed green. It also showed a readability issue: other windows' text ghosting through the 94% static window tint, handled in WindowFrame (see problems)."
+  },
+  {
+   "command": "Playwright interaction script plus @axe-core/playwright (wcag2a, 2aa, 21a, 21aa, 22aa), run with motion on and with motion=reduce",
+   "outcome": "PASS. With motion on, hovering the dock magnifies 7 layers; under reduced motion, 0. Minimise sends Files to the dock (data-state minimised, and focus and the app name move to Terminal); clicking the dock icon restores and focuses it. Clicking File opens it with focus on 'New Window'. ArrowRight moves to Edit, and Escape closes it and returns focus to the title. Double-clicking a title bar maximises and restores. Dragging a title bar sets data-dragging and moves the window. The Control Centre trigger toggles it. axe: 0 violations in both runs; 0 console errors."
+  }
+ ],
+ "problems": [
+  "Blocker (root config, R5): the task's verify command `pnpm exec vitest run --project ui` fails for 47 of 57 ui test files, because the root vitest.config.ts has no vite-plugin-solid for the ui project. With ui/vitest.config.ts all 408 tests pass.",
+  "Bug in the foundation's Menu primitive (ui/src/primitives/menu/Menu.tsx, not my path): its focus effect can run before its presence-gated rows mount, and on re-open it holds a stale, detached row ref. A Menu that opens after mount therefore does not get keyboard focus: an isolated repro left focus on <body>. I worked around it in MenuBar with a microtask guard (marked TODO(ui-foundation)). Other users of Menu, such as the dock item menu and app menus, may hit the same bug.",
+  "Motion contract conflict for the WM compositor: the window keyframes in motion.css (open, minimise, restore, FLIP) animate `transform`, but window-manager.md \u00a73.5 writes window geometry as translate3d on the same element, so the geometry is lost while an animation runs. The gallery writes geometry as left and top. The compositor must put geometry on a wrapper, use left and top, or build the base translate into its WAAPI keyframes.",
+  "Genie offset wording: visual-language-macos.md \u00a73.7.1 rule 5 defines --pl-genie-x/y as 'dock-icon centre minus window centre', but the minimise keyframes use transform-origin 50% 100%. The correct input is the dock-icon centre minus the window's bottom centre; with the spec's formula the window lands about half its height below the icon. WindowFrame's prop doc and the gallery use the bottom-centre formula.",
+  "Windows have no live blur (DSN-24), so the 94% --pl-glass-window-bg tint let other windows' text visibly ghost through; the light desktop looked messy against the reference. WindowFrame now paints the same tint token twice, for about 99.6% coverage. Please confirm, or add an explicit window-content token (owner R3 or foundation).",
+  "Traffic lights are 24 x 24 targets to meet WCAG 2.5.8 (WM spec \u00a73.19), which puts the visible gap between the 12 px circles at 12 px instead of --pl-traffic-gap (8 px). A 20 px spacing fails the 2.5.8 spacing exception.",
+  "ui/src/index.ts and ui/package.json are outside my paths, so the shell is not yet exported from @plotinium/ui. It is exported from ui/src/shell/index.ts.",
+  "Design sources: there is still no Stitch screen.html or screenshot.png, only the hand-built reference.html and reference.png. So 'pixel-faithful' means faithful to those references and their notes.md. Where the mock text differed from the spec's exact tray strings I used the spec: 'Online' with 'All changes synced \u00b7 last sync 10:41', not 'Online \u00b7 synced'.",
+  "Deliberate deviations: the wallpaper drift is opt-in (off by default) because of the no-looping-motion rule and WCAG 2.2.2, and it pauses under reduced motion. Cards in Notification Centre use the static popover tint, and only banners (at most 3) get a live blur, to respect the 'at most four live-blur regions' rule. Banners sit top right under the menu bar, per the notes.md alignment, not bottom right as in WM \u00a73.17.",
+  "Housekeeping: before switching to my own scratchpad subfolder (scratchpad/ui-desktop-shell/), I overwrote a scratch file named shot.mjs in the shared scratchpad root. It may have belonged to another agent's run; no project files were affected."
+ ],
+ "todos_for_team": [
+  "Owner of ui/src/index.ts and ui/package.json: add `export * from './shell/index.ts'` (or a \"./shell\": \"./src/shell/index.ts\" export) so web/ and apps can import the shell components.",
+  "ui-foundation: fix the Menu focus effect so it focuses the active row after the rows mount and drops stale refs on close. Then remove the guard in ui/src/shell/menubar/MenuBar.tsx (search for TODO(ui-foundation)).",
+  "R5: point the root vitest `ui` project at ui/vitest.config.ts, or add vite-plugin-solid, the setup file, the lucide-solid inline and the css ?raw include.",
+  "WM compositor (wm/src/compositor): drive WindowFrame through props. Pass geometry through `style` on a wrapper, or as left/top, so the pl-anim window keyframes are not overridden. Use Dock apiRef.getIconRect(appId) at animation start and pass genie = icon centre minus window bottom centre. Set phase and listen to onPhaseEnd; phases always end, via a safety timer and at once under reduced motion. Wire onTitlePointerDown and onResizeStart(edge) to the gesture code, and dragging to data-dragging. Use MenuBar apiRef.focus()/openMenu() and Dock apiRef.focus() for the keyboard bindings (Alt+N per \u00a73.9; F10 is reserved by Chrome).",
+  "Shell store owner: map net.state to NetView, svc.* to SvcView[], mem.pressure to MemoryView, and notify to ShellNotification (the protocol's notify level 'warn' needs mapping to 'warning'). The host redraws `now` once a minute, and once a second while a countdown shows. Commit memory budgets through onMemoryBudgetCommit and send refusals back as memory.error.",
+  "R3 (specs): window-manager.md \u00a73.10/\u00a73.11 still describe a bottom taskbar and tray. Record the menu bar and dock mapping, the status-item accessible names, and top-right banners (\u00a73.17). Fix the genie offset wording in visual-language-macos.md \u00a73.7.1 rule 5, and document the 24 px traffic-light targets and 12 px visual spacing.",
+  "R5 (traceability): shell tests are titled with requirement IDs (OFF-04, WM-03, WM-04, WM-05, WM-07, WMD-10, WMD-11, WMD-18, MEM-01, DSN-24, DSN-30, DSN-31) inside UI-<Component> describe blocks.",
+  "Apps UI agents: WindowFrame takes the app view as children, and an optional unified toolbar through `toolbar` (use `hideTitle` when the toolbar carries the title). The gallery's Files, Terminal, Task Manager, Editor and Settings contents are placeholders to be replaced by the real views."
+ ],
+ "deps_requested": []
+}

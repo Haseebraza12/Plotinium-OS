@@ -1,0 +1,62 @@
+{
+  "id": "AGT40-D05",
+  "category": "relative-date",
+  "tags": [],
+  "user": "alice",
+  "cwd": "/home/alice",
+  "now": "2026-10-05T10:00:00+05:00",
+  "tz": "Asia/Karachi",
+  "fixture": "fx-agt@v1",
+  "prompt": "touch the documents I changed in the last 3 hours",
+  "expect": {
+    "kind": "plan",
+    "ops": [["utimes", "/home/alice/Documents/letter.docx"]],
+    "confirm": false
+  },
+  "reference": {
+    "tool": "submit_plan",
+    "input": {
+      "summary": "plan",
+      "steps": [
+        {
+          "id": "s1",
+          "span": "the documents I changed in the last 3 hours",
+          "op": {
+            "call": "find",
+            "args": {
+              "path": "~/Documents",
+              "name": null,
+              "type": "f",
+              "mtime": {
+                "within": {
+                  "unit": "hour",
+                  "count": 3,
+                  "mode": "rolling"
+                },
+                "olderThan": null
+              },
+              "size": null,
+              "maxdepth": null
+            }
+          },
+          "sources": null
+        },
+        {
+          "id": "s2",
+          "span": "touch the documents I changed in the last 3 hours",
+          "op": {
+            "call": "utimes",
+            "args": {
+              "path": "~/Documents"
+            }
+          },
+          "sources": {
+            "ref": "s1"
+          }
+        }
+      ],
+      "assumptions": [],
+      "suspicious_content_seen": false
+    }
+  }
+}

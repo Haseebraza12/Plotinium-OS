@@ -1,0 +1,9 @@
+# Weekly sync — 23 Oct 2026
+
+- Went through Alice's post-mortem of the checkpoint demo. Agreed actions are in that document.
+- CI was red for most of Tuesday; Esha explained the cause and the fix (write-up in reports). New rule: dependency changes go in their own PR.
+- Boot time: cold 2.6 s after lazy-loading the terminal and the model; warm 1.1 s.
+- Carol: server verify endpoint for search results owned by other users.
+- Bob: window resize no longer flickers.
+
+Next week: design review of the window manager.

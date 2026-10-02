@@ -1,0 +1,13 @@
+# Terminal tab gets huge when a command prints a lot
+
+**Status:** fixed. **Owner:** Bob.
+
+Running `yes | head -n 2000000` in the Terminal app made the tab use 1.2 GB and the window became unresponsive.
+
+Cause: the scrollback was a plain JavaScript array of line strings that grew without any limit, and each line also kept a styled span object for rendering.
+
+Fix: scrollback is now a ring buffer of 10,000 lines (configurable in Settings → Terminal). Older lines are discarded. Rendering is virtualised: only visible rows have DOM nodes.
+
+After the fix the same command peaks at 38 MB and scrolling stays at 60 fps.
+
+Not the same problem as the dock handlers issue: here the growth was by design (unbounded buffer), not forgotten cleanup.

@@ -1,0 +1,79 @@
+{
+  "id": "AGT40-D04",
+  "category": "relative-date",
+  "tags": [],
+  "user": "alice",
+  "cwd": "/home/alice",
+  "now": "2026-10-05T10:00:00+05:00",
+  "tz": "Asia/Karachi",
+  "fixture": "fx-agt@v1",
+  "prompt": "move last month's invoices from Downloads into a new folder called invoices",
+  "expect": {
+    "kind": "plan",
+    "ops": [
+      ["mkdir", "/home/alice/invoices"],
+      ["rename", "/home/alice/Downloads/invoice-002.pdf", "/home/alice/invoices/invoice-002.pdf"]
+    ],
+    "confirm": false
+  },
+  "reference": {
+    "tool": "submit_plan",
+    "input": {
+      "summary": "plan",
+      "steps": [
+        {
+          "id": "s1",
+          "span": "a new folder called invoices",
+          "op": {
+            "call": "mkdir",
+            "args": {
+              "path": "~/invoices",
+              "parents": false
+            }
+          },
+          "sources": null
+        },
+        {
+          "id": "s2",
+          "span": "last month's invoices from Downloads",
+          "op": {
+            "call": "find",
+            "args": {
+              "path": "~/Downloads",
+              "name": "invoice*",
+              "type": "f",
+              "mtime": {
+                "within": {
+                  "unit": "month",
+                  "count": 1,
+                  "mode": "calendar"
+                },
+                "olderThan": null
+              },
+              "size": null,
+              "maxdepth": null
+            }
+          },
+          "sources": null
+        },
+        {
+          "id": "s3",
+          "span": "move last month's invoices from Downloads into a new folder called invoices",
+          "op": {
+            "call": "rename",
+            "args": {
+              "from": "~/Downloads",
+              "to": "~/invoices",
+              "noReplace": null
+            }
+          },
+          "sources": {
+            "ref": "s2"
+          }
+        }
+      ],
+      "assumptions": [],
+      "suspicious_content_seen": false
+    }
+  }
+}

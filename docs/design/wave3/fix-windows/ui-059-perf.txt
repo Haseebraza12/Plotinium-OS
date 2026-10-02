@@ -1,0 +1,30 @@
+UI-059 re-measurement (fix-windows, 2026-09-30)
+
+Target: http://localhost:4718 (QA Docker build of 2026-09-30, production bundle, real CSP).
+Browser: Playwright chromium channel 'chrome' (Chrome/153), viewport 1440x900, dpr 1, hardwareConcurrency 12,
+machine shared with ~10 other agents (load average 2.6-5).
+Windows: 10 (4 Terminal, 3 Files, 3 Editor), opened from the Dock and Dock > New Window.
+Script (after window-manager.md §8.2 step 5): for each window, drag the title bar along a 300x200 px ellipse
+for 1 s (one mouse.move per animation frame), then resize from se by up to 200 px and back (0.5 s) and from
+nw (0.5 s).
+Metric: NOT the Chrome-trace PipelineReporter parser of §8.2 (that harness does not exist yet). Frame intervals
+come from an in-page requestAnimationFrame loop over the whole script; LoAF entries > 50 ms from a
+PerformanceObserver('long-animation-frame'). Script: scratchpad fw/perf.mjs (not committed).
+
+Headless (no GPU; software raster), indicative only:
+  run 1: frames 992,  p50 16.7, p95 50.0, p99 83.3, 75 intervals > 34 ms, 48 LoAF > 50 ms
+  run 2: frames 950,  p50 16.7, p95 50.0, p99 83.3, 104 intervals > 34 ms, 72 LoAF > 50 ms
+  The headless LoAFs have ~0 ms of script, style/layout and render time: the main thread is idle; the
+  time is spent waiting for frames (software compositing), not in our code.
+
+Headed Chrome (GPU, display :0), the §8.2 condition:
+  run A: frames 1288, p50 16.7, p95 16.7, p99 16.7, 0 intervals > 34 ms, 0 LoAF > 50 ms
+  run B: frames 1309, p50 16.7, p95 16.7, p99 33.3, 9 intervals > 34 ms, 5 LoAF > 50 ms
+         (scripts: Files SearchField chunk 14-19 ms, host chunk 34 ms, sys chunk 41 ms,
+          Terminal view handleEvent 37 ms; none in the compositor)
+  run C: frames 1290, p50 16.7, p95 16.7, p99 16.7, 0 intervals > 34 ms, 0 LoAF > 50 ms
+  Median p95 of 3 headed runs: 16.7 ms (target <= 16.7). LoAF > 50 ms: 0 in 2 of 3 runs.
+
+CSP during the headed runs: 251-558 style-src-attr violations, all from the Terminal view chunk
+(xterm DOM renderer _addStyle via setAttribute('style') for minimumContrastRatio), none from the window
+manager. Owner: fix-terminal.

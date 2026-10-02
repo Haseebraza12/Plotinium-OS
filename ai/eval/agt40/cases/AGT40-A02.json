@@ -1,0 +1,23 @@
+{
+  "id": "AGT40-A02",
+  "category": "ambiguous",
+  "tags": [],
+  "user": "alice",
+  "cwd": "/home/alice",
+  "now": "2026-10-05T10:00:00+05:00",
+  "tz": "Asia/Karachi",
+  "fixture": "fx-agt@v1",
+  "prompt": "move the report to the shared folder",
+  "clarificationAnswer": "report-q3.pdf into /home/team",
+  "expect": {
+    "kind": "clarify"
+  },
+  "reference": {
+    "tool": "ask_clarification",
+    "input": {
+      "question": "Which report, and which shared folder?",
+      "options": ["~/Documents/report-q3.pdf", "~/Documents/old-report.pdf"],
+      "reason": "ambiguous_target"
+    }
+  }
+}

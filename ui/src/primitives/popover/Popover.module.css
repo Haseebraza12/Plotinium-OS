@@ -1,0 +1,13 @@
+.popover {
+  display: flex;
+  flex-direction: column;
+  min-width: var(--pl-menu-min-w);
+  padding: var(--pl-space-3);
+  outline: none;
+}
+.flush {
+  padding: 0;
+}
+.arrowless {
+  border-radius: var(--pl-radius-lg);
+}

@@ -1,0 +1,28 @@
+# Mutex vs semaphore
+
+People say "a mutex is just a semaphore initialised to 1". That's true about the counter and wrong about the meaning.
+
+## Ownership
+
+A mutex has an **owner**: only the thread that locked it may unlock it. That enables:
+- priority inheritance (the kernel knows whom to boost);
+- error checking (unlocking a mutex you don't hold is a bug the library can report);
+- recursive locking, if you ask for it.
+
+A counting semaphore has **no owner**. Any thread may post. That is exactly what you want for signalling: the producer posts, the consumer waits.
+
+## Use them for different jobs
+
+- Protecting shared data → mutex.
+- Counting free slots or items (bounded buffer) → two counting semaphores plus a mutex.
+- "Tell another thread that something happened" → semaphore or a condition variable.
+
+## A 0/1 semaphore used as a lock
+
+Works, but you lose the ownership checks. If thread B posts by accident, thread A's critical section is no longer protected and nothing complains.
+
+## POSIX calls
+
+`pthread_mutex_lock/unlock` vs `sem_wait/sem_post`. Named semaphores (`sem_open`) also work across processes.
+
+TA's one-liner: *a mutex is a lock, a semaphore is a counter with a waiting room.*

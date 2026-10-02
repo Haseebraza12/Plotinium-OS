@@ -1,0 +1,44 @@
+{
+ "files_changed": [
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/src/dag/index.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/src/dag/README.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/dsa/bench/dag.bench.ts"
+ ],
+ "verification": [
+  {
+   "command": "pnpm exec tsc -p dsa/tsconfig.json --noEmit",
+   "outcome": "exit 0, no errors"
+  },
+  {
+   "command": "pnpm exec vitest run --project dsa dsa/tests/dag.test.ts dsa/tests/dag.prop.test.ts dsa/tests/scaffold.test.ts",
+   "outcome": "22 passed, 9 skipped (the skipped ones are scaffold rows for structures whose flags are now true). All 17 dag unit tests and 3 property tests pass."
+  },
+  {
+   "command": "PLT_PROP_RUNS=10000 pnpm exec vitest run --project dsa dsa/tests/dag.prop.test.ts",
+   "outcome": "3 passed at the nightly scale of 10,000 runs"
+  },
+  {
+   "command": "pnpm exec eslint dsa/src/dag dsa/tests dsa/bench --max-warnings 0",
+   "outcome": "exit 0, no warnings"
+  },
+  {
+   "command": "PLT_BENCH_SIZES=1000,10000 pnpm exec vitest bench --run --project 'dsa (bench)' dsa/bench/dag.bench.ts (the documented pull-request sizes of spec \u00a77.2)",
+   "outcome": "4/4 passed; shape ratio 1.49 (limit 2) on the recorded run. It passed on every run after the optimisations at load average below 5, and failed once at 2.16 before them under heavy load."
+  },
+  {
+   "command": "pnpm exec vitest bench --run --project 'dsa (bench)' dsa/bench/dag.bench.ts (all sizes 10^3, 10^4 and 10^5: the nightly configuration)",
+   "outcome": "3/4 passed. The DSA-DAG-01 shape assertion fails at 10^5: ratio 4.46 on the recorded run and 2.63 on a later run at lower load (limit 2). The app-closure budget, the 18-service budget and the new memory record pass. The test was not weakened; see problems."
+  }
+ ],
+ "benchmark": "Dev machine (Ryzen 5 7530U, 16 MB L3, Node 24.13.1), shared with about 25 other agents (load average 3.5-14). Every figure must be re-run on the lab machine.\n\nbuild + Kahn + levels, in ns per (V + E), on a layered DAG with E = 5V:\n- 10^3: mean 50.6, p50 47.4, p95 66.7.\n- 10^4: mean 83.6, p50 77.3, p95 121.0.\n- 10^5: mean 225.8, p50 181.5, p95 445.6.\n- Whole build: 0.30 ms, 4.98 ms and 135 ms.\n- A second full run at lower load gave 49.3, 107.7 and 129.7, a shape ratio of 2.63.\n\nThe curve is not flat: 40.3, 62.0 and 112.0 ns in a standalone profile. The build does one Map.set per name and one Map.get per requirement, and those string lookups on the spec's `index: Map<string, number>` take 72-79% of the time. At 10^5 they miss in L3. The team-written part (CSR transpose, Kahn, levels) grows from 11.2 to 23.9 ns per (V + E), a ratio of 2.1.\n\nBudgets (all pass):\n- 18 shipped services: mean 8.1 \u00b5s, p95 11.3 \u00b5s (budget 50 \u00b5s).\n- App closure at 32 nodes: mean 13.4 \u00b5s, p95 22.7 \u00b5s (budget 1 ms).\n- App closure at 8 and 128 nodes: 1.4 \u00b5s and 38.9 \u00b5s, sub-linear in closure size.\n\nMemory, in bytes per node:\n- Typed arrays (from stats()): exactly 4\u00b7(5V + 2 + 2E) bytes, which is 58.8 / 59.6 / 59.9 B/node at 10^3 / 10^4 / 10^5. The bench asserts this.\n- Measured with --expose-gc: 97 / 114 / 105 B/node for the built graph, and 121 / 133 / 125 B/node with the levels() and topoOrder() lists cached (about 21 B per (V + E)).\n\nThe full tables, the phase profile, the budgets and the filled DSA.md entry are in dsa/src/dag/README.md.",
+ "problems": [
+  "The 10^5 benchmark fails its spec target. Spec \u00a77.2 says build time per (V + E) may grow at most 2x from 10^3 to 10^5, and the nightly run asserts this. It measured 4.46 and 2.63 on this shared dev machine. The cause is mostly Map string lookups on random requirement names that miss in L3, not Kahn's algorithm (see the profile in the README). I did not weaken the test. If the lab machine also fails, the team needs to choose: keep the limit only at 10^3-10^4, time name resolution separately, or raise the S4 limit. The README lists these options.",
+  "The shape assertion at the pull-request sizes (10^3-10^4) passes: 1.49 on the recorded run. The margin is moderate on a machine under contention: it failed once at 2.16 at load average above 6, before two optimisations took random memory accesses out of the hot loops.",
+  "I added a `stats(): DsaStats` method to the `Dag` interface. Spec \u00a73.4 ('Accounting') requires every structure to have one, but the \u00a74.4 contract omitted it. It is additive and nothing else implements `Dag`. The team may want to add it to spec \u00a74.4.",
+  "I extended dsa/bench/dag.bench.ts with a 'DSA-GEN-09 dag bytes per node \u2026' memory record, the same pattern the other structures' benches use. It asserts the exact typed-array size 4\u00b7(5V + 2 + 2E). No test files were changed.",
+  "Error order is decided in buildDag and documented in the README. It checks, in order: a duplicate name, then an unknown requirement, a duplicate requirement, a self-loop (smallest name) and a cycle. Duplicate edges are found after all names are resolved, by scanning the sorted dependents rows, so an unknown requirement anywhere in the input is reported before a duplicate edge.",
+  "Not done, because it was outside the allowed edit scope: benchmark JSON was not committed to docs/evidence/dsa/dag, `dsa` was not added to GATED_PACKAGES in vitest.config.ts, and DSA.md and AI_USAGE.md were not edited. The filled DSA.md entry is in dsa/src/dag/README.md, ready to copy, with owner-name and PR placeholders.",
+  "dsa/src/index.ts needed no change: it already exports buildDag, CycleError, topoLevels, UnknownNodeError and the Dag, DagNode and KahnCursor types."
+ ],
+ "test_changes": "No existing test was changed or weakened; dag.test.ts and dag.prop.test.ts are untouched. I made one addition to the bench file dsa/bench/dag.bench.ts: a new test, 'DSA-GEN-09 dag bytes per node at 10^3, 10^4 and 10^5 are recorded'. It records bytes per node through the harness's recordMemory and measureBytesPerEntry, as the other structures' benches do, and asserts that stats().bytesAllocated / V equals 4\u00b7(5V + 2 + 2E) / V, the exact \u00a73.5 layout. For this it imports measureBytesPerEntry, recordMemory and SIZES."
+}

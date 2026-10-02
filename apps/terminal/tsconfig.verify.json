@@ -1,0 +1,10 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@plotinium/ui/apps/*": ["../../ui/src/apps/*/index.ts"]
+    }
+  },
+  "include": ["./**/*.ts", "./**/*.tsx", "../src/**/*.ts", "../../ui/src/primitives/vite-env.d.ts"],
+  "exclude": ["../node_modules", "../dist", "../coverage"]
+}

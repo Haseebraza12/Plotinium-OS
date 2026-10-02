@@ -1,0 +1,857 @@
+# Release pipeline: tag v* -> verified, tested, multi-arch images on GHCR pinned by digest, a timed
+# clean bring-up, a GitHub Release with coverage and performance artefacts, the pin PR and the
+# approval-gated production deploy.
+# Spec: specs/14-devops/deployment-and-ci.md §3.4, §3.5, §3.6, §3.7.5, §3.10 (OPS-04, OPS-05,
+# OPS-07, OPS-08, OPS-10, OPS-19, PLT-ID-15, PLT-DEL-03, §17.1, §17.2). Runbook: ops/RUNBOOK.md §5.
+# Owner: R5 QA/DevOps. Reviewer: R1 Kernel.
+#
+#   verify ─┬─ suite (lint, typecheck, tests + coverage + JUnit, traceability)
+#           ├─ perf  (hosted micro-benchmarks + the lab-spec result for this tree, budgets)
+#           └─ images (amd64 + arm64, by digest) ── publish (manifest lists, images.lock.json, SBOMs)
+#                                                      └─ bringup (clean clone -> up --wait <= 240 s)
+#   suite + perf + publish + bringup ── release (GitHub Release + assets) ─┬─ pin (PR into main)
+#                                                                          └─ deploy (deploy.yml,
+#                                                                             environment production)
+#
+# Third-party actions are pinned to full commit SHAs (tag in the trailing comment, OPS-10). No LLM
+# key and no deploy key is used here except by the deploy job, which runs in the approval-gated
+# `production` environment (spec §3.9). Repository variables (Settings -> Variables):
+#   ARM64_RUNNER          runner label for the arm64 half (default ubuntu-24.04-arm; on a private
+#                         repository without arm64 runners set it to ubuntu-24.04 to build under QEMU)
+#   WEB_BUILD             'required' (default): a missing or failing web build fails the image
+#   REQUIRE_LAB_PERF      'true' once perf-lab.yml exists: no lab-spec result for this tree -> fail
+#   PLT_SEMESTER_START    ISO date of week 1, for the budget checker's hardFrom weeks
+#   BRINGUP_ALLOW_DOCKER_HUB  'true' only if a runner cannot block Docker Hub (downgrades to a warning)
+#   DEPLOY_ON_RELEASE     'false' to skip the deploy job (for example a dry-run tag in a fork)
+
+name: release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  verify:
+    name: verify the tag (PLT-ID-15)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    outputs:
+      version: ${{ steps.tag.outputs.version }}
+      minor: ${{ steps.tag.outputs.minor }}
+      prerelease: ${{ steps.tag.outputs.prerelease }}
+      short_sha: ${{ steps.tag.outputs.short_sha }}
+      source_date_epoch: ${{ steps.tag.outputs.source_date_epoch }}
+      build_date: ${{ steps.tag.outputs.build_date }}
+      image_base: ${{ steps.tag.outputs.image_base }}
+    steps:
+      - name: Check out the tagged commit with history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Tag format, package.json version, CHANGELOG section, commit on main
+        id: tag
+        env:
+          TAG: ${{ github.ref_name }}
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$TAG" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)(-rc\.([0-9]+))?$ ]]; then
+            echo "::error::tag ${TAG} does not match vX.Y.Z or vX.Y.Z-rc.N (OPS-07)"
+            exit 1
+          fi
+          major="${BASH_REMATCH[1]}" minor="${BASH_REMATCH[2]}" rc="${BASH_REMATCH[4]}"
+          version="${TAG#v}"
+          pkg="$(node -p 'require("./package.json").version')"
+          if [[ "$pkg" != "$version" ]]; then
+            echo "::error::package.json says ${pkg} but the tag is ${TAG} (PLT-ID-15)"
+            exit 1
+          fi
+          if ! grep -Eq "^## \[${version//./\\.}\]" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md has no '## [${version}]' section (PLT-DOC-12)"
+            exit 1
+          fi
+          git fetch --no-tags --quiet origin +refs/heads/main:refs/remotes/origin/main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::the tagged commit ${GITHUB_SHA} is not on main (OPS-07)"
+            exit 1
+          fi
+          sde="$(git log -1 --format=%ct "$GITHUB_SHA")"
+          {
+            echo "version=${version}"
+            echo "minor=${major}.${minor}"
+            echo "prerelease=$([[ -n "$rc" ]] && echo true || echo false)"
+            echo "short_sha=${GITHUB_SHA:0:12}"
+            echo "source_date_epoch=${sde}"
+            echo "build_date=$(date -u -d "@${sde}" +%Y-%m-%dT%H:%M:%SZ)"
+            echo "image_base=${REGISTRY}/${OWNER,,}/plotinium"
+          } >> "$GITHUB_OUTPUT"
+          echo "Release ${version} from ${GITHUB_SHA} (SOURCE_DATE_EPOCH ${sde})" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Set up pnpm (version from packageManager)
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Set up Node.js (version from .node-version)
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - name: Install dependencies (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+
+      - name: The tree is clean after checkout and install (PLT-ID-15)
+        run: |
+          if [[ -n "$(git status --porcelain)" ]]; then
+            git status --porcelain
+            echo "::error::the working tree changed after install; a release is built from a clean tree"
+            exit 1
+          fi
+
+  suite:
+    name: tests, coverage and traceability
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prettier
+        run: pnpm format:check
+
+      - name: ESLint (--max-warnings 0)
+        run: pnpm lint
+
+      - name: TypeScript 7 type check
+        run: pnpm typecheck
+
+      - name: Vitest with coverage and a JUnit report (PLT-DEL-03)
+        run: |
+          mkdir -p reports/junit
+          pnpm exec vitest run --coverage \
+            --reporter=default --reporter=junit --outputFile.junit=reports/junit/vitest.xml
+
+      - name: Traceability matrix (C18; every title begins with a requirement ID)
+        run: |
+          mkdir -p reports/traceability
+          pnpm --silent traceability --strict --json > reports/traceability/traceability.json
+          pnpm --silent traceability --out reports/traceability/traceability.md > /dev/null
+
+      - name: Coverage table in the job summary
+        if: ${{ !cancelled() }}
+        run: |
+          # shellcheck disable=SC2016 # the single-quoted program is JavaScript, not shell
+          if [[ -f coverage/coverage-summary.json ]]; then
+            node -e '
+              const t = require("./coverage/coverage-summary.json").total;
+              const row = (k) => `| ${k} | ${t[k].pct}% | ${t[k].covered}/${t[k].total} |`;
+              console.log(["## Coverage", "", "| Metric | % | Covered |", "|---|---|---|",
+                ...["lines", "statements", "functions", "branches"].map(row), ""].join("\n"));
+            ' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload the test evidence
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-tests
+          path: |
+            coverage/
+            reports/junit/
+            reports/traceability/
+          if-no-files-found: error
+          retention-days: 90
+
+  perf:
+    name: performance evidence
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: read # find and download the lab-spec run for this tree
+    steps:
+      - name: Check out with history (tree comparison)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Hosted micro-benchmarks (smoke only; never gate evidence, TST-06)
+        env:
+          PLT_BENCH_OUT: reports/perf/dsa # dsa/bench/harness.ts appends spec §7.3 JSON lines here
+        run: |
+          mkdir -p reports/perf
+          pnpm exec vitest bench --run \
+            --reporter=default --reporter=json --outputFile.json=reports/perf/bench-hosted.json
+
+      - name: Lab-spec result for this tree, at most 7 days old (OPS-11; spec §3.7.5 step 3)
+        id: lab
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUIRE_LAB_PERF: ${{ vars.REQUIRE_LAB_PERF || 'false' }}
+        run: |
+          set -euo pipefail
+          tree="$(git rev-parse 'HEAD^{tree}')"
+          since="$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ)"
+          found=""
+          if runs="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow perf-lab.yml --branch main \
+                --status success --limit 50 --json databaseId,headSha,createdAt 2>/dev/null)"; then
+            while read -r id sha created; do
+              [[ "$created" < "$since" ]] && continue
+              git cat-file -e "${sha}^{commit}" 2>/dev/null || continue
+              if [[ "$(git rev-parse "${sha}^{tree}")" == "$tree" ]]; then found="$id"; break; fi
+            done < <(jq -r '.[] | "\(.databaseId) \(.headSha) \(.createdAt)"' <<<"$runs")
+          fi
+          if [[ -n "$found" ]]; then
+            gh run download "$found" --repo "$GITHUB_REPOSITORY" --name perf-results --dir reports/perf/lab
+            echo "run=${found}" >> "$GITHUB_OUTPUT"
+            echo "Lab-spec performance: run ${found} (same tree as this tag)" >> "$GITHUB_STEP_SUMMARY"
+          elif [[ "$REQUIRE_LAB_PERF" == true ]]; then
+            echo "::error::no passing lab-spec result for this tree in the last 7 days: dispatch perf-lab on main at ${GITHUB_SHA}"
+            exit 1
+          else
+            echo "::warning::no lab-spec performance result for this tree; this release carries hosted smoke numbers only (set REQUIRE_LAB_PERF=true once perf-lab.yml runs)"
+            echo "Lab-spec performance: none for this tree (hosted smoke only)" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Check the lab results against budgets.json (TST-04, TST-19)
+        if: steps.lab.outputs.run != ''
+        env:
+          PLT_SEMESTER_START: ${{ vars.PLT_SEMESTER_START }}
+        run: >
+          node tests/performance/check-budgets.ts --results reports/perf/lab --cadence release
+          --machine lab-spec --summary reports/perf/budgets.md
+
+      - name: Upload the performance evidence
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-perf
+          path: reports/perf/
+          if-no-files-found: warn
+          retention-days: 90
+
+  images:
+    name: images (${{ matrix.arch }})
+    needs: verify
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    permissions:
+      contents: read
+      packages: write # GITHUB_TOKEN pushes to GHCR in this job only
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - arch: amd64
+            platform: linux/amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            platform: linux/arm64
+            runner: ${{ vars.ARM64_RUNNER || 'ubuntu-24.04-arm' }}
+    env:
+      IMAGE_BASE: ${{ needs.verify.outputs.image_base }}
+      SOURCE_DATE_EPOCH: ${{ needs.verify.outputs.source_date_epoch }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up QEMU (only when the arm64 half runs on an amd64 runner)
+        if: matrix.arch == 'arm64' && runner.arch != 'ARM64'
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+        with:
+          image: docker.io/tonistiigi/binfmt:qemu-v10.2.3@sha256:400a4873b838d1b89194d982c45e5fb3cda4593fbfd7e08a02e76b03b21166f0
+          platforms: arm64
+
+      - name: Set up Buildx (BuildKit pinned by digest)
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+        with:
+          driver-opts: image=moby/buildkit:v0.32.2@sha256:28a898719c18a33f4e8000685287fa36fd0dd9560c6440227d3a732d79bb41d8
+
+      - name: Log in to GHCR
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTOR: ${{ github.actor }}
+        run: printf '%s' "$TOKEN" | docker login "$REGISTRY" -u "$ACTOR" --password-stdin
+
+      - name: Build and push web by digest
+        id: web
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          target: web
+          platforms: ${{ matrix.platform }}
+          build-args: |
+            BUILD_VERSION=${{ needs.verify.outputs.version }}
+            BUILD_SHA=${{ github.sha }}
+            BUILD_DATE=${{ needs.verify.outputs.build_date }}
+            WEB_BUILD=${{ vars.WEB_BUILD || 'required' }}
+          labels: |
+            org.opencontainers.image.title=plotinium-web
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ needs.verify.outputs.version }}
+            org.opencontainers.image.created=${{ needs.verify.outputs.build_date }}
+          provenance: mode=max
+          sbom: true
+          outputs: type=image,name=${{ env.IMAGE_BASE }}-web,push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=web-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=web-${{ matrix.arch }}
+
+      - name: Build and push app by digest
+        id: app
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          target: app
+          platforms: ${{ matrix.platform }}
+          build-args: |
+            BUILD_VERSION=${{ needs.verify.outputs.version }}
+            BUILD_SHA=${{ github.sha }}
+            BUILD_DATE=${{ needs.verify.outputs.build_date }}
+          labels: |
+            org.opencontainers.image.title=plotinium-app
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ needs.verify.outputs.version }}
+            org.opencontainers.image.created=${{ needs.verify.outputs.build_date }}
+          provenance: mode=max
+          sbom: true
+          outputs: type=image,name=${{ env.IMAGE_BASE }}-app,push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=app-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=app-${{ matrix.arch }}
+
+      - name: Build and push db by digest
+        id: db
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          target: db
+          platforms: ${{ matrix.platform }}
+          labels: |
+            org.opencontainers.image.title=plotinium-db
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ needs.verify.outputs.version }}
+            org.opencontainers.image.created=${{ needs.verify.outputs.build_date }}
+          provenance: mode=max
+          sbom: true
+          outputs: type=image,name=${{ env.IMAGE_BASE }}-db,push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=db-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=db-${{ matrix.arch }}
+
+      - name: Record the per-platform digests
+        env:
+          WEB: ${{ steps.web.outputs.digest }}
+          APP: ${{ steps.app.outputs.digest }}
+          DB: ${{ steps.db.outputs.digest }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          mkdir -p digests
+          for pair in "web=${WEB}" "app=${APP}" "db=${DB}"; do
+            name="${pair%%=*}" digest="${pair#*=}"
+            [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "::error::no digest for ${name}"; exit 1; }
+            printf '%s\n' "$digest" > "digests/${name}-${ARCH}"
+          done
+
+      - name: Upload the digests
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: digests-${{ matrix.arch }}
+          path: digests/
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: multi-arch manifests, images.lock.json and SBOMs
+    needs: [verify, images]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+    env:
+      IMAGE_BASE: ${{ needs.verify.outputs.image_base }}
+      VERSION: ${{ needs.verify.outputs.version }}
+      MINOR: ${{ needs.verify.outputs.minor }}
+      PRERELEASE: ${{ needs.verify.outputs.prerelease }}
+      SHORT_SHA: ${{ needs.verify.outputs.short_sha }}
+      SOURCE_DATE_EPOCH: ${{ needs.verify.outputs.source_date_epoch }}
+    steps:
+      - name: Check out (Dockerfile base digests)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Download the per-platform digests
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: digests-*
+          path: digests
+          merge-multiple: true
+
+      - name: Set up Buildx (imagetools)
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+        with:
+          driver-opts: image=moby/buildkit:v0.32.2@sha256:28a898719c18a33f4e8000685287fa36fd0dd9560c6440227d3a732d79bb41d8
+
+      - name: Log in to GHCR
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTOR: ${{ github.actor }}
+        run: printf '%s' "$TOKEN" | docker login "$REGISTRY" -u "$ACTOR" --password-stdin
+
+      - name: Refuse to overwrite a released version (OPS-04)
+        run: |
+          for t in web app db; do
+            if docker buildx imagetools inspect "${IMAGE_BASE}-${t}:${VERSION}" > /dev/null 2>&1; then
+              echo "::error::${IMAGE_BASE}-${t}:${VERSION} already exists; a version tag is never overwritten"
+              exit 1
+            fi
+          done
+
+      - name: Create the manifest lists (X.Y.Z, X.Y, sha-<12>)
+        run: |
+          set -euo pipefail
+          for t in web app db; do
+            tags=(-t "${IMAGE_BASE}-${t}:${VERSION}" -t "${IMAGE_BASE}-${t}:sha-${SHORT_SHA}")
+            [[ "$PRERELEASE" == false ]] && tags+=(-t "${IMAGE_BASE}-${t}:${MINOR}")
+            docker buildx imagetools create "${tags[@]}" \
+              "${IMAGE_BASE}-${t}@$(cat "digests/${t}-amd64")" \
+              "${IMAGE_BASE}-${t}@$(cat "digests/${t}-arm64")"
+          done
+
+      - name: Write images.lock.json (spec §4.1) and the SBOMs
+        run: |
+          set -euo pipefail
+          mkdir -p release/sbom
+          images='{}'
+          for t in web app db; do
+            ref="${IMAGE_BASE}-${t}"
+            digest="$(docker buildx imagetools inspect "${ref}:${VERSION}" --format '{{json .Manifest}}' | jq -r .digest)"
+            [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "::error::no index digest for ${t}"; exit 1; }
+            platforms="$(docker buildx imagetools inspect --raw "${ref}@${digest}" \
+              | jq -c '[.manifests[] | select(.platform.os == "linux" and .platform.architecture != "unknown")
+                        | "linux/" + .platform.architecture] | unique')"
+            images="$(jq -c --arg t "$t" --arg ref "$ref" --arg d "$digest" --argjson p "$platforms" \
+              '. + {($t): {ref: $ref, digest: $d, platforms: $p}}' <<<"$images")"
+            docker buildx imagetools inspect "${ref}@${digest}" --format '{{json .SBOM}}' \
+              > "release/sbom/plotinium-${t}-${VERSION}.sbom.json"
+          done
+          bases="$(sed -nE 's/^ARG [A-Z_]+_IMAGE=([^@ ]+)@(sha256:[0-9a-f]{64}).*/\1 \2/p' Dockerfile \
+            | jq -Rn '[inputs | split(" ") | {(.[0]): .[1]}] | add // {}')"
+          jq -n --arg v "$VERSION" --argjson sde "$SOURCE_DATE_EPOCH" --arg sha "$GITHUB_SHA" \
+            --argjson images "$images" --argjson bases "$bases" \
+            '{version: $v, sourceDateEpoch: $sde, gitSha: $sha, images: $images, bases: $bases}' \
+            > release/images.lock.json
+          jq . release/images.lock.json
+          {
+            echo "## Images (by digest)"
+            echo ""
+            echo "| Image | Digest | Platforms |"
+            echo "|---|---|---|"
+            jq -r '.images | to_entries[] | "| `\(.value.ref)` | `\(.value.digest)` | \(.value.platforms | join(", ")) |"' release/images.lock.json
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: The release shell has no test-flag handler and no secret (OPS-19, SEC-10)
+        env:
+          GITLEAKS_VERSION: 8.30.1
+          GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+        run: |
+          set -euo pipefail
+          web="$(jq -r '.images.web.ref + "@" + .images.web.digest' release/images.lock.json)"
+          docker pull --quiet --platform linux/amd64 "$web"
+          cid="$(docker create --platform linux/amd64 "$web")"
+          docker cp "${cid}:/srv" webroot
+          docker rm "$cid" > /dev/null
+          if grep -rlE '__TEST_FLAGS__|inject-cycle' webroot; then
+            echo "::error::the release web image contains the e2e test-flag handler (OPS-19)"
+            exit 1
+          fi
+          if grep -rlE 'sk-ant-|ANTHROPIC_API_KEY' webroot; then
+            echo "::error::the release web image references an LLM key (SEC-10, spec §12.6)"
+            exit 1
+          fi
+          curl -sSfL -o gitleaks.tar.gz \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  gitleaks.tar.gz" | sha256sum --check --strict
+          tar -xzf gitleaks.tar.gz gitleaks
+          ./gitleaks dir --redact --no-banner --exit-code 1 webroot
+
+      - name: Upload images.lock.json and the SBOMs
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-images
+          path: release/
+          if-no-files-found: error
+          retention-days: 90
+
+  bringup:
+    name: clean bring-up <= 240 s (${{ matrix.arch }})
+    needs: [verify, publish]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: read # used only on a private repository (anonymous pulls need public packages)
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ${{ vars.ARM64_RUNNER || 'ubuntu-24.04-arm' }}
+    env:
+      TAG: ${{ github.ref_name }}
+      VERSION: ${{ needs.verify.outputs.version }}
+      ARCH: ${{ matrix.arch }}
+      LIMIT_SECONDS: '240'
+      PORT: '4717'
+      PRIVATE_REPO: ${{ github.event.repository.private }}
+    steps:
+      - name: Is this runner native for the architecture?
+        id: gate
+        run: |
+          native=false
+          case "${ARCH}/${RUNNER_ARCH}" in amd64/X64 | arm64/ARM64) native=true ;; esac
+          echo "native=${native}" >> "$GITHUB_OUTPUT"
+          [[ "$native" == true ]] || echo "::notice::no native ${ARCH} runner (ARM64_RUNNER); the ${ARCH} bring-up is skipped"
+
+      - name: Download images.lock.json
+        if: steps.gate.outputs.native == 'true'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-images
+          path: release
+
+      - name: Clean Docker state, no docker login, Docker Hub blocked (OPS-04)
+        if: steps.gate.outputs.native == 'true'
+        env:
+          ALLOW_HUB: ${{ vars.BRINGUP_ALLOW_DOCKER_HUB || 'false' }}
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          set -euo pipefail
+          rm -f ~/.docker/config.json
+          docker system prune -af --volumes > /dev/null
+          hub="registry-1.docker.io auth.docker.io index.docker.io registry.hub.docker.com production.cloudflare.docker.com"
+          printf '127.0.0.1 %s\n::1 %s\n' "$hub" "$hub" | sudo tee -a /etc/hosts > /dev/null
+          if docker pull hello-world > /dev/null 2>&1; then
+            if [[ "$ALLOW_HUB" == true ]]; then
+              echo "::warning::Docker Hub is still reachable from this runner; OPS-04 'Docker Hub blocked' is not proven"
+              echo "HUB_BLOCKED=false" >> "$GITHUB_ENV"
+            else
+              echo "::error::Docker Hub is still reachable after blocking it; the bring-up cannot prove OPS-04"
+              exit 1
+            fi
+          else
+            echo "HUB_BLOCKED=true" >> "$GITHUB_ENV"
+          fi
+          if [[ "$PRIVATE_REPO" == true ]]; then
+            echo "::warning::private repository: logging in to GHCR, so anonymous pulls (OPS-04) are not proven"
+            printf '%s' "$TOKEN" | docker login ghcr.io -u "$ACTOR" --password-stdin
+          fi
+
+      # The gate is "clone -> the stack serves / and /api/readyz" (<= 240 s). TODO(R5): once the
+      # Playwright `bringup` project exists (tests/bringup/, spec §3.6 step 3), also open
+      # http://localhost:4717 in Chrome, log in with the password from `docker compose logs app`,
+      # and gate on the desktop-interactive mark instead.
+      - name: 'Timed: git clone, cd plotinium, docker compose up -d --wait (§17.1, OPS-05)'
+        if: steps.gate.outputs.native == 'true'
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          work="$(mktemp -d)"
+          echo "WORK=${work}" >> "$GITHUB_ENV"
+          url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git"
+          [[ "$PRIVATE_REPO" == true ]] && url="https://x-access-token:${TOKEN}@${GITHUB_SERVER_URL#https://}/${GITHUB_REPOSITORY}.git"
+          t0="$(date +%s.%N)"
+          git clone --quiet --depth 1 --branch "$TAG" "$url" "${work}/plotinium"
+          cd "${work}/plotinium"
+          # What the pin PR does on main: point compose.yaml at this release's digests.
+          for t in web app db; do
+            ref="$(jq -r --arg t "$t" '.images[$t].ref + "@" + .images[$t].digest' "${GITHUB_WORKSPACE}/release/images.lock.json")"
+            sed -i -E "s#^([[:space:]]*image:[[:space:]]*)ghcr\.io/[^[:space:]]*/plotinium-${t}([:@][^[:space:]]*)?#\1${ref}#" compose.yaml
+          done
+          git diff --stat
+          docker compose up -d --wait --wait-timeout 300
+          t1="$(date +%s.%N)"
+          ready=""
+          for _ in $(seq 1 60); do
+            if curl -fsS -o /dev/null "http://localhost:${PORT}/" \
+               && curl -fsS -o /dev/null "http://localhost:${PORT}/api/readyz"; then
+              ready=yes
+              break
+            fi
+            sleep 1
+          done
+          t2="$(date +%s.%N)"
+          [[ -n "$ready" ]] || { echo "::error::the stack is up but http://localhost:${PORT} does not answer"; exit 1; }
+          {
+            echo "T_UP=$(awk -v a="$t0" -v b="$t1" 'BEGIN { printf "%.1f", b - a }')"
+            echo "T_READY=$(awk -v a="$t0" -v b="$t2" 'BEGIN { printf "%.1f", b - a }')"
+          } >> "$GITHUB_ENV"
+
+      - name: Record the result and enforce the 240 s limit (OPS-05.bringup)
+        if: steps.gate.outputs.native == 'true'
+        run: |
+          set -euo pipefail
+          cd "${WORK}/plotinium"
+          served="$(curl -fsS "http://localhost:${PORT}/version.json" | jq -r '.version // empty' || true)"
+          compose_images="$(docker compose images --format json)"
+          foreign="$(jq -r '[.[] | select((.Repository // "") | startswith("ghcr.io/") | not) | .Repository] | join(" ")' <<<"$compose_images")"
+          pulled=0
+          for t in web app db; do
+            ref="$(jq -r --arg t "$t" '.images[$t].ref' "${GITHUB_WORKSPACE}/release/images.lock.json")"
+            idx="$(jq -r --arg t "$t" '.images[$t].digest' "${GITHUB_WORKSPACE}/release/images.lock.json")"
+            plat="$(docker buildx imagetools inspect --raw "${ref}@${idx}" \
+              | jq -r --arg a "$ARCH" '[.manifests[] | select(.platform.os == "linux" and .platform.architecture == $a)][0].digest')"
+            bytes="$(docker buildx imagetools inspect --raw "${ref}@${plat}" | jq '[.layers[].size] | add')"
+            pulled=$((pulled + bytes))
+          done
+          pass=true
+          awk -v t="$T_READY" -v l="$LIMIT_SECONDS" 'BEGIN { exit !(t <= l) }' || pass=false
+          [[ -z "$foreign" ]] || pass=false
+          mkdir -p "${GITHUB_WORKSPACE}/bringup"
+          jq -n --arg tag "$TAG" --arg arch "$ARCH" --arg runner "$RUNNER_NAME" \
+            --argjson up "$T_UP" --argjson ready "$T_READY" --argjson limit "$LIMIT_SECONDS" \
+            --argjson pulled "$pulled" --arg served "$served" --arg foreign "$foreign" \
+            --argjson hub "${HUB_BLOCKED:-false}" --arg private "$PRIVATE_REPO" --argjson pass "$pass" \
+            --argjson images "$(jq .images "${GITHUB_WORKSPACE}/release/images.lock.json")" \
+            '{budget: "OPS-05.bringup", tag: $tag, arch: $arch, runner: $runner,
+              cloneToUpSeconds: $up, cloneToReadySeconds: $ready, limitSeconds: $limit,
+              pulledCompressedBytes: $pulled, servedVersion: $served, nonGhcrImages: $foreign,
+              dockerHubBlocked: $hub, anonymousPull: ($private != "true"), images: $images, pass: $pass}' \
+            | tee "${GITHUB_WORKSPACE}/bringup/bringup-${ARCH}.json"
+          {
+            echo "## Clean bring-up (${ARCH})"
+            echo ""
+            echo "| clone -> up --wait | clone -> serving | limit | pulled (compressed) | Docker Hub blocked |"
+            echo "|---|---|---|---|---|"
+            echo "| ${T_UP} s | ${T_READY} s | ${LIMIT_SECONDS} s | $((pulled / 1048576)) MB | ${HUB_BLOCKED:-false} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+          [[ -n "$served" && "$served" != "$VERSION" ]] && echo "::warning::/version.json says ${served}, the tag is ${VERSION}"
+          [[ -z "$foreign" ]] || echo "::error::images not from GHCR: ${foreign}"
+          if [[ "$pass" != true ]]; then
+            echo "::error::clean bring-up took ${T_READY} s (limit ${LIMIT_SECONDS} s, spec limit 300 s)"
+            exit 1
+          fi
+          (( pulled <= 450 * 1048576 )) || echo "::warning::pulled $((pulled / 1048576)) MB (OPS-04.pull-size budget 450 MB)"
+
+      - name: Stack logs on failure
+        if: failure() && steps.gate.outputs.native == 'true'
+        run: |
+          cd "${WORK}/plotinium" 2> /dev/null && docker compose logs --no-color --tail 300 || true
+
+      - name: Tear down
+        if: always() && steps.gate.outputs.native == 'true'
+        run: |
+          cd "${WORK}/plotinium" 2> /dev/null && docker compose down -v --remove-orphans || true
+
+      - name: Upload the bring-up result
+        if: always() && steps.gate.outputs.native == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: bringup-${{ matrix.arch }}
+          path: bringup/
+          if-no-files-found: warn
+          retention-days: 90
+
+  release:
+    name: GitHub Release with coverage and performance artefacts
+    needs: [verify, suite, perf, publish, bringup]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write # create the release
+    env:
+      TAG: ${{ github.ref_name }}
+      VERSION: ${{ needs.verify.outputs.version }}
+      PRERELEASE: ${{ needs.verify.outputs.prerelease }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Download the evidence of this run
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          path: evidence
+
+      - name: Assemble the release assets (PLT-DEL-03)
+        run: |
+          set -euo pipefail
+          a=assets
+          mkdir -p "$a"
+          cp evidence/release-images/images.lock.json "$a/"
+          cp evidence/release-images/sbom/*.json "$a/"
+          cp evidence/release-tests/coverage/coverage-summary.json "$a/coverage-summary.json"
+          if [[ -f evidence/release-tests/coverage/lcov.info ]]; then
+            cp evidence/release-tests/coverage/lcov.info "$a/coverage-lcov.info"
+          fi
+          tar -czf "$a/coverage-html-${VERSION}.tar.gz" -C evidence/release-tests coverage
+          cp evidence/release-tests/reports/junit/vitest.xml "$a/junit-vitest-${VERSION}.xml"
+          cp evidence/release-tests/reports/traceability/traceability.json "$a/"
+          cp evidence/release-tests/reports/traceability/traceability.md "$a/"
+          if [[ -d evidence/release-perf ]]; then
+            tar -czf "$a/performance-${VERSION}.tar.gz" -C evidence release-perf
+            if [[ -f evidence/release-perf/budgets.md ]]; then
+              cp evidence/release-perf/budgets.md "$a/perf-budgets-${VERSION}.md"
+            fi
+          fi
+          for f in evidence/bringup-*/bringup-*.json; do
+            if [[ -f "$f" ]]; then cp "$f" "$a/"; fi
+          done
+          if [[ "$VERSION" == 1.0.0 ]]; then
+            find docs/report docs/slides -maxdepth 2 -name '*.pdf' -exec cp {} "$a/" \; 2> /dev/null || true
+          fi
+          ls -la "$a"
+
+      - name: Release notes from the CHANGELOG section plus the evidence
+        run: |
+          # shellcheck disable=SC2016 # the single-quoted programs are awk, JavaScript and jq
+          set -euo pipefail
+          awk -v v="$VERSION" '
+            $0 ~ "^## \\[" v "\\]" { on = 1; next }
+            on && /^## \[/ { exit }
+            on { print }
+          ' CHANGELOG.md > notes.md
+          {
+            echo ""
+            echo "## Evidence"
+            echo ""
+            # shellcheck disable=SC2016 # JavaScript template literal
+            node -e '
+              const t = require("./assets/coverage-summary.json").total;
+              console.log(`- Line coverage ${t.lines.pct}% (${t.lines.covered}/${t.lines.total}); report in coverage-html-*.tar.gz`);
+            '
+            for f in assets/bringup-*.json; do
+              [[ -f "$f" ]] && jq -r '"- Clean bring-up (\(.arch)): \(.cloneToReadySeconds) s from git clone to serving (limit \(.limitSeconds) s), \((.pulledCompressedBytes / 1048576) | floor) MB pulled, Docker Hub blocked: \(.dockerHubBlocked)"' "$f"
+            done
+            echo "- Images (by digest), from images.lock.json:"
+            jq -r '.images | to_entries[] | "  - `\(.value.ref)@\(.value.digest)`"' assets/images.lock.json
+            echo "- Performance: hosted smoke benchmarks and, when present, the lab-spec run for this tree (performance-*.tar.gz). Authoritative numbers come only from the lab-spec machine (spec p3)."
+          } >> notes.md
+          cat notes.md
+
+      - name: Create the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          flags=(--verify-tag --title "Plotinium ${VERSION}" --notes-file notes.md --generate-notes)
+          [[ "$PRERELEASE" == true ]] && flags+=(--prerelease) || flags+=(--latest)
+          gh release create "$TAG" "${flags[@]}" assets/*
+
+  pin:
+    name: pin PR (chore(release) pin image digests into compose.yaml)
+    needs: [verify, release]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write # push the pin branch
+      pull-requests: write # open the PR (needs "Allow GitHub Actions to create pull requests")
+    env:
+      TAG: ${{ github.ref_name }}
+    steps:
+      - name: Check out main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+
+      - name: Download images.lock.json
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-images
+          path: release
+
+      - name: Replace the three image references with this release's digests
+        run: |
+          set -euo pipefail
+          for t in web app db; do
+            ref="$(jq -r --arg t "$t" '.images[$t].ref + "@" + .images[$t].digest' release/images.lock.json)"
+            sed -i -E "s#^([[:space:]]*image:[[:space:]]*)ghcr\.io/[^[:space:]]*/plotinium-${t}([:@][^[:space:]]*)?#\1${ref}#" compose.yaml
+            grep -qF "image: ${ref}" compose.yaml || { echo "::error::compose.yaml has no image line for ${t}"; exit 1; }
+          done
+          rm -rf release
+          git diff
+
+      - name: Open the pin PR (a second member approves it like any PR)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- compose.yaml; then
+            echo "compose.yaml already pins ${TAG}"
+            exit 0
+          fi
+          branch="release/pin-${TAG}"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git switch -c "$branch"
+          git commit -q -m "chore(release): pin ${TAG} image digests (OPS-04)" -- compose.yaml
+          git push -q origin "$branch"
+          gh pr create --base main --head "$branch" \
+            --title "chore(release): pin ${TAG} image digests" \
+            --body "Pins compose.yaml to the multi-arch GHCR digests published for ${TAG} (OPS-04, spec §3.7.5 step 9), so the examiner bring-up pulls exactly the released images. Close and reopen this PR once so the required checks run (PRs opened with GITHUB_TOKEN do not trigger workflows)."
+
+  deploy:
+    name: deploy (environment production, approval required)
+    needs: [verify, release]
+    if: vars.DEPLOY_ON_RELEASE != 'false'
+    permissions:
+      contents: read
+      actions: read # the approver's name for the deploy record
+    uses: ./.github/workflows/deploy.yml
+    with:
+      tag: ${{ github.ref_name }}
+      backup: true
+    secrets: inherit

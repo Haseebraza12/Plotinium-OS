@@ -1,0 +1,25 @@
+# Bloom filters
+
+A compact set membership sketch that answers **"definitely not present"** or **"probably present"**. It can be wrong in only one direction: it may claim an item is there when it isn't, but it never forgets an item that was inserted.
+
+## How it works
+
+- a bit array of m bits, all zero;
+- k independent hash functions;
+- insert x: set bits h1(x) … hk(x);
+- query x: if any of those bits is 0, x was never inserted. If all are 1, x is probably there (the bits may have been set by other items).
+
+## Error rate
+
+After n inserts, p ≈ (1 − e^(−kn/m))^k. Best k = (m/n) ln 2. With 10 bits per item and k = 7, p ≈ 0.8 %.
+
+## Tricks
+
+- Double hashing: g_i(x) = h1(x) + i·h2(x) mod m gives k hashes from two, with no measurable loss (Kirsch & Mitzenmacher).
+- You cannot delete (clearing a bit could erase other items). Counting Bloom filters use small counters instead of bits.
+
+## Where we use it
+
+The capstone indexer keeps one over chunk content hashes so it can skip a database lookup when a chunk is certainly new. A false positive only costs one extra lookup, so a small error rate is fine.
+
+Other uses: Chrome's old malicious URL check, LSM trees (skip SSTables that can't contain a key), CDN one-hit-wonder filtering.

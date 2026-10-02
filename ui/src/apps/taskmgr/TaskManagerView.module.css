@@ -1,0 +1,200 @@
+/*
+ * Task Manager window content (unified chrome): the toolbar is the drag region and leaves room
+ * for the traffic lights the window frame pins at the top-left. Panels slide ±16 px and fade
+ * in on a tab change (transform and opacity only).
+ */
+.view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  color: var(--pl-text);
+  font: var(--pl-type-body);
+}
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--pl-space-3);
+  flex: none;
+  height: var(--pl-toolbar-h);
+  padding: 0 var(--pl-space-3);
+  box-shadow: inset 0 calc(var(--pl-hairline-width) * -1) 0 var(--pl-separator);
+}
+.inset .toolbar {
+  padding-left: calc(
+    var(--pl-space-5) + var(--pl-traffic-size) * 3 + var(--pl-traffic-gap) * 2 + var(--pl-space-4)
+  );
+}
+.lead {
+  display: flex;
+  flex: none;
+  align-items: center;
+  min-width: 0;
+  margin-right: var(--pl-space-6);
+}
+.title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: var(--pl-type-headline);
+  font-size: calc(var(--pl-text-md) + 1px);
+}
+.tabs {
+  flex: none;
+}
+.tools {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--pl-space-2);
+  min-width: 0;
+}
+.tools > * {
+  flex: none;
+}
+.tools > .search {
+  flex: 0 1 calc(var(--pl-space-12) * 4);
+  min-width: calc(var(--pl-space-12) * 2 + var(--pl-space-8));
+}
+.announcer {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  animation: pl-tm-panel-fwd var(--pl-motion-med) var(--pl-ease-out) backwards;
+}
+.content[data-dir='back'] {
+  animation-name: pl-tm-panel-back;
+}
+@keyframes pl-tm-panel-fwd {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+}
+@keyframes pl-tm-panel-back {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+}
+.status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--pl-space-3);
+  flex: none;
+  min-height: calc(var(--pl-row-h) + var(--pl-space-1));
+  padding: 0 var(--pl-space-4);
+  box-shadow: inset 0 var(--pl-hairline-width) 0 var(--pl-separator);
+  font: var(--pl-type-caption);
+  color: var(--pl-text-muted);
+}
+.statusLeft,
+.statusRight {
+  display: flex;
+  align-items: center;
+  gap: var(--pl-space-3);
+  min-width: 0;
+}
+.mono {
+  font-family: var(--pl-font-mono);
+  font-size: calc(var(--pl-text-xs) - 0.5px);
+  color: var(--pl-text-tertiary);
+}
+.muted {
+  color: var(--pl-text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+.guard {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pl-space-1);
+}
+.dot {
+  width: calc(var(--pl-status-dot) - 1px);
+  height: calc(var(--pl-status-dot) - 1px);
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-status-online);
+}
+.guardOn {
+  color: var(--pl-danger);
+}
+.guardOn .dot {
+  background: var(--pl-danger);
+}
+.pause {
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pl-space-1);
+  min-height: var(--pl-target-min);
+  padding: 0 var(--pl-space-2);
+  border: 0;
+  border-radius: var(--pl-radius-sm);
+  background: transparent;
+  color: var(--pl-text-muted);
+  font: inherit;
+  cursor: default;
+  transition: transform var(--pl-motion-med) var(--pl-ease-spring-soft);
+}
+.pause::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--pl-control-hover);
+  opacity: 0;
+  transition: opacity var(--pl-motion-fast) var(--pl-ease);
+}
+.pause:hover::before {
+  opacity: 1;
+}
+.pause:active {
+  transform: scale(var(--pl-press-scale));
+}
+.pause[aria-pressed='true'] {
+  color: var(--pl-warning);
+}
+.pauseIcon {
+  display: inline-flex;
+  animation: pl-tm-swap var(--pl-motion-fast) var(--pl-ease-spring) both;
+}
+@keyframes pl-tm-swap {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+}
+@media (width < 980px) {
+  .toolbar {
+    flex-wrap: wrap;
+    height: auto;
+    padding-block: var(--pl-space-2);
+  }
+  .tools {
+    flex-basis: 100%;
+    justify-content: flex-start;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .content,
+  .pauseIcon {
+    animation: none;
+  }
+  .pause,
+  .pause::before {
+    transition: none;
+  }
+}

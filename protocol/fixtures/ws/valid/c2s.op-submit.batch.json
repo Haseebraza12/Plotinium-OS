@@ -1,0 +1,85 @@
+{
+  "v": 1,
+  "t": "op.submit",
+  "id": 3,
+  "body": {
+    "opId": "0192f0c1-8a3b-7c4d-8e5f-0123456789ab",
+    "osSessionId": "0192f0c1-9000-7000-8000-000000000001",
+    "cseq": 9,
+    "lamport": 44,
+    "principal": 1001,
+    "clientTime": "2026-09-24T10:00:00.000Z",
+    "op": {
+      "kind": "batch",
+      "fingerprint": "abababababababababababababababababababababababababababababababab",
+      "ops": [
+        {
+          "kind": "rename",
+          "ino": "0192f0c1-8a3b-7c4d-8e5f-0123456789ab",
+          "fromParentIno": "00000000-0000-7000-8000-000000000008",
+          "fromName": "a.md",
+          "toParentIno": "00000000-0000-7000-8000-000000000008",
+          "toName": "b.md"
+        },
+        {
+          "kind": "chmod",
+          "ino": "0192f0c1-8a3b-7c4d-9e5f-0123456789ac",
+          "change": {
+            "symbolic": "o-w"
+          },
+          "recursive": false
+        },
+        {
+          "kind": "chown",
+          "ino": "0192f0c1-8a3b-7c4d-9e5f-0123456789ac",
+          "gid": 200,
+          "recursive": true
+        },
+        {
+          "kind": "copy",
+          "srcIno": "0192f0c1-8a3b-7c4d-8e5f-0123456789ab",
+          "toParentIno": "00000000-0000-7000-8000-000000000008",
+          "toName": "c.md",
+          "recursive": false
+        },
+        {
+          "kind": "link",
+          "ino": "0192f0c1-8a3b-7c4d-8e5f-0123456789ab",
+          "parentIno": "00000000-0000-7000-8000-000000000008",
+          "name": "hard.md"
+        },
+        {
+          "kind": "write",
+          "ino": "0192f0c1-8a3b-7c4d-8e5f-0123456789ab",
+          "blob": "abababababababababababababababababababababababababababababababab",
+          "size": 3,
+          "mtime": 1790000000000
+        },
+        {
+          "kind": "utimes",
+          "ino": "0192f0c1-8a3b-7c4d-8e5f-0123456789ab",
+          "mtime": 1790000000000
+        }
+      ]
+    },
+    "base": {
+      "kind": "versions",
+      "entries": [
+        {
+          "ino": "0192f0c1-8a3b-7c4d-8e5f-0123456789ab",
+          "version": 3
+        },
+        {
+          "ino": "0192f0c1-8a3b-7c4d-9e5f-0123456789ac",
+          "version": 1
+        }
+      ]
+    },
+    "fences": [
+      {
+        "ino": "0192f0c1-8a3b-7c4d-8e5f-0123456789ab",
+        "fence": 5
+      }
+    ]
+  }
+}

@@ -1,0 +1,524 @@
+/*
+ * Plotinium motion: keyframes and one-shot animation classes. Only transform and opacity
+ * animate (WM-03, PROC-05). Durations are tokens or calc(ms * var(--pl-k)), so every class
+ * collapses to an instant change under reduced motion (DSN-05); the guard block at the end
+ * also caps iteration counts and delays. will-change is set only by these classes, which a
+ * component adds for the length of one animation and removes on animationend.
+ *
+ * Inputs set by the caller as custom properties:
+ *   --pl-genie-x / --pl-genie-y   minimise target offset (dock icon centre minus window centre)
+ *   --pl-flip-x / --pl-flip-y / --pl-flip-sx / --pl-flip-sy   FLIP start for maximise/restore
+ *   --pl-stagger-index            0-based index for staggered children
+ *   --pl-stack-index              notification position in a collapsed stack
+ */
+@layer shell {
+  /* ---------- shared keyframes ---------- */
+  @keyframes pl-fade-in {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes pl-fade-out {
+    to {
+      opacity: 0;
+    }
+  }
+
+  /* ---------- windows ---------- */
+  @keyframes pl-window-open {
+    from {
+      opacity: 0;
+      transform: scale(0.94) translateY(10px);
+    }
+  }
+  @keyframes pl-window-close {
+    to {
+      opacity: 0;
+      transform: scale(0.96);
+    }
+  }
+  @keyframes pl-window-minimise {
+    0% {
+      opacity: 1;
+      transform: none;
+    }
+    45% {
+      opacity: 0.8;
+      transform: translate(calc(var(--pl-genie-x, 0px) * 0.35), calc(var(--pl-genie-y, 0px) * 0.55))
+        scale(0.62, 0.8);
+    }
+    100% {
+      opacity: 0;
+      transform: translate(var(--pl-genie-x, 0px), var(--pl-genie-y, 400px)) scale(0.12);
+    }
+  }
+  @keyframes pl-window-restore {
+    0% {
+      opacity: 0;
+      transform: translate(var(--pl-genie-x, 0px), var(--pl-genie-y, 400px)) scale(0.12);
+    }
+    55% {
+      opacity: 0.8;
+      transform: translate(calc(var(--pl-genie-x, 0px) * 0.35), calc(var(--pl-genie-y, 0px) * 0.45))
+        scale(0.62, 0.8);
+    }
+    100% {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes pl-window-flip {
+    from {
+      transform: translate(var(--pl-flip-x, 0px), var(--pl-flip-y, 0px))
+        scale(var(--pl-flip-sx, 1), var(--pl-flip-sy, 1));
+    }
+  }
+
+  .pl-anim-window-open {
+    transform-origin: 50% 60%;
+    will-change: transform, opacity;
+    animation: pl-window-open calc(360ms * var(--pl-k)) var(--pl-ease-spring) both;
+  }
+  .pl-anim-window-close {
+    will-change: transform, opacity;
+    animation: pl-window-close calc(160ms * var(--pl-k)) var(--pl-ease-in) forwards;
+  }
+  .pl-anim-window-minimise {
+    transform-origin: 50% 100%;
+    will-change: transform, opacity;
+    animation: pl-window-minimise var(--pl-motion-slow) var(--pl-ease-genie) forwards;
+  }
+  .pl-anim-window-restore {
+    transform-origin: 50% 100%;
+    will-change: transform, opacity;
+    animation: pl-window-restore var(--pl-motion-slow) var(--pl-ease-spring) both;
+  }
+  .pl-anim-window-maximise,
+  .pl-anim-window-unmaximise {
+    transform-origin: 0 0;
+    will-change: transform;
+    animation: pl-window-flip calc(260ms * var(--pl-k)) var(--pl-ease-spring) both;
+  }
+
+  /* Focus change: a window's heavy shadow lives on a pseudo-element whose opacity crossfades. */
+  .pl-focus-shadow {
+    position: relative;
+    isolation: isolate; /* keeps the z-index: -1 shadow layer inside this element's stacking context */
+  }
+  .pl-focus-shadow::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    box-shadow: var(--pl-shadow-win-focus);
+    opacity: 0;
+    pointer-events: none;
+    z-index: -1;
+    transition: opacity var(--pl-motion-med) var(--pl-ease);
+  }
+  .pl-focus-shadow[data-focused='true']::before {
+    opacity: 1;
+  }
+  .pl-focus-shadow[data-dragging='true']::before {
+    opacity: 0;
+    transition: none;
+  }
+
+  /* ---------- menus, popovers, sheets ---------- */
+  @keyframes pl-menu-in {
+    from {
+      opacity: 0;
+      transform: translateY(-4px) scale(0.98);
+    }
+  }
+  @keyframes pl-popover-in {
+    from {
+      opacity: 0;
+      transform: translateY(-6px) scale(0.97);
+    }
+  }
+  @keyframes pl-sheet-in {
+    from {
+      opacity: 0;
+      transform: translateY(-24px) scale(0.98);
+    }
+  }
+  @keyframes pl-sheet-out {
+    to {
+      opacity: 0;
+      transform: translateY(-16px) scale(0.98);
+    }
+  }
+  @keyframes pl-dialog-in {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+  }
+  @keyframes pl-dialog-out {
+    to {
+      opacity: 0;
+      transform: scale(0.97);
+    }
+  }
+  @keyframes pl-tooltip-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px) scale(0.96);
+    }
+  }
+
+  .pl-anim-menu-in {
+    transform-origin: top left;
+    will-change: transform, opacity;
+    animation: pl-menu-in calc(140ms * var(--pl-k)) var(--pl-ease-out) both;
+  }
+  .pl-anim-menu-out {
+    animation: pl-fade-out calc(100ms * var(--pl-k)) var(--pl-ease-in) forwards;
+  }
+  .pl-anim-popover-in {
+    transform-origin: top right;
+    will-change: transform, opacity;
+    animation: pl-popover-in calc(180ms * var(--pl-k)) var(--pl-ease-spring-soft) both;
+  }
+  .pl-anim-popover-out {
+    animation: pl-fade-out calc(100ms * var(--pl-k)) var(--pl-ease-in) forwards;
+  }
+  .pl-anim-sheet-in {
+    transform-origin: top center;
+    will-change: transform, opacity;
+    animation: pl-sheet-in calc(300ms * var(--pl-k)) var(--pl-ease-spring) both;
+  }
+  .pl-anim-sheet-out {
+    transform-origin: top center;
+    animation: pl-sheet-out calc(180ms * var(--pl-k)) var(--pl-ease-in) forwards;
+  }
+  .pl-anim-dialog-in {
+    will-change: transform, opacity;
+    animation: pl-dialog-in calc(240ms * var(--pl-k)) var(--pl-ease-spring) both;
+  }
+  .pl-anim-dialog-out {
+    animation: pl-dialog-out calc(140ms * var(--pl-k)) var(--pl-ease-in) forwards;
+  }
+  .pl-anim-scrim-in {
+    animation: pl-fade-in var(--pl-motion-med) var(--pl-ease) both;
+  }
+  .pl-anim-scrim-out {
+    animation: pl-fade-out var(--pl-motion-fast) var(--pl-ease-in) forwards;
+  }
+  .pl-anim-tooltip-in {
+    animation: pl-tooltip-in var(--pl-motion-fast) var(--pl-ease) both;
+  }
+  .pl-anim-fade-in {
+    animation: pl-fade-in var(--pl-motion-med) var(--pl-ease) both;
+  }
+  .pl-anim-fade-out {
+    animation: pl-fade-out var(--pl-motion-fast) var(--pl-ease-in) forwards;
+  }
+
+  /* ---------- notifications ---------- */
+  @keyframes pl-notification-in {
+    from {
+      opacity: 0;
+      transform: translateX(calc(100% + 16px));
+    }
+  }
+  @keyframes pl-notification-out {
+    to {
+      opacity: 0;
+      transform: translateX(calc(100% + 16px));
+    }
+  }
+  .pl-anim-notification-in {
+    will-change: transform, opacity;
+    animation: pl-notification-in calc(420ms * var(--pl-k)) var(--pl-ease-spring) both;
+  }
+  .pl-anim-notification-out {
+    animation: pl-notification-out calc(220ms * var(--pl-k)) var(--pl-ease-in) forwards;
+  }
+  /* A collapsed stack: cards behind the first shrink and peek out below it. */
+  .pl-notification-stack > * {
+    transform: translateY(calc(var(--pl-stack-index, 0) * 8px))
+      scale(calc(1 - var(--pl-stack-index, 0) * 0.04));
+    opacity: calc(1 - var(--pl-stack-index, 0) * 0.25);
+    transition:
+      transform var(--pl-motion-slow) var(--pl-ease-spring),
+      opacity var(--pl-motion-med) var(--pl-ease);
+  }
+  .pl-notification-stack[data-expanded='true'] > * {
+    transform: none;
+    opacity: 1;
+  }
+
+  /* ---------- Control Centre, Search, Overview ---------- */
+  @keyframes pl-panel-in {
+    from {
+      opacity: 0;
+      transform: translateY(-8px) scale(0.96);
+    }
+  }
+  @keyframes pl-tile-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px) scale(0.98);
+    }
+  }
+  @keyframes pl-search-in {
+    from {
+      opacity: 0;
+      transform: translateY(-6px) scale(0.96);
+    }
+  }
+  @keyframes pl-overview-in {
+    from {
+      opacity: 0;
+      transform: scale(1.06);
+    }
+  }
+  @keyframes pl-overview-desktop {
+    to {
+      transform: scale(0.92);
+      opacity: 0.6;
+    }
+  }
+
+  .pl-anim-cc-in {
+    transform-origin: top right;
+    will-change: transform, opacity;
+    animation: pl-panel-in calc(240ms * var(--pl-k)) var(--pl-ease-spring) both;
+  }
+  .pl-anim-cc-tile {
+    animation: pl-tile-in calc(220ms * var(--pl-k)) var(--pl-ease-spring-soft) both;
+    animation-delay: calc(var(--pl-stagger-index, 0) * 20ms * var(--pl-k));
+  }
+  .pl-anim-search-in {
+    transform-origin: top center;
+    will-change: transform, opacity;
+    animation: pl-search-in calc(220ms * var(--pl-k)) var(--pl-ease-spring) both;
+  }
+  .pl-anim-search-out {
+    animation: pl-fade-out calc(120ms * var(--pl-k)) var(--pl-ease-in) forwards;
+  }
+  .pl-anim-overview-in {
+    will-change: transform, opacity;
+    animation: pl-overview-in calc(360ms * var(--pl-k)) var(--pl-ease-spring) both;
+  }
+  .pl-anim-overview-desktop {
+    will-change: transform, opacity;
+    animation: pl-overview-desktop calc(360ms * var(--pl-k)) var(--pl-ease-spring) forwards;
+  }
+
+  /* ---------- dock ---------- */
+  @keyframes pl-dock-bounce {
+    0%,
+    100% {
+      transform: none;
+    }
+    40% {
+      transform: translateY(-14px);
+    }
+  }
+  @keyframes pl-dock-attention {
+    0%,
+    50%,
+    100% {
+      transform: none;
+    }
+    22%,
+    72% {
+      transform: translateY(-10px);
+    }
+  }
+  @keyframes pl-pop-in {
+    from {
+      opacity: 0;
+      transform: scale(0);
+    }
+  }
+  .pl-anim-dock-bounce {
+    will-change: transform;
+    animation: pl-dock-bounce var(--pl-motion-xslow) var(--pl-ease-spring) 1;
+  }
+  .pl-anim-dock-attention {
+    will-change: transform;
+    animation: pl-dock-attention calc(720ms * var(--pl-k)) var(--pl-ease) 1;
+  }
+  .pl-anim-pop-in {
+    animation: pl-pop-in var(--pl-motion-med) var(--pl-ease-spring-soft) both;
+  }
+  .pl-press {
+    transition: transform var(--pl-motion-med) var(--pl-ease-spring-soft);
+  }
+  .pl-press:active {
+    transform: scale(0.92);
+    transition-duration: var(--pl-motion-press);
+    transition-timing-function: var(--pl-ease);
+  }
+
+  /* ---------- focus ring ---------- */
+  @keyframes pl-focus-in {
+    from {
+      opacity: 0;
+      transform: scale(1.04);
+    }
+  }
+  .pl-anim-focus-ring {
+    animation: pl-focus-in var(--pl-motion-fast) var(--pl-ease) both;
+  }
+
+  /* ---------- boot, login, restore ---------- */
+  @keyframes pl-boot-glow {
+    0% {
+      opacity: 0;
+      transform: scale(0.9);
+    }
+    60% {
+      opacity: 1;
+      transform: scale(1.04);
+    }
+    100% {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes pl-progress-sweep {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(100%);
+    }
+  }
+  @keyframes pl-login-unlock {
+    to {
+      opacity: 0;
+      transform: scale(1.06);
+    }
+  }
+  @keyframes pl-login-shake {
+    0%,
+    100% {
+      transform: none;
+    }
+    15%,
+    55% {
+      transform: translateX(-10px);
+    }
+    35%,
+    75% {
+      transform: translateX(10px);
+    }
+  }
+  @keyframes pl-shimmer {
+    from {
+      transform: translateX(-110%);
+    }
+    to {
+      transform: translateX(110%);
+    }
+  }
+
+  .pl-anim-boot-glow {
+    will-change: transform, opacity;
+    animation: pl-boot-glow calc(900ms * var(--pl-k)) var(--pl-ease-out) both;
+  }
+  /* Sweep sheen over a determinate bar; a bounded count keeps it off WCAG 2.2.2's loop rule. */
+  .pl-anim-progress-sweep {
+    animation: pl-progress-sweep calc(1400ms * var(--pl-k)) var(--pl-ease) var(--pl-sweep-count, 3);
+  }
+  .pl-anim-login-unlock {
+    will-change: transform, opacity;
+    animation: pl-login-unlock calc(420ms * var(--pl-k)) var(--pl-ease-in) forwards;
+  }
+  .pl-anim-login-shake {
+    animation: pl-login-shake calc(420ms * var(--pl-k)) var(--pl-ease) 1;
+  }
+  .pl-anim-restore-shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+  .pl-anim-restore-shimmer::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(
+      100deg,
+      transparent 30%,
+      rgb(255 255 255 / 0.22) 50%,
+      transparent 70%
+    );
+    animation: pl-shimmer calc(900ms * var(--pl-k)) var(--pl-ease) 1 both;
+  }
+
+  /* ---------- small springs ---------- */
+  .pl-spring-transform {
+    transition: transform var(--pl-motion-med) var(--pl-ease-spring);
+  }
+  .pl-spring-soft {
+    transition: transform var(--pl-motion-med) var(--pl-ease-spring-soft);
+  }
+  @keyframes pl-toggle-knob {
+    50% {
+      transform: translateX(var(--pl-knob-mid, 0px)) scaleX(1.18);
+    }
+  }
+  .pl-anim-toggle-spring {
+    animation: pl-toggle-knob calc(280ms * var(--pl-k)) var(--pl-ease-spring) 1;
+  }
+
+  /* ---------- desktop mount (after login) ---------- */
+  @keyframes pl-menubar-in {
+    from {
+      opacity: 0;
+      transform: translateY(-100%);
+    }
+  }
+  @keyframes pl-dock-in {
+    from {
+      opacity: 0;
+      transform: translateY(24px) scale(0.96);
+    }
+  }
+  @keyframes pl-dock-item-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+  }
+  .pl-anim-menubar-in {
+    will-change: transform, opacity;
+    animation: pl-menubar-in var(--pl-motion-slow) var(--pl-ease-out) calc(80ms * var(--pl-k)) both;
+  }
+  .pl-anim-dock-in {
+    transform-origin: 50% 100%;
+    will-change: transform, opacity;
+    animation: pl-dock-in calc(420ms * var(--pl-k)) var(--pl-ease-spring) calc(140ms * var(--pl-k))
+      both;
+  }
+  .pl-anim-dock-item-in {
+    animation: pl-dock-item-in calc(320ms * var(--pl-k)) var(--pl-ease-spring-soft) both;
+    animation-delay: calc((180ms + var(--pl-stagger-index, 0) * 30ms) * var(--pl-k));
+  }
+
+  /* ---------- reduced-motion guard ---------- */
+  @media (prefers-reduced-motion: reduce) {
+    :where([class*='pl-anim-'], [class*='pl-anim-']::after) {
+      animation-delay: 0ms !important;
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+    }
+    :where(.pl-notification-stack > *, .pl-spring-transform, .pl-spring-soft, .pl-press) {
+      transition-duration: 0ms !important;
+    }
+  }
+  :root[data-motion='reduce'] :where([class*='pl-anim-'], [class*='pl-anim-']::after) {
+    animation-delay: 0ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+  :root[data-motion='reduce']
+    :where(.pl-notification-stack > *, .pl-spring-transform, .pl-spring-soft, .pl-press) {
+    transition-duration: 0ms !important;
+  }
+}

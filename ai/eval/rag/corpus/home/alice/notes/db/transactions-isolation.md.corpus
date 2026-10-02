@@ -1,0 +1,21 @@
+# Transactions and isolation levels
+
+ACID: atomicity, consistency, isolation, durability.
+
+Anomalies:
+- dirty read: see uncommitted data;
+- non-repeatable read: read the same row twice, get different values;
+- phantom: re-run a range query, new rows appear;
+- lost update: two read-modify-write cycles overwrite each other;
+- write skew: two transactions read overlapping data and write disjoint rows, jointly breaking a constraint (the on-call doctors example).
+
+| Level | Dirty | Non-repeatable | Phantom |
+|---|---|---|---|
+| Read uncommitted | possible | possible | possible |
+| Read committed | no | possible | possible |
+| Repeatable read | no | no | possible (standard) |
+| Serializable | no | no | no |
+
+In PostgreSQL: read uncommitted behaves as read committed; repeatable read is snapshot isolation and already prevents phantoms but not write skew; serializable is SSI, which aborts transactions that could form a dangerous cycle. Retry on serialization failure (SQLSTATE 40001).
+
+Default is read committed. For the quota counters in our project we use `SELECT … FOR UPDATE` in a short transaction.

@@ -1,0 +1,67 @@
+{
+  "id": "AGT40-D02",
+  "category": "relative-date",
+  "tags": [],
+  "user": "alice",
+  "cwd": "/home/alice",
+  "now": "2026-10-05T10:00:00+05:00",
+  "tz": "Asia/Karachi",
+  "fixture": "fx-agt@v1",
+  "prompt": "copy the PDFs from Downloads modified in the last 3 days into Documents",
+  "expect": {
+    "kind": "plan",
+    "ops": [
+      ["copy", "/home/alice/Downloads/invoice-001.pdf", "/home/alice/Documents/invoice-001.pdf"],
+      ["copy", "/home/alice/Downloads/receipt.pdf", "/home/alice/Documents/receipt.pdf"]
+    ],
+    "confirm": false
+  },
+  "reference": {
+    "tool": "submit_plan",
+    "input": {
+      "summary": "plan",
+      "steps": [
+        {
+          "id": "s1",
+          "span": "the PDFs from Downloads modified in the last 3 days",
+          "op": {
+            "call": "find",
+            "args": {
+              "path": "~/Downloads",
+              "name": "*.pdf",
+              "type": "f",
+              "mtime": {
+                "within": {
+                  "unit": "day",
+                  "count": 3,
+                  "mode": "rolling"
+                },
+                "olderThan": null
+              },
+              "size": null,
+              "maxdepth": null
+            }
+          },
+          "sources": null
+        },
+        {
+          "id": "s2",
+          "span": "copy the PDFs from Downloads modified in the last 3 days into Documents",
+          "op": {
+            "call": "copy",
+            "args": {
+              "from": "~/Downloads",
+              "to": "~/Documents",
+              "recursive": false
+            }
+          },
+          "sources": {
+            "ref": "s1"
+          }
+        }
+      ],
+      "assumptions": [],
+      "suspicious_content_seen": false
+    }
+  }
+}

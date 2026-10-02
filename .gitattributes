@@ -1,0 +1,27 @@
+# Normalise line endings to LF in the repository.
+* text=auto eol=lf
+
+# Binary assets
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.onnx binary
+*.wasm binary
+*.gz binary
+*.dump binary
+
+# Generated files: collapsed in GitHub diffs and excluded from language statistics
+pnpm-lock.yaml linguist-generated=true
+db/schema.sql linguist-generated=true
+server/src/db/types.gen.ts linguist-generated=true
+
+# Research inputs and pilot evidence are documentation, not project code. The pilot evidence is
+# committed byte-for-byte (no line-ending normalisation; some files use CRLF).
+docs/research/** linguist-documentation=true
+docs/evidence/** -text linguist-documentation=true

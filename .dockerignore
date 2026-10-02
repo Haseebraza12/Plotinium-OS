@@ -1,0 +1,18 @@
+# Build context for the Dockerfile (C14). Keep the context small and free of secrets (spec §18).
+.git
+**/node_modules
+**/dist
+**/coverage
+test-results
+playwright-report
+blob-report
+docs/research
+docs/evidence
+*.pdf
+*.log
+
+# Secrets and local overrides never enter an image.
+.env
+.env.*
+!.env.example
+compose.override.yaml

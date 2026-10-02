@@ -1,0 +1,77 @@
+{
+ "files_changed": [
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/sync/types.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/sync/ports.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/sync/backoff.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/sync/lamport.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/sync/machine.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/sync/status.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/sync/outbox.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/sync/sender.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/sync/feed.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/sync/txn.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/sync/results.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/sync/remote.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/sync/storage.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/sync/syncd.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/sync/index.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/sync/README.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/sync/tests/units.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/sync/tests/results.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/sync/tests/planner-revert.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/sync/tests/syncd.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/sync/tests/feed.test.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/sync/tests/doubles/clock.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/sync/tests/doubles/device.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/sync/tests/doubles/fake-server.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/sync/tests/doubles/harness.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/locks/types.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/locks/table.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/locks/advisory.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/locks/lockd.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/locks/index.ts",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/locks/README.md",
+  "/home/haseeb-raza/Desktop/Plotinium OS/vfs/src/locks/tests/lockd.test.ts"
+ ],
+ "verification": [
+  {
+   "command": "pnpm exec tsc -p vfs/tsconfig.json --noEmit",
+   "outcome": "exit 0. The whole vfs package type-checks, including all sync/locks sources and tests."
+  },
+  {
+   "command": "pnpm exec eslint vfs/src/sync vfs/src/locks --max-warnings 0",
+   "outcome": "exit 0, no errors or warnings. The package-boundary, no-await-in-idb-builder and switch-exhaustiveness rules all pass."
+  },
+  {
+   "command": "pnpm exec vitest run --project vfs src/sync src/locks",
+   "outcome": "6 files and 95 tests pass. Titles start with requirement IDs: OFF-02, OFF-04, VFS-09, VFS-10, SYN-01/02/03/06/07/10/11/13/15, DB-02, AGT-09, AGT-10, BOOT-12, PROC-07. The SYN- prefix is already registered in the traceability spec."
+  },
+  {
+   "command": "pnpm exec vitest run --project vfs",
+   "outcome": "17 files and 222 tests pass: my 95 plus vfs-core's 127. Nothing of theirs broke."
+  },
+  {
+   "command": "pnpm exec vitest run --project vfs src/sync src/locks --coverage --coverage.include='**/src/sync/*.ts' --coverage.include='**/src/locks/*.ts'",
+   "outcome": "Lines 95.01%, statements 92.55%, functions 94.2%, branches 82.99% on my code; target was 85%."
+  }
+ ],
+ "problems": [
+  "Your request asked for multiple agents, but this subagent has no tool that can launch more agents. I did the whole assignment in one agent, and it is complete.",
+  "vfs cannot import valibot (it is not in vfs/package.json and I did not run pnpm add). Incoming frames are therefore checked by a structural decoder (`decodeFrame` in syncd.ts), and `SyncdOptions.decode` lets the kernel inject a full Valibot decoder. TODO(protocol) is marked in syncd.ts.",
+  "Not implemented, marked TODO(R5): when `snapshot.required` has reason 'reset', local rows newer than the restored server should first be copied to ~/lost+found/restore-<date>/ (spec \u00a76, open question \u00a79.1 #6). syncd sends a 'snapshot-reset' notice instead, and the version guard keeps newer local rows.",
+  "The `lock.list {ino}` query that VFS \u00a73.16.3 mentions is not in the protocol's client-to-server frame catalogue. `lockd.checkWritable` therefore answers only from its cache of known foreign leases (from `lock.denied.holder` and lock pushes), and the server remains the final arbiter.",
+  "`throttle` frames with scope 'locks' are ignored. Frames and ops scopes pause sending as the spec requires.",
+  "My tests import vfs-core's test doubles read-only: vfs/tests/doubles/fake-idb.ts (so the product IdbStore runs in Node) and world.ts (planner-compatibility tests). If vfs-core changes those files, my tests will need to follow."
+ ],
+ "integration_notes": "EXPORTS (vfs-core or root-config owner):\n- Add subpath exports to vfs/package.json: \"./sync\": \"./src/sync/index.ts\" and \"./locks\": \"./src/locks/index.ts\".\n- Alternatively, append `export * from './sync/index.ts'; export * from './locks/index.ts';` to vfs/src/index.ts. There are no name collisions: I renamed my conflicted-copy type to `SyncKeptAs` because vfs-core already exports `KeptAs`.\n\nKERNEL WIRING (kernel/services integration step):\n1. Service `sync`, at start: `const syncd = new Syncd({session: {osSessionId, deviceId, kernelEpoch, loginUid, build, url: 'wss://<origin>/ws'}, storage: new StoreSyncStorage(idbStore), socket: browserSocket, http: <SyncHttp over fetch>, host: {applied, status, notice}, decode: <Valibot S2CFrame parser>, timeZone})`, then `await syncd.start()`. No network I/O happens here.\n2. Service `lockd`: `new Lockd({channel: syncd, newId: uuidv7, locks: platformLocks(), emit})`, then `syncd.attachLocks(lockd)`.\n3. After desktop-interactive, call `syncd.connect()`. The router forwards `online`/`offline` to `syncd.setOnline(bool)`, and `visibilitychange`-visible or `resume` to both `syncd.onVisible()` and `lockd.onVisible()`.\n4. `SyncHttp` must implement `authMe` (status code), `healthz`, `postOp(opId, body)` returning the op.result body (throw `HttpUnavailable` on a transport failure), `putBlob(sha)` (reads the local chunks and does `PUT /api/blobs/{sha}`), and `snapshot(url, after)` returning a SnapshotPage.\n\nVFS COMMIT PATH (vfs-core):\n- Call `syncd.kick()` after every synced commit's `oncomplete`.\n- For bulk ops and agent batches while RESUMING or LIVE, call `await syncd.waitFor(opId)`, which returns `{sync: 'applied'|'pending'|'rejected', errno?, reason?, keptAs?}`.\n- Pass `lockd.fenceFor(pid, ino)` as `CommitMeta.fence`. syncd then sends it as `OpSubmit.fences = [{ino: op.ino, fence}]`.\n- Call `syncd.reserve(opId)` before coalescing a write into a pending record; the reservation ends at the next kick.\n- `host.applied(effect)` must run `VfsTree.apply(effect.writes)` and publish vfs events with an origin taken from `effect.kind`: remote, revert, ack, conflict, park or snapshot.\n- `open` for writing calls `lockd.checkWritable(ino, pid)`. The kill path (PROC-07) calls `lockd.releaseAll(pid)` and `syncd.cancelOp(opId)` for any op a killed process was waiting on.\n\nSTORAGE CONVENTIONS I USE:\n- Outbox key `seq` (autoIncrement) and meta `lamport` are shared with vfs-core's commit.\n- Cursors are stored under meta `resume:<ownerUid>` as `{seq, updatedAt}`.\n- `attempts` is persisted before each frame leaves, so a rejection cascade never deletes an op that may have been applied.\n- The state 'sent' is never written. The states 'reverted' and 'parked' are persisted.\n- Parked records keep their outbox blob pin. For a single write or create, a local 'not synced' copy is also created in ~/lost+found with id `deriveIno(opId, ino)`, and the record's `touches` are rewritten to that copy and its directory.\n\nPROTOCOL REQUESTS (R1), marked TODO(protocol):\n(a) Export a frame parser, e.g. `parseS2CFrame(raw)` built on `v.safeParse(S2CFrame)`, for the `decode` option.\n(b) Export `protocol/src/http/sync.ts` with SnapshotRow and SnapshotPage (backend-api \u00a74.2). They are declared locally in vfs/src/sync/types.ts for now.\n(c) `LockAcquireRet` requires `fence` and `expiresAt`, but VFS \u00a73.4.1 makes them optional for `scope: 'local'`. `lockd` returns null for local locks, so the kernel must map null until the schema allows it.\n(d) The protocol `vfs.rejected` payload `{opId, errno, path, restored}` differs from sync spec \u00a74.8 `{opId, errno, reason, keptAs?}`. syncd emits a `SyncNotice` of type 'rejected' carrying reason, keptAs, parked and cascade; the kernel maps it.\n\nVFS-CORE REQUEST: `OutboxRec` has no `audit` field, so `OpSubmit.audit` (AGT-08) is never sent. Add `audit?: OpAudit` to OutboxRec and `toSubmit` will pass it through.\n\nDESIGN READINGS:\n- One hb timer in syncd, every hbMs taken from `hello.ok`, carries `lockd.heartbeatLeases()`. This merges lockd's and syncd's heartbeats into one frame per period.\n- Following \u00a73.14.7 literally, the lockd server layer engages only in LIVE. Acquires made during RESUMING or offline are local advisory locks, upgraded with `wait: false` once LIVE; a denial becomes `lock.lost`.\n- A lost lease keeps its old fence, so a later save follows the stale-fence path: conflict EBUSY, bytes kept.\n- Remote changes that touch pending local ops are deferred in memory (cap 10,000, then the directory is re-fetched) and re-applied after that op's result.\n\nCOVERAGE GATE: my code is at 95% lines, so the sync and locks parts would not hold back adding vfs to GATED_PACKAGES in vitest.config.ts.",
+ "todos_for_team": [
+  "R5: implement the snapshot 'reset' restore-copy into ~/lost+found/restore-<date>/ (offline-and-sync \u00a76), or record it as a v1 limitation (open question \u00a79.1 #6).",
+  "R5/R2: add Settings \u2192 Storage actions for parked ops. 'Discard' is done (`syncd.discardParked(opId)`). 'Retry' and 'Save as\u2026' need a new create op from the VFS planner.",
+  "R1: add a `lock.list {ino}` frame if the second writer must get EBUSY synchronously when the foreign lease is not cached yet (VFS \u00a73.16.3).",
+  "R2: when coalescing writes (VFS \u00a73.14.2), call `syncd.reserve(opId)` first.",
+  "R3/kernel: map `SyncNotice` values (rejected, conflict, refetch, su-ended, superseded, snapshot-reset) to notifications, TTY lines and SIGHUP; map `LockEvent` to the `lock.*` bus topics.",
+  "R5: run the browser/e2e parts of OFF-02/OFF-04/VFS-09 (real Chrome durability, hidden-tab 6-minute test, routeWebSocket fault injection) against the real server once it is wired; the Node tests here cover the client logic with a protocol-level fake server.",
+  "Optionally let lockd honour `throttle` frames with scope 'locks' (they are ignored today)."
+ ],
+ "deps_requested": []
+}

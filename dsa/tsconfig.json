@@ -1,0 +1,13 @@
+// Environment-agnostic structures used by the kernel worker, the main thread and the Node server.
+// Node types are visible only because the memory benchmarks (*.mem.ts, run with --expose-gc) need
+// them; ESLint rejects Node, DOM-only and worker-only globals in every non-test dsa/ file
+// (tools/eslint-rules/boundaries.js, with failing fixtures).
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "types": ["node"]
+  },
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules", "dist", "coverage"]
+}

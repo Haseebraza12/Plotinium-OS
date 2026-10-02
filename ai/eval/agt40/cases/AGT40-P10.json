@@ -1,0 +1,54 @@
+{
+  "id": "AGT40-P10",
+  "category": "pipeline",
+  "tags": [],
+  "user": "alice",
+  "cwd": "/home/alice",
+  "now": "2026-10-05T10:00:00+05:00",
+  "tz": "Asia/Karachi",
+  "fixture": "fx-agt@v1",
+  "prompt": "rename draft-final.txt in Documents to final.txt and delete draft-v1.txt",
+  "expect": {
+    "kind": "plan",
+    "ops": [
+      ["rename", "/home/alice/Documents/draft-final.txt", "/home/alice/Documents/final.txt"],
+      ["unlink", "/home/alice/Documents/draft-v1.txt"]
+    ],
+    "confirm": true
+  },
+  "reference": {
+    "tool": "submit_plan",
+    "input": {
+      "summary": "plan",
+      "steps": [
+        {
+          "id": "s1",
+          "span": "rename draft-final.txt in Documents to final.txt",
+          "op": {
+            "call": "rename",
+            "args": {
+              "from": "~/Documents/draft-final.txt",
+              "to": "~/Documents/final.txt",
+              "noReplace": null
+            }
+          },
+          "sources": null
+        },
+        {
+          "id": "s2",
+          "span": "delete draft-v1.txt",
+          "op": {
+            "call": "unlink",
+            "args": {
+              "path": "~/Documents/draft-v1.txt",
+              "recursive": false
+            }
+          },
+          "sources": null
+        }
+      ],
+      "assumptions": [],
+      "suspicious_content_seen": false
+    }
+  }
+}

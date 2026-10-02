@@ -1,0 +1,14 @@
+{
+  "note": "generate_screen_from_text returned a sessionId but no screen. list_screens stayed {} for 17 polls between 15:23 and 15:46 UTC. get_screen with the sessionId as the screen id returned 'Requested entity was not found.' No screen id exists, so edit_screens could not be called.",
+  "request": {
+    "projectId": "12849137298552292712",
+    "deviceType": "DESKTOP",
+    "modelId": "GEMINI_3_8_FLASH",
+    "designSystem": "assets/3690503530025860907"
+  },
+  "response": {
+    "projectId": "12849137298552292712",
+    "sessionId": "2240624124644553619"
+  },
+  "fallback": "reference.html + reference.png are a hand-built render of the same prompt (NOT a Stitch export), made with the design-system tokens and rendered at 1440x900 in headless Chrome."
+}

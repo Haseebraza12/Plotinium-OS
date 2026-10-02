@@ -1,0 +1,23 @@
+# Hash tables
+
+Average O(1) insert, lookup and delete; worst case O(n) when everything collides.
+
+## Collision resolution
+
+- **Separate chaining:** each bucket holds a list. Load factor α = n/m can exceed 1. Java's HashMap turns long chains into small trees.
+- **Open addressing:** everything lives in the array.
+  - linear probing: great cache behaviour, primary clustering;
+  - quadratic probing: less clustering, may fail to find a slot unless m is prime and α < 0.5;
+  - double hashing: step size from a second hash;
+  - Robin Hood: steal the slot from an element closer to its home, which evens out probe lengths.
+- Deletion with open addressing needs tombstones or backward-shift deletion.
+
+## Resizing
+
+Double the table when α passes a threshold (0.75 for chaining, ~0.5–0.7 for open addressing) and rehash everything. Amortised O(1) per insert.
+
+## Hash functions
+
+For integer keys, multiply-shift. For strings, FNV-1a or xxHash. Adversarial input can force collisions (hash flooding), so languages use randomly seeded SipHash for user-facing maps.
+
+Lab: implement linear probing with tombstones. My bug: lookups stopped at tombstones instead of skipping them.

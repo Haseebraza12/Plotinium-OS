@@ -1,0 +1,8 @@
+week 3 lab notes
+
+- strace ls shows ~150 syscalls; most are mmap/openat for shared libraries before ls does anything useful.
+- ltrace vs strace: library calls vs system calls.
+- /proc/<pid>/status shows VmRSS, threads, voluntary/nonvoluntary context switches.
+- nice -n 19 ./spin & then top: NI 19, PR 39. renice to change later. only root can lower nice below 0.
+- taskset -c 0 to pin two spinners on the same core: each gets ~50%.
+TA said next week is pipes and dup2. bring the fork lab code.

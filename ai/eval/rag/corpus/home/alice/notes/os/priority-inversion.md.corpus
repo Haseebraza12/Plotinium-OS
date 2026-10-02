@@ -1,0 +1,23 @@
+# Priority inversion (lecture 9 + my own reading)
+
+## The Pathfinder story
+
+In July 1997 the Mars Pathfinder lander started resetting itself every few days. The flight software ran on VxWorks with preemptive, fixed-priority scheduling. Three tasks matter:
+
+- a **low-importance** meteorological data task that grabbed a mutex protecting the shared information bus;
+- a **medium-importance** communications task that ran for a long time and needed no mutex at all;
+- the **most urgent** bus management task, which also needed that same mutex.
+
+The urgent task blocked on the mutex. The weather task could not finish its critical section, because the medium task kept preempting it. So the urgent task was effectively waiting behind a task less important than itself, for an unbounded time. A watchdog noticed the bus task had not completed its cycle and rebooted the whole system.
+
+## Why "unbounded" is the scary word
+
+Blocking on a lock held by a less important task is normal and bounded: at most the length of the critical section. The problem is the middle band. Any number of medium tasks can stretch that wait indefinitely.
+
+## Fixes
+
+1. **Inheritance.** While the weather task holds the mutex that the urgent task wants, it temporarily runs at the urgent task's level. Medium work can no longer cut in. JPL fixed Pathfinder by flipping the inheritance flag on that mutex with a patch uploaded from Earth.
+2. **Ceiling protocol.** Each mutex gets a ceiling equal to the most urgent task that ever locks it; whoever holds it runs at the ceiling. Also prevents some deadlocks, but you must know all users of the lock in advance.
+3. Keep critical sections tiny and never do I/O inside them.
+
+Exam tip from Sir: be ready to draw the timeline with three bars (L, M, H) and mark exactly where H is stuck.

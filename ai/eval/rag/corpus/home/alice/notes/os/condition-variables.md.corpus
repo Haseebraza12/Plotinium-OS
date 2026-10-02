@@ -1,0 +1,35 @@
+# Condition variables
+
+A condition variable lets a thread sleep until some state becomes true, releasing the mutex while it sleeps.
+
+```c
+pthread_mutex_lock(&m);
+while (!ready)                 // ALWAYS a loop, never an if
+    pthread_cond_wait(&cv, &m);
+/* use the state */
+pthread_mutex_unlock(&m);
+```
+
+and on the other side:
+
+```c
+pthread_mutex_lock(&m);
+ready = 1;
+pthread_cond_signal(&cv);      // or broadcast if several waiters may proceed
+pthread_mutex_unlock(&m);
+```
+
+## Why the while loop
+
+- spurious wakeups are allowed by POSIX;
+- with Mesa semantics the woken thread doesn't run immediately; someone else may change the state first.
+
+## Signal vs broadcast
+
+`signal` wakes at least one waiter; `broadcast` wakes all. Use broadcast when waiters wait for different conditions on the same cv, or you'll get a lost wakeup.
+
+## No memory
+
+Unlike a semaphore, a signal with no waiter is simply lost. The state variable (`ready`) is the memory; the cv is only the waiting mechanism.
+
+Lab 5 used two cvs to make two threads alternate strictly.

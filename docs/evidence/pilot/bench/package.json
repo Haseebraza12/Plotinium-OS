@@ -1,0 +1,19 @@
+{
+  "name": "bench",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@sqlite.org/sqlite-wasm": "^3.53.4-build1",
+    "dexie": "^4.4.6",
+    "idb": "^8.0.3",
+    "playwright-core": "^1.63.0"
+  }
+}

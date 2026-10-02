@@ -1,0 +1,21 @@
+# Interrupts, traps and system calls
+
+- **Interrupt:** asynchronous, from hardware (timer, disk, NIC). The CPU finishes the current instruction, saves state and jumps to a handler through the interrupt vector table.
+- **Trap / exception:** synchronous, caused by the running instruction (divide by zero, page fault, breakpoint).
+- **System call:** a deliberate trap (`syscall` on x86-64, `svc` on ARM). User code puts the call number in a register and the arguments in others.
+
+## Dual mode
+
+The mode bit separates kernel mode from user mode. Privileged instructions (I/O, changing page tables, disabling interrupts) fault in user mode.
+
+## Timer interrupt
+
+The reason preemption works at all: the kernel regains control every tick even if a process loops forever.
+
+## Cost
+
+A syscall is roughly 100 ns on modern hardware; the mitigations for Meltdown (page-table isolation) made it noticeably slower. vDSO avoids the trap for things like `gettimeofday`.
+
+## In our web OS
+
+Apps can't touch IndexedDB or the DOM directly; they send a typed message to the kernel worker, which checks capabilities and permissions. It's the same idea as a trap: one narrow, checked entry point.

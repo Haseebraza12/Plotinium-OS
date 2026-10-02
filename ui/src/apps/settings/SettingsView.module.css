@@ -1,0 +1,141 @@
+/*
+ * Settings window content (System Settings layout). The window frame pins its traffic lights
+ * over the sidebar's top drag area. The view is positioned so window-modal sheets drop from
+ * its top edge. Panes rise 6 px and fade in on a section change.
+ */
+.view {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  color: var(--pl-text);
+  font: var(--pl-type-body);
+}
+.main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+.toolbar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--pl-space-3);
+  height: var(--pl-toolbar-h);
+  padding: 0 var(--pl-space-4);
+  box-shadow: inset 0 calc(var(--pl-hairline-width) * -1) 0 var(--pl-separator);
+}
+.history {
+  display: flex;
+  gap: var(--pl-space-half);
+}
+.heading {
+  display: flex;
+  align-items: center;
+  gap: var(--pl-space-2);
+  min-width: 0;
+  animation: pl-set-title calc(200ms * var(--pl-k)) var(--pl-ease-out) backwards;
+}
+@keyframes pl-set-title {
+  from {
+    opacity: 0;
+    transform: translateX(6px);
+  }
+}
+.tile {
+  --pl-tile: var(--pl-tint-gray);
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: calc(var(--pl-icon-md) + var(--pl-space-1));
+  height: calc(var(--pl-icon-md) + var(--pl-space-1));
+  border-radius: var(--pl-radius-sm);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--pl-tile) 82%, var(--pl-on-tint)),
+    var(--pl-tile)
+  );
+  color: var(--pl-on-tint);
+  box-shadow: var(--pl-glass-specular);
+}
+.tint-indigo {
+  --pl-tile: var(--pl-tint-indigo);
+}
+.tint-blue {
+  --pl-tile: var(--pl-tint-blue);
+}
+.tint-teal {
+  --pl-tile: var(--pl-tint-teal);
+}
+.tint-green {
+  --pl-tile: var(--pl-tint-green);
+}
+.tint-orange {
+  --pl-tile: var(--pl-tint-orange);
+}
+.tint-red {
+  --pl-tile: var(--pl-tint-red);
+}
+.tint-purple {
+  --pl-tile: var(--pl-tint-purple);
+}
+.tint-gray {
+  --pl-tile: var(--pl-tint-gray);
+}
+.title {
+  flex: none;
+  margin: 0;
+  font: var(--pl-type-headline);
+  font-size: calc(var(--pl-text-md) + 1px);
+  white-space: nowrap;
+}
+.lede {
+  margin: 0;
+  padding: 0 var(--pl-space-3);
+  font: var(--pl-type-body);
+  color: var(--pl-text-muted);
+}
+.content {
+  flex: 1;
+  min-height: 0;
+  padding: var(--pl-space-5) var(--pl-space-8) var(--pl-space-6);
+  overflow-y: auto;
+}
+.pane {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pl-space-5);
+  max-width: 720px;
+  margin: 0 auto;
+  animation: pl-set-pane calc(220ms * var(--pl-k)) var(--pl-ease-out) backwards;
+}
+.paneWide {
+  max-width: 820px;
+}
+@keyframes pl-set-pane {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+.build {
+  margin: 0;
+  font-family: var(--pl-font-mono);
+  font-size: calc(var(--pl-text-xs) - 1px);
+  color: var(--pl-text-tertiary);
+  text-align: center;
+}
+@media (width < 900px) {
+  .content {
+    padding: var(--pl-space-4);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .heading,
+  .pane {
+    animation: none;
+  }
+}

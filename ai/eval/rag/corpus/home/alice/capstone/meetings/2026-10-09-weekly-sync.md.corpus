@@ -1,0 +1,10 @@
+# Weekly sync — 9 Oct 2026
+
+- Integration day went OK: 3 bugs found, 2 fixed.
+- Bob reported that the desktop gets sluggish after it has been open for an hour or so; the dock animation stutters. He hasn't found why yet. Alice offered to take a heap snapshot with him on Monday.
+- Dan: priority aging implemented; `ps` shows PRI and NI.
+- Carol: quota counters in Postgres, EDQUOT surfaces correctly in the terminal.
+- Alice: indexer runs as a niced background process and pauses when the search box has focus.
+- Esha: coverage gates on for dsa/ and kernel/.
+
+Actions: Alice + Bob profile the slowdown (Mon); Esha to add a long-running soak test.

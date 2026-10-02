@@ -1,0 +1,79 @@
+/* Process state pill: tinted capsule, glyph, caps word, optional reason in regular weight. */
+.pill {
+  --pl-pill-fg: var(--pl-text-muted);
+  --pl-pill-bg: var(--pl-neutral-subtle);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pl-space-1);
+  max-width: 100%;
+  height: var(--pl-badge-h);
+  padding: 0 var(--pl-space-2) 0 var(--pl-space-1);
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-pill-bg);
+  box-shadow: inset 0 0 0 var(--pl-hairline-width)
+    color-mix(in srgb, var(--pl-pill-fg) 45%, transparent);
+  color: var(--pl-pill-fg);
+  font: var(--pl-type-caption);
+  line-height: 1;
+  white-space: nowrap;
+}
+.accent {
+  --pl-pill-fg: var(--pl-accent-text);
+  --pl-pill-bg: var(--pl-accent-subtle);
+}
+.info {
+  --pl-pill-fg: var(--pl-info);
+  --pl-pill-bg: var(--pl-info-subtle);
+}
+.success {
+  --pl-pill-fg: var(--pl-success);
+  --pl-pill-bg: var(--pl-success-subtle);
+}
+.warning {
+  --pl-pill-fg: var(--pl-warning);
+  --pl-pill-bg: var(--pl-warning-subtle);
+}
+.danger {
+  --pl-pill-fg: var(--pl-danger);
+  --pl-pill-bg: var(--pl-danger-subtle);
+}
+.glyph {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: calc(var(--pl-badge-h) - var(--pl-space-1));
+  height: calc(var(--pl-badge-h) - var(--pl-space-1));
+  border-radius: var(--pl-radius-pill);
+  background: color-mix(in srgb, var(--pl-pill-fg) 18%, transparent);
+}
+.word {
+  font-weight: var(--pl-weight-bold);
+  font-size: calc(var(--pl-text-xs) - 1px);
+  letter-spacing: var(--pl-tracking-caps);
+  text-transform: uppercase;
+}
+/* Full colour (no opacity): the regular-weight reason must reach 4.5:1 on its tint (UI-145). */
+.reason {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: var(--pl-weight-regular);
+}
+/* On a selected row the pill takes the row's text colour (white on the accent selection), so
+   "BLOCKED idle" never sits brown on violet (UI-043); the outline keeps the capsule shape. */
+:global([role='row'][aria-selected='true']) .pill {
+  --pl-pill-fg: currentColor;
+  --pl-pill-bg: transparent;
+}
+.hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+@media (forced-colors: active) {
+  .pill {
+    border: 1px solid CanvasText;
+  }
+}

@@ -1,0 +1,13 @@
+real-time systems - short notes
+
+hard real time: missing a deadline is a failure (airbag, pacemaker). soft: degrade gracefully (video frames).
+
+rate monotonic: static priorities, shorter period = higher priority. schedulable if utilisation <= n(2^(1/n) - 1). n=3 -> 0.78. sufficient, not necessary.
+
+EDF: dynamic, earliest deadline first. optimal on one CPU: schedulable iff utilisation <= 1.
+
+jitter and latency matter more than throughput. interrupt latency must be bounded.
+
+RTOS examples: FreeRTOS, VxWorks, Zephyr, QNX. they give priority inheritance on mutexes because of the pathfinder thing.
+
+linux PREEMPT_RT patch set was merged into mainline in 6.12.

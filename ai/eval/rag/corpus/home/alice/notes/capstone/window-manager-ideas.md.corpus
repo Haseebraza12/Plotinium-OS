@@ -1,0 +1,11 @@
+# Window manager ideas
+
+- windows are absolutely positioned layers; move with `transform: translate3d()` during a drag and commit the final x/y on pointer-up;
+- pointer capture on the title bar so the drag doesn't stop when the cursor outruns the window;
+- snap zones: drag to the left/right edge to tile half-screen, to the top to maximise;
+- Exposé-style overview (F3) scales every window into a grid;
+- focus follows click; the focused window gets the stronger shadow;
+- minimise animates into the dock icon (genie effect is optional, a scale + fade is fine);
+- keyboard: ⌘` cycles windows of the same app, ⌘W closes, ⌘M minimises.
+
+Performance budget: 60 fps while dragging with 10 windows open. No layout-triggering properties during animations.

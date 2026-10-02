@@ -1,0 +1,488 @@
+/*
+ * Files window content. The window is static tinted glass; the sidebar is a lighter static
+ * tint (vibrancy look without backdrop-filter, WM-03). contain: layout paint keeps list
+ * scrolling from invalidating the rest of the desktop.
+ */
+.view {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  background: var(--pl-glass-window-bg);
+  color: var(--pl-text);
+  font: var(--pl-type-body);
+  contain: layout paint;
+}
+.main {
+  container: files-main / inline-size;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+.content {
+  container: files-content / inline-size;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+/* The inspector gives the list room on narrower windows: 282 px, then 232 px, then 200 px. */
+@container files-content (width < 760px) {
+  .content > .inspectorPane {
+    width: 232px;
+  }
+}
+@container files-content (width < 560px) {
+  .content > .inspectorPane {
+    width: 200px;
+  }
+}
+.pane {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* ---------- sidebar ---------- */
+.sidebar {
+  width: var(--pl-sidebar-w);
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  background: var(--pl-glass-sidebar-bg);
+  box-shadow: inset calc(var(--pl-hairline-width) * -1) 0 0 var(--pl-separator);
+}
+.sidebarInset {
+  padding-top: var(--pl-titlebar-h);
+}
+/* The primitive pins its footer to the bottom; here Tags follow Locations and only the quota
+   meter sits at the foot. */
+.sidebar > :last-child {
+  display: flex;
+  flex: 1 0 auto;
+  flex-direction: column;
+  margin-top: 0;
+}
+.sidebarFoot {
+  display: flex;
+  flex: 1 0 auto;
+  flex-direction: column;
+  gap: var(--pl-space-4);
+}
+.sectionTitle {
+  margin: 0;
+  padding: var(--pl-space-1) var(--pl-space-2);
+  color: var(--pl-text-tertiary);
+  font: var(--pl-type-section);
+}
+.tagGroup {
+  display: flex;
+  flex-direction: column;
+}
+.tagList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pl-space-half);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.tag {
+  display: flex;
+  align-items: center;
+  gap: var(--pl-space-2);
+  width: 100%;
+  min-height: var(--pl-row-h);
+  padding: 0 var(--pl-space-2);
+  border: 0;
+  border-radius: var(--pl-radius-ctl);
+  background: transparent;
+  color: var(--pl-text);
+  font: inherit;
+  text-align: start;
+}
+.tag:hover {
+  background: var(--pl-control-hover);
+}
+.tag[aria-pressed='true'] {
+  background: var(--pl-accent-subtle);
+  font-weight: var(--pl-weight-semibold);
+}
+.tag:focus-visible {
+  outline: var(--pl-focus-ring);
+  outline-offset: calc(var(--pl-focus-offset) * -1);
+}
+.tagDot {
+  width: calc(var(--pl-status-dot) + var(--pl-space-half));
+  height: calc(var(--pl-status-dot) + var(--pl-space-half));
+  flex: none;
+  border-radius: var(--pl-radius-pill);
+  box-shadow: inset 0 0 0 var(--pl-hairline-width) var(--pl-hairline);
+}
+.quota {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pl-space-1);
+  margin-top: auto;
+  padding: 0 var(--pl-space-2) var(--pl-space-2);
+}
+.quotaText {
+  color: var(--pl-text-muted);
+  font: var(--pl-type-caption);
+  font-variant-numeric: tabular-nums;
+}
+.quotaState {
+  color: var(--pl-text);
+  font-weight: var(--pl-weight-semibold);
+}
+
+/* ---------- unified toolbar ---------- */
+/* The path bar takes the free space (it folds itself to fit, UI-010); the view switcher keeps
+   its size (UI-052). When the toolbar is narrow the folder title gives way first: the path
+   bar's bold last crumb names the folder too. */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--pl-space-2);
+  flex: none;
+  min-width: 0;
+  height: var(--pl-toolbar-h);
+  padding: 0 var(--pl-space-3);
+  box-shadow: inset 0 calc(var(--pl-hairline-width) * -1) 0 var(--pl-separator);
+}
+.toolbarInset {
+  padding-left: calc(var(--pl-traffic-size) * 3 + var(--pl-traffic-gap) * 2 + var(--pl-space-8));
+}
+.navButtons {
+  display: flex;
+  gap: var(--pl-space-half);
+  flex: none;
+}
+.title {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: calc(var(--pl-sidebar-w) * 0.8);
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: var(--pl-type-headline);
+}
+.viewSwitch,
+.sortToggle {
+  flex: none;
+}
+
+/* ---------- path bar ---------- */
+.pathBar {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 104px;
+}
+/* The crumbs clip what does not fit; the clip reaches 5 px past them so a focus ring shows. */
+.crumbs {
+  display: flex;
+  align-items: center;
+  gap: var(--pl-space-half);
+  min-width: 0;
+  margin: -5px;
+  padding: 5px;
+  list-style: none;
+  overflow: hidden;
+}
+.crumb {
+  display: inline-flex;
+  flex: none;
+}
+/* The current folder shrinks (with an ellipsis) last; the fold leaves it room. */
+.crumbLast {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+.crumbLast > .crumbButton {
+  max-width: 100%;
+}
+/* The invisible copy of every crumb that the fold measures. */
+.measure {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  margin: 0;
+  padding: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.measure .crumbButton {
+  display: inline-block;
+}
+.crumbSep {
+  display: inline-flex;
+  flex: none;
+  color: var(--pl-text-tertiary);
+}
+.crumbButton {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: calc(var(--pl-sidebar-w) * 0.7);
+  height: var(--pl-control-h-sm);
+  padding: 0 var(--pl-space-2);
+  border: 0;
+  border-radius: var(--pl-radius-sm);
+  background: var(--pl-control-bg);
+  color: var(--pl-text-muted);
+  font: var(--pl-type-caption);
+  font-family: var(--pl-font-mono);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.crumbButton:hover {
+  background: var(--pl-control-hover);
+  color: var(--pl-text);
+  text-decoration: underline;
+}
+.crumbButton:focus-visible {
+  outline: var(--pl-focus-ring);
+}
+.crumbCurrent {
+  color: var(--pl-text);
+  font-weight: var(--pl-weight-bold);
+  animation: crumb-in var(--pl-motion-fast) var(--pl-ease-out) both;
+}
+.measure .crumbCurrent {
+  animation: none;
+}
+.crumbMore {
+  min-width: var(--pl-control-h-sm);
+}
+
+/* ---------- search field ---------- */
+.search {
+  display: flex;
+  align-items: center;
+  gap: var(--pl-space-1);
+  flex: 0 1 200px;
+  min-width: 140px;
+  height: var(--pl-control-h);
+  padding: 0 var(--pl-space-1) 0 var(--pl-space-3);
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-search-bg);
+  box-shadow: inset 0 0 0 var(--pl-hairline-width) var(--pl-hairline-subtle);
+  color: var(--pl-text-tertiary);
+}
+.search:focus-within {
+  outline: var(--pl-focus-ring);
+  outline-offset: var(--pl-focus-offset);
+}
+.searchIcon {
+  display: inline-flex;
+  flex: none;
+}
+.searchSemantic .searchIcon,
+.search:focus-within .searchIcon {
+  color: var(--pl-accent-text);
+}
+.sparkle {
+  animation: sparkle var(--pl-motion-slow) var(--pl-ease-spring-bouncy) 1;
+}
+.searchInput {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--pl-text);
+  font: var(--pl-type-body);
+  /* A long placeholder or query ends in an ellipsis, never mid-word (UI-157). */
+  text-overflow: ellipsis;
+}
+.searchInput::placeholder {
+  color: var(--pl-text-tertiary);
+}
+.searchInput::-webkit-search-cancel-button,
+.searchInput::-webkit-search-decoration {
+  appearance: none;
+}
+.searchClear {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: var(--pl-control-h-sm);
+  height: var(--pl-control-h-sm);
+  padding: 0;
+  border: 0;
+  border-radius: var(--pl-radius-pill);
+  background: transparent;
+  color: var(--pl-text-tertiary);
+}
+.searchClear:hover {
+  color: var(--pl-text-muted);
+}
+.searchClear:focus-visible,
+.modePill:focus-visible {
+  outline: var(--pl-focus-ring);
+}
+.modePill {
+  flex: none;
+  height: calc(var(--pl-control-h-sm) - var(--pl-space-1));
+  padding: 0 var(--pl-space-2);
+  border: 0;
+  border-radius: var(--pl-radius-pill);
+  background: var(--pl-control-bg);
+  color: var(--pl-text-muted);
+  font: var(--pl-type-caption);
+  font-weight: var(--pl-weight-semibold);
+}
+.modePill[aria-checked='true'] {
+  background: var(--pl-accent-subtle);
+  color: var(--pl-accent-text);
+}
+
+/* ---------- status bar ---------- */
+/* Counts on the left keep their room; the quota words, then the meter, give way on narrow
+   windows, and `user · path` on the right ellipsises into whatever is left (UI-097). */
+.status {
+  container: files-status / inline-size;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--pl-space-4);
+  flex: none;
+  height: calc(var(--pl-control-h) - var(--pl-space-half));
+  padding: 0 var(--pl-space-4);
+  box-shadow: inset 0 var(--pl-hairline-width) 0 var(--pl-separator);
+  color: var(--pl-text-muted);
+  font: var(--pl-type-caption);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.statusStart {
+  display: flex;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: var(--pl-space-2);
+  min-width: 0;
+  overflow: hidden;
+}
+.statusStart > * {
+  flex: none;
+}
+.statusStart > .statusQuota {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.statusSep {
+  margin: 0 calc(var(--pl-space-2) * -1);
+  color: var(--pl-text-tertiary);
+  white-space: pre;
+}
+.statusMeter {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pl-space-2);
+  width: calc(var(--pl-sidebar-w) * 0.55);
+}
+.statusMeter > :first-child {
+  flex: 1;
+}
+.statusWarning {
+  color: var(--pl-text);
+}
+.statusMuted {
+  color: var(--pl-text-tertiary);
+}
+.statusEnd {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  text-align: end;
+  text-overflow: ellipsis;
+}
+
+/* ---------- in-window error banner ---------- */
+.errorBanner {
+  display: flex;
+  align-items: center;
+  gap: var(--pl-space-3);
+  margin: var(--pl-space-4);
+  padding: var(--pl-space-3) var(--pl-space-4);
+  border-radius: var(--pl-radius-md);
+  background: var(--pl-danger-subtle);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pl-danger) 40%, transparent);
+}
+.errorBanner > svg {
+  flex: none;
+  color: var(--pl-danger);
+}
+.errorText {
+  flex: 1;
+}
+.errno {
+  color: var(--pl-text-muted);
+  font-family: var(--pl-font-mono);
+  font-size: var(--pl-text-xs);
+}
+
+/* ---------- narrow windows (after the base rules, which they override) ---------- */
+@container files-main (width < 640px) {
+  .title {
+    display: none;
+  }
+}
+/* The narrowest windows (640 px, the minimum): tighter spacing, a shorter path bar and search,
+   and the Sort button gives way (the column headers sort, and the order stays for Icons). */
+@container files-main (width < 460px) {
+  .toolbar {
+    gap: var(--pl-space-1);
+  }
+  .toolbar > .sortToggle {
+    display: none;
+  }
+  .pathBar {
+    min-width: 80px;
+  }
+  .search {
+    flex-basis: 150px;
+    min-width: 150px;
+  }
+  .modePill {
+    padding: 0 var(--pl-space-1);
+  }
+}
+@container files-status (width < 560px) {
+  .statusQuota,
+  .statusQuotaSep {
+    display: none;
+  }
+}
+@container files-status (width < 400px) {
+  .statusMeter {
+    display: none;
+  }
+}
+
+@keyframes crumb-in {
+  from {
+    opacity: 0;
+    transform: translateX(-4px);
+  }
+}
+@keyframes sparkle {
+  50% {
+    transform: scale(1.15) rotate(15deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crumbCurrent,
+  .sparkle {
+    animation: none;
+  }
+}

@@ -1,0 +1,89 @@
+{
+  "which": "shutdown",
+  "nav": ["http://localhost:4718/"],
+  "console": [],
+  "pageErrors": [],
+  "failed": ["401 GET /api/auth/me"],
+  "confirmButtons": ["Shut Down?", "Cancel"],
+  "frames": [
+    {
+      "login": true,
+      "plb": ["plb plb-unsup"],
+      "text": "Sunday, 27 September | 0 | 9 | : | 3 | 8 | D | demo | A | alice | B | bob | Guest | Press Enter to sign in | Sleep | Restart | Shut Down | Plotinium 0.1.0-dev.0 | build 0000000 | POWER | Plotinium has shut down. | Plotinium 0.1.0-dev.0 ",
+      "active": "↵Start"
+    },
+    {
+      "login": true,
+      "plb": ["plb plb-unsup"],
+      "text": "Sunday, 27 September | 0 | 9 | : | 3 | 8 | D | demo | A | alice | B | bob | Guest | Press Enter to sign in | Sleep | Restart | Shut Down | Plotinium 0.1.0-dev.0 | build 0000000 | POWER | Plotinium has shut down. | Plotinium 0.1.0-dev.0 ",
+      "active": ""
+    },
+    {
+      "login": true,
+      "plb": ["plb plb-unsup"],
+      "text": "Sunday, 27 September | 0 | 9 | : | 3 | 8 | D | demo | A | alice | B | bob | Guest | Press Enter to sign in | Sleep | Restart | Shut Down | Plotinium 0.1.0-dev.0 | build 0000000 | POWER | Plotinium has shut down. | Plotinium 0.1.0-dev.0 ",
+      "active": ""
+    },
+    {
+      "login": true,
+      "plb": ["plb plb-unsup"],
+      "text": "Sunday, 27 September | 0 | 9 | : | 3 | 8 | D | demo | A | alice | B | bob | Guest | Press Enter to sign in | Sleep | Restart | Shut Down | Plotinium 0.1.0-dev.0 | build 0000000 | POWER | Plotinium has shut down. | Plotinium 0.1.0-dev.0 ",
+      "active": ""
+    },
+    {
+      "login": true,
+      "plb": ["plb plb-unsup"],
+      "text": "Sunday, 27 September | 0 | 9 | : | 3 | 8 | D | demo | A | alice | B | bob | Guest | Press Enter to sign in | Sleep | Restart | Shut Down | Plotinium 0.1.0-dev.0 | build 0000000 | POWER | Plotinium has shut down. | Plotinium 0.1.0-dev.0 ",
+      "active": ""
+    },
+    {
+      "login": true,
+      "plb": ["plb plb-unsup"],
+      "text": "Sunday, 27 September | 0 | 9 | : | 3 | 8 | D | demo | A | alice | B | bob | Guest | Press Enter to sign in | Sleep | Restart | Shut Down | Plotinium 0.1.0-dev.0 | build 0000000 | POWER | Plotinium has shut down. | Plotinium 0.1.0-dev.0 ",
+      "active": ""
+    },
+    {
+      "login": true,
+      "plb": ["plb plb-unsup"],
+      "text": "Sunday, 27 September | 0 | 9 | : | 3 | 8 | D | demo | A | alice | B | bob | Guest | Press Enter to sign in | Sleep | Restart | Shut Down | Plotinium 0.1.0-dev.0 | build 0000000 | POWER | Plotinium has shut down. | Plotinium 0.1.0-dev.0 ",
+      "active": ""
+    },
+    {
+      "login": true,
+      "plb": ["plb plb-unsup"],
+      "text": "Sunday, 27 September | 0 | 9 | : | 3 | 8 | D | demo | A | alice | B | bob | Guest | Press Enter to sign in | Sleep | Restart | Shut Down | Plotinium 0.1.0-dev.0 | build 0000000 | POWER | Plotinium has shut down. | Plotinium 0.1.0-dev.0 ",
+      "active": ""
+    },
+    {
+      "login": true,
+      "plb": ["plb plb-unsup"],
+      "text": "Sunday, 27 September | 0 | 9 | : | 3 | 8 | D | demo | A | alice | B | bob | Guest | Press Enter to sign in | Sleep | Restart | Shut Down | Plotinium 0.1.0-dev.0 | build 0000000 | POWER | Plotinium has shut down. | Plotinium 0.1.0-dev.0 ",
+      "active": ""
+    },
+    {
+      "login": true,
+      "plb": ["plb plb-unsup"],
+      "text": "Sunday, 27 September | 0 | 9 | : | 3 | 8 | D | demo | A | alice | B | bob | Guest | Press Enter to sign in | Sleep | Restart | Shut Down | Plotinium 0.1.0-dev.0 | build 0000000 | POWER | Plotinium has shut down. | Plotinium 0.1.0-dev.0 ",
+      "active": ""
+    },
+    {
+      "login": true,
+      "plb": ["plb plb-unsup"],
+      "text": "Sunday, 27 September | 0 | 9 | : | 3 | 8 | D | demo | A | alice | B | bob | Guest | Press Enter to sign in | Sleep | Restart | Shut Down | Plotinium 0.1.0-dev.0 | build 0000000 | POWER | Plotinium has shut down. | Plotinium 0.1.0-dev.0 ",
+      "active": ""
+    },
+    {
+      "login": true,
+      "plb": ["plb plb-unsup"],
+      "text": "Sunday, 27 September | 0 | 9 | : | 3 | 8 | D | demo | A | alice | B | bob | Guest | Press Enter to sign in | Sleep | Restart | Shut Down | Plotinium 0.1.0-dev.0 | build 0000000 | POWER | Plotinium has shut down. | Plotinium 0.1.0-dev.0 ",
+      "active": ""
+    }
+  ],
+  "end": {
+    "login": true,
+    "plb": ["plb plb-unsup"],
+    "text": "Sunday, 27 September | 0 | 9 | : | 3 | 8 | D | demo | A | alice | B | bob | Guest | Press Enter to sign in | Sleep | Restart | Shut Down | Plotinium 0.1.0-dev.0 | build 0000000 | POWER | Plotinium has shut down. | Plotinium 0.1.0-dev.0 ",
+    "active": ""
+  },
+  "afterEnter": "login"
+}

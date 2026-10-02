@@ -1,0 +1,34 @@
+/* Lab 4: multiply two N x N matrices with T threads, each computing a band of rows.
+ * build: gcc -O2 -pthread matrix_threads.c -o mm && ./mm 1024 4 */
+#include <pthread.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+static int N, T;
+static double *A, *B, *C;
+
+static void *band(void *arg) {
+    long id = (long)arg;
+    int lo = N * id / T, hi = N * (id + 1) / T;
+    for (int i = lo; i < hi; i++)
+        for (int k = 0; k < N; k++) {         /* i-k-j order: stride-1 inner loop */
+            double a = A[i * N + k];
+            for (int j = 0; j < N; j++) C[i * N + j] += a * B[k * N + j];
+        }
+    return NULL;
+}
+
+int main(int argc, char **argv) {
+    N = argc > 1 ? atoi(argv[1]) : 512;
+    T = argc > 2 ? atoi(argv[2]) : 4;
+    A = malloc(sizeof(double) * N * N);
+    B = malloc(sizeof(double) * N * N);
+    C = calloc((size_t)N * N, sizeof(double));
+    for (int i = 0; i < N * N; i++) { A[i] = i % 7; B[i] = i % 5; }
+    pthread_t th[64];
+    for (long t = 0; t < T; t++) pthread_create(&th[t], NULL, band, (void *)t);
+    for (int t = 0; t < T; t++) pthread_join(th[t], NULL);
+    printf("C[0] = %.0f\n", C[0]);
+    free(A); free(B); free(C);
+    return 0;
+}

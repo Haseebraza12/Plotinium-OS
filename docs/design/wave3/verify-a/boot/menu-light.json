@@ -1,0 +1,22 @@
+[
+  {
+    "name": "UI-066 arrows work after a click outside",
+    "ok": true,
+    "detail": "Normal bootStart Plotinium and -> Verbose bootTimestamped kernel (focus was BODY)"
+  },
+  {
+    "name": "UI-062 verbose log keeps following",
+    "ok": true,
+    "detail": "worst gap 24"
+  },
+  {
+    "name": "CSP violations (menu/verbose)",
+    "ok": true,
+    "detail": "[]"
+  },
+  {
+    "name": "console/page errors",
+    "ok": true,
+    "detail": ""
+  }
+]

@@ -1,0 +1,37 @@
+/**
+ * Token bucket: `capacity` tokens, refilled at `ratePerSec`. `tryTake()` spends one token if
+ * available. Used by the server for /api/llm/* (per user) and by the client to avoid hammering
+ * /api/index/verify.
+ */
+export class TokenBucket {
+  private tokens: number;
+  private last: number;
+
+  constructor(
+    private readonly capacity: number,
+    private readonly ratePerSec: number,
+    private readonly now: () => number = () => Date.now(),
+  ) {
+    this.tokens = capacity;
+    this.last = now();
+  }
+
+  private refill(): void {
+    const t = this.now();
+    this.tokens = Math.min(this.capacity, this.tokens + ((t - this.last) / 1000) * this.ratePerSec);
+    this.last = t;
+  }
+
+  tryTake(n = 1): boolean {
+    this.refill();
+    if (this.tokens < n) return false;
+    this.tokens -= n;
+    return true;
+  }
+
+  /** Milliseconds until `n` tokens are available (for a Retry-After header). */
+  waitMs(n = 1): number {
+    this.refill();
+    return this.tokens >= n ? 0 : Math.ceil(((n - this.tokens) / this.ratePerSec) * 1000);
+  }
+}

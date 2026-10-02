@@ -1,0 +1,21 @@
+# Inodes and directories
+
+An **inode** holds everything about a file except its name: type, mode bits, owner uid/gid, size, timestamps (atime, mtime, ctime), link count and the block pointers.
+
+## Block pointers (ext2 style)
+
+12 direct pointers, 1 single indirect, 1 double indirect, 1 triple indirect. With 4 KiB blocks and 4-byte pointers: 48 KiB direct, then 4 MiB, 4 GiB, 4 TiB.
+
+ext4 uses extents instead: (start block, length) runs, much smaller for big contiguous files.
+
+## Directories
+
+A directory is a file whose contents map names to inode numbers. Hard links are just two names for one inode; the file is freed when the link count reaches 0 **and** no process has it open. Symlinks are separate small files holding a path.
+
+## Permissions
+
+rwx for owner, group, others. On a directory, r lists names, w creates/deletes entries, x lets you traverse (look up a name inside). You can read a file in a directory you cannot list if you know the name and have x on the directory. Our project's search filter follows exactly this rule.
+
+## Path resolution
+
+Start at root (or cwd), for each component check x on the current directory, look up the name, follow mounts and symlinks (with a loop limit).

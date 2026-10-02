@@ -1,0 +1,10 @@
+// AI processes run on executors and the ai.embed worker. If eval/ harnesses need Node, give eval/ its own tsconfig.json.
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2024", "WebWorker"],
+    "types": []
+  },
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules", "dist", "coverage"]
+}

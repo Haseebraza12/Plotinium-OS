@@ -1,0 +1,83 @@
+{
+  "id": "AGT40-D03",
+  "category": "relative-date",
+  "tags": ["needs-observation"],
+  "user": "alice",
+  "cwd": "/home/alice",
+  "now": "2026-10-05T10:00:00+05:00",
+  "tz": "Asia/Karachi",
+  "fixture": "fx-agt@v1",
+  "prompt": "delete the files in tmp older than 30 days",
+  "expect": {
+    "kind": "plan",
+    "ops": [["unlink", "/home/alice/tmp/scratch1.txt"]],
+    "confirm": true
+  },
+  "reference": {
+    "observe": [
+      {
+        "name": "fs_find",
+        "input": {
+          "path": "~/tmp",
+          "name": null,
+          "type": "f",
+          "mtime": {
+            "within": null,
+            "olderThan": {
+              "unit": "day",
+              "count": 30,
+              "mode": "rolling"
+            }
+          },
+          "size": null,
+          "maxdepth": null
+        }
+      }
+    ],
+    "tool": "submit_plan",
+    "input": {
+      "summary": "plan",
+      "steps": [
+        {
+          "id": "s1",
+          "span": "the files in tmp older than 30 days",
+          "op": {
+            "call": "find",
+            "args": {
+              "path": "~/tmp",
+              "name": null,
+              "type": "f",
+              "mtime": {
+                "within": null,
+                "olderThan": {
+                  "unit": "day",
+                  "count": 30,
+                  "mode": "rolling"
+                }
+              },
+              "size": null,
+              "maxdepth": null
+            }
+          },
+          "sources": null
+        },
+        {
+          "id": "s2",
+          "span": "delete the files in tmp older than 30 days",
+          "op": {
+            "call": "unlink",
+            "args": {
+              "path": "~/tmp",
+              "recursive": false
+            }
+          },
+          "sources": {
+            "ref": "s1"
+          }
+        }
+      ],
+      "assumptions": [],
+      "suspicious_content_seen": false
+    }
+  }
+}

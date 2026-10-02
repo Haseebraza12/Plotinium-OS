@@ -1,0 +1,976 @@
+{
+  "afterBoot": {
+    "tt": 26,
+    "cspErr": 0,
+    "v": 26
+  },
+  "apps": {
+    "files": {
+      "violations": [
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<section role=dialog aria-modal=false><d",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div data-wm-view>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div aria-hidden=true>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div style=position:relative;width:100%;",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "style-src-attr",
+          "disp": "enforce",
+          "sample": "",
+          "where": "",
+          "blocked": "inline"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div><div><div><div>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<nav>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div><ul>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<h3>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div role=toolbar aria-label=\"Files tool",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<button><span aria-hidden=true style=dis",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "style-src-attr",
+          "disp": "enforce",
+          "sample": "",
+          "where": "",
+          "blocked": "inline"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<nav aria-label=Path><ol>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<li><button type=button>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div role=radiogroup><span aria-hidden=t",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<button type=button role=radio><span>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<span aria-hidden=true>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div role=search><input type=search auto",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<span aria-hidden=true>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<button type=button role=switch aria-lab",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div aria-hidden=true>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<p>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div role=grid aria-multiselectable=true",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div role=columnheader><button type=butt",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div role=row aria-hidden=true><span></s",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<aside aria-label=\"File info\">",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<p>Select a file to see its info",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<footer><div role=status aria-live=polit",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<span>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<li><button type=button><span>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<span aria-hidden=true>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<li aria-hidden=true>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<span aria-hidden=true> ·",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<span> quota used",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div><div role=progressbar aria-valuemin",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div><span>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        }
+      ],
+      "blockedElements": []
+    },
+    "terminal": {
+      "violations": [
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div><div role=tabpanel>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div><div role=tablist>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div role=tab><span></span><span>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<span aria-hidden=true>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<button type=button aria-label=\"New tab\"",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div role=region>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<footer><div role=status aria-live=polit",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "style-src-elem",
+          "disp": "enforce",
+          "sample": "",
+          "where": "style in [data-app=terminal]",
+          "blocked": "inline"
+        },
+        {
+          "dir": "style-src-elem",
+          "disp": "enforce",
+          "sample": "",
+          "where": "style in [data-app=terminal]",
+          "blocked": "inline"
+        },
+        {
+          "dir": "style-src-elem",
+          "disp": "enforce",
+          "sample": "",
+          "where": "style in [data-app=terminal]",
+          "blocked": "inline"
+        },
+        {
+          "dir": "style-src-elem",
+          "disp": "enforce",
+          "sample": "",
+          "where": "style in [data-app=terminal]",
+          "blocked": "inline"
+        },
+        {
+          "dir": "style-src-elem",
+          "disp": "enforce",
+          "sample": "",
+          "where": "style in [data-app=terminal]",
+          "blocked": "inline"
+        },
+        {
+          "dir": "style-src-elem",
+          "disp": "enforce",
+          "sample": "",
+          "where": "style in [data-app=terminal]",
+          "blocked": "inline"
+        },
+        {
+          "dir": "style-src-elem",
+          "disp": "enforce",
+          "sample": "",
+          "where": "style in [data-app=terminal]",
+          "blocked": "inline"
+        },
+        {
+          "dir": "style-src-elem",
+          "disp": "enforce",
+          "sample": "",
+          "where": "style in [data-app=terminal]",
+          "blocked": "inline"
+        },
+        {
+          "dir": "style-src-elem",
+          "disp": "enforce",
+          "sample": "",
+          "where": "style in [data-app=terminal]",
+          "blocked": "inline"
+        },
+        {
+          "dir": "style-src-elem",
+          "disp": "enforce",
+          "sample": "",
+          "where": "style in [data-app=terminal]",
+          "blocked": "inline"
+        },
+        {
+          "dir": "style-src-elem",
+          "disp": "enforce",
+          "sample": "",
+          "where": "style in [data-app=terminal]",
+          "blocked": "inline"
+        },
+        {
+          "dir": "style-src-elem",
+          "disp": "enforce",
+          "sample": "",
+          "where": "style in [data-app=terminal]",
+          "blocked": "inline"
+        }
+      ],
+      "blockedElements": []
+    },
+    "editor": {
+      "violations": [
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div data-app=editor style=\"position:rel",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "style-src-attr",
+          "disp": "enforce",
+          "sample": "",
+          "where": "",
+          "blocked": "inline"
+        },
+        {
+          "dir": "style-src-attr",
+          "disp": "enforce",
+          "sample": "",
+          "where": "",
+          "blocked": "inline"
+        },
+        {
+          "dir": "style-src-attr",
+          "disp": "enforce",
+          "sample": "",
+          "where": "",
+          "blocked": "inline"
+        },
+        {
+          "dir": "style-src-attr",
+          "disp": "enforce",
+          "sample": "",
+          "where": "",
+          "blocked": "inline"
+        },
+        {
+          "dir": "style-src-attr",
+          "disp": "enforce",
+          "sample": "",
+          "where": "",
+          "blocked": "inline"
+        },
+        {
+          "dir": "style-src-attr",
+          "disp": "enforce",
+          "sample": "",
+          "where": "",
+          "blocked": "inline"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<aside aria-label=\"Outline and files\"><h",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<p>No headings",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<footer><div><span aria-hidden=true> · <",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<button type=button>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "style-src-elem",
+          "disp": "enforce",
+          "sample": "",
+          "where": "style",
+          "blocked": "inline"
+        }
+      ],
+      "blockedElements": []
+    },
+    "taskmgr": {
+      "violations": [
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div style=position:relative;width:100%;",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "style-src-attr",
+          "disp": "enforce",
+          "sample": "",
+          "where": "",
+          "blocked": "inline"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div><header data-pl-drag-region><div><s",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div role=group aria-label=\"End process\"",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<button><span>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<span aria-hidden=true>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div role=search><span aria-hidden=true>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<kbd>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<kbd aria-hidden=true>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<section>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div><div><p><span><strong></strong> pro",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div role=status aria-label=\"Loading pro",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<span aria-hidden=true>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div><section><div><h3>CPU per executor<",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<section><div><h3>Frame time p95</h3><bu",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div aria-hidden=true><span>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<span>Plotinium <!> · build",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<li><div role=img><div><span>exec-</span",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<svg preserveAspectRatio=none><defs><lin",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<svg><path></svg>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<span>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div role=grid><div role=rowgroup><div r",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div role=columnheader>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<button type=button><span></span><span a",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div role=rowgroup>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div role=row>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div role=gridcell>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<span><span aria-hidden=true></span><spa",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<span><span aria-hidden=true></span><spa",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<span>,",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<span>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<span><span> <span>/</span>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<span><span aria-hidden=true><span></spa",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        }
+      ],
+      "blockedElements": []
+    },
+    "settings": {
+      "violations": [
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div style=position:relative;width:100%;",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "style-src-attr",
+          "disp": "enforce",
+          "sample": "",
+          "where": "",
+          "blocked": "inline"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div><div><header data-pl-drag-region><d",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div><div data-pl-drag-region></div><but",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<span aria-hidden=true>+",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<span>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<span aria-hidden=true>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<ul>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<li><button type=button><span aria-hidde",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div><span aria-hidden=true></span><h1>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<section><div>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<h2>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div><div><div><span>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div><label></label><div><input>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<button type=button><span><span></span><",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<span aria-hidden=true>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<div><span></span><button type=button ro",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<label><span><span></span></span><button",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<span>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<p>Plotinium <!> · build",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        },
+        {
+          "dir": "require-trusted-types-for",
+          "disp": "report",
+          "sample": "Element innerHTML|<span aria-hidden=true>",
+          "where": "",
+          "blocked": "trusted-types-sink"
+        }
+      ],
+      "blockedElements": []
+    }
+  },
+  "docBlocked": [],
+  "totals": {
+    "trustedTypesReports": 149,
+    "inlineStyleErrors": 28,
+    "violations": 177
+  },
+  "byDirective": {
+    "require-trusted-types-for/report": 149,
+    "style-src-attr/enforce": 15,
+    "style-src-elem/enforce": 13
+  }
+}

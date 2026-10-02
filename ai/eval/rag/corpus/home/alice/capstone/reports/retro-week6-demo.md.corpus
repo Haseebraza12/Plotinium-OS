@@ -1,0 +1,30 @@
+# Post-mortem: Week-6 checkpoint (14 Oct)
+
+Written by Alice after the checkpoint, discussed on 23 Oct.
+
+## What happened
+
+- The projector laptop was not the one we rehearsed on. Cold boot took 9 s instead of our usual 2.5 s because nothing was cached and the service worker had never installed.
+- The terminal froze during the `ps` demo: a process spinning without yielding blocked the executor.
+- The semantic search demo showed keyword results with "model loading" because the model had not been downloaded yet.
+- We ran 6 minutes over time and skipped the offline part, which was our strongest feature.
+
+## What went well
+
+- The window manager looked great; the panel said so twice.
+- Carol answered the database questions calmly and with numbers.
+
+## Root causes
+
+- No checklist for the demo machine.
+- The scheduler trusted processes to yield.
+- Too many features in 15 minutes.
+
+## Actions
+
+1. Demo checklist, including a warm-up boot on the actual machine (owner Esha).
+2. Kernel enforces the quantum: a process that doesn't yield is pre-empted at the next check and eventually killed (owner Dan).
+3. Model pre-warmed during the warm-up boot (owner Alice).
+4. Script with timings; rehearse twice with a timer (everyone).
+
+Honestly I felt terrible afterwards, but the list above is fixable in a week.

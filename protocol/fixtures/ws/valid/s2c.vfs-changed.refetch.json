@@ -1,0 +1,17 @@
+{
+  "v": 1,
+  "t": "vfs.changed",
+  "id": 7,
+  "body": {
+    "ownerUid": 1002,
+    "seq": 78,
+    "opId": "0192f0c1-8a3b-7c4d-8e5f-0123456789ab",
+    "commitTime": "2026-09-24T10:00:00.000Z",
+    "lamport": 906,
+    "redacted": true,
+    "changes": [],
+    "refetch": {
+      "dirs": ["00000000-0000-7000-8000-000000000008"]
+    }
+  }
+}

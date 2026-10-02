@@ -1,0 +1,77 @@
+/*
+ * The Editor window's own layout around the @plotinium/ui editor parts: the root column, the
+ * tab row with the lock chip, the sidebar and document row, the code area, the "Opening…" line
+ * and the read-only hint. Static styles live here, not in style attributes, because the
+ * production CSP (style-src without 'unsafe-inline') refuses those (UI-118). Only the hint's
+ * position (left and top, at the caret) is set per use, through the CSSOM.
+ */
+.root {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  background: var(--pl-glass-window-bg);
+  color: var(--pl-text);
+  font: var(--pl-type-body);
+  contain: layout paint;
+  overflow: hidden;
+}
+.tabRow {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  box-shadow: inset 0 calc(var(--pl-hairline-width) * -1) 0 var(--pl-separator);
+}
+.tabs {
+  flex: 1;
+  min-width: 0;
+}
+.lockSlot {
+  flex-shrink: 0;
+  padding: 0 var(--pl-space-3);
+}
+.body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+.codeArea {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+.opening {
+  margin: 0;
+  padding: var(--pl-space-4);
+  color: var(--pl-text-muted);
+  font: var(--pl-type-callout);
+}
+/* "Locked by …" above the caret after a refused key; placed with left/top at run time. */
+.hint {
+  position: absolute;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pl-space-1);
+  padding: var(--pl-space-half) var(--pl-space-2);
+  border-radius: var(--pl-radius-sm);
+  background: color-mix(in srgb, var(--pl-warning) 18%, var(--pl-surface));
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--pl-warning) 55%, transparent),
+    var(--pl-shadow-tooltip);
+  color: var(--pl-text);
+  font: var(--pl-type-caption);
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translateY(-120%);
+}
